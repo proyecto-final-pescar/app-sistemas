@@ -14,3 +14,6 @@ Ejemplo: "formulario de registro con validaciones"
 - Siempre hacia develop, nunca a main
 - El título debe incluir el ID de la tarea
 - Necesita al menos 1 aprobación antes de mergear
+
+.
+.
