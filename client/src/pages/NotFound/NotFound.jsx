@@ -1,0 +1,1 @@
+/* Pantalla de error 404 global */
