@@ -1,0 +1,30 @@
+.select-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.select-label {
+  color: #2b2142;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.select-campo {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e5ddf8;
+  border-radius: 14px;
+  background-color: #f2ecff;
+  font-size: 14px;
+  outline: none;
+}
+
+.select-campo:focus {
+  border-color: #7c3aed;
+}
+
+.select-error {
+  color: #ef4444;
+  font-size: 13px;
+}

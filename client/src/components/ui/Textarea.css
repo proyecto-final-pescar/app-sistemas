@@ -1,0 +1,23 @@
+.textarea-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.textarea-label {
+  font-weight: 500;
+}
+
+.textarea-campo {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  resize: vertical;
+}
+
+.textarea-error {
+  color: red;
+  font-size: 12px;
+}
