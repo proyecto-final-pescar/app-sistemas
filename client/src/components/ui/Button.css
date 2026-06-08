@@ -1,0 +1,56 @@
+.btn {
+  font-family: 'Inter', sans-serif; 
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* VARIANTE */
+
+.btn-primario {
+  background-color: green;
+  color: white;
+}
+
+.btn-secundario {
+  background-color: white;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+.btn-peligro {
+  background-color: #ef4444; 
+  color: white;
+  border: none;
+}
+
+/* CASO ESPECIFICO DEL BOTON DE RECHAZO SUAVE */
+.btn-peligro-borde {
+  background-color: white;
+  color: #ef4444;
+  border: 2px solid #ef4444;
+}
+
+/* CASO ESPECIFICO DEL BOTON PELIGRO SUAVE*/
+.btn-peligro-ghost {
+  background-color: transparent;
+  color: #6b7280; 
+  border: 1px solid #d1d5db;
+}
+
+/* TAMAÑOS */
+
+.btn-chico {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-mediano {
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+.btn-grande {
+  padding: 14px 20px;
+  font-size: 16px;
+}
+
