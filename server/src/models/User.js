@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 
 const userSchema = new mongoose.Schema(
   {
-    nombre: {
+    name: {
       type: String,
       required: [true, 'El nombre es requerido'],
       trim: true
@@ -19,13 +19,13 @@ const userSchema = new mongoose.Schema(
       required: [true, 'La contraseña es requerida'],
       minlength: [8, 'La contraseña debe tener mínimo 8 caracteres']
     },
-    rol: {
+    role: {
       type: String,
       required: [true, 'El rol es requerido'],
-      enum: ['dueno', 'veterinaria', 'admin'],
+      enum: ['dueno', 'veterinaria', 'administrador'],
       default: 'dueno'
     },
-    activo: {
+    active: {
       type: Boolean,
       default: true
     }
