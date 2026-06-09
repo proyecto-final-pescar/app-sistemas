@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv'
 import connectDB from './config/db.js'
+import rutasDelProyecto from './routes/index.js';
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ const corsOptions = {
 app.use(express.json());
 app.use(cors(corsOptions));
 
+app.use('/api', rutasDelProyecto);
 
 connectDB();
 
