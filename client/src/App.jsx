@@ -22,8 +22,6 @@ function App() {
         role="tutor"
         activeItem={activePage}
         onSelect={setActivePage}
-        userName="Ana García"
-        userRole="Tutora · CABA"
         userInitial="A"
       />
 
