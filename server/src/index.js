@@ -1,9 +1,10 @@
+import dotenv from 'dotenv'
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv'
 import connectDB from './config/db.js'
-
-dotenv.config();
+import routes from './routes/index.js'
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -16,7 +17,7 @@ const corsOptions = {
 
 app.use(express.json());
 app.use(cors(corsOptions));
-
+app.use('/api', routes);
 
 connectDB();
 
