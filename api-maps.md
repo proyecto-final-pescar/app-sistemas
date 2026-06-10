@@ -180,7 +180,7 @@
 
     Si sale mal (el usuario rechaza el permiso): Tener una ubicación por defecto (ej. el centro de la ciudad) para que la app no se rompa y muestre algo.
     
-
+git
 
 
 
