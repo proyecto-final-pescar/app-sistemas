@@ -1,9 +1,9 @@
 // Routes: rutas agrupadas por recurso
 import { Router } from 'express';
-import { register } from '../controllers/index.js';
+import authRoutes from './rutasRegistro.js';
 
 const router = Router();
 
-router.post('/auth/register', register);
+router.use(authRoutes);
 
 export default router;
