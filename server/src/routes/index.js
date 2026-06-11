@@ -1,10 +1,9 @@
 // Routes: rutas agrupadas por recurso
+import { Router } from 'express'
+import authRouter from './authIndex.js'
 
-import express from 'express'
-import { authController } from '../controllers/index.js'
+const router = Router()
 
-const router = express.Router()
-
-router.post('/auth/login', authController.login)
+router.use('/auth', authRouter)
 
 export default router

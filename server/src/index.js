@@ -18,13 +18,13 @@ const corsOptions = {
 app.use(express.json());
 app.use(cors(corsOptions));
 
-app.use('/api', rutasDelProyecto);
-
-connectDB();
-
 app.get('/', (req, res) => {
     res.json({ message: 'Servidor funcionando' });
 });
+
+app.use('/api', rutasDelProyecto);
+
+connectDB();
 
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en puerto ${PORT}`);
