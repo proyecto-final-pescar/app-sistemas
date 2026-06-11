@@ -1,8 +1,10 @@
+import dotenv from 'dotenv'
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv'
 import connectDB from './config/db.js'
-import rutasDelProyecto from './routes/index.js';
+import routes from './routes/index.js'
 
 dotenv.config();
 
@@ -18,13 +20,12 @@ const corsOptions = {
 app.use(express.json());
 app.use(cors(corsOptions));
 
+app.use('/api', routes);
+connectDB();
+
 app.get('/', (req, res) => {
     res.json({ message: 'Servidor funcionando' });
 });
-
-app.use('/api', rutasDelProyecto);
-
-connectDB();
 
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en puerto ${PORT}`);

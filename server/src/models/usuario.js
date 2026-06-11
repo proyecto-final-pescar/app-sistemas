@@ -28,18 +28,11 @@ const userSchema = new mongoose.Schema(
     active: {
       type: Boolean,
       default: true
-    },
-    historialSesiones: [
-      {
-        fecha: {
-          type: Date,
-          default: Date.now
-        }
-      }
-    ]
+    }
   },
   {
-    timestamps: true
+    timestamps: true,
+    collection: 'users'
   }
 )
 
