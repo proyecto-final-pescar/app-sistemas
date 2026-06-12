@@ -24,20 +24,30 @@ export const register = async (req, res) => {
 
     // Encriptar contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
-
+    
     // Guardar usuario
-    const user = await User.create({ name, email, password: hashedPassword, role });
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role
+    });
 
     // Generar token
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: process.env.JWT_EXPIRES_IN }
     );
 
+    await user.save();
+
     res.status(201).json({
-      token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      success: true,
+      data: {
+        token,
+        user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      }
     });
 
   } catch (error) {
