@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import User from '../models/usuario.js';
+import User from '../models/User.js';
 
 export const register = async (req, res) => {
   try {
@@ -24,7 +24,7 @@ export const register = async (req, res) => {
 
     // Encriptar contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
-
+    
     // Guardar usuario
     const user = new User({
       name,
@@ -32,6 +32,7 @@ export const register = async (req, res) => {
       password: hashedPassword,
       role
     });
+
     // Generar token
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },

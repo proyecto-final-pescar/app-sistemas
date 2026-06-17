@@ -10,9 +10,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const corsOptions = {
-  origin: process.env.CLIENT_URL,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+    origin: process.env.CLIENT_URL,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }
 
 app.use(express.json());
@@ -29,4 +29,13 @@ app.listen(PORT, () => {
     console.log(`Servidor corriendo en puerto ${PORT}`);
 });
 
+/*import verifyToken from './middleware/auth.js';*/
+
+/*Ruta temporal de prueba  middleware
+app.get('/test-auth', verifyToken, (req, res) => {
+    res.json({
+        mensaje: 'Token válido',
+        usuario: req.user
+    });
+});*/
 export default app
