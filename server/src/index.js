@@ -1,23 +1,24 @@
+import dotenv from 'dotenv'
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv'
 import connectDB from './config/db.js'
-
-dotenv.config();
+import routes from './routes/index.js'
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 const corsOptions = {
-  origin: process.env.CLIENT_URL,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+    origin: process.env.CLIENT_URL,
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }
 
 app.use(express.json());
 app.use(cors(corsOptions));
 
-
+app.use('/api', routes);
 connectDB();
 
 app.get('/', (req, res) => {
@@ -28,4 +29,13 @@ app.listen(PORT, () => {
     console.log(`Servidor corriendo en puerto ${PORT}`);
 });
 
+/*import verifyToken from './middleware/auth.js';*/
+
+/*Ruta temporal de prueba  middleware
+app.get('/test-auth', verifyToken, (req, res) => {
+    res.json({
+        mensaje: 'Token válido',
+        usuario: req.user
+    });
+});*/
 export default app
