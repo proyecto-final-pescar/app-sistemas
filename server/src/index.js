@@ -5,6 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import connectDB from './config/db.js'
 import routes from './routes/index.js'
+import uploadRoutes from './routes/uploadRoutes.js'
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -28,6 +29,8 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en puerto ${PORT}`);
 });
+
+app.use('/api/upload', uploadRoutes)
 
 /*import verifyToken from './middleware/auth.js';*/
 
