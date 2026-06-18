@@ -9,7 +9,7 @@ export const obtenerMascotas = async (req, res) => {
         res.json(mascotas);
     } catch (error) {
         console.error('Error en GET /mascotas:', error);
-        res.status(500).json({ mensaje: 'Error al obtener las mascotas'});
+        res.status(500).json({ message: 'Error interno del servidor' });
     }
 };
 
@@ -19,6 +19,11 @@ export const crearMascota = async (req, res) => {
         const dueñoId = req.user.id; // Obtengo el ID del dueño desde el token de autenticación
 
         const { nombre, especie, raza, fechaNacimiento, foto, esCastrado, peso } = req.body; // Extraigo las propiedades que necesito del body
+
+        // Validación de campos obligatorios
+        if (!nombre || !especie) {
+            return res.status(400).json({ message: 'Nombre y especie son requeridos' });
+        }
 
         // Instancio una nueva mascota tomando los datos del body y el dueñoId
         const nuevaMascota = new Mascota({
@@ -39,13 +44,12 @@ export const crearMascota = async (req, res) => {
         res.status(201).json(mascotaGuardada);
 
     } catch (error) {
-        // Si falta algún campo obligatorio:
         if (error.name === 'ValidationError') {
-            return res.status(400).json({ mensaje: 'Datos inválidos', error: error.message });
+            return res.status(400).json({ message: 'Datos inválidos', error: error.message });
         }
         console.error("Error en POST /mascotas:", error);
         // Error general del servidor
-        res.status(500).json({ mensaje: "Hubo un error al crear la mascota" });
+        res.status(500).json({ message: "Hubo un error al crear la mascota" });
     }
 };
 
@@ -59,12 +63,12 @@ export const actualizarMascota = async (req, res) => {
 
         // Si la mascota no existe o no es encontrada:
         if (!mascota) {
-            return res.status(404).json({ mensaje: 'Mascota no encontrada' });
+            return res.status(404).json({ message: 'Mascota no encontrada' });
         }
 
         // Si la mascota solicitada no pertenece al usuario:
         if (mascota.dueñoId.toString() !== dueñoId) {
-            return res.status(403).json({ mensaje: 'No tenés permiso para editar esta mascota' });
+            return res.status(403).json({ message: 'No tenés permiso para editar esta mascota' });
         }
 
         // Actualización de datos
@@ -81,13 +85,13 @@ export const actualizarMascota = async (req, res) => {
 
     } catch (error) {
         if (error.name === 'ValidationError') {
-            return res.status(400).json({ mensaje: 'Datos inválidos', error: error.message });
+            return res.status(400).json({ message: 'Datos inválidos', error: error.message });
         }
         if (error.name === 'CastError') {
-            return res.status(400).json({ mensaje: 'El id de la mascota no es válido' });
+            return res.status(400).json({ message: 'El id de la mascota no es válido' });
         }
         console.error('Error en PUT /mascotas', error);
-        res.status(500).json({ mensaje: 'Error al actualizar la mascota' });
+        res.status(500).json({ message: 'Error al actualizar la mascota' });
     }
 };
 
@@ -101,22 +105,22 @@ export const eliminarMascota = async (req, res) => {
 
         // Si la mascota no existe o no es encontrada:
         if (!mascota) {
-            return res.status(404).json({ mensaje: 'Mascota no encontrada' });
+            return res.status(404).json({ message: 'Mascota no encontrada' });
         }
 
         // Si la mascota solicitada no pertenece al usuario:
         if (mascota.dueñoId.toString() !== dueñoId) {
-            return res.status(403).json({ mensaje: 'No tenés permiso para eliminar esta mascota' });
+            return res.status(403).json({ message: 'No tenés permiso para eliminar esta mascota' });
         }
 
         await mascota.deleteOne();
-        res.json({ mensaje: 'Mascota eliminada correctamente' });
+        res.json({ message: 'Mascota eliminada correctamente' });
 
     } catch (error) {
         if (error.name === 'CastError') {
-            return res.status(400).json({ mensaje: 'El id de la mascota no es válido' });
+            return res.status(400).json({ message: 'El id de la mascota no es válido' });
         }
         console.error('Error en DELETE /mascotas', error);
-        res.status(500).json({ mensaje: 'Error al eliminar la mascota' });
+        res.status(500).json({ message: 'Error al eliminar la mascota' });
     }
 };
