@@ -1,11 +1,8 @@
-const express = require('express'); // Importé el framework Express para manejar el servidor
-const router = express.Router(); // Creé un enrutador para las rutas de mascotas
+import { Router } from 'express'; // Uso la función Router para crear un enrutador para las rutas de mascotas
+import authMiddleware from '../middleware/auth.js'; // Importo el middleware de autenticación para proteger las rutas de mascotas
+import Mascota from '../models/Mascota.js'; // Importo el modelo de Mascota para interactuar con la base de datos
 
-// 1. Importar el middleware de autenticación
-const authMiddleware = require('../middleware/auth');
-
-// 2. Importar el modelo de Mascota
-const Mascota = require('../models/Mascota');
+const router = Router();
 
 // GET /mascotas: devuelve las mascotas del usuario logueado
 router.get('/', authMiddleware, async (req, res) => {
@@ -56,4 +53,4 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;
