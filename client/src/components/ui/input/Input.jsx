@@ -3,7 +3,11 @@ import './Input.css';
 function Input({
   label,
   placeholder,
-  error
+  type,
+  error,
+  value,
+  onChange,
+  nombre
 }) {
 
   let mensajeError = null;
@@ -16,6 +20,8 @@ function Input({
     );
   }
 
+  console.log(nombre)
+
   return (
     <div className="input-container">
 
@@ -25,8 +31,11 @@ function Input({
 
       <input
         className="input-campo"
-        type="text"
         placeholder={placeholder}
+        type={type}
+        value={value}
+        onChange={onChange}
+        
       />
 
       {mensajeError}
@@ -36,6 +45,8 @@ function Input({
 }
 
 export default Input;
+
+
 
 /* 
 La funcion se va a llamar de la siguiente forma:
