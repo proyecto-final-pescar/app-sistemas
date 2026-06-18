@@ -41,3 +41,27 @@ Si la respuesta incluye una URL de Cloudinary, copiarla y pegarla en una pestañ
 ## A tener en cuenta para módulos futuros
 
 Cada vez que una tarea involucre subir una imagen (por ejemplo el foro de mascotas perdidas o cualquier otro módulo), el flujo de testeo es el mismo: Postman, form-data, campo tipo File. Lo único que cambia es la URL del endpoint y el nombre del campo.
+
+## Cómo conectar esto desde el frontend (React)
+ 
+Subir una imagen no es un solo paso, son dos:
+ 
+1. Mandar la foto al endpoint de upload, que devuelve una URL de Cloudinary.
+2. Mandar esa URL (no el archivo) junto con el resto de los datos del formulario al endpoint correspondiente (por ejemplo, crear mascota).
+Para mandar el archivo desde React hay que usar `FormData`, no JSON:
+ 
+```javascript
+const formData = new FormData()
+formData.append('imagen', file) // "imagen" debe coincidir con el campo que espera el backend
+ 
+const response = await fetch(`${import.meta.env.VITE_API_URL}/api/upload`, {
+  method: 'POST',
+  body: formData
+  // No agregar headers de Content-Type manualmente, el navegador lo hace solo
+})
+ 
+const data = await response.json()
+const fotoUrl = data.url // esto es lo que se guarda y se manda al endpoint final
+```
+ 
+El `name` usado en `formData.append()` tiene que coincidir exactamente con el campo que espera el middleware de multer (`upload.single('nombre_del_campo')`). Si no coincide, el backend no encuentra el archivo.
