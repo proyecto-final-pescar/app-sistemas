@@ -7,9 +7,9 @@ const router = Router();
 // GET /mascotas: devuelve las mascotas del usuario logueado
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        const usuarioId = req.user.id; // Obtengo el ID del dueño desde el token de autenticación
+        const dueñoId = req.user.id; // Obtengo el ID del dueño desde el token de autenticación
 
-        const mascotas = await Mascota.find({ dueñoId: usuarioId }); // Busco en la base de datos del usuario logueado
+        const mascotas = await Mascota.find({ dueñoId: dueñoId }); // Busco en la base de datos del usuario logueado
         res.json(mascotas);
     } catch (error) {
         console.error('Error en GET /mascotas:', error);
@@ -20,7 +20,7 @@ router.get('/', authMiddleware, async (req, res) => {
 // POST /mascotas: Crea una nueva mascota
 router.post('/', authMiddleware, async (req, res) => {
     try {
-        const usuarioId = req.user.id; // Obtengo el ID del dueño desde el token de autenticación
+        const dueñoId = req.user.id; // Obtengo el ID del dueño desde el token de autenticación
 
         const { nombre, especie, raza, fechaNacimiento, foto, esCastrado, peso } = req.body; // Extraigo las propiedades que necesito del body
 
@@ -33,7 +33,7 @@ router.post('/', authMiddleware, async (req, res) => {
             foto,
             esCastrado,
             peso,
-            usuarioId
+            dueñoId
         });
 
         // Guardo la mascota en la base de datos
@@ -56,8 +56,8 @@ router.post('/', authMiddleware, async (req, res) => {
 // PUT /mascotas: Actualiza una mascota existente
 router.put('/:id', authMiddleware, async (req, res) => {
     try {
-        const mascotaId = req.params.id; // El ID de la mascota que viene en la URL (ej: /mascotas/64f1a...)
-        const usuarioId = req.user.id; // Obtengo el ID del dueño desde el token de autenticación
+        const mascotaId = req.params.id; // El ID de la mascota que viene en la URL
+        const dueñoId = req.user.id; // Obtengo el ID del dueño desde el token de autenticación
 
         const mascota = await Mascota.findById(mascotaId); // Busco la mascota en la base de datos por ID
 
@@ -67,7 +67,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
         }
 
         // Si la mascota solicitada no pertenece al usuario:
-        if (mascota.dueñoId.toString() !== usuarioId) {
+        if (mascota.dueñoId.toString() !== dueñoId) {
             return res.status(403).json({ mensaje: 'No tenés permiso para editar esta mascota' });
         }
 
@@ -92,6 +92,36 @@ router.put('/:id', authMiddleware, async (req, res) => {
         }
         console.error('Error en PUT /mascotas', error);
         res.status(500).json({ mensaje: 'Error al actualizar la mascota' });
+    }
+});
+
+// DELETE /mascotas: elimina una mascota
+router.delete('/:id', authMiddleware, async (req, res) => {
+    try {
+        const mascotaId = req.params.id; // El ID de la mascota que viene en la URL
+        const dueñoId = req.user.id; // Obtengo el ID del dueño desde el token de autenticación
+
+        const mascota = await Mascota.findById(mascotaId);
+
+        // Si la mascota no existe o no es encontrada:
+        if (!mascota) {
+            return res.status(404).json({ mensaje: 'Mascota no encontrada' });
+        }
+
+        // Si la mascota solicitada no pertenece al usuario:
+        if (mascota.dueñoId.toString() !== dueñoId) {
+            return res.status(403).json({ mensaje: 'No tenés permiso para eliminar esta mascota' });
+        }
+
+        await mascota.deleteOne();
+        res.json({ mensaje: 'Mascota eliminada correctamente' });
+
+    } catch (error) {
+        if (error.name === 'CastError') {
+            return res.status(400).json({ mensaje: 'El id de la mascota no es válido' });
+        }
+        console.error('Error en DELETE /mascotas', error);
+        res.status(500).json({ mensaje: 'Error al eliminar la mascota' });
     }
 });
 
