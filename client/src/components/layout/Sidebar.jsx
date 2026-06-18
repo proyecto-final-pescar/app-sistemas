@@ -34,6 +34,7 @@ const Sidebar = ({
         boxSizing: "border-box",
         position: "sticky",
         top: 0,
+        fontFamily: "'Inter', Arial, Helvetica, sans-serif",
       }}
     >
       {/* ── Logo ── */}
@@ -85,6 +86,9 @@ const Sidebar = ({
               backgroundColor: "transparent",
               color: "#6b7280",
               fontSize: "14px",
+              lineHeight: "20px",
+              fontWeight: "500",
+              letterSpacing: "-0.15px",
               cursor: "pointer",
               textAlign: "left",
               boxSizing: "border-box",

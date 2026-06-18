@@ -14,15 +14,18 @@ const TopBar = ({ title = "Dashboard", notifications = 2, userInitial = "A" }) =
         justifyContent: "space-between",
         padding: "0 24px",
         overflow: "hidden",
-        fontFamily: "Arial, Helvetica, sans-serif",
+        fontFamily: "'Inter', Arial, Helvetica, sans-serif",
       }}
     >
       {/* Título de la página */}
       <h1
         style={{
           margin: 0,
-          fontSize: "18px",
-          fontWeight: "600",
+          fontFamily: "'Outfit', Arial, Helvetica, sans-serif",
+          fontSize: "30px",
+          lineHeight: "36px",
+          fontWeight: "800",
+          letterSpacing: 0,
           color: "#1e1b4b",
           whiteSpace: "nowrap",
           overflow: "hidden",
@@ -79,8 +82,10 @@ const TopBar = ({ title = "Dashboard", notifications = 2, userInitial = "A" }) =
                 right: "0px",
                 backgroundColor: "#ef4444",
                 color: "#ffffff",
-                fontSize: "10px",
-                fontWeight: "700",
+                fontSize: "14px",
+                lineHeight: "20px",
+                fontWeight: "500",
+                letterSpacing: "-0.15px",
                 width: "18px",
                 height: "18px",
                 borderRadius: "50%",
@@ -107,7 +112,9 @@ const TopBar = ({ title = "Dashboard", notifications = 2, userInitial = "A" }) =
             alignItems: "center",
             justifyContent: "center",
             fontSize: "15px",
-            fontWeight: "600",
+            lineHeight: "20px",
+            fontWeight: "500",
+            letterSpacing: "-0.15px",
             cursor: "pointer",
             flexShrink: 0,
           }}
