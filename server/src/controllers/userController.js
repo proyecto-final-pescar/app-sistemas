@@ -8,7 +8,7 @@ export const obtenerPerfilUsuario = async (req, res) => {
 
         // Control de acceso: solo el propio usuario o un admin pueden ver el perfil
         const esElMismoUsuario = req.user.id === id;
-        const esAdmin = req.user.rol === 'administrador';
+        const esAdmin = req.user.role === 'administrador';
 
         if (!esElMismoUsuario && !esAdmin) {
             return res.status(403).json({
