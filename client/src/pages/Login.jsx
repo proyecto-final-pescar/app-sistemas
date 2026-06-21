@@ -1,6 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth.js";
 
 function Login() {
+  const navigate = useNavigate();
+  const { setUsuario } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -32,7 +36,7 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/auth/login", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -60,6 +64,12 @@ function Login() {
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(userData));
+      setUsuario(userData);
+
+      const rol = userData.rol;
+      if (rol === "dueno") navigate("/home");
+      if (rol === "veterinaria") navigate("/agenda");
+      if (rol === "administrador") navigate("/dashboard");
     } catch (requestError) {
       setError(requestError.message);
     } finally {
