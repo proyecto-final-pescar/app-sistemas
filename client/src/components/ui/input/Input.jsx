@@ -1,4 +1,4 @@
-import './Input.css';
+import './input.css';
 
 function Input({
   label,

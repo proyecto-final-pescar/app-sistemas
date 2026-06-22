@@ -3,6 +3,9 @@ import './Select.css';
 function Select({
   label,
   opciones = [],
+  placeholder = "Seleccioná una opción",
+  value,
+  onChange,
   error
 }) {
   let mensajeError = null;
@@ -22,13 +25,21 @@ function Select({
         {label}
       </label>
 
-      <select className="select-campo">
-        {opciones.map((opcion) => (
-          <option key={opcion} value={opcion}>
-            {opcion}
+        <select
+          className={`select-campo ${value === "" ? "select-placeholder" : ""}`}
+          value={value}
+          onChange={onChange}
+        >
+          <option value="" disabled>
+            {placeholder}
           </option>
-        ))}
-      </select>
+
+          {opciones.map((opcion) => (
+            <option key={opcion} value={opcion}>
+              {opcion}
+            </option>
+          ))}
+        </select>
 
       {mensajeError}
 
