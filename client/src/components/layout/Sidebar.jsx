@@ -82,7 +82,6 @@ const Sidebar = ({
               padding: "10px 12px",
               border: "none",
               borderRadius: "10px",
-              // 🔥 Si activeItem es "Configuración", se pinta morado de forma fija
               backgroundColor: activeItem === "Configuración" ? "#f5f3ff" : "transparent",
               color: activeItem === "Configuración" ? "#7c3aed" : "#6b7280",
               fontWeight: activeItem === "Configuración" ? "600" : "normal",
@@ -96,7 +95,6 @@ const Sidebar = ({
               e.currentTarget.style.color = "#7c3aed";
             }}
             onMouseLeave={(e) => {
-              // 🔥 Al salir el mouse, regresa al color activo o transparente según corresponda
               e.currentTarget.style.backgroundColor = activeItem === "Configuración" ? "#f5f3ff" : "transparent";
               e.currentTarget.style.color = activeItem === "Configuración" ? "#7c3aed" : "#6b7280";
             }}
