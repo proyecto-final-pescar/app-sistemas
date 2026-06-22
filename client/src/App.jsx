@@ -11,6 +11,7 @@ import Turnos from './pages/tutor/Turnos/Turnos';
 import Foro from './pages/tutor/Foro/Foro';
 import AdminDashboard from './pages/admin/AdminDashboard/AdminDashboard';
 import NotFound from './pages/NotFound/NotFound';
+import Usuario from './pages/usuario/Usuario.jsx';
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
@@ -21,6 +22,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Registro />} />
         <Route path="/home" element={<Landing />} />
+        <Route path="/user" element={<Usuario />} />
         <Route path="/mascotas" element={<MisMascotas />} />
         <Route path="/turnos" element={<Turnos />} />
         <Route path="/foro" element={<Foro />} />
