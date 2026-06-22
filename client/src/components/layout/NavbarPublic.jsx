@@ -5,6 +5,7 @@ const NavbarPublic = () => {
         width: "100%",
         backgroundColor: "#ffffff",
         borderBottom: "1px solid #ede9fe",
+        fontFamily: "'Inter', Arial, Helvetica, sans-serif",
       }}
     >
       <nav
@@ -57,8 +58,10 @@ const NavbarPublic = () => {
             borderRadius: "999px",
             color: "#7c3aed",
             fontSize: "14px",
-            fontWeight: "600",
-            fontFamily: "Arial, Helvetica, sans-serif",
+            lineHeight: "20px",
+            fontWeight: "500",
+            letterSpacing: "-0.15px",
+            fontFamily: "'Inter', Arial, Helvetica, sans-serif",
             textDecoration: "none",
             backgroundColor: "#ffffff",
           }}
