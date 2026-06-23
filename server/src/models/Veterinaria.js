@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const veterinariaSchema = new mongoose.Schema(
   {
@@ -202,4 +202,6 @@ const veterinariaSchema = new mongoose.Schema(
 
 veterinariaSchema.index({ coordenadas: '2dsphere' }); // El "2dsphere" permite búsquedas geoespaciales con coordenadas.
 
-module.exports = mongoose.model('Veterinaria', veterinariaSchema);
+const Veterinaria = mongoose.model('Veterinaria', veterinariaSchema);
+
+export default Veterinaria;
