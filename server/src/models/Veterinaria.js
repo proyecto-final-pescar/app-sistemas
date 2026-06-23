@@ -14,6 +14,34 @@ const veterinariaSchema = new mongoose.Schema(
       trim: true
     },
 
+    razonSocial: {
+      type: String,
+      trim: true
+    },
+
+    cuit: {
+      type: String,
+      required: [true, 'El CUIT es requerido'],
+      trim: true
+    },
+
+    telefono: {
+      type: String,
+      required: [true, 'El teléfono es requerido'],
+      trim: true
+    },
+
+    email: {
+      type: String,
+      required: [true, 'El email institucional es requerido'],
+      trim: true
+    },
+
+    sitioWeb: {
+      type: String,
+      trim: true
+    },
+
     coordenadas: {
       type: {
         type: String,
@@ -34,6 +62,11 @@ const veterinariaSchema = new mongoose.Schema(
 
     servicios: [
       {
+        categoria: {
+          type: String,
+          trim: true
+        },
+
         nombre: {
           type: String,
           required: [true, 'El nombre del servicio es requerido'],
@@ -57,20 +90,98 @@ const veterinariaSchema = new mongoose.Schema(
           type: String,
           required: [true, 'La especialidad del profesional es requerida'],
           trim: true
+        },
+        email: {
+          type: String,
+          trim: true
         }
       }
     ],
 
     horarios: {
-      lunes: [String], // ej:  lunes: ['09:00-13:00', '15:00-19:00'],
-      martes: [String],
-      miercoles: [String],
-      jueves: [String],
-      viernes: [String],
-      sabado: [String],
-     domingo: [String]
-    },
+        lunes: {
+            desde: {
+            type: String,
+            trim: true
+            },
+            hasta: {
+            type: String,
+            trim: true
+            }
+        },
 
+        martes: {
+            desde: {
+            type: String,
+            trim: true
+            },
+            hasta: {
+            type: String,
+            trim: true
+            }
+        },
+
+        miercoles: {
+            desde: {
+            type: String,
+            trim: true
+            },
+            hasta: {
+            type: String,
+            trim: true
+            }
+        },
+
+        jueves: {
+            desde: {
+            type: String,
+            trim: true
+            },
+            hasta: {
+            type: String,
+            trim: true
+            }
+        },
+
+        viernes: {
+            desde: {
+            type: String,
+            trim: true
+            },
+            hasta: {
+            type: String,
+            trim: true
+            }
+        },
+
+        sabado: {
+            desde: {
+            type: String,
+            trim: true
+            },
+            hasta: {
+            type: String,
+            trim: true
+            }
+        },
+
+        domingo: {
+            desde: {
+            type: String,
+            trim: true
+            },
+            hasta: {
+            type: String,
+            trim: true
+            }
+        }
+},
+
+    urgencias24hs: {
+         type: Boolean,
+         default: false
+    },
+    
     usuarioId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -83,6 +194,7 @@ const veterinariaSchema = new mongoose.Schema(
       default: 'activa'
     }
   },
+
   {
     timestamps: true
   }
