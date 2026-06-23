@@ -1,10 +1,165 @@
-function MisMascotas() {
+import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import Sidebar from "../../../components/layout/Sidebar";
+import TopBar from "../../../components/layout/TopBar";
+import Button from "../../../components/ui/button/Button";
+import MascotaCard from "../../../components/mascotas/MascotaCard";
+import AddPetCard from "../../../components/mascotas/AddPetCard";
+import {
+  obtenerMascotas,
+  eliminarMascota,
+} from "../../../services/MascotaService";
+import { mascotasMock } from "../../../services/mascotasMock";
+import styles from "../../../styles/MisMascotas.module.css";
+
+// ⚠️ TEMPORAL: poné esto en false (o borrá estas líneas) cuando el login
+// esté conectado y quieras ver datos reales del backend.
+const USAR_MOCK = true;
+
+const MisMascotas = () => {
+  const navigate = useNavigate();
+
+  const [mascotas, setMascotas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+
+  const cargarMascotas = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (USAR_MOCK) {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        setMascotas(mascotasMock);
+        return;
+      }
+
+      const data = await obtenerMascotas();
+      setMascotas(data);
+    } catch (err) {
+      console.error("Error al obtener mascotas:", err);
+
+      const status = err?.response?.status;
+      const mensajeBackend = err?.response?.data?.error;
+
+      if (status === 401) {
+        setError(mensajeBackend || "Tu sesión expiró. Te estamos llevando al login…");
+        setTimeout(() => navigate("/login"), 1500);
+      } else if (mensajeBackend) {
+        setError(mensajeBackend);
+      } else {
+        setError("No pudimos cargar tus mascotas. Intentá nuevamente en unos minutos.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    cargarMascotas();
+  }, [cargarMascotas]);
+
+  const handleAddPet = () => navigate("/mascotas/nueva");
+  const handleViewPet = (id) => navigate(`/mascotas/${id}`);
+  const handleEdit = (id) => navigate(`/mascotas/${id}/editar`);
+
+  const handleDelete = async (id) => {
+    const mascotasPrevias = mascotas;
+    try {
+      setDeletingId(id);
+      setMascotas((prev) => prev.filter((m) => m._id !== id));
+
+      if (USAR_MOCK) {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        return;
+      }
+
+      await eliminarMascota(id);
+    } catch (err) {
+      console.error("Error al eliminar mascota:", err);
+
+      const status = err?.response?.status;
+      const mensajeBackend = err?.response?.data?.error;
+
+      setMascotas(mascotasPrevias);
+
+      if (status === 401) {
+        setError(mensajeBackend || "Tu sesión expiró. Te estamos llevando al login…");
+        setTimeout(() => navigate("/login"), 1500);
+      } else {
+        setError(mensajeBackend || "No se pudo eliminar la mascota. Intentá de nuevo.");
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
-    <div>
-      <h1>Mis Mascotas</h1>
-      <p>Sección en construcción.</p>
+    <div className={styles.layout}>
+      <Sidebar role="tutor" />
+
+      <div className={styles.pageWrapper}>
+        <TopBar title="Mis Mascotas" />
+
+        <main className={styles.content}>
+          <div className={styles.toolbar}>
+            <p className={styles.countLabel}>
+              {loading
+                ? "Cargando mascotas…"
+                : `${mascotas.length} ${mascotas.length === 1
+                    ? "mascota registrada"
+                    : "mascotas registradas"
+                  }`}
+            </p>
+            <Button
+              texto="+ Agregar Mascota"
+              variante="primario"
+              tamaño="mediano"
+              onClick={handleAddPet}
+            />
+          </div>
+
+          {error && <div className={styles.errorBanner}>{error}</div>}
+
+          {loading ? (
+            <div className={styles.grid}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className={styles.skeletonCard} />
+              ))}
+            </div>
+          ) : (
+            <div className={styles.grid}>
+              {mascotas.map((mascota) => (
+                <div
+                  key={mascota._id}
+                  style={{
+                    opacity: deletingId === mascota._id ? 0.5 : 1,
+                    transition: "opacity 0.2s ease",
+                  }}
+                >
+                  <MascotaCard
+                    mascota={mascota}
+                    onView={handleViewPet}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    eliminando={deletingId === mascota._id}
+                  />
+                </div>
+              ))}
+              <AddPetCard onClick={handleAddPet} />
+            </div>
+          )}
+
+          {!loading && mascotas.length === 0 && !error && (
+            <p className={styles.emptyHint}>
+              Todavía no registraste ninguna mascota. ¡Agregá la primera!
+            </p>
+          )}
+        </main>
+      </div>
     </div>
   );
-}
+};
 
 export default MisMascotas;

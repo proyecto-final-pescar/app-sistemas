@@ -1,8 +1,9 @@
-// client/src/components/layout/TutorMenu.jsx
+import { useNavigate, useLocation } from "react-router-dom";
 
 const menuItems = [
   {
     label: "Dashboard",
+    path: "/",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
@@ -12,6 +13,7 @@ const menuItems = [
   },
   {
     label: "Historial Médico",
+    path: "/historial-medico",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -23,6 +25,7 @@ const menuItems = [
   },
   {
     label: "Turnos",
+    path: "/turnos",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -34,6 +37,7 @@ const menuItems = [
   },
   {
     label: "Mis Mascotas",
+    path: "/mascotas",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 21C12 21 4 13.5 4 8.5C4 5.42 6.42 3 9.5 3C11 3 12 4 12 4C12 4 13 3 14.5 3C17.58 3 20 5.42 20 8.5C20 13.5 12 21 12 21Z" />
@@ -42,6 +46,7 @@ const menuItems = [
   },
   {
     label: "Urgencias 24h",
+    path: "/urgencias",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
@@ -52,6 +57,7 @@ const menuItems = [
   },
   {
     label: "Foro Perdidos",
+    path: "/foro",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -60,15 +66,21 @@ const menuItems = [
   },
 ];
 
-const TutorMenu = ({ activeItem, onSelect }) => {
+const TutorMenu = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   return (
     <nav style={{ padding: "8px 0" }}>
       {menuItems.map((item) => {
-        const isActive = activeItem === item.label;
+        // Resalta el ítem activo comparando contra la URL real, no contra
+        // un estado externo. Así funciona sin importar por dónde se haya
+        // entrado a la página (click en el menú, refresh, link directo).
+        const isActive = location.pathname === item.path;
         return (
           <button
             key={item.label}
-            onClick={() => onSelect && onSelect(item.label)}
+            onClick={() => navigate(item.path)}
             style={{
               display: "flex",
               alignItems: "center",

@@ -1,0 +1,255 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f7f7fb;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+/* Columna derecha: TopBar arriba pegado, contenido scrolleable abajo */
+.pageWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.content {
+  flex: 1;
+  padding: 32px 40px 56px;
+  overflow-y: auto;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1e1b2e;
+  margin: 0;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  color: #8b87a3;
+  font-size: 14px;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.countLabel {
+  font-size: 15px;
+  color: #4a4660;
+  margin: 0;
+}
+
+/* Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+/* Card */
+.card {
+  background: #ffffff;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid #ece9f7;
+  box-shadow: 0 4px 14px rgba(30, 27, 46, 0.04);
+  display: flex;
+  flex-direction: column;
+}
+
+.cardImageWrapper {
+  position: relative;
+  height: 220px;
+  width: 100%;
+}
+
+.cardImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cardImageOverlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px 20px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.65) 0%,
+    rgba(0, 0, 0, 0.05) 100%
+  );
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.petName {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.petBreed {
+  color: #f1f0fb;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.cardBody {
+  padding: 18px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tagsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  background: #efe9ff;
+  color: #6d28d9;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+.actionsRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* El primer Button (Ver ficha) ocupa el espacio disponible;
+   Editar y Eliminar quedan a su tamaño natural. */
+.actionsRow > *:first-child {
+  flex: 1;
+}
+
+.actionsRow > *:first-child button {
+  width: 100%;
+}
+
+/* Add pet card */
+.addCard {
+  border: 2px dashed #d8d4ec;
+  border-radius: 20px;
+  background: transparent;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #6d28d9;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.addCard:hover {
+  background: #f7f4ff;
+  border-color: #b9aef0;
+}
+
+.addIconWrapper {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: #efe9ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.addCardTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e1b2e;
+}
+
+.addCardSubtitle {
+  font-size: 13px;
+  color: #8b87a3;
+}
+
+/* Empty / error states */
+.emptyHint {
+  text-align: center;
+  color: #8b87a3;
+  margin-top: 24px;
+}
+
+.errorBanner {
+  background: #fdeaea;
+  color: #b91c1c;
+  border: 1px solid #f5c2c2;
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+/* Skeleton loading */
+.skeletonCard {
+  height: 360px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #f0eef8 25%, #f8f7fc 37%, #f0eef8 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .content {
+    padding: 20px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .toolbar > *:last-child {
+    width: 100%;
+  }
+
+  .toolbar > *:last-child button {
+    width: 100%;
+  }
+}

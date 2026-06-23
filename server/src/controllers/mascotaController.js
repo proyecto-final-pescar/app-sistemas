@@ -18,7 +18,7 @@ export const crearMascota = async (req, res) => {
     try {
         const dueñoId = req.user.id; // Obtengo el ID del dueño desde el token de autenticación
 
-        const { nombre, especie, raza, fechaNacimiento, foto, esCastrado, peso } = req.body; // Extraigo las propiedades que necesito del body
+        const { nombre, especie, raza, sexo, fechaNacimiento, foto, esCastrado, peso } = req.body; // Extraigo las propiedades que necesito del body
 
         // Validación de campos obligatorios
         if (!nombre || !especie) {
@@ -30,6 +30,7 @@ export const crearMascota = async (req, res) => {
             nombre,
             especie,
             raza,
+            sexo,
             fechaNacimiento,
             foto,
             esCastrado,
@@ -72,14 +73,14 @@ export const actualizarMascota = async (req, res) => {
         }
 
         // Actualización de datos
-        const camposPermitidos = ['nombre', 'especie', 'raza', 'fechaNacimiento', 'foto', 'esCastrado', 'peso']; // Lista de los campos que el cliente puede modificar; evitando la posibilidad de que modifique algo 'peligroso' como dueñoId
+        const camposPermitidos = ['nombre', 'especie', 'raza', 'sexo', 'fechaNacimiento', 'foto', 'esCastrado', 'peso']; // Lista de los campos que el cliente puede modificar; evitando la posibilidad de que modifique algo 'peligroso' como dueñoId
 
         camposPermitidos.forEach((campo) => {
             if (req.body[campo] !== undefined) {
                 mascota[campo] = req.body[campo];
             }
         }); // Recorro los campos de la lista para encontrar aquel que el usuario quiera modificar y lo actualizo al nuevo valor.
-        
+
         const mascotaActualizada = await mascota.save(); // Guardo los cambios en la base de datos
         res.json(mascotaActualizada); // Devuelvo al cliente la mascota ya actualizada.
 

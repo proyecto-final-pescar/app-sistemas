@@ -1,6 +1,19 @@
 // client/src/components/layout/TopBar.jsx
+import { useAuth } from "../../context/AuthContext";
+const TopBar = ({ title = "Dashboard", notifications = 2 }) => {
+  const fechaHoy = new Date().toLocaleDateString("es-AR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const { usuario } = useAuth();
 
-const TopBar = ({ title = "Dashboard", notifications = 2, userInitial = "A" }) => {
+const inicial = usuario?.name
+  ? usuario.name.charAt(0).toUpperCase()
+  : "?";
+  const fecha = fechaHoy.charAt(0).toUpperCase() + fechaHoy.slice(1);
+
   return (
     <header
       style={{
@@ -17,20 +30,25 @@ const TopBar = ({ title = "Dashboard", notifications = 2, userInitial = "A" }) =
         fontFamily: "Arial, Helvetica, sans-serif",
       }}
     >
-      {/* Título de la página */}
-      <h1
-        style={{
-          margin: 0,
-          fontSize: "18px",
-          fontWeight: "600",
-          color: "#1e1b4b",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {title}
-      </h1>
+      {/* el titulo de la seccion y agrego la fecha */}
+      <div>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: "18px",
+            fontWeight: "600",
+            color: "#1e1b4b",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {title}
+        </h1>
+        <p style={{ margin: 0, fontSize: "13px", color: "#6b7280", marginTop: "2px" }}>
+          {fecha}
+        </p>
+      </div>
 
       {/* Acciones del lado derecho */}
       <div
@@ -95,25 +113,28 @@ const TopBar = ({ title = "Dashboard", notifications = 2, userInitial = "A" }) =
           )}
         </div>
 
-        {/* Avatar con inicial */}
-        <div
-          style={{
-            width: "40px",
-            height: "40px",
-            borderRadius: "50%",
-            backgroundColor: "#7c3aed",
-            color: "#ffffff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "15px",
-            fontWeight: "600",
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
-        >
-          {userInitial}
-        </div>
+       
+      {/* Avatar del usuario */}
+<div
+  title={usuario?.name || "Usuario"}
+  style={{
+    width: "40px",
+    height: "40px",
+    borderRadius: "50%",
+    backgroundColor: "#7c3aed",
+    color: "#ffffff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    flexShrink: 0,
+    fontWeight: "700",
+    fontSize: "16px",
+    textTransform: "uppercase",
+  }}
+>
+  {inicial}
+</div>
       </div>
     </header>
   );

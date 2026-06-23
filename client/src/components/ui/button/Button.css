@@ -10,6 +10,11 @@
   transition: all 0.2s ease;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* VARIANTES */
 
 .btn-primario {
@@ -65,4 +70,3 @@
   padding: 0 20px;
   font-size: 16px;
 }
-
