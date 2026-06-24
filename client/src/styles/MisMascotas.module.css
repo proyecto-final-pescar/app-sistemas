@@ -71,6 +71,7 @@
   box-shadow: 0 4px 14px rgba(30, 27, 46, 0.04);
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
 .cardImageWrapper {
@@ -122,6 +123,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1;
+  justify-content: space-between;
 }
 
 .tagsRow {
@@ -145,8 +148,7 @@
   gap: 10px;
 }
 
-/* El primer Button (Ver ficha) ocupa el espacio disponible;
-   Editar y Eliminar quedan a su tamaño natural. */
+
 .actionsRow > *:first-child {
   flex: 1;
 }

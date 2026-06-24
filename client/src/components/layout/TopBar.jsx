@@ -1,5 +1,5 @@
 // client/src/components/layout/TopBar.jsx
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 const TopBar = ({ title = "Dashboard", notifications = 2 }) => {
   const fechaHoy = new Date().toLocaleDateString("es-AR", {
     weekday: "long",
@@ -9,7 +9,9 @@ const TopBar = ({ title = "Dashboard", notifications = 2 }) => {
   });
   const { usuario } = useAuth();
 
-const inicial = usuario?.name
+const inicial = usuario?.nombre
+  ? usuario.nombre.charAt(0).toUpperCase()
+  : usuario?.name
   ? usuario.name.charAt(0).toUpperCase()
   : "?";
   const fecha = fechaHoy.charAt(0).toUpperCase() + fechaHoy.slice(1);

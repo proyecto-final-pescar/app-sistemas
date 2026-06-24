@@ -9,12 +9,7 @@ import {
   obtenerMascotas,
   eliminarMascota,
 } from "../../../services/MascotaService";
-import { mascotasMock } from "../../../services/mascotasMock";
 import styles from "../../../styles/MisMascotas.module.css";
-
-// ⚠️ TEMPORAL: poné esto en false (o borrá estas líneas) cuando el login
-// esté conectado y quieras ver datos reales del backend.
-const USAR_MOCK = true;
 
 const MisMascotas = () => {
   const navigate = useNavigate();
@@ -28,13 +23,6 @@ const MisMascotas = () => {
     try {
       setLoading(true);
       setError(null);
-
-      if (USAR_MOCK) {
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        setMascotas(mascotasMock);
-        return;
-      }
-
       const data = await obtenerMascotas();
       setMascotas(data);
     } catch (err) {
@@ -69,12 +57,6 @@ const MisMascotas = () => {
     try {
       setDeletingId(id);
       setMascotas((prev) => prev.filter((m) => m._id !== id));
-
-      if (USAR_MOCK) {
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        return;
-      }
-
       await eliminarMascota(id);
     } catch (err) {
       console.error("Error al eliminar mascota:", err);
@@ -136,6 +118,9 @@ const MisMascotas = () => {
                   style={{
                     opacity: deletingId === mascota._id ? 0.5 : 1,
                     transition: "opacity 0.2s ease",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
                   }}
                 >
                   <MascotaCard
