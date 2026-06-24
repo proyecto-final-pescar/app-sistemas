@@ -1,5 +1,6 @@
 import Veterinaria from '../models/Veterinaria.js';
 
+// GET /veterinarias/buscar: búsqueda geoespacial (requiere autenticación)
 export const buscarVeterinarias = async (req, res) => {
   try {
     if (req.query.lat === undefined || req.query.lng === undefined) {
@@ -16,6 +17,21 @@ export const buscarVeterinarias = async (req, res) => {
 
     if (radio <= 0) {
       return res.status(400).json({ message: 'radio debe ser mayor a 0' });
+    }
+
+    // Validación de rangos geoespaciales
+    if (lat < -90 || lat > 90) {
+      return res.status(400).json({ message: 'La latitud debe estar entre -90 y 90' });
+    }
+
+    if (lng < -180 || lng > 180) {
+      return res.status(400).json({ message: 'La longitud debe estar entre -180 y 180' });
+    }
+
+    // Límite máximo de radio: 50km
+    const RADIO_MAXIMO = 50000;
+    if (radio > RADIO_MAXIMO) {
+      return res.status(400).json({ message: 'El radio máximo permitido es 50000 metros (50km)' });
     }
 
     const veterinarias = await Veterinaria.find({
@@ -37,7 +53,8 @@ export const buscarVeterinarias = async (req, res) => {
     return res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
-// GET /veterinarias: devuelve todas las veterinarias activas (público)
+
+// GET /veterinarias: devuelve todas las veterinarias activas
 export const obtenerVeterinarias = async (req, res) => {
     try {
         const veterinarias = await Veterinaria.find({ estado: 'activa' });
@@ -53,12 +70,13 @@ export const obtenerVeterinarias = async (req, res) => {
     }
 };
 
-// GET /veterinarias/:id: devuelve el detalle completo de una veterinaria (público)
+// GET /veterinarias/:id: devuelve el detalle de una veterinaria activa
 export const obtenerVeterinariaPorId = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const veterinaria = await Veterinaria.findById(id);
+        // Filtramos por id Y por estado activa
+        const veterinaria = await Veterinaria.findOne({ _id: id, estado: 'activa' });
 
         if (!veterinaria) {
             return res.status(404).json({ message: 'El recurso no existe.' });
@@ -83,9 +101,39 @@ export const crearVeterinaria = async (req, res) => {
     try {
         const usuarioId = req.user.id;
 
+        // Solo se permiten estos campos, ignoramos cualquier otro que venga en el body
+        const {
+            nombre,
+            direccion,
+            razonSocial,
+            cuit,
+            telefono,
+            email,
+            sitioWeb,
+            coordenadas,
+            especialidades,
+            servicios,
+            profesionales,
+            horarios,
+            urgencias24hs
+        } = req.body;
+
         const nuevaVeterinaria = new Veterinaria({
-            ...req.body,
+            nombre,
+            direccion,
+            razonSocial,
+            cuit,
+            telefono,
+            email,
+            sitioWeb,
+            coordenadas,
+            especialidades,
+            servicios,
+            profesionales,
+            horarios,
+            urgencias24hs,
             usuarioId
+            // estado no se permite, siempre arranca como 'activa' por defecto
         });
 
         const veterinariaGuardada = await nuevaVeterinaria.save();
@@ -104,14 +152,15 @@ export const crearVeterinaria = async (req, res) => {
     }
 };
 
-// PUT /veterinarias/:id: edita una veterinaria (dueño o admin)
+// PUT /veterinarias/:id: edita una veterinaria activa (dueño o admin)
 export const actualizarVeterinaria = async (req, res) => {
     try {
         const { id } = req.params;
         const usuarioId = req.user.id;
         const esAdmin = req.user.rol === 'administrador';
 
-        const veterinaria = await Veterinaria.findById(id);
+        // Buscamos solo si está activa
+        const veterinaria = await Veterinaria.findOne({ _id: id, estado: 'activa' });
 
         if (!veterinaria) {
             return res.status(404).json({ message: 'El recurso no existe.' });
@@ -121,7 +170,38 @@ export const actualizarVeterinaria = async (req, res) => {
             return res.status(403).json({ message: 'No tenés permisos para realizar esta acción.' });
         }
 
-        Object.assign(veterinaria, req.body);
+        // Solo se permiten estos campos, el cliente no puede cambiar estado ni usuarioId
+        const {
+            nombre,
+            direccion,
+            razonSocial,
+            cuit,
+            telefono,
+            email,
+            sitioWeb,
+            coordenadas,
+            especialidades,
+            servicios,
+            profesionales,
+            horarios,
+            urgencias24hs
+        } = req.body;
+
+        // Solo actualizamos los campos que vinieron en el body (si no vienen, quedan igual)
+        if (nombre !== undefined) veterinaria.nombre = nombre;
+        if (direccion !== undefined) veterinaria.direccion = direccion;
+        if (razonSocial !== undefined) veterinaria.razonSocial = razonSocial;
+        if (cuit !== undefined) veterinaria.cuit = cuit;
+        if (telefono !== undefined) veterinaria.telefono = telefono;
+        if (email !== undefined) veterinaria.email = email;
+        if (sitioWeb !== undefined) veterinaria.sitioWeb = sitioWeb;
+        if (coordenadas !== undefined) veterinaria.coordenadas = coordenadas;
+        if (especialidades !== undefined) veterinaria.especialidades = especialidades;
+        if (servicios !== undefined) veterinaria.servicios = servicios;
+        if (profesionales !== undefined) veterinaria.profesionales = profesionales;
+        if (horarios !== undefined) veterinaria.horarios = horarios;
+        if (urgencias24hs !== undefined) veterinaria.urgencias24hs = urgencias24hs;
+
         const veterinariaActualizada = await veterinaria.save();
 
         res.status(200).json({
