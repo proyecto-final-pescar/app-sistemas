@@ -19,4 +19,5 @@ router.use('/usuarios', usuariosRouter);
 
 router.use('/veterinarias', veterinariasRouter);
 
+
 export default router;
