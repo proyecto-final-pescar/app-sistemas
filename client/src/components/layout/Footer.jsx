@@ -6,7 +6,7 @@ const Footer = () => {
         backgroundColor: "#ffffff",
         borderTop: "1px solid #ede9fe",
         padding: "20px 40px",
-        fontFamily: "Arial, Helvetica, sans-serif",
+        fontFamily: "'Inter', Arial, Helvetica, sans-serif",
       }}
     >
       <div
@@ -56,8 +56,10 @@ const Footer = () => {
           style={{
             margin: 0,
             color: "#7c6aa6",
-            fontSize: "12px",
-            fontWeight: "500",
+            fontSize: "14px",
+            lineHeight: "20px",
+            fontWeight: "400",
+            letterSpacing: "-0.15px",
           }}
         >
           Datos protegidos bajo ley 25.326
@@ -67,8 +69,10 @@ const Footer = () => {
           style={{
             margin: 0,
             color: "#7c6aa6",
-            fontSize: "13px",
-            fontWeight: "500",
+            fontSize: "14px",
+            lineHeight: "20px",
+            fontWeight: "400",
+            letterSpacing: "-0.15px",
           }}
         >
           © 2026 MyPet · Buenos Aires, Argentina

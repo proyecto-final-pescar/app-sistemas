@@ -71,7 +71,7 @@ const TutorMenu = () => {
   const location = useLocation();
 
   return (
-    <nav style={{ padding: "8px 0" }}>
+    <nav style={{ padding: "8px 0", fontFamily: "'Inter', Arial, Helvetica, sans-serif" }}>
       {menuItems.map((item) => {
         // Resalta el ítem activo comparando contra la URL real, no contra
         // un estado externo. Así funciona sin importar por dónde se haya
@@ -92,7 +92,9 @@ const TutorMenu = () => {
               backgroundColor: isActive ? "#ede9fe" : "transparent",
               color: isActive ? "#6d28d9" : "#6b7280",
               fontSize: "14px",
-              fontWeight: isActive ? "600" : "400",
+              lineHeight: "20px",
+              fontWeight: isActive ? "500" : "400",
+              letterSpacing: "-0.15px",
               cursor: "pointer",
               textAlign: "left",
               transition: "background-color 0.15s, color 0.15s",
