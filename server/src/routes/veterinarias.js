@@ -1,8 +1,23 @@
 import { Router } from 'express';
-import { buscarVeterinarias } from '../controllers/veterinariaController.js';
+import verifyToken from '../middleware/auth.js'
+import verificarRol from '../middleware/roles.js'
+import {
+    buscarVeterinarias,
+    obtenerVeterinarias,
+    obtenerVeterinariaPorId,
+    crearVeterinaria,
+    actualizarVeterinaria
+} from '../controllers/veterinariaController.js'
 
-const router = Router();
+const router = Router()
 
-router.get('/buscar', buscarVeterinarias);
+// Rutas públicas (no requieren autenticación)
+router.get('/buscar', buscarVeterinarias)
+router.get('/', obtenerVeterinarias)
+router.get('/:id', obtenerVeterinariaPorId)
 
-export default router;
+// Rutas protegidas
+router.post('/', verifyToken, verificarRol('veterinaria'), crearVeterinaria)
+router.put('/:id', verifyToken, actualizarVeterinaria)
+
+export default router
