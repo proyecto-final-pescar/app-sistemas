@@ -12,12 +12,21 @@
 
 .select-campo {
   width: 100%;
+  box-sizing: border-box;
   padding: 12px 14px;
   border: 1px solid #e5ddf8;
   border-radius: 14px;
-  background-color: #f2ecff;
+  background-color: #ffffff;
   font-size: 14px;
+  font-family: "Inter", sans-serif;
   outline: none;
+  min-height: 52px;
+  line-height: 20px;
+  appearance: none;
+}
+
+.select-placeholder {
+  color: #9ca3af;
 }
 
 .select-campo:focus {
