@@ -11,6 +11,7 @@ import Turnos from './pages/tutor/Turnos/Turnos';
 import Foro from './pages/tutor/Foro/Foro';
 import AdminDashboard from './pages/admin/AdminDashboard/AdminDashboard';
 import NotFound from './pages/NotFound/NotFound';
+import Emergencias from './pages/tutor/Emergencias/Emergencias';
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
@@ -26,6 +27,7 @@ function App() {
         <Route path="/foro" element={<Foro />} />
         <Route path="/veterinarias" element={<h1>Sección Veterinarias</h1>} />
         <Route path="/agenda" element={<h1>Agenda veterinaria</h1>} />
+        <Route path="/urgencias" element={<Emergencias />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/dashboard" element={<AdminDashboard />} />
         <Route path="/" element={
