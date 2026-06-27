@@ -43,6 +43,17 @@ const turnoSchema = new mongoose.Schema(
       default: 'pendiente'
     },
 
+    profesionalNombre: {
+      type: String,
+      trim: true
+    },
+
+    pagoId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Pago'
+      // No requerido: el modelo de pagos aún no existe
+    },
+
     notas: {
       type: String,
       trim: true
