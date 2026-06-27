@@ -51,9 +51,19 @@ export const eliminarMascota = async (id) => {
     return data;
 };
 
+/**
+ * Crea una nueva mascota.
+ * POST /mascotas
+ */
+export const crearMascota = async (data) => {
+  const { data: response } = await api.post("/mascotas", data);
+  return response;
+};
+
 export default {
-    obtenerMascotas,
-    obtenerMascotaPorId,
-    actualizarMascota,
-    eliminarMascota,
+  obtenerMascotas,
+  obtenerMascotaPorId,
+  crearMascota,
+  actualizarMascota,
+  eliminarMascota,
 };

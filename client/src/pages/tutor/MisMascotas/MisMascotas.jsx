@@ -5,6 +5,8 @@ import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
 import MascotaCard from "../../../components/mascotas/MascotaCard";
 import AddPetCard from "../../../components/mascotas/AddPetCard";
+import FormularioMascota from "../../../components/forms/FormularioMascota.jsx";
+import Modal from "../../../components/layout/modal/Modal";
 import {
   obtenerMascotas,
   eliminarMascota,
@@ -15,6 +17,8 @@ const MisMascotas = () => {
   const navigate = useNavigate();
 
   const [mascotas, setMascotas] = useState([]);
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [mascotaSeleccionada, setMascotaSeleccionada] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -48,9 +52,21 @@ const MisMascotas = () => {
     cargarMascotas();
   }, [cargarMascotas]);
 
-  const handleAddPet = () => navigate("/mascotas/nueva");
+  const abrirModalNuevaMascota = () => {
+  setMascotaSeleccionada(null);
+  setModalAbierto(true);
+};
+
+
   const handleViewPet = (id) => navigate(`/mascotas/${id}`);
-  const handleEdit = (id) => navigate(`/mascotas/${id}/editar`);
+ const handleEdit = (id) => {
+  const mascota = mascotas.find((m) => m._id === id);
+
+  if (!mascota) return;
+
+  setMascotaSeleccionada(mascota);
+  setModalAbierto(true);
+};
 
   const handleDelete = async (id) => {
     const mascotasPrevias = mascotas;
@@ -94,12 +110,12 @@ const MisMascotas = () => {
                     : "mascotas registradas"
                   }`}
             </p>
-            <Button
-              texto="+ Agregar Mascota"
-              variante="primario"
-              tamaño="mediano"
-              onClick={handleAddPet}
-            />
+                <Button
+                texto="+ Agregar Mascota"
+                variante="primario"
+                tamaño="mediano"
+                 onClick={abrirModalNuevaMascota}
+              />
           </div>
 
           {error && <div className={styles.errorBanner}>{error}</div>}
@@ -132,7 +148,9 @@ const MisMascotas = () => {
                   />
                 </div>
               ))}
-              <AddPetCard onClick={handleAddPet} />
+              <AddPetCard
+                  onClick={abrirModalNuevaMascota}
+                />
             </div>
           )}
 
@@ -142,8 +160,25 @@ const MisMascotas = () => {
             </p>
           )}
         </main>
-      </div>
-    </div>
+
+
+        {modalAbierto && (
+          <Modal
+            isOpen={modalAbierto}
+            onClose={() => setModalAbierto(false)}
+          >
+            <FormularioMascota
+              mascotaInicial={mascotaSeleccionada}
+              onCancelar={() => setModalAbierto(false)}
+              onGuardado={() => {
+                setModalAbierto(false);
+                cargarMascotas();
+              }}
+            />
+          </Modal>
+        )}
+      </div> 
+    </div>  
   );
 };
 
