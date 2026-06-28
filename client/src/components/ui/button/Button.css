@@ -10,6 +10,11 @@
   transition: all 0.2s ease;
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* VARIANTES */
 
 .btn-primario {
@@ -47,6 +52,17 @@
   border: 1px solid #d1d5db;
 }
 
+ /*boton usado en mis mascotas */
+.btn-ver-ficha {
+  background-color: transparent;
+  color: #7C3AED;
+  border: 1.5px solid #7C3AED;
+  width: 100%;
+  text-align: center;
+}
+.btn-ver-ficha:hover {
+  background-color: #EDE9FE;
+}
 /* TAMAÑOS */
 
 .btn-chico {
@@ -65,4 +81,3 @@
   padding: 0 20px;
   font-size: 16px;
 }
-

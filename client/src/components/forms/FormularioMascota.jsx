@@ -4,19 +4,36 @@ import "./FormularioMascota.css";
 import Input from "../ui/input/Input";
 import Select from "../ui/select/Select";
 import Button from "../ui/button/Button";
+import {
+  crearMascota,
+  actualizarMascota,
+} from "../../services/MascotaService";
+import { subirImagen } from "../../services/uploadService";
 
-function FormularioMascota({ mascotaInicial = null, onCancelar }) {
+function FormularioMascota({
+  mascotaInicial = null,
+  onCancelar,
+  onGuardado,
+})  {
   const esEdicion = Boolean(mascotaInicial);
 
   const [nombre, setNombre] = useState(mascotaInicial?.nombre || "");
   const [especie, setEspecie] = useState(mascotaInicial?.especie || "");
   const [raza, setRaza] = useState(mascotaInicial?.raza || "");
   const [fechaNacimiento, setFechaNacimiento] = useState(
-    mascotaInicial?.fechaNacimiento || ""
-  );
+    mascotaInicial?.fechaNacimiento
+        ? mascotaInicial.fechaNacimiento.split("T")[0]
+        : ""
+    );
   const [sexo, setSexo] = useState(mascotaInicial?.sexo || "");
   const [peso, setPeso] = useState(mascotaInicial?.peso || "");
+  const [esCastrado, setEsCastrado] = useState(mascotaInicial?.esCastrado ?? false);
   const [foto, setFoto] = useState(null);
+const [guardando, setGuardando] = useState(false);
+
+
+
+
 
   const [errores, setErrores] = useState({});
 
@@ -47,13 +64,20 @@ function FormularioMascota({ mascotaInicial = null, onCancelar }) {
 
     return Object.keys(nuevosErrores).length === 0;
   }
-
-  function manejarSubmit(evento) {
+async function manejarSubmit(evento) {
     evento.preventDefault();
 
-    const formularioValido = validarFormularioMascota();
+    if (!validarFormularioMascota()) return;
 
-    if (formularioValido) {
+    setGuardando(true);
+
+    try {
+      let urlFoto = mascotaInicial?.foto || "";
+
+      if (foto) {
+        urlFoto = await subirImagen(foto);
+      }
+
       const datosMascota = {
         nombre,
         especie,
@@ -61,17 +85,31 @@ function FormularioMascota({ mascotaInicial = null, onCancelar }) {
         fechaNacimiento,
         sexo,
         peso,
-        foto,
+        esCastrado,   
+        foto: urlFoto,
       };
 
-      console.log(datosMascota);
+      if (esEdicion) {
+        await actualizarMascota(mascotaInicial._id, datosMascota);
+      } else {
+        await crearMascota(datosMascota);
+      }
+
+      onGuardado?.();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setGuardando(false);
     }
   }
 
-  function manejarCambioFoto(evento) {
-    const archivo = evento.target.files[0];
+    function manejarCambioFoto(evento) {
+  const archivo = evento.target.files?.[0];
+
+  if (archivo) {
     setFoto(archivo);
   }
+}
 
   return (
     <form className="formulario-mascota" onSubmit={manejarSubmit}>
@@ -80,15 +118,31 @@ function FormularioMascota({ mascotaInicial = null, onCancelar }) {
 
         <h2>{esEdicion ? "Editar Mascota" : "Agregar Mascota"}</h2>
 
-        <p>Registrá a tu próximo compañero</p>
+       <p>{esEdicion ? "Modificá los datos de tu mascota" : "Registrá a tu próximo compañero"}</p>
       </div>
 
-      <label className="foto-upload">
-        <span className="foto-icono">📷</span>
-        <span>Subir foto</span>
+<label className="foto-upload">
+  {foto || mascotaInicial?.foto ? (
+    <div className="foto-preview-wrapper">
+      <img
+        className="preview-foto"
+        src={foto ? URL.createObjectURL(foto) : mascotaInicial.foto}
+        alt="Vista previa"
+      />
+      <div className="foto-edit-overlay">✏️</div>
+    </div>
+  ) : (
+    <>
+      <span className="foto-icono">📷</span>
+      <span>{esEdicion ? "Cambiar foto" : "Subir foto"}</span>
+    </>
+  )}
+  <input type="file" accept="image/*" onChange={manejarCambioFoto} />
+</label>
 
-        <input type="file" accept="image/*" onChange={manejarCambioFoto} />
-      </label>
+
+      
+  
 
       <Input
         label="Nombre"
@@ -157,6 +211,23 @@ function FormularioMascota({ mascotaInicial = null, onCancelar }) {
         onChange={(evento) => setPeso(evento.target.value)}
         error={errores.peso}
       />
+      <div>
+      <label className="input-label">Castración</label>
+      <div className="sexo-opciones">
+        <div
+          className={`sexo-card ${esCastrado === true ? "sexo-card-selected" : ""}`}
+          onClick={() => setEsCastrado(true)}
+        >
+          Castrad@
+        </div>
+        <div
+          className={`sexo-card ${esCastrado === false ? "sexo-card-selected" : ""}`}
+          onClick={() => setEsCastrado(false)}
+        >
+          No castrad@
+        </div>
+      </div>
+    </div>
 
       <div className="formulario-acciones">
         <Button
@@ -167,9 +238,16 @@ function FormularioMascota({ mascotaInicial = null, onCancelar }) {
           onClick={onCancelar}
         />
 
-        <Button
+       <Button
           type="submit"
-          texto={esEdicion ? "Guardar cambios" : "Agregar Mascota"}
+          disabled={guardando}
+          texto={
+            guardando
+              ? "Guardando..."
+              : esEdicion
+              ? "Guardar cambios"
+              : "Agregar Mascota"
+          }
           variante="primario"
           tamaño="mediano"
         />
@@ -177,5 +255,4 @@ function FormularioMascota({ mascotaInicial = null, onCancelar }) {
     </form>
   );
 }
-
 export default FormularioMascota;

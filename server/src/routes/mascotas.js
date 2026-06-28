@@ -1,12 +1,12 @@
 import { Router } from 'express'; // Uso la función Router para crear un enrutador para las rutas de mascotas
 import authMiddleware from '../middleware/auth.js'; // Importo el middleware de autenticación para proteger las rutas de mascotas
 // Importo las funciones del controlador de mascotas
-import { 
-    obtenerMascotas, 
-    crearMascota, 
-    actualizarMascota, 
-    eliminarMascota 
-} from '../controllers/mascotaController.js'; 
+import {
+    obtenerMascotas,
+    crearMascota,
+    actualizarMascota,
+    eliminarMascota
+} from '../controllers/mascotaController.js';
 
 const router = Router();
 

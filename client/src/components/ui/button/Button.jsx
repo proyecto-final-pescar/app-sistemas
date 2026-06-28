@@ -1,11 +1,12 @@
 import './Button.css';
 
-function Button({ type = "button", texto, variante, tamaño, onClick }) {
+function Button({ type = "button", texto, variante, tamaño, onClick, disabled = false }) {
   return (
     <button
       type={type}
       className={`btn btn-${variante} btn-${tamaño}`}
       onClick={onClick}
+      disabled={disabled}
     >
       {texto}
     </button>
@@ -13,7 +14,6 @@ function Button({ type = "button", texto, variante, tamaño, onClick }) {
 }
 
 export default Button;
-
 /* La funcion se va a llamar de la siguiente forma 
 
 <Button
