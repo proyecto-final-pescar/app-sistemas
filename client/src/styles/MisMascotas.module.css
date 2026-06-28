@@ -62,13 +62,12 @@
   gap: 24px;
 }
 
-/* Card */
 .card {
   background: #ffffff;
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid #ece9f7;
-  box-shadow: 0 4px 14px rgba(30, 27, 46, 0.04);
+  box-shadow: 0 8px 24px rgba(30, 27, 46, 0.08);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -105,6 +104,7 @@
 
 .petName {
   color: #ffffff;
+  font-family: 'Outfit', sans-serif;
   font-size: 20px;
   font-weight: 800;
   display: flex;
@@ -142,19 +142,19 @@
   border-radius: 999px;
 }
 
+
+
+
 .actionsRow {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
 }
 
-
-.actionsRow > *:first-child {
-  flex: 1;
-}
-
-.actionsRow > *:first-child button {
-  width: 100%;
+.actionsSecundarias {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 /* Add pet card */
@@ -254,4 +254,26 @@
   .toolbar > *:last-child button {
     width: 100%;
   }
+}
+
+.cardImagePlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.successBanner {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
 }

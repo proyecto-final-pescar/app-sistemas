@@ -22,6 +22,8 @@ const MisMascotas = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [mensajeExito, setMensajeExito] = useState(null);
+
 
   const cargarMascotas = useCallback(async () => {
     try {
@@ -29,6 +31,7 @@ const MisMascotas = () => {
       setError(null);
       const data = await obtenerMascotas();
       setMascotas(data);
+     
     } catch (err) {
       console.error("Error al obtener mascotas:", err);
 
@@ -57,6 +60,11 @@ const MisMascotas = () => {
   setModalAbierto(true);
 };
 
+const mostrarExito = (mensaje) => {
+  setMensajeExito(mensaje);
+  setTimeout(() => setMensajeExito(null), 3000);
+};
+
 
   const handleViewPet = (id) => navigate(`/mascotas/${id}`);
  const handleEdit = (id) => {
@@ -80,7 +88,7 @@ const MisMascotas = () => {
       const status = err?.response?.status;
       const mensajeBackend = err?.response?.data?.error;
 
-      setMascotas(mascotasPrevias);
+     setMascotas(mascotasPrevias);
 
       if (status === 401) {
         setError(mensajeBackend || "Tu sesión expiró. Te estamos llevando al login…");
@@ -119,6 +127,9 @@ const MisMascotas = () => {
           </div>
 
           {error && <div className={styles.errorBanner}>{error}</div>}
+          {mensajeExito && (                                
+            <div className={styles.successBanner}>{mensajeExito}</div>
+          )}
 
           {loading ? (
             <div className={styles.grid}>
@@ -173,7 +184,12 @@ const MisMascotas = () => {
               onGuardado={() => {
                 setModalAbierto(false);
                 cargarMascotas();
-              }}
+                 mostrarExito(                                    
+                  mascotaSeleccionada
+                    ? "¡Mascota actualizada correctamente!"
+                    : "¡Mascota agregada correctamente!"
+                );
+                }}
             />
           </Modal>
         )}

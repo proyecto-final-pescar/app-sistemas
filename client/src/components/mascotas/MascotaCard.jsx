@@ -5,8 +5,7 @@ import ConfirmModal from "../ui/confirm-modal/ConfirmModal";
 import { formatearEdad } from "../../utils/EdadMascota";
 import styles from "../../styles/MisMascotas.module.css";
 
-const PLACEHOLDER_IMG =
-    "https://placehold.co/600x400/EDE9FE/7C3AED?text=Sin+foto";
+
 
 const ESPECIE_EMOJI = {
     gato: "🐱",
@@ -58,14 +57,23 @@ const MascotaCard = ({ mascota, onView, onEdit, onDelete, eliminando = false }) 
     return (
         <article className={styles.card}>
             <div className={styles.cardImageWrapper}>
-                <img
-                    src={foto || PLACEHOLDER_IMG}
-                    alt={nombre}
-                    className={styles.cardImage}
-                    onError={(e) => {
-                        e.currentTarget.src = PLACEHOLDER_IMG;
-                    }}
-                />
+                {foto ? (
+    <img
+        src={foto}
+        alt={nombre}
+        className={styles.cardImage}
+        onError={(e) => {
+            e.currentTarget.style.display = "none";
+            e.currentTarget.nextSibling.style.display = "flex";
+        }}
+    />
+) : null}
+<div
+    className={styles.cardImagePlaceholder}
+    style={{ display: foto ? "none" : "flex" }}
+>
+    <span style={{ fontSize: 48 }}>{emoji}</span>
+</div>
                 <div className={styles.cardImageOverlay}>
                     <span className={styles.petName}>
                         <span aria-hidden="true">{emoji}</span> {nombre}
@@ -86,28 +94,30 @@ const MascotaCard = ({ mascota, onView, onEdit, onDelete, eliminando = false }) 
                     </span>
                 </div>
 
-                <div className={styles.actionsRow}>
+               <div className={styles.actionsRow}>
                     <Button
-                        texto="Ver ficha"
-                        variante="secundario"
+                        texto="Ver ficha completa ›"
+                        variante="ver-ficha"
                         tamaño="chico"
                         onClick={() => onView(_id)}
                     />
-                    <Button
+                    <div className={styles.actionsSecundarias}>
+                        <Button
                         texto="Editar"
                         variante="secundario"
                         tamaño="chico"
                         onClick={() => onEdit(_id)}
-                    />
-                    <Button
+                        />
+                        <Button
                         texto="Eliminar"
                         variante="peligro-borde"
                         tamaño="chico"
                         onClick={handleDeleteClick}
                         disabled={eliminando}
-                    />
+                        />
+                    </div>
+                    </div>
                 </div>
-            </div>
 
             <ConfirmModal
                 abierto={modalAbierto}
