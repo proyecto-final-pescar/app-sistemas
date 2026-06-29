@@ -12,6 +12,7 @@ import Foro from './pages/tutor/Foro/Foro';
 import AdminDashboard from './pages/admin/AdminDashboard/AdminDashboard';
 import NotFound from './pages/NotFound/NotFound';
 import Emergencias from './pages/tutor/Emergencias/Emergencias';
+import RegistroDeVeterinaria from './pages/veterinaria/RegistroDeVeterinaria/RegistroDeVeterinaria';
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
@@ -19,6 +20,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/registro-veterinaria" element={<RegistroDeVeterinaria />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Registro />} />
         <Route path="/home" element={<Landing />} />
