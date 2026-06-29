@@ -138,8 +138,6 @@ export default function RegistroDeVeterinaria() {
 
   const handleContinuarStep1 = crearHandleContinuar(validateStep1, setErrorStep1, () => setStep(2));
 
- 
-
   // Servicios
   const handleChangeServicio = (i, field, value) =>
     setServicios((prev) => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
@@ -176,9 +174,81 @@ export default function RegistroDeVeterinaria() {
     if (Object.keys(diasSeleccionados).length === 0) return "Seleccioná al menos un día de atención.";
     return "";
   };
-  // El botón final dice "Guardar Cambios" en vez de "Continuar", pero el patrón
-  // (validar -> mostrar error o ejecutar acción) es el mismo, así que reutiliza el helper.
-  const handleGuardar = crearHandleContinuar(validateStep4, setErrorStep4, () => alert("¡Registro completo! ✅"));
+  
+  //const handleGuardar = crearHandleContinuar(validateStep4, setErrorStep4, () => alert("¡Registro completo! ✅"));
+
+  const [guardando, setGuardando] = useState(false);
+
+const construirHorarios = () => {
+  const mapaDias = {
+    Lunes: "lunes", Martes: "martes", Miércoles: "miercoles",
+    Jueves: "jueves", Viernes: "viernes", Sábado: "sabado", Domingo: "domingo",
+  };
+  const horarios = {};
+  Object.values(mapaDias).forEach((clave) => { horarios[clave] = { desde: "", hasta: "" }; });
+  Object.entries(diasSeleccionados).forEach(([dia, horario]) => {
+    const clave = mapaDias[dia];
+    if (clave) horarios[clave] = { desde: horario.desde, hasta: horario.hasta };
+  });
+  return horarios;
+};
+
+const handleGuardarReal = async () => {
+  setGuardando(true);
+  setErrorStep4("");
+  try {
+    const token = localStorage.getItem("token");
+
+    const body = {
+      nombre: form.nombreClinica,
+      direccion: form.direccion,
+      razonSocial: form.razonSocial,
+      cuit: form.cuit,
+      telefono: form.telefono,
+      email: form.email,
+      sitioWeb: form.sitioWeb,
+      coordenadas: { type: "Point", coordinates: [form.lng, form.lat] },
+      especialidades: [],
+      servicios: servicios.map((s) => ({
+        categoria: s.categoria,
+        nombre: s.nombre,
+        precio: Number(s.precio),
+      })),
+      profesionales: profesionales.map((p) => ({
+        nombre: p.nombre,
+        especialidad: p.especialidad,
+        email: p.email,
+      })),
+      horarios: construirHorarios(),
+      urgencias24hs: urgencias,
+    };
+
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/veterinarias`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      setErrorStep4(data.message || "No se pudo guardar el registro.");
+      return;
+    }
+
+    //!AVISO TEMPORAL DE QUE ESTA TODO OK
+    alert("¡Registro completo! ✅");
+  } catch (error) {
+    setErrorStep4("Error de conexión. Intentá de nuevo.");
+  } finally {
+    setGuardando(false);
+  }
+};
+
+const handleGuardar = crearHandleContinuar(validateStep4, setErrorStep4, handleGuardarReal);  
 
   return (
     <div style={styles.shell}>
@@ -447,8 +517,8 @@ export default function RegistroDeVeterinaria() {
 
               <div style={styles.botonesRow}>
                 <button onClick={() => setStep(3)} style={styles.btnBack}>← Atrás</button>
-                <button onClick={handleGuardar} style={{ ...styles.btnGreen, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                  Guardar Cambios <IconSave />
+                <button onClick={handleGuardar} disabled={guardando} style={{ ...styles.btnGreen, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", opacity: guardando ? 0.6 : 1 }}>
+                  {guardando ? "Guardando..." : "Guardar Cambios"} <IconSave />
                 </button>
               </div>
             </div>
