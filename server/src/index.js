@@ -16,21 +16,23 @@ const corsOptions = {
     allowedHeaders: ['Content-Type', 'Authorization']
 }
 
-app.use(express.json());
 app.use(cors(corsOptions));
+app.use(express.json());
 
 app.use('/api', routes);
+app.use('/api/upload', uploadRoutes)
 connectDB();
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en puerto ${PORT}`);
+});
 
 app.get('/', (req, res) => {
     res.json({ message: 'Servidor funcionando' });
 });
 
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en puerto ${PORT}`);
-});
 
-app.use('/api/upload', uploadRoutes)
+
+
 
 /*import verifyToken from './middleware/auth.js';*/
 
