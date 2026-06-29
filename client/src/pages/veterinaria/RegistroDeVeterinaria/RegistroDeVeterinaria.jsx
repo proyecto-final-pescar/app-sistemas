@@ -136,17 +136,10 @@ export default function RegistroDeVeterinaria() {
     return "";
   };
 
-  //---------------------------------------------------------------------------------------------------------------------------------
-  //!CUANDO FUNCIONE LA API HAY QUE DESCOMENTAR ESTA LINEA
-  //const handleContinuarStep1 = crearHandleContinuar(validateStep1, setErrorStep1, () => setStep(2));
+  const handleContinuarStep1 = crearHandleContinuar(validateStep1, setErrorStep1, () => setStep(2));
 
-  //!CUANDO FUNCIONA LA API HAY QUE SACAR ESTE BLOQUE DE CODIGO O COMENTARLO
-  const handleContinuarStep1 = () => {
-    setErrorStep1("");
-    setStep(2);
-  };
+ 
 
-  //----------------------------------------------------------------------------------------------------------------------------------
   // Servicios
   const handleChangeServicio = (i, field, value) =>
     setServicios((prev) => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
@@ -262,7 +255,7 @@ export default function RegistroDeVeterinaria() {
           </>
         )}
 
-        {/* ══ PASO 2 ══ */}
+        {/* ══ Pag 2 ══ */}
         {step === 2 && (
           <>
             <div style={{ ...styles.heroBanner, background: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)" }}>
@@ -311,7 +304,7 @@ export default function RegistroDeVeterinaria() {
           </>
         )}
 
-        {/* ══ PASO 3 ══ */}
+        {/* ══ Pag 3 ══ */}
         {step === 3 && (
           <>
             <div style={{ ...styles.heroBanner, background: "linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%)" }}>
@@ -357,7 +350,7 @@ export default function RegistroDeVeterinaria() {
           </>
         )}
 
-        {/* ══ PASO 4 ══ */}
+        {/* ══ Pag 4 ══ */}
         {step === 4 && (
           <>
             <div style={{ ...styles.heroBanner, background: "linear-gradient(135deg, #5b21b6 0%, #3b0764 100%)" }}>
