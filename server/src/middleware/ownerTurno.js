@@ -2,7 +2,7 @@ import Turno from '../models/Turno.js';
 
 // protege la ruta: solo el usuario dueño del turno (quien lo reservó) puede cancelarlo.
 
-export const esDueñoTurno = async (req, res, next) => {
+export const ownerTurno = async (req, res, next) => {
   try {
     const { id } = req.params;
     const turno = await Turno.findById(id);

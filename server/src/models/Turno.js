@@ -43,9 +43,8 @@ const turnoSchema = new mongoose.Schema(
       default: 'pendiente'
     },
 
-    profesionalNombre: {
-      type: String,
-      trim: true
+    profesionalId: {
+      type: mongoose.Schema.Types.ObjectId
     },
 
     pagoId: {

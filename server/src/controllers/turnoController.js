@@ -3,7 +3,6 @@ import Veterinaria from '../models/Veterinaria.js';
 
 const HORAS_LIMITE = 24;
 
-// Combina fecha (Date) + hora ("HH:MM") en un único Date real
 const obtenerFechaHoraCompleta = (turno) => {
   const fecha = new Date(turno.fecha);
   const [horas, minutos] = turno.hora.split(':').map(Number);
@@ -16,21 +15,28 @@ const horasHastaTurno = (turno) => {
   return diffMs / (1000 * 60 * 60);
 };
 
-// POST /turnos  -> reservar (crear) un turno
+// POST /turnos -> reservar (crear) un turno
 export const reservarTurno = async (req, res) => {
   try {
-    const { fecha, hora, motivo, mascotaId, veterinariaId, profesionalNombre, notas } = req.body;
+    const { fecha, hora, motivo, mascotaId, veterinariaId, profesionalId, notas } = req.body;
 
     if (!fecha || !hora || !motivo || !mascotaId || !veterinariaId) {
-      return res.status(400).json({ mensaje: 'Faltan datos obligatorios para reservar el turno' });
+      return res.status(400).json({ message: 'Faltan datos obligatorios para reservar el turno' });
     }
 
     const veterinaria = await Veterinaria.findById(veterinariaId);
     if (!veterinaria || veterinaria.estado !== 'activa') {
-      return res.status(404).json({ mensaje: 'Veterinaria no disponible' });
+      return res.status(404).json({ message: 'Veterinaria no disponible' });
     }
 
-    // Verificamos que ese horario no esté ya ocupado por un turno activo
+    // Si se especifica un profesional, validar que pertenezca a esa veterinaria
+    if (profesionalId) {
+      const profesionalValido = veterinaria.profesionales.id(profesionalId);
+      if (!profesionalValido) {
+        return res.status(400).json({ message: 'El profesional no pertenece a esta veterinaria' });
+      }
+    }
+
     const turnoExistente = await Turno.findOne({
       veterinariaId,
       fecha,
@@ -39,7 +45,7 @@ export const reservarTurno = async (req, res) => {
     });
 
     if (turnoExistente) {
-      return res.status(400).json({ mensaje: 'Ese horario ya está reservado' });
+      return res.status(400).json({ message: 'Ese horario ya está reservado' });
     }
 
     const nuevoTurno = await Turno.create({
@@ -48,57 +54,65 @@ export const reservarTurno = async (req, res) => {
       motivo,
       mascotaId,
       veterinariaId,
-      usuarioId: req.user.id, // dueño del turno = usuario autenticado
-      profesionalNombre,
+      usuarioId: req.user.id,
+      profesionalId,
       notas,
       estado: 'pendiente'
     });
 
-    res.status(201).json({ mensaje: 'Turno reservado. Queda pendiente de confirmación', turno: nuevoTurno });
+    res.status(201).json({
+      success: true,
+      data: { turno: nuevoTurno }
+    });
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al reservar el turno', error: error.message });
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Alguno de los ids enviados no es válido' });
+    }
+    console.error('Error en reservarTurno:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
 
-// PATCH /turnos/:id/cancelar (protegido con esDueñoTurno)
+// PATCH /turnos/:id/cancelar (protegido con ownerTurno)
 export const cancelarTurno = async (req, res) => {
   try {
-    const turno = req.turno; // seteado por el middleware esDueñoTurno
+    const turno = req.turno;
 
     if (turno.estado === 'cancelado') {
-      return res.status(400).json({ mensaje: 'El turno ya estaba cancelado' });
+      return res.status(400).json({ message: 'El turno ya estaba cancelado' });
     }
 
     if (turno.estado === 'atendido') {
-      return res.status(400).json({ mensaje: 'No se puede cancelar un turno ya atendido' });
+      return res.status(400).json({ message: 'No se puede cancelar un turno ya atendido' });
     }
 
     const horasRestantes = horasHastaTurno(turno);
 
     if (horasRestantes < HORAS_LIMITE) {
       return res.status(400).json({
-        mensaje: `Solo se puede cancelar el turno hasta ${HORAS_LIMITE}hs antes. Faltan ${horasRestantes.toFixed(1)}hs`
+        message: `Solo se puede cancelar el turno hasta ${HORAS_LIMITE}hs antes. Faltan ${horasRestantes.toFixed(1)}hs`
       });
     }
 
     turno.estado = 'cancelado';
     await turno.save();
 
-    res.status(200).json({ mensaje: 'Turno cancelado correctamente', turno });
+    res.status(200).json({
+      success: true,
+      data: { turno }
+    });
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al cancelar el turno', error: error.message });
+    console.error('Error en cancelarTurno:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
 
-// Libera automáticamente los turnos "pendiente" que no se confirmaron
-// a tiempo (menos de 24hs antes de la hora del turno).
-// Como el schema no tiene un estado "disponible", liberar el horario
-// significa eliminar el turno pendiente para que ese slot quede libre.
+// Libera automáticamente los turnos "pendiente" no confirmados a tiempo.
+// No responde a cliente (uso interno del cron).
 export const liberarTurnosPendientesVencidos = async () => {
   try {
     const ahora = new Date();
 
-    // Traemos los pendientes que vencen dentro de las próximas 24hs (o ya vencidos)
     const candidatos = await Turno.find({ estado: 'pendiente' });
 
     const idsALiberar = candidatos
@@ -114,7 +128,6 @@ export const liberarTurnosPendientesVencidos = async () => {
       console.log(`[cron] ${idsALiberar.length} turno(s) pendiente(s) liberado(s) automáticamente`);
     }
   } catch (error) {
-    console.error('[cron] Error al liberar turnos pendientes:', error.message);
+    console.error('Error en liberarTurnosPendientesVencidos:', error);
   }
 };
-
