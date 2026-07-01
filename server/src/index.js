@@ -6,6 +6,8 @@ import cors from 'cors';
 import connectDB from './config/db.js'
 import routes from './routes/index.js'
 import uploadRoutes from './routes/uploadRoutes.js'
+import rutasTurnos from './routes/rutasTurnos.js';
+import { iniciarJobsTurnos } from './jobs/turnoJobs.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,6 +33,10 @@ app.listen(PORT, () => {
 });
 
 app.use('/api/upload', uploadRoutes)
+
+app.use('/api', rutasTurnos);
+
+iniciarJobsTurnos(); // arranca el cron de liberación automática
 
 /*import verifyToken from './middleware/auth.js';*/
 
