@@ -21,7 +21,7 @@ export const ownerTurno = async (req, res, next) => {
     if (error.name === 'CastError') {
       return res.status(400).json({ message: 'El id del turno no es válido' });
     }
-    console.error('Error en middleware esDueñoTurno:', error);
+    console.error('Error en middleware ownerTurno:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 
