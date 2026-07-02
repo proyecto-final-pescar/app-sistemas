@@ -1,0 +1,40 @@
+:root {
+    /* Colores */
+    --color-primario: #7C3AED;
+    --color-cta: #059669;
+    --color-texto-principal: #1C1033;
+    --color-texto-secundario: #7E6FA0;
+    --color-fondo-claro: #EDE9FE;
+    --color-blanco: #FFFFFF;
+
+    /* Degradado del panel destacado */
+    --gradiente-primario: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%);
+
+    /* Tipografía */
+    --fuente-titulos: "Outfit", sans-serif;
+    --fuente-texto: "Inter", sans-serif;
+
+    /* Título principal / Hero */
+    --titulo-hero-size: 56px;
+    --titulo-hero-line-height: 61.6px;
+    --titulo-hero-letter-spacing: -1.4px;
+    --titulo-hero-weight: 800;
+
+    /* Títulos internos / banners */
+    --titulo-interno-size: 30px;
+    --titulo-interno-line-height: 36px;
+    --titulo-interno-letter-spacing: 0px;
+    --titulo-interno-weight: 800;
+
+    /* Texto de formularios / inputs */
+    --texto-form-size: 14px;
+    --texto-form-line-height: 20px;
+    --texto-form-letter-spacing: -0.15px;
+    --texto-form-weight: 400;
+
+    /* Navegación / menú lateral */
+    --texto-nav-size: 14px;
+    --texto-nav-line-height: 20px;
+    --texto-nav-letter-spacing: -0.15px;
+    --texto-nav-weight: 500;
+}

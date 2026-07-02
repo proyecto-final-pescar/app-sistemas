@@ -17,6 +17,15 @@ const mascotaSchema = new mongoose.Schema(
       required: [true, 'La raza es requerida'],
       trim: true
     },
+
+    sexo: {
+      type: String,
+      required: [true, 'El sexo es requerido'],
+      enum: {
+        values: ['Macho', 'Hembra'],
+        message: 'El sexo debe ser "Macho" o "Hembra"'
+      }
+    },
     fechaNacimiento: {
       type: Date,
       required: [true, 'La fecha de nacimiento es requerida']

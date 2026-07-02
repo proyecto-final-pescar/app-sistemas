@@ -6,7 +6,7 @@ import authRoutes from './rutasRegistro.js';
 import mascotasRouter from './mascotas.js';
 import usuariosRouter from './usuarios.js';
 import veterinariasRouter from './veterinarias.js';
-import placesRouter from './places.js';
+import disponibilidadRouter from './disponibilidad.js';
 
 const router = Router()
 
@@ -19,6 +19,8 @@ router.use('/mascotas', mascotasRouter);
 router.use('/usuarios', usuariosRouter);
 
 router.use('/veterinarias', veterinariasRouter);
-router.use('/places', placesRouter);
+
+router.use('/disponibilidad', disponibilidadRouter);
+
 
 export default router;
