@@ -1,0 +1,325 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f9f8ff;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* ── Card del formulario ── */
+.formCard {
+  margin: 20px 32px 40px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #ede9fe;
+  padding: 28px 28px 32px;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f1739;
+  letter-spacing: -0.2px;
+}
+
+.cardSub {
+  margin: 4px 0 20px;
+  font-size: 13px;
+  color: #8276ab;
+  line-height: 18px;
+}
+
+/* ── Grilla de 2 columnas ── */
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 20px;
+}
+
+/* ── Campo con label ── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f1739;
+  letter-spacing: -0.1px;
+}
+
+.req {
+  color: #7c3aed;
+  margin-left: 2px;
+}
+
+/* ── Input de dirección con ícono (particular de esta pantalla) ── */
+.inputWrap {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  border-radius: 12px;
+  background-color: #f0ecfb;
+  color: #8276ab;
+  position: relative;
+}
+
+.inputIcon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  flex: 0 0 40px;
+  color: #8779b0;
+}
+
+.inputInner {
+  flex: 1;
+  border: none;
+  background-color: transparent;
+  padding: 0 14px 0 0;
+  font-size: 14px;
+  color: #1f1739;
+  outline: none;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+}
+
+/* ── Dropdown de sugerencias de Google Places ── */
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  background-color: #ffffff;
+  border: 1px solid #ede9fe;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12);
+  overflow: hidden;
+}
+
+.suggestionItem {
+  padding: 11px 16px;
+  font-size: 13px;
+  color: #1f1739;
+  cursor: pointer;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+}
+
+.suggestionItem:hover {
+  background-color: #f5f3ff;
+}
+
+/* ── Textos auxiliares debajo de inputs ── */
+.helperText {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #8276ab;
+}
+
+.helperTextOk {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #25a36f;
+}
+
+/* ── Sub-tarjeta (servicios / profesionales) ── */
+.subCard {
+  position: relative;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid #ede9fe;
+  background-color: #faf9ff;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Botón eliminar dentro de subCard ── */
+.btnEliminar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background-color: #fff1f4;
+  color: #a31d34;
+  cursor: pointer;
+}
+
+/* ── Botón "Agregar servicio / profesional" (texto+ícono sin fondo) ── */
+.btnAgregar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: #7c3aed;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+}
+
+/* ── Fila de botones Atrás / Continuar ── */
+.botonesRow {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+/* ── Input de precio con $ al inicio ── */
+.precioWrap {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  border-radius: 12px;
+  background-color: #f0ecfb;
+  color: #8276ab;
+  max-width: 200px;
+}
+
+.precioSimbolo {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  flex: 0 0 40px;
+  font-size: 14px;
+  color: #8276ab;
+}
+
+.precioInput {
+  flex: 1;
+  border: none;
+  background-color: transparent;
+  padding: 0 14px 0 0;
+  font-size: 14px;
+  color: #1f1739;
+  outline: none;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+}
+
+/* ── Toggle de urgencias ── */
+.toggleWrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.toggleLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f1739;
+}
+
+.toggleBtn {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  transition: left 0.2s;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ── Select de horarios ── */
+.selectHorario {
+  min-height: 38px;
+  border: none;
+  border-radius: 10px;
+  background-color: #f0ecfb;
+  padding: 0 12px;
+  font-size: 13px;
+  color: #1f1739;
+  outline: none;
+  cursor: pointer;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+}
+
+/* ── Días de atención ── */
+.diasWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.diaBtn {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  transition: all 0.15s;
+}
+
+.diaBtnActivo {
+  background-color: #7c3aed;
+  color: #ffffff;
+}
+
+.diaBtnInactivo {
+  background-color: #f0ecfb;
+  color: #6b7280;
+}
+
+/* ── Fila de horario por día ── */
+.horarioDiaRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.horarioDiaNombre {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f1739;
+  min-width: 90px;
+}
+
+.horarioGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.horarioGroupLabel {
+  font-size: 13px;
+  color: #8276ab;
+}

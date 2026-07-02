@@ -32,10 +32,6 @@ app.get('/', (req, res) => {
     res.json({ message: 'Servidor funcionando' });
 });
 
-
-
-
-
 app.use('/api', rutasTurnos);
 
 iniciarJobsTurnos(); // arranca el cron de liberación automática

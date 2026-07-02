@@ -1,6 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
+import Button from "../../../components/ui/button/Button";
+import Input from "../../../components/ui/input/Input";
+import PanelDestacado from "../../../components/ui/panel-destacado/PanelDestacado";
+import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
+import ErrorModal from "../../../components/ui/error-modal/ErrorModal";
+import styles from "./RegistroDeVeterinaria.module.css";
+
+import {
+  servicioVacio, profesionalVacio, DIAS, HORAS,
+  validarCamposRequeridos, construirHorarios,
+  validarEmail, validarCUIT, validarTelefono,
+  validarPrecio, validarCoordenadas, validarHorarios,
+} from "../../../utils/RegistroVeterinarias";
 
 const IconSearch = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -28,27 +41,6 @@ const IconTrash = () => (
     <path d="M9 6V4h6v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
-const IconSave = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <polyline points="17 21 17 13 7 13 7 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    <polyline points="7 3 7 8 15 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-  </svg>
-);
-
-const servicioVacio = () => ({ categoria: "", nombre: "", precio: "" });
-const profesionalVacio = () => ({ nombre: "", email: "", especialidad: "" });
-const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-const horasDisponibles = () => {
-  const horas = [];
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 30) {
-      horas.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-    }
-  }
-  return horas;
-};
-const HORAS = horasDisponibles();
 
 const crearHandleContinuar = (validar, setError, avanzar) => () => {
   const err = validar();
@@ -57,19 +49,10 @@ const crearHandleContinuar = (validar, setError, avanzar) => () => {
   avanzar();
 };
 
-const validarCamposRequeridos = (items, campos, mensajeError) => {
-  for (const item of items) {
-    for (const campo of campos) {
-      if (!item[campo]?.toString().trim()) return mensajeError;
-    }
-  }
-  return "";
-};
-
 export default function RegistroDeVeterinaria() {
   const [step, setStep] = useState(1);
 
-  // Pag 1
+  // Paso 1
   const [form, setForm] = useState({
     nombreClinica: "", razonSocial: "", cuit: "",
     telefono: "", direccion: "", lat: null, lng: null,
@@ -80,18 +63,23 @@ export default function RegistroDeVeterinaria() {
   const [errorStep1, setErrorStep1] = useState("");
   const debounceRef = useRef(null);
 
-  // Pag 2
+  // Paso 2
   const [servicios, setServicios] = useState([servicioVacio()]);
   const [errorStep2, setErrorStep2] = useState("");
 
-  // Pag 3
+  // Paso 3
   const [profesionales, setProfesionales] = useState([profesionalVacio()]);
   const [errorStep3, setErrorStep3] = useState("");
 
-  // Pag 4
+  // Paso 4
   const [diasSeleccionados, setDiasSeleccionados] = useState({});
   const [urgencias, setUrgencias] = useState(false);
   const [errorStep4, setErrorStep4] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  // Modales
+  const [successModal, setSuccessModal] = useState(false);
+  const [errorModal, setErrorModal] = useState({ abierto: false, mensaje: "" });
 
   // Google Places
   useEffect(() => {
@@ -115,7 +103,12 @@ export default function RegistroDeVeterinaria() {
       const res = await fetch(`${import.meta.env.VITE_API_URL}/api/places/details?place_id=${place.place_id}`);
       const data = await res.json();
       const location = data.result?.geometry?.location;
-      setForm((f) => ({ ...f, direccion: place.description, lat: location?.lat || null, lng: location?.lng || null }));
+      setForm((f) => ({
+        ...f,
+        direccion: place.description,
+        lat: typeof location?.lat === "number" ? location.lat : null,
+        lng: typeof location?.lng === "number" ? location.lng : null,
+      }));
     } catch { setForm((f) => ({ ...f, direccion: place.description })); }
     finally { setSuggestions([]); }
   };
@@ -129,10 +122,13 @@ export default function RegistroDeVeterinaria() {
   const validateStep1 = () => {
     if (!form.nombreClinica.trim()) return "El nombre de la clínica es requerido.";
     if (!form.cuit.trim()) return "El CUIT/CUIL es requerido.";
+    if (!validarCUIT(form.cuit)) return "El CUIT/CUIL no tiene un formato válido.";
     if (!form.telefono.trim()) return "El teléfono es requerido.";
+    if (!validarTelefono(form.telefono)) return "El teléfono solo puede contener números.";
     if (!form.direccion.trim()) return "La dirección es requerida.";
-    if (!form.lat) return "Seleccioná una dirección de la lista para obtener las coordenadas.";
+    if (!validarCoordenadas(form.lat, form.lng)) return "Seleccioná una dirección de la lista para obtener las coordenadas.";
     if (!form.email.trim()) return "El email institucional es requerido.";
+    if (!validarEmail(form.email)) return "El email no tiene un formato válido.";
     return "";
   };
 
@@ -143,8 +139,12 @@ export default function RegistroDeVeterinaria() {
     setServicios((prev) => prev.map((s, idx) => idx === i ? { ...s, [field]: value } : s));
   const agregarServicio = () => setServicios((prev) => [...prev, servicioVacio()]);
   const eliminarServicio = (i) => { if (servicios.length > 1) setServicios((prev) => prev.filter((_, idx) => idx !== i)); };
-  const validateStep2 = () =>
-    validarCamposRequeridos(servicios, ["categoria", "nombre", "precio"], "Completá todos los campos de cada servicio.");
+  const validateStep2 = () => {
+    const base = validarCamposRequeridos(servicios, ["categoria", "nombre", "precio"], "Completá todos los campos de cada servicio.");
+    if (base) return base;
+    if (servicios.some((s) => !validarPrecio(s.precio))) return "El precio debe ser numérico y mayor a 0.";
+    return "";
+  };
   const handleContinuarStep2 = crearHandleContinuar(validateStep2, setErrorStep2, () => setStep(3));
 
   // Profesionales
@@ -172,286 +172,350 @@ export default function RegistroDeVeterinaria() {
 
   const validateStep4 = () => {
     if (Object.keys(diasSeleccionados).length === 0) return "Seleccioná al menos un día de atención.";
+    const errorHorario = validarHorarios(diasSeleccionados);
+    if (errorHorario) return errorHorario;
     return "";
   };
-  
-  //const handleGuardar = crearHandleContinuar(validateStep4, setErrorStep4, () => alert("¡Registro completo! ✅"));
 
-  const [guardando, setGuardando] = useState(false);
+  const handleGuardarReal = async () => {
+    setGuardando(true);
+    setErrorStep4("");
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setErrorStep4("Tu sesión expiró. Iniciá sesión nuevamente.");
+        return;
+      }
 
-const construirHorarios = () => {
-  const mapaDias = {
-    Lunes: "lunes", Martes: "martes", Miércoles: "miercoles",
-    Jueves: "jueves", Viernes: "viernes", Sábado: "sabado", Domingo: "domingo",
-  };
-  const horarios = {};
-  Object.values(mapaDias).forEach((clave) => { horarios[clave] = { desde: "", hasta: "" }; });
-  Object.entries(diasSeleccionados).forEach(([dia, horario]) => {
-    const clave = mapaDias[dia];
-    if (clave) horarios[clave] = { desde: horario.desde, hasta: horario.hasta };
-  });
-  return horarios;
-};
+      // Validar lat y lng por separado antes de armar coordenadas
+      if (typeof form.lat !== "number" || isNaN(form.lat)) {
+        setErrorStep4("La latitud de la dirección no es válida.");
+        return;
+      }
+      if (typeof form.lng !== "number" || isNaN(form.lng)) {
+        setErrorStep4("La longitud de la dirección no es válida.");
+        return;
+      }
 
-const handleGuardarReal = async () => {
-  setGuardando(true);
-  setErrorStep4("");
-  try {
-    const token = localStorage.getItem("token");
+      const body = {
+        nombre: form.nombreClinica,
+        direccion: form.direccion,
+        razonSocial: form.razonSocial,
+        cuit: form.cuit,
+        telefono: form.telefono,
+        email: form.email,
+        sitioWeb: form.sitioWeb,
+        coordenadas: { type: "Point", coordinates: [form.lng, form.lat] },
+        especialidades: [],
+        servicios: servicios.map((s) => ({
+          categoria: s.categoria,
+          nombre: s.nombre,
+          precio: Number(s.precio),
+        })),
+        profesionales: profesionales.map((p) => ({
+          nombre: p.nombre,
+          especialidad: p.especialidad,
+          email: p.email,
+        })),
+        horarios: construirHorarios(diasSeleccionados),
+        urgencias24hs: urgencias,
+      };
 
-    const body = {
-      nombre: form.nombreClinica,
-      direccion: form.direccion,
-      razonSocial: form.razonSocial,
-      cuit: form.cuit,
-      telefono: form.telefono,
-      email: form.email,
-      sitioWeb: form.sitioWeb,
-      coordenadas: { type: "Point", coordinates: [form.lng, form.lat] },
-      especialidades: [],
-      servicios: servicios.map((s) => ({
-        categoria: s.categoria,
-        nombre: s.nombre,
-        precio: Number(s.precio),
-      })),
-      profesionales: profesionales.map((p) => ({
-        nombre: p.nombre,
-        especialidad: p.especialidad,
-        email: p.email,
-      })),
-      horarios: construirHorarios(),
-      urgencias24hs: urgencias,
-    };
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/veterinarias`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
 
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/veterinarias`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
+      const data = await res.json().catch(() => ({}));
 
-    const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErrorModal({ abierto: true, mensaje: data.message || "No se pudo guardar el registro." });
+        return;
+      }
 
-    if (!res.ok) {
-      setErrorStep4(data.message || "No se pudo guardar el registro.");
-      return;
+      setSuccessModal(true);
+    } catch {
+      setErrorModal({ abierto: true, mensaje: "Error de conexión. Intentá de nuevo." });
+    } finally {
+      setGuardando(false);
     }
+  };
 
-    //!AVISO TEMPORAL DE QUE ESTA TODO OK
-    alert("¡Registro completo! ✅");
-  } catch (error) {
-    setErrorStep4("Error de conexión. Intentá de nuevo.");
-  } finally {
-    setGuardando(false);
-  }
-};
-
-const handleGuardar = crearHandleContinuar(validateStep4, setErrorStep4, handleGuardarReal);  
+  const handleGuardar = crearHandleContinuar(validateStep4, setErrorStep4, handleGuardarReal);
 
   return (
-    <div style={styles.shell}>
+    <div className={styles.shell}>
       <Sidebar role="veterinaria" activeItem="Registro" />
-      <div style={styles.main}>
+      <div className={styles.main}>
         <TopBar title="Registro de clínica" notifications={2} userInitial="J" />
 
-        {/* ══ PAGINA 1 ══ */}
+        {/* ── Modales ── */}
+        <SuccessModal
+          abierto={successModal}
+          titulo="¡Registro completo!"
+          mensaje="Tu clínica fue registrada correctamente y ya está visible para los usuarios."
+          textoBoton="Aceptar"
+          onClose={() => setSuccessModal(false)}
+        />
+        <ErrorModal
+          abierto={errorModal.abierto}
+          titulo="Error al guardar"
+          mensaje={errorModal.mensaje}
+          textoBoton="Cerrar"
+          onClose={() => setErrorModal({ abierto: false, mensaje: "" })}
+        />
+
+        {/* ══ PASO 1 ══ */}
         {step === 1 && (
           <>
-            <div style={styles.heroBanner}>
-              <div style={styles.heroBubble1} /><div style={styles.heroBubble2} />
-              <div style={{ position: "relative", zIndex: 1 }}>
-                <h2 style={styles.heroTitle}>¡Registrá tu clínica veterinaria!</h2>
-                <p style={styles.heroSub}>Completá el perfil de tu clínica para que los dueños de mascotas te encuentren.</p>
+            <PanelDestacado
+              titulo="¡Registrá tu clínica veterinaria!"
+              subtitulo="Completá el perfil de tu clínica para que los dueños de mascotas te encuentren."
+            />
+            <div className={styles.formCard}>
+              <h3 className={styles.cardTitle}>Datos de la clínica</h3>
+              <p className={styles.cardSub}>Ingresá la información principal para crear el perfil de tu centro veterinario.</p>
+              <div className={styles.grid2}>
+                <Input
+                  label="Nombre de la clínica *"
+                  name="nombreClinica"
+                  value={form.nombreClinica}
+                  placeholder="VetCenter Palermo"
+                  maxLength={80}
+                  onChange={(e) => setForm((f) => ({ ...f, nombreClinica: e.target.value }))}
+                />
+                <Input
+                  label="Razón social"
+                  name="razonSocial"
+                  value={form.razonSocial}
+                  placeholder="VetCenter Palermo S.R.L."
+                  maxLength={80}
+                  onChange={(e) => setForm((f) => ({ ...f, razonSocial: e.target.value }))}
+                />
+                <Input
+                  label="CUIT/CUIL *"
+                  name="cuit"
+                  value={form.cuit}
+                  placeholder="20-12345678-9"
+                  maxLength={13}
+                  onChange={(e) => setForm((f) => ({ ...f, cuit: e.target.value.trim() }))}
+                />
+                <Input
+                  label="Teléfono *"
+                  name="telefono"
+                  value={form.telefono}
+                  placeholder="1123456789"
+                  maxLength={10}
+                  onChange={(e) => {
+                    // Restricción en tiempo real: Solo números mientras escribe
+                    const soloNumeros = e.target.value.replace(/\D/g, "");
+                    setForm((f) => ({ ...f, telefono: soloNumeros }));
+                  }}
+                />
               </div>
-            </div>
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Datos de la clínica</h3>
-              <p style={styles.cardSub}>Ingresá la información principal para crear el perfil de tu centro veterinario.</p>
-              <div style={styles.grid2}>
-                <div style={styles.field}>
-                  <label style={styles.label}>Nombre de la clínica<span style={styles.req}>*</span></label>
-                  <input name="nombreClinica" value={form.nombreClinica} onChange={handleChangeStep1} placeholder="VetCenter Palermo" style={styles.input} />
-                </div>
-                <div style={styles.field}>
-                  <label style={styles.label}>Razón social</label>
-                  <input name="razonSocial" value={form.razonSocial} onChange={handleChangeStep1} placeholder="VetCenter Palermo S.R.L." style={styles.input} />
-                </div>
-                <div style={styles.field}>
-                  <label style={styles.label}>CUIT/CUIL<span style={styles.req}>*</span></label>
-                  <input name="cuit" value={form.cuit} onChange={handleChangeStep1} placeholder="20-12345678-9" style={styles.input} />
-                </div>
-                <div style={styles.field}>
-                  <label style={styles.label}>Teléfono<span style={styles.req}>*</span></label>
-                  <input name="telefono" value={form.telefono} onChange={handleChangeStep1} placeholder="1123456789" style={styles.input} />
-                </div>
-              </div>
-              <div style={{ ...styles.field, marginTop: "16px", position: "relative" }}>
-                <label style={styles.label}>Dirección<span style={styles.req}>*</span></label>
-                <div style={styles.inputWrap}>
-                  <span style={styles.inputIcon}><IconSearch /></span>
-                  <input name="direccion" value={form.direccion} onChange={handleChangeStep1} placeholder="Av. Rivadavia 1234, Piso 3 Dpto. B" autoComplete="off" style={styles.inputInner} />
-                  {form.lat && <span style={{ ...styles.inputIcon, color: "#25a36f" }}><IconPin /></span>}
+
+              {/* Dirección con autocomplete — particular de esta pantalla */}
+              <div className={styles.field} style={{ marginTop: "16px", position: "relative" }}>
+                <label className={styles.label}>Dirección<span className={styles.req}>*</span></label>
+                <div className={styles.inputWrap}>
+                  <span className={styles.inputIcon}><IconSearch /></span>
+                  <input
+                    name="direccion"
+                    value={form.direccion}
+                    onChange={handleChangeStep1}
+                    placeholder="Av. Rivadavia 1234, Piso 3 Dpto. B"
+                    autoComplete="off"
+                    className={styles.inputInner}
+                  />
+                  {form.lat && <span className={styles.inputIcon} style={{ color: "#25a36f" }}><IconPin /></span>}
                 </div>
                 {suggestions.length > 0 && (
-                  <ul style={styles.suggestions}>
+                  <ul className={styles.suggestions}>
                     {suggestions.map((s) => (
-                      <li key={s.place_id} style={styles.suggestionItem}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f5f3ff"}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#ffffff"}
-                        onClick={() => handleSelectPlace(s)}>
+                      <li
+                        key={s.place_id}
+                        className={styles.suggestionItem}
+                        onClick={() => handleSelectPlace(s)}
+                      >
                         <span style={{ color: "#7c3aed", marginRight: "8px" }}>📍</span>{s.description}
                       </li>
                     ))}
                   </ul>
                 )}
-                {loadingAddress && <p style={styles.helperText}>Buscando dirección...</p>}
-                {form.lat && <p style={{ ...styles.helperText, color: "#25a36f" }}>✅ Coordenadas: {form.lat.toFixed(5)}, {form.lng.toFixed(5)}</p>}
+                {loadingAddress && <p className={styles.helperText}>Buscando dirección...</p>}
+                {form.lat && (
+                  <p className={styles.helperTextOk}>
+                    ✅ Coordenadas: {form.lat.toFixed(5)}, {form.lng.toFixed(5)}
+                  </p>
+                )}
               </div>
-              <div style={{ ...styles.grid2, marginTop: "16px" }}>
-                <div style={styles.field}>
-                  <label style={styles.label}>Email institucional<span style={styles.req}>*</span></label>
-                  <input name="email" type="email" value={form.email} onChange={handleChangeStep1} placeholder="info@vetcenterpalermo.com" style={styles.input} />
-                </div>
-                <div style={styles.field}>
-                  <label style={styles.label}>Sitio web</label>
-                  <input name="sitioWeb" value={form.sitioWeb} onChange={handleChangeStep1} placeholder="vetcenterpalermo.com.ar" style={styles.input} />
-                </div>
+
+              <div className={styles.grid2} style={{ marginTop: "16px" }}>
+                <Input
+                  label="Email institucional *"
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  placeholder="info@vetcenterpalermo.com"
+                  maxLength={60}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                />
+                <Input
+                  label="Sitio web"
+                  name="sitioWeb"
+                  value={form.sitioWeb}
+                  placeholder="vetcenterpalermo.com.ar"
+                  maxLength={100}
+                  onChange={(e) => setForm((f) => ({ ...f, sitioWeb: e.target.value }))}
+                />
               </div>
-              {errorStep1 && <p style={styles.error}>{errorStep1}</p>}
-              <button onClick={handleContinuarStep1} style={{ ...styles.btnGreenFull, marginTop: "20px" }}>Continuar →</button>
+
+              {errorStep1 && <p style={{ color: "#a31d34", fontSize: "13px", marginTop: "12px" }}>{errorStep1}</p>}
+              <div style={{ marginTop: "20px" }}>
+                <Button
+                  texto="Continuar →"
+                  variante="primario"
+                  tamaño="mediano"
+                  onClick={handleContinuarStep1}
+                />
+              </div>
             </div>
           </>
         )}
 
-        {/* ══ Pag 2 ══ */}
+        {/* ══ PASO 2 ══ */}
         {step === 2 && (
           <>
-            <div style={{ ...styles.heroBanner, background: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)" }}>
-              <div style={styles.heroBubble1} /><div style={styles.heroBubble2} />
-              <div style={{ position: "relative", zIndex: 1 }}>
-                <h2 style={styles.heroTitle}>Configurá tus servicios y precios</h2>
-                <p style={styles.heroSub}>Detallá las prestaciones y aranceles de tu clínica para tus clientes.</p>
-              </div>
-            </div>
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Servicios y precios</h3>
-              <p style={styles.cardSub}>Ingresá la información para crear el perfil de tu centro veterinario.</p>
+            <PanelDestacado
+              titulo="Configurá tus servicios y precios"
+              subtitulo="Detallá las prestaciones y aranceles de tu clínica para tus clientes."
+            />
+            <div className={styles.formCard}>
+              <h3 className={styles.cardTitle}>Servicios y precios</h3>
+              <p className={styles.cardSub}>Ingresá la información para crear el perfil de tu centro veterinario.</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                 {servicios.map((servicio, index) => (
-                  <div key={index} style={styles.subCard}>
+                  <div key={index} className={styles.subCard}>
                     {servicios.length > 1 && (
-                      <button onClick={() => eliminarServicio(index)} style={styles.btnEliminar} title="Eliminar">
+                      <button onClick={() => eliminarServicio(index)} className={styles.btnEliminar} title="Eliminar">
                         <IconTrash />
                       </button>
                     )}
-                    <div style={styles.field}>
-                      <label style={styles.label}>Categoría del Servicio<span style={styles.req}>*</span></label>
-                      <input value={servicio.categoria} onChange={(e) => handleChangeServicio(index, "categoria", e.target.value)} placeholder="Ej: Vacunación, Cirugía..." style={styles.input} />
-                    </div>
-                    <div style={styles.field}>
-                      <label style={styles.label}>Nombre del Servicio o Prestación<span style={styles.req}>*</span></label>
-                      <input value={servicio.nombre} onChange={(e) => handleChangeServicio(index, "nombre", e.target.value)} placeholder="Ej: Vacuna Antirrábica Anual" style={styles.input} />
-                    </div>
-                    <div style={{ ...styles.field, maxWidth: "200px" }}>
-                      <label style={styles.label}>Precio<span style={styles.req}>*</span></label>
-                      <div style={styles.inputWrap}>
-                        <span style={{ ...styles.inputIcon, fontSize: "14px", color: "#8276ab" }}>$</span>
-                        <input type="number" min="0" value={servicio.precio} onChange={(e) => handleChangeServicio(index, "precio", e.target.value)} placeholder="0.00" style={styles.inputInner} />
+                    <Input
+                      label="Categoría del Servicio *"
+                      value={servicio.categoria}
+                      onChange={(e) => handleChangeServicio(index, "categoria", e.target.value)}
+                      placeholder="Ej: Vacunación, Cirugía..."
+                    />
+                    <Input
+                      label="Nombre del Servicio o Prestación *"
+                      value={servicio.nombre}
+                      onChange={(e) => handleChangeServicio(index, "nombre", e.target.value)}
+                      placeholder="Ej: Vacuna Antirrábica Anual"
+                    />
+                    <div className={styles.field}>
+                      <label className={styles.label}>Precio<span className={styles.req}>*</span></label>
+                      <div className={styles.precioWrap}>
+                        <span className={styles.precioSimbolo}>$</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={servicio.precio}
+                          onChange={(e) => handleChangeServicio(index, "precio", e.target.value)}
+                          placeholder="0.00"
+                          className={styles.precioInput}
+                        />
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              <button onClick={agregarServicio} style={styles.btnAgregar}><IconPlus /> Agregar servicio</button>
-              {errorStep2 && <p style={styles.error}>{errorStep2}</p>}
-              <div style={styles.botonesRow}>
-                <button onClick={() => setStep(1)} style={styles.btnBack}>← Atrás</button>
-                <button onClick={handleContinuarStep2} style={styles.btnGreen}>Continuar →</button>
+              <button onClick={agregarServicio} className={styles.btnAgregar}><IconPlus /> Agregar servicio</button>
+              {errorStep2 && <p style={{ color: "#a31d34", fontSize: "13px", marginTop: "12px" }}>{errorStep2}</p>}
+              <div className={styles.botonesRow}>
+                <Button texto="← Atrás" variante="secundario" tamaño="mediano" onClick={() => setStep(1)} />
+                <Button texto="Continuar →" variante="primario" tamaño="mediano" onClick={handleContinuarStep2} />
               </div>
             </div>
           </>
         )}
 
-        {/* ══ Pag 3 ══ */}
+        {/* ══ PASO 3 ══ */}
         {step === 3 && (
           <>
-            <div style={{ ...styles.heroBanner, background: "linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%)" }}>
-              <div style={styles.heroBubble1} /><div style={styles.heroBubble2} />
-              <div style={{ position: "relative", zIndex: 1 }}>
-                <h2 style={styles.heroTitle}>Sumá a tu equipo médico</h2>
-                <p style={styles.heroSub}>Registrá a los profesionales de tu veterinaria.</p>
-              </div>
-            </div>
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Profesionales</h3>
-              <p style={styles.cardSub}>Ingresá la información para crear el perfil de tu centro veterinario.</p>
+            <PanelDestacado
+              titulo="Sumá a tu equipo médico"
+              subtitulo="Registrá a los profesionales de tu veterinaria."
+            />
+            <div className={styles.formCard}>
+              <h3 className={styles.cardTitle}>Profesionales</h3>
+              <p className={styles.cardSub}>Ingresá la información para crear el perfil de tu centro veterinario.</p>
               <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                 {profesionales.map((prof, index) => (
-                  <div key={index} style={styles.subCard}>
+                  <div key={index} className={styles.subCard}>
                     {profesionales.length > 1 && (
-                      <button onClick={() => eliminarProfesional(index)} style={styles.btnEliminar} title="Eliminar">
+                      <button onClick={() => eliminarProfesional(index)} className={styles.btnEliminar} title="Eliminar">
                         <IconTrash />
                       </button>
                     )}
-                    <div style={styles.field}>
-                      <label style={styles.label}>Nombre y Apellido<span style={styles.req}>*</span></label>
-                      <input value={prof.nombre} onChange={(e) => handleChangeProfesional(index, "nombre", e.target.value)} placeholder="Dr. Juan Pérez" style={styles.input} />
-                    </div>
-                    <div style={styles.field}>
-                      <label style={styles.label}>Email del profesional<span style={styles.req}>*</span></label>
-                      <input type="email" value={prof.email} onChange={(e) => handleChangeProfesional(index, "email", e.target.value)} placeholder="juanperez@email.com" style={styles.input} />
-                    </div>
-                    <div style={styles.field}>
-                      <label style={styles.label}>Especialidad<span style={styles.req}>*</span></label>
-                      <input value={prof.especialidad} onChange={(e) => handleChangeProfesional(index, "especialidad", e.target.value)} placeholder="Ej: Veterinaria general, Cirugía..." style={styles.input} />
-                    </div>
+                    <Input
+                      label="Nombre y Apellido *"
+                      value={prof.nombre}
+                      onChange={(e) => handleChangeProfesional(index, "nombre", e.target.value)}
+                      placeholder="Dr. Juan Pérez"
+                    />
+                    <Input
+                      label="Email del profesional *"
+                      type="email"
+                      value={prof.email}
+                      onChange={(e) => handleChangeProfesional(index, "email", e.target.value)}
+                      placeholder="juanperez@email.com"
+                    />
+                    <Input
+                      label="Especialidad *"
+                      value={prof.especialidad}
+                      onChange={(e) => handleChangeProfesional(index, "especialidad", e.target.value)}
+                      placeholder="Ej: Veterinaria general, Cirugía..."
+                    />
                   </div>
                 ))}
               </div>
-              <button onClick={agregarProfesional} style={styles.btnAgregar}><IconPlus /> Agregar profesional</button>
-              {errorStep3 && <p style={styles.error}>{errorStep3}</p>}
-              <div style={styles.botonesRow}>
-                <button onClick={() => setStep(2)} style={styles.btnBack}>← Atrás</button>
-                <button onClick={handleContinuarStep3} style={styles.btnGreen}>Continuar →</button>
+              <button onClick={agregarProfesional} className={styles.btnAgregar}><IconPlus /> Agregar profesional</button>
+              {errorStep3 && <p style={{ color: "#a31d34", fontSize: "13px", marginTop: "12px" }}>{errorStep3}</p>}
+              <div className={styles.botonesRow}>
+                <Button texto="← Atrás" variante="secundario" tamaño="mediano" onClick={() => setStep(2)} />
+                <Button texto="Continuar →" variante="primario" tamaño="mediano" onClick={handleContinuarStep3} />
               </div>
             </div>
           </>
         )}
 
-        {/* ══ Pag 4 ══ */}
+        {/* ══ PASO 4 ══ */}
         {step === 4 && (
           <>
-            <div style={{ ...styles.heroBanner, background: "linear-gradient(135deg, #5b21b6 0%, #3b0764 100%)" }}>
-              <div style={styles.heroBubble1} /><div style={styles.heroBubble2} />
-              <div style={{ position: "relative", zIndex: 1 }}>
-                <h2 style={styles.heroTitle}>Definí tus horarios de atención</h2>
-                <p style={styles.heroSub}>Establecé los días y franjas horarias disponibles para que los usuarios puedan programar sus turnos.</p>
-              </div>
-            </div>
-            <div style={styles.card}>
-              <h3 style={styles.cardTitle}>Disponibilidad</h3>
-              <p style={styles.cardSub}>Ingresá la información para crear el perfil de tu centro veterinario.</p>
+            <PanelDestacado
+              titulo="Definí tus horarios de atención"
+              subtitulo="Establecé los días y franjas horarias disponibles para que los usuarios puedan programar sus turnos."
+            />
+            <div className={styles.formCard}>
+              <h3 className={styles.cardTitle}>Disponibilidad</h3>
+              <p className={styles.cardSub}>Ingresá la información para crear el perfil de tu centro veterinario.</p>
 
               {/* Días */}
-              <div style={styles.field}>
-                <label style={styles.label}>Días de atención<span style={styles.req}>*</span></label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "4px" }}>
+              <div className={styles.field}>
+                <label className={styles.label}>Días de atención<span className={styles.req}>*</span></label>
+                <div className={styles.diasWrap}>
                   {DIAS.map((dia) => {
                     const activo = !!diasSeleccionados[dia];
                     return (
                       <button
                         key={dia}
                         onClick={() => toggleDia(dia)}
-                        style={{
-                          padding: "8px 14px", borderRadius: "10px", border: "none", cursor: "pointer",
-                          fontSize: "13px", fontWeight: 500,
-                          backgroundColor: activo ? "#7c3aed" : "#f0ecfb",
-                          color: activo ? "#ffffff" : "#6b7280",
-                          fontFamily: "'Inter', Arial, Helvetica, sans-serif",
-                          transition: "all 0.15s",
-                        }}
+                        className={`${styles.diaBtn} ${activo ? styles.diaBtnActivo : styles.diaBtnInactivo}`}
                       >
                         {dia}
                       </button>
@@ -460,29 +524,29 @@ const handleGuardar = crearHandleContinuar(validateStep4, setErrorStep4, handleG
                 </div>
               </div>
 
-              {/* Horario por día */}
+              {/* Horarios por día */}
               {Object.keys(diasSeleccionados).length > 0 && (
                 <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                  <label style={styles.label}>Horarios por día</label>
+                  <label className={styles.label}>Horarios por día</label>
                   {Object.entries(diasSeleccionados).map(([dia, horario]) => (
-                    <div key={dia} style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#1f1739", minWidth: "90px" }}>{dia}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "13px", color: "#8276ab" }}>Desde:</span>
+                    <div key={dia} className={styles.horarioDiaRow}>
+                      <span className={styles.horarioDiaNombre}>{dia}</span>
+                      <div className={styles.horarioGroup}>
+                        <span className={styles.horarioGroupLabel}>Desde:</span>
                         <select
                           value={horario.desde}
                           onChange={(e) => handleHorario(dia, "desde", e.target.value)}
-                          style={styles.select}
+                          className={styles.selectHorario}
                         >
                           {HORAS.map((h) => <option key={h} value={h}>{h}</option>)}
                         </select>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ fontSize: "13px", color: "#8276ab" }}>Hasta:</span>
+                      <div className={styles.horarioGroup}>
+                        <span className={styles.horarioGroupLabel}>Hasta:</span>
                         <select
                           value={horario.hasta}
                           onChange={(e) => handleHorario(dia, "hasta", e.target.value)}
-                          style={styles.select}
+                          className={styles.selectHorario}
                         >
                           {HORAS.map((h) => <option key={h} value={h}>{h}</option>)}
                         </select>
@@ -492,34 +556,32 @@ const handleGuardar = crearHandleContinuar(validateStep4, setErrorStep4, handleG
                 </div>
               )}
 
-              {/* Urgencias toggle */}
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "24px" }}>
-                <span style={{ fontSize: "14px", fontWeight: 500, color: "#1f1739" }}>¿Atiende Urgencias 24 hs?</span>
+              {/* Toggle urgencias */}
+              <div className={styles.toggleWrap}>
+                <span className={styles.toggleLabel}>¿Atiende Urgencias 24 hs?</span>
                 <button
                   onClick={() => setUrgencias((v) => !v)}
-                  style={{
-                    width: "44px", height: "24px", borderRadius: "12px", border: "none",
-                    backgroundColor: urgencias ? "#25a36f" : "#d1d5db",
-                    cursor: "pointer", position: "relative", transition: "background-color 0.2s",
-                  }}
+                  className={styles.toggleBtn}
+                  style={{ backgroundColor: urgencias ? "#25a36f" : "#d1d5db" }}
                 >
-                  <span style={{
-                    position: "absolute", top: "3px",
-                    left: urgencias ? "22px" : "3px",
-                    width: "18px", height: "18px", borderRadius: "50%",
-                    backgroundColor: "#ffffff", transition: "left 0.2s",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
-                  }} />
+                  <span
+                    className={styles.toggleThumb}
+                    style={{ left: urgencias ? "22px" : "3px" }}
+                  />
                 </button>
               </div>
 
-              {errorStep4 && <p style={styles.error}>{errorStep4}</p>}
+              {errorStep4 && <p style={{ color: "#a31d34", fontSize: "13px", marginTop: "12px" }}>{errorStep4}</p>}
 
-              <div style={styles.botonesRow}>
-                <button onClick={() => setStep(3)} style={styles.btnBack}>← Atrás</button>
-                <button onClick={handleGuardar} disabled={guardando} style={{ ...styles.btnGreen, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", opacity: guardando ? 0.6 : 1 }}>
-                  {guardando ? "Guardando..." : "Guardar Cambios"} <IconSave />
-                </button>
+              <div className={styles.botonesRow}>
+                <Button texto="← Atrás" variante="secundario" tamaño="mediano" onClick={() => setStep(3)} />
+                <Button
+                  texto={guardando ? "Guardando..." : "Guardar Cambios"}
+                  variante="primario"
+                  tamaño="mediano"
+                  onClick={handleGuardar}
+                  disabled={guardando}
+                />
               </div>
             </div>
           </>
@@ -528,36 +590,3 @@ const handleGuardar = crearHandleContinuar(validateStep4, setErrorStep4, handleG
     </div>
   );
 }
-
-const styles = {
-  shell: { display: "flex", minHeight: "100vh", backgroundColor: "#f9f8ff", fontFamily: "'Inter', Arial, Helvetica, sans-serif" },
-  main: { flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" },
-  heroBanner: { position: "relative", margin: "24px 32px 0", borderRadius: "16px", padding: "28px 32px", background: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 60%, #25a36f 100%)", overflow: "hidden" },
-  heroBubble1: { position: "absolute", top: "-30px", right: "-30px", width: "140px", height: "140px", borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.08)" },
-  heroBubble2: { position: "absolute", bottom: "-20px", right: "80px", width: "80px", height: "80px", borderRadius: "50%", backgroundColor: "rgba(255,255,255,0.06)" },
-  heroTitle: { margin: 0, fontSize: "22px", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.3px" },
-  heroSub: { margin: "8px 0 0", fontSize: "14px", color: "rgba(255,255,255,0.85)", lineHeight: "20px", maxWidth: "480px" },
-  card: { margin: "20px 32px 40px", backgroundColor: "#ffffff", borderRadius: "16px", border: "1px solid #ede9fe", padding: "28px 28px 32px", boxShadow: "0 4px 20px rgba(124,58,237,0.06)" },
-  cardTitle: { margin: 0, fontSize: "16px", fontWeight: 700, color: "#1f1739", letterSpacing: "-0.2px" },
-  cardSub: { margin: "4px 0 20px", fontSize: "13px", color: "#8276ab", lineHeight: "18px" },
-  grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px 20px" },
-  field: { display: "flex", flexDirection: "column", gap: "7px" },
-  label: { fontSize: "13px", fontWeight: 500, color: "#1f1739", letterSpacing: "-0.1px" },
-  req: { color: "#7c3aed", marginLeft: "2px" },
-  input: { minHeight: "42px", border: "none", borderRadius: "12px", backgroundColor: "#f0ecfb", padding: "0 14px", fontSize: "14px", color: "#1f1739", outline: "none", fontFamily: "'Inter', Arial, Helvetica, sans-serif", boxSizing: "border-box", width: "100%" },
-  inputWrap: { display: "flex", alignItems: "center", minHeight: "42px", borderRadius: "12px", backgroundColor: "#f0ecfb", color: "#8276ab" },
-  inputIcon: { display: "grid", placeItems: "center", width: "40px", flex: "0 0 40px", color: "#8779b0" },
-  inputInner: { flex: 1, border: "none", backgroundColor: "transparent", padding: "0 14px 0 0", fontSize: "14px", color: "#1f1739", outline: "none", fontFamily: "'Inter', Arial, Helvetica, sans-serif" },
-  suggestions: { position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10, margin: "4px 0 0", padding: 0, listStyle: "none", backgroundColor: "#ffffff", border: "1px solid #ede9fe", borderRadius: "12px", boxShadow: "0 8px 24px rgba(124,58,237,0.12)", overflow: "hidden" },
-  suggestionItem: { padding: "11px 16px", fontSize: "13px", color: "#1f1739", cursor: "pointer", backgroundColor: "#ffffff", display: "flex", alignItems: "center" },
-  helperText: { margin: "6px 0 0", fontSize: "12px", color: "#8276ab" },
-  error: { margin: "16px 0 0", border: "1px solid #fac7ce", borderRadius: "12px", padding: "11px 14px", color: "#a31d34", backgroundColor: "#fff1f4", fontSize: "13px", lineHeight: "18px" },
-  subCard: { position: "relative", padding: "20px", borderRadius: "12px", border: "1px solid #ede9fe", backgroundColor: "#faf9ff", display: "flex", flexDirection: "column", gap: "14px" },
-  btnEliminar: { position: "absolute", top: "12px", right: "12px", display: "flex", alignItems: "center", justifyContent: "center", width: "28px", height: "28px", border: "none", borderRadius: "8px", backgroundColor: "#fff1f4", color: "#a31d34", cursor: "pointer" },
-  btnAgregar: { display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", padding: 0, border: "none", backgroundColor: "transparent", color: "#7c3aed", fontSize: "14px", fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', Arial, Helvetica, sans-serif" },
-  botonesRow: { display: "flex", gap: "12px", marginTop: "28px" },
-  btnBack: { flex: 1, minHeight: "48px", border: "none", borderRadius: "15px", color: "#ffffff", background: "linear-gradient(135deg, #25a36f 0%, #1a8a5a 100%)", boxShadow: "0 10px 20px rgba(37,163,111,0.28)", fontSize: "15px", fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', Arial, Helvetica, sans-serif" },
-  btnGreen: { flex: 1, minHeight: "48px", border: "none", borderRadius: "15px", color: "#ffffff", background: "linear-gradient(135deg, #25a36f 0%, #1a8a5a 100%)", boxShadow: "0 10px 20px rgba(37,163,111,0.28)", fontSize: "15px", fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', Arial, Helvetica, sans-serif" },
-  btnGreenFull: { width: "100%", minHeight: "48px", border: "none", borderRadius: "15px", color: "#ffffff", background: "linear-gradient(135deg, #25a36f 0%, #1a8a5a 100%)", boxShadow: "0 10px 20px rgba(37,163,111,0.28)", fontSize: "15px", fontWeight: 600, cursor: "pointer", fontFamily: "'Inter', Arial, Helvetica, sans-serif" },
-  select: { minHeight: "38px", border: "none", borderRadius: "10px", backgroundColor: "#f0ecfb", padding: "0 12px", fontSize: "13px", color: "#1f1739", outline: "none", cursor: "pointer", fontFamily: "'Inter', Arial, Helvetica, sans-serif" },
-};
