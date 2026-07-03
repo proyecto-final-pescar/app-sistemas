@@ -1,12 +1,17 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
-import User from '../models/User.js' 
+import crypto from 'crypto'
+import User from '../models/User.js'
+import { sendResetPasswordEmail } from '../utils/mailer.js'
+
+const TOKEN_EXPIRATION_MS = 60 * 60 * 1000 // 1 hora
+const SALT_ROUNDS = 10
 
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body
 
-    const user = await User.findOne({ email: email.toLowerCase() }) 
+    const user = await User.findOne({ email: email.toLowerCase() })
 
     if (!user) {
       return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
@@ -40,9 +45,75 @@ export const login = async (req, res) => {
         role: user.role
       }
     })
-
   } catch (error) {
     console.error('Error en el login:', error)
+    return res.status(500).json({ mensaje: 'Error interno del servidor' })
+  }
+}
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body
+
+    if (!email) {
+      return res.status(400).json({ mensaje: 'El email es requerido' })
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() })
+
+    if (!user || !user.active) {
+      return res.status(200).json({
+        mensaje: 'Si el email está registrado, vas a recibir un correo con instrucciones'
+      })
+    }
+
+    const token = crypto.randomBytes(32).toString('hex')
+
+    user.resetPasswordToken = token
+    user.resetPasswordExpires = Date.now() + TOKEN_EXPIRATION_MS
+    await user.save()
+
+    await sendResetPasswordEmail(user.email, token)
+
+    return res.status(200).json({
+      mensaje: 'Si el email está registrado, vas a recibir un correo con instrucciones'
+    })
+  } catch (error) {
+    console.error('Error en forgotPassword:', error)
+    return res.status(500).json({ mensaje: 'Error interno del servidor' })
+  }
+}
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ mensaje: 'El token y la nueva contraseña son requeridos' })
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ mensaje: 'La contraseña debe tener mínimo 8 caracteres' })
+    }
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    }).select('+resetPasswordToken +resetPasswordExpires')
+
+    if (!user) {
+      return res.status(400).json({ mensaje: 'El token es inválido o ha expirado' })
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS)
+
+    user.password = hashedPassword
+    user.resetPasswordToken = undefined
+    user.resetPasswordExpires = undefined
+    await user.save()
+
+    return res.status(200).json({ mensaje: 'Contraseña actualizada con éxito' })
+  } catch (error) {
+    console.error('Error en resetPassword:', error)
     return res.status(500).json({ mensaje: 'Error interno del servidor' })
   }
 }
