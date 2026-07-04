@@ -1,0 +1,27 @@
+/* client/src/components/common/Badge.css */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-confirmado {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.badge-pendiente {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.badge-cancelado {
+  background-color: #fee2e2;
+  color: #ef4444;
+}

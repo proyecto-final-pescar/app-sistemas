@@ -96,6 +96,28 @@ export const obtenerVeterinariaPorId = async (req, res) => {
     }
 };
 
+// GET /veterinarias/mia: devuelve la veterinaria del usuario logueado
+export const obtenerMiVeterinaria = async (req, res) => {
+    try {
+        const usuarioId = req.user.id;
+
+        const veterinaria = await Veterinaria.findOne({ usuarioId, estado: 'activa' });
+
+        if (!veterinaria) {
+            return res.status(404).json({ message: 'No tenés una veterinaria registrada.' });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: veterinaria
+        });
+
+    } catch (error) {
+        console.error('Error en GET /veterinarias/mia:', error);
+        res.status(500).json({ message: 'Error interno del servidor' });
+    }
+};
+
 // POST /veterinarias: crea el perfil de una veterinaria (solo rol 'veterinaria')
 export const crearVeterinaria = async (req, res) => {
     try {

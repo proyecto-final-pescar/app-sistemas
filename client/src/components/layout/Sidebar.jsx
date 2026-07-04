@@ -1,6 +1,7 @@
 // client/src/components/layout/Sidebar.jsx
 
 import TutorMenu from "./TutorMenu";
+import VeterinariaMenu from "./VeterinariaMenu";
 
 const IconConfig = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -55,6 +56,7 @@ const Sidebar = ({
         {role === "tutor" && (
           <TutorMenu activeItem={activeItem} onSelect={onSelect} />
         )}
+        {role === "veterinaria" && <VeterinariaMenu activeItem={activeItem} onSelect={onSelect} />}
       </div>
 
       {/* ── Bloque inferior ── */}
