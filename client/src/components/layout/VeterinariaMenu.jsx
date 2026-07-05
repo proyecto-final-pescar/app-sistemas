@@ -1,13 +1,9 @@
-// client/src/components/layout/VeterinariaMenu.jsx
 import { useNavigate, useLocation } from "react-router-dom";
 
-// Dashboard e Historial Clínico todavía no tienen ruta propia en App.jsx
-// (hoy solo existe /agenda) — dejalos así hasta que se creen esas páginas,
-// o sacá esos dos ítems del menú si van a dar 404 mientras tanto.
 const menuItems = [
   {
-    label: "Dashboard",
-    path: "/veterinaria",
+    label: "Registro",
+    path: "/registro-veterinaria",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
@@ -17,7 +13,7 @@ const menuItems = [
   },
   {
     label: "Historial Clínico",
-    path: "/veterinaria/historial-clinico",
+    path: "/historial-clinico",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -29,7 +25,7 @@ const menuItems = [
   },
   {
     label: "Turnos",
-    path: "/agenda",
+    path: "/turnos-veterinaria",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -87,6 +83,16 @@ const VeterinariaMenu = () => {
           >
             <span style={{ flexShrink: 0 }}>{item.icon}</span>
             {item.label}
+            {isActive && (
+              <span style={{
+                marginLeft: "auto",
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                backgroundColor: "#7c3aed",
+                flexShrink: 0,
+              }} />
+            )}
           </button>
         );
       })}
