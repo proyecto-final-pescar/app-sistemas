@@ -36,7 +36,16 @@ const userSchema = new mongoose.Schema(
           default: Date.now
         }
       }
-    ]
+    ],
+    // --- Campos para recuperacin de contraseña  ---
+    resetPasswordToken: {
+      type: String,
+      select: false 
+    },
+    resetPasswordExpires: {
+      type: Date,
+      select: false
+    }
   },
   {
     timestamps: true
