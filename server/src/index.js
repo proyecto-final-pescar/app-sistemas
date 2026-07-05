@@ -9,12 +9,26 @@ import uploadRoutes from './routes/uploadRoutes.js'
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
+/*
 const corsOptions = {
     origin: process.env.CLIENT_URL,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
-}
+}*/
+/*modificacion hecha para que pueda usar el localhost*/
+const corsOptions = {
+  origin: (origin, callback) => {
+    const allowed = (process.env.CLIENT_URL || "").split(",").map(o => o.trim());
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 
 app.use(express.json());
 app.use(cors(corsOptions));
