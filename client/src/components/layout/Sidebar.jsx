@@ -16,7 +16,7 @@ const IconCollapse = () => (
   </svg>
 );
 
-const Sidebar = ({ role = "tutor", activeItem = "Dashboard", onSelect }) => {
+const Sidebar = ({ role = "tutor" }) => {
   return (
     <aside style={{
       width: "260px", minWidth: "260px", height: "100vh",
@@ -33,8 +33,8 @@ const Sidebar = ({ role = "tutor", activeItem = "Dashboard", onSelect }) => {
 
       {/* Menú principal */}
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 12px 0" }}>
-        {role === "tutor" && <TutorMenu activeItem={activeItem} onSelect={onSelect} />}
-        {role === "veterinaria" && <VeterinariaMenu activeItem={activeItem} onSelect={onSelect} />}
+         {role === "veterinaria" && <VeterinariaMenu />}
+         {role === "tutor" && <TutorMenu />}
       </div>
 
       {/* Bloque inferior */}

@@ -14,12 +14,12 @@
 
 /* ── Card del formulario ── */
 .formCard {
-  margin: 20px 32px 40px;
+  margin: 16px 32px 40px;
   background-color: #ffffff;
   border-radius: 16px;
   border: 1px solid #ede9fe;
   padding: 28px 28px 32px;
-  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
+  box-shadow: 0 8px 32px rgba(124, 58, 237, 0.10);
 }
 
 .cardTitle {
@@ -322,4 +322,59 @@
 .horarioGroupLabel {
   font-size: 13px;
   color: #8276ab;
+}
+
+/*mensaje de error y saco estilos inline */
+.errorMsg {
+  color: #a31d34;
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+.toggleBtnActivo {
+  background-color: #25a36f;
+}
+
+.toggleBtnInactivo {
+  background-color: #d1d5db;
+}
+
+.toggleThumbActivo {
+  left: 22px;
+}
+
+.toggleThumbInactivo {
+  left: 3px;
+}
+
+/*estilos en direccion  y paso 1*/
+
+.direccionWrap {
+  margin-top: 16px;
+  position: relative;
+}
+
+.grid2MarginTop {
+  margin-top: 16px;
+}
+
+.continuarWrap {
+  margin-top: 20px;
+}
+
+/*margen para el panel destacado */
+.panelWrap {
+  margin: 24px 32px 0;
+}
+
+.horariosWrap {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.listaItems {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
