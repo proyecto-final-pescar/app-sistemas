@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/layout/Sidebar";
 import TopBar from "./components/layout/TopBar";
 import CitasAgendadas from './pages/veterinaria/CitasAgendadas/CitasAgendadas';
+import MisTurnos from "./pages/tutor/MisTurnos/MisTurnos";
 
 import Login from './pages/public/Login/Login';
 import Registro from './pages/public/registro/Registro';
@@ -27,6 +28,7 @@ function App() {
         <Route path="/home" element={<Landing />} />
         <Route path="/mascotas" element={<MisMascotas />} />
         <Route path="/turnos" element={<Turnos />} />
+        <Route path="/mis-turnos" element={<MisTurnos />} />
         <Route path="/foro" element={<Foro />} />
         <Route path="/veterinarias" element={<h1>Sección Veterinarias</h1>} />
         <Route path="/agenda" element={<CitasAgendadas />} />
