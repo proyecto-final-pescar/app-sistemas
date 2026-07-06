@@ -14,6 +14,8 @@ import AdminDashboard from './pages/admin/AdminDashboard/AdminDashboard';
 import NotFound from './pages/NotFound/NotFound';
 import Emergencias from './pages/tutor/Emergencias/Emergencias';
 import RegistroDeVeterinaria from './pages/veterinaria/RegistroDeVeterinaria/RegistroDeVeterinaria';
+import RegistrarConsulta from './pages/veterinaria/HistorialClinico/RegistrarConsulta';
+
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
@@ -33,6 +35,7 @@ function App() {
         <Route path="/urgencias" element={<Emergencias />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/dashboard" element={<AdminDashboard />} />
+        <Route path="/historial/registrar" element={<RegistrarConsulta />} />
         <Route path="/" element={
           <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8f7ff" }}>
             <Sidebar role="tutor" activeItem={activePage} onSelect={setActivePage} userInitial="A" />
