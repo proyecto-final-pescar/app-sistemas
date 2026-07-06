@@ -51,15 +51,6 @@ const HistorialClinicoSchema = new mongoose.Schema(
       required: [true, "La categoría del servicio es requerida"],
     },
 
-    estado: {
-      type: String,
-      enum: {
-        values: ["Completado", "Con seguimiento", "Pendiente"],
-        message: "{VALUE} no es un estado válido",
-      },
-      default: "Completado",
-    },
-
     motivoConsulta: {
       type: String,
       required: [true, "El motivo del turno es requerido"],
