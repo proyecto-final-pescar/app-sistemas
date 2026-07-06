@@ -12,7 +12,7 @@ import {
 const router = Router()
 
 // Todas las rutas requieren autenticación
-router.get('/buscar', verifyToken, buscarVeterinarias)
+router.get('/buscar',verifyToken,buscarVeterinarias)
 router.get('/', verifyToken, obtenerVeterinarias)
 router.get('/:id', verifyToken, obtenerVeterinariaPorId)
 router.post('/', verifyToken, verificarRol('veterinaria'), crearVeterinaria)
