@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/layout/Sidebar";
 import TopBar from "./components/layout/TopBar";
+import CitasAgendadas from './pages/veterinaria/CitasAgendadas/CitasAgendadas';
 
 import Login from "./pages/public/Login/Login";
 import Registro from "./pages/public/registro/Registro";
@@ -12,6 +13,7 @@ import Foro from "./pages/tutor/Foro/Foro";
 import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
 import NotFound from "./pages/NotFound/NotFound";
 import Emergencias from "./pages/tutor/Emergencias/Emergencias";
+import RegistroDeVeterinaria from './pages/veterinaria/RegistroDeVeterinaria/RegistroDeVeterinaria';
 import AgendarTurnos from "./pages/tutor/Turnos/AgendarTurno";
 
 function App() {
@@ -20,6 +22,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/registro-veterinaria" element={<RegistroDeVeterinaria />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Registro />} />
         <Route path="/home" element={<Landing />} />
@@ -31,7 +34,7 @@ function App() {
         />
         <Route path="/foro" element={<Foro />} />
         <Route path="/veterinarias" element={<h1>Sección Veterinarias</h1>} />
-        <Route path="/agenda" element={<h1>Agenda veterinaria</h1>} />
+        <Route path="/agenda" element={<CitasAgendadas />} />
         <Route path="/urgencias" element={<Emergencias />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/dashboard" element={<AdminDashboard />} />

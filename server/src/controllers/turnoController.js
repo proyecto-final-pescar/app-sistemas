@@ -15,6 +15,35 @@ const horasHastaTurno = (turno) => {
   return diffMs / (1000 * 60 * 60);
 };
 
+export const obtenerTurnos = async (req, res) => {
+  try {
+    const { veterinariaId, estado } = req.query;
+
+    if (!veterinariaId) {
+      return res.status(400).json({ message: 'Falta el id de la veterinaria' });
+    }
+
+    const filtro = { veterinariaId };
+    if (estado) filtro.estado = estado;
+
+    const turnos = await Turno.find(filtro)
+      .populate('mascotaId', 'nombre especie')
+      .populate('usuarioId', 'nombre email')
+      .sort({ fecha: 1, hora: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: { turnos }
+    });
+  } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'El id de la veterinaria no es válido' });
+    }
+    console.error('Error en obtenerTurnos:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 // POST /turnos -> reservar (crear) un turno
 export const reservarTurno = async (req, res) => {
   try {
