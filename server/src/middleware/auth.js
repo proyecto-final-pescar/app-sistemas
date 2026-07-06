@@ -47,4 +47,17 @@ const verifyToken = (req, res, next) => {
     }
 };
 
+// Verifica que el usuario autenticado tenga uno de los roles permitidos
+const authorize = (...rolesPermitidos) => {
+    return (req, res, next) => {
+        if (!req.user || !rolesPermitidos.includes(req.user.rol)) {
+            return res.status(403).json({
+                error: 'No tenés permisos para realizar esta acción'
+            });
+        }
+        next();
+    };
+};
+
+export { verifyToken, authorize };
 export default verifyToken;

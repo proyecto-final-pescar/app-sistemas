@@ -16,8 +16,8 @@ const HistorialClinicoSchema = new mongoose.Schema(
 
     profesionalId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
       required: [true, "El profesional a cargo es requerido"],
+     
     },
 
     veterinariaId: {
