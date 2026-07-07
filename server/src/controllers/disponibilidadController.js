@@ -55,11 +55,9 @@ export const obtenerDisponibilidad = async (req, res) => {
     // 2. Validar formato de fecha (YYYY-MM-DD)
     const formatoFecha = /^\d{4}-\d{2}-\d{2}$/;
     if (!formatoFecha.test(fecha)) {
-      return res
-        .status(400)
-        .json({
-          message: "Formato de fecha inválido. Usá YYYY-MM-DD (ej: 2026-07-15)",
-        });
+      return res.status(400).json({
+        message: "Formato de fecha inválido. Usá YYYY-MM-DD (ej: 2026-07-15)",
+      });
     }
 
     // 3. Validar que la fecha no sea en el pasado
@@ -71,15 +69,14 @@ export const obtenerDisponibilidad = async (req, res) => {
       mesSolicitado - 1,
       diaSolicitado,
     );
+
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
     if (fechaSolicitada < hoy) {
-      return res
-        .status(400)
-        .json({
-          message: "No podés consultar disponibilidad para fechas pasadas",
-        });
+      return res.status(400).json({
+        message: "No podés consultar disponibilidad para fechas pasadas",
+      });
     }
 
     // ── Lógica principal ──

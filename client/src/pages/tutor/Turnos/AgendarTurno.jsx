@@ -152,7 +152,6 @@ const AgendarTurnos = () => {
             setLoading(false);
             return;
           }
-
           setVeterinaria(resVet.data);
           setMascotas(Array.isArray(resMascotas) ? resMascotas : []);
         }
