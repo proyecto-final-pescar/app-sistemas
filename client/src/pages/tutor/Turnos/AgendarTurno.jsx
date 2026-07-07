@@ -22,6 +22,17 @@ const formatearFechaId = (date) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+// Verifica si un turno (fecha + hora) respeta la antelación mínima de 24hs desde ahora
+const cumpleAntelacionMinima = (fechaStr, hora) => {
+  const [anio, mes, dia] = fechaStr.split("-").map(Number);
+  const [hh, mm] = hora.split(":").map(Number);
+  const fechaHoraTurno = new Date(anio, mes - 1, dia, hh, mm); // hora local
+
+  const limiteMinimo = new Date(Date.now() + 24 * 60 * 60 * 1000); // ahora + 24hs
+
+  return fechaHoraTurno >= limiteMinimo;
+};
+
 // Helper centralizado para leer el JWT (evita repetir localStorage.getItem en cada fetch)
 const obtenerToken = () => localStorage.getItem("token");
 
@@ -51,18 +62,6 @@ const NOMBRES_MESES = [
   "dic",
 ];
 
-// Rango de horas estables para pintar las filas de la UI (no depende de estado, vive fuera del componente)
-const HORAS_FIJAS = [
-  "09:00",
-  "09:30",
-  "10:00",
-  "10:30",
-  "11:00",
-  "11:30",
-  "12:00",
-  "12:30",
-];
-
 const AgendarTurnos = () => {
   const navigate = useNavigate();
   const { veterinariaId } = useParams(); // Obtenemos el ID dinámico de la URL
@@ -78,9 +77,10 @@ const AgendarTurnos = () => {
   const [fechaInicioSemana, setFechaInicioSemana] = useState(() => {
     const hoy = new Date();
     const diaSemana = hoy.getDay();
-    const domingo = new Date(hoy);
-    domingo.setDate(hoy.getDate() - diaSemana);
-    return domingo;
+    const offset = (diaSemana + 6) % 7; // días transcurridos desde el lunes de esta semana
+    const lunes = new Date(hoy);
+    lunes.setDate(hoy.getDate() - offset);
+    return lunes;
   });
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -109,6 +109,20 @@ const AgendarTurnos = () => {
     });
   }, [fechaInicioSemana]);
 
+  // Extrae dinámicamente las horas que el backend ya calculó y envió
+  const horasVisibles = useMemo(() => {
+    const todasLasHoras = new Set();
+
+    // Recorremos los días de la semana y extraemos las horas que devolvió el backend
+    Object.values(disponibilidadSemanal).forEach((listaHoras) => {
+      if (Array.isArray(listaHoras)) {
+        listaHoras.forEach((hora) => todasLasHoras.add(hora));
+      }
+    });
+
+    return Array.from(todasLasHoras).sort();
+  }, [disponibilidadSemanal]);
+
   // --- Obtención de datos del Servidor (Carga Inicial y paginación) ---
   useEffect(() => {
     let cancelado = false;
@@ -130,8 +144,17 @@ const AgendarTurnos = () => {
 
           if (cancelado) return;
 
-          if (resVet.success) setVeterinaria(resVet.data);
-          setMascotas(resMascotas); // Devuelve array directo según tu controlador
+          if (!resVet.success) {
+            setError(
+              resVet.message ||
+                "No pudimos cargar los datos de esta veterinaria. Intentá de nuevo más tarde.",
+            );
+            setLoading(false);
+            return;
+          }
+
+          setVeterinaria(resVet.data);
+          setMascotas(Array.isArray(resMascotas) ? resMascotas : []);
         }
 
         // 2. Resolver concurrencia de turnos para los 7 días mapeados en pantalla
@@ -154,7 +177,9 @@ const AgendarTurnos = () => {
             .then((r) => r.json())
             .then((res) => ({
               fechaStr: dia.fechaStr,
-              horarios: res.data?.horariosDisponibles || [],
+              horarios: (res.data?.horariosDisponibles || []).filter((hora) =>
+                cumpleAntelacionMinima(dia.fechaStr, hora),
+              ),
             }));
         });
 
@@ -373,7 +398,7 @@ const AgendarTurnos = () => {
 
               {/* ------ INICIO: FILAS DE HORARIOS (SLOTS) ------ */}
               <div className={styles.gridHorariosScroll}>
-                {HORAS_FIJAS.map((hora) => (
+                {horasVisibles.map((hora) => (
                   <div key={hora} className={styles.filaHorario}>
                     <span className={styles.horaLabel}>{hora}</span>
                     {diasSemana.map((dia) => {
