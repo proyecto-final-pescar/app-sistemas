@@ -1,0 +1,161 @@
+.registrar-consulta-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #fbf9ff;
+}
+
+.registrar-consulta-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.registrar-consulta-main {
+  flex: 1;
+  padding: 32px 24px;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #24113f;
+}
+
+.registrar-consulta-container {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.registrar-consulta-banner {
+  background: linear-gradient(135deg, #8b3df5, #5f22d9);
+  border-radius: 26px;
+  padding: 44px 46px;
+  color: white;
+  margin-bottom: 32px;
+  box-shadow: 0 12px 28px rgba(95, 34, 217, 0.22);
+}
+
+.registrar-consulta-step {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 800;
+  opacity: 0.85;
+}
+
+.registrar-consulta-title {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 900;
+}
+
+.registrar-consulta-subtitle {
+  margin: 12px 0 0;
+  font-size: 22px;
+  opacity: 0.9;
+}
+
+.registrar-consulta-alert {
+  padding: 14px 18px;
+  border-radius: 14px;
+  margin-bottom: 18px;
+  font-weight: 800;
+}
+
+.registrar-consulta-alert-error {
+  background: #fff5f5;
+  color: #c0392b;
+  border: 1px solid #f5b7b1;
+}
+
+.registrar-consulta-alert-success {
+  background: #ecfdf3;
+  color: #0f7a55;
+  border: 1px solid #b7ebc6;
+}
+
+.registrar-consulta-form {
+  background: white;
+  border: 1px solid #eee7ff;
+  border-radius: 26px;
+  padding: 34px;
+}
+
+.registrar-consulta-section-title {
+  margin: 0 0 22px;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.registrar-consulta-section-title-spaced {
+  margin-top: 28px;
+}
+
+.registrar-consulta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+
+.registrar-consulta-textarea-wrapper {
+  margin-top: 22px;
+}
+
+.registrar-consulta-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #24113f;
+}
+
+.registrar-consulta-textarea {
+  width: 100%;
+  min-height: 128px;
+  border: none;
+  border-radius: 22px;
+  background: #f1ecff;
+  padding: 18px 20px;
+  font-size: 16px;
+  color: #24113f;
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.registrar-consulta-textarea-error {
+  border: 2px solid #e74c3c;
+  background: #fff5f5;
+}
+
+.registrar-consulta-error-text {
+  color: #e74c3c;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 6px 0 0;
+}
+
+.registrar-consulta-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 38px;
+}
+
+@media (max-width: 768px) {
+  .registrar-consulta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .registrar-consulta-banner {
+    padding: 32px 28px;
+  }
+
+  .registrar-consulta-title {
+    font-size: 30px;
+  }
+
+  .registrar-consulta-subtitle {
+    font-size: 18px;
+  }
+
+  .registrar-consulta-actions {
+    flex-direction: column;
+  }
+}

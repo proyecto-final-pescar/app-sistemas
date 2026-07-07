@@ -1,6 +1,19 @@
 import { useState } from "react";
+import Input from "../../../components/ui/input/Input";
+import Select from "../../../components/ui/select/Select";
+import Button from "../../../components/ui/button/Button";
+import Sidebar from "../../../components/layout/Sidebar";
+import TopBar from "../../../components/layout/TopBar";
+import "./RegistrarConsulta.css";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 function RegistrarConsulta() {
+  const [pasoActual, setPasoActual] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorApi, setErrorApi] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
   const [form, setForm] = useState({
     nombreDueno: "",
     email: "",
@@ -10,283 +23,389 @@ function RegistrarConsulta() {
     edad: "",
     sexo: "",
     peso: "",
+    fecha: "",
+    horario: "",
+    categoriaServicio: "",
+    motivoConsulta: "",
+    anotaciones: "",
+    profesional: "",
+    monto: "",
   });
 
   const [errores, setErrores] = useState({});
 
-  function handleChange(e) {
-    const { name, value } = e.target;
+  function actualizarCampo(campo, valor) {
+    setForm({ ...form, [campo]: valor });
+    setErrorApi("");
+    setSuccessMessage("");
 
-    setForm({ ...form, [name]: value });
-
-    if (errores[name]) {
-      setErrores({ ...errores, [name]: "" });
+    if (errores[campo]) {
+      setErrores({ ...errores, [campo]: "" });
     }
   }
 
-  function validarFormulario() {
+  function actualizarMonto(valor) {
+    const valorSoloNumeros = valor.replace(/[^\d]/g, "");
+    actualizarCampo("monto", valorSoloNumeros);
+  }
+
+  function formatearMonto(valor) {
+    if (!valor) return "";
+    return `$${Number(valor).toLocaleString("es-AR")}`;
+  }
+
+  function validarPasoUno() {
     const nuevosErrores = {};
 
-    if (!form.nombreDueno.trim()) {
-      nuevosErrores.nombreDueno = "El nombre del dueño es requerido";
-    }
-
-    if (!form.email.trim()) {
-      nuevosErrores.email = "El email es requerido";
-    }
-
-    if (!form.nombreMascota.trim()) {
-      nuevosErrores.nombreMascota = "El nombre de la mascota es requerido";
-    }
-
-    if (!form.especie) {
-      nuevosErrores.especie = "Debe seleccionar una especie";
-    }
-
-    if (!form.raza.trim()) {
-      nuevosErrores.raza = "La raza es requerida";
-    }
-
-    if (!form.edad.trim()) {
-      nuevosErrores.edad = "La edad es requerida";
-    }
-
-    if (!form.sexo) {
-      nuevosErrores.sexo = "Debe seleccionar el sexo";
-    }
-
-    if (!form.peso.trim()) {
-      nuevosErrores.peso = "El peso es requerido";
-    }
+    if (!form.nombreDueno.trim()) nuevosErrores.nombreDueno = "El nombre del dueño es requerido";
+    if (!form.email.trim()) nuevosErrores.email = "El email es requerido";
+    if (!form.nombreMascota.trim()) nuevosErrores.nombreMascota = "El nombre de la mascota es requerido";
+    if (!form.especie) nuevosErrores.especie = "Debe seleccionar una especie";
+    if (!form.raza.trim()) nuevosErrores.raza = "La raza es requerida";
+    if (!form.edad.trim()) nuevosErrores.edad = "La edad es requerida";
+    if (!form.sexo) nuevosErrores.sexo = "Debe seleccionar el sexo";
+    if (!form.peso.trim()) nuevosErrores.peso = "El peso es requerido";
 
     setErrores(nuevosErrores);
     return Object.keys(nuevosErrores).length === 0;
   }
 
-  function handleSubmit(e) {
-    e.preventDefault();
+  function validarPasoDos() {
+    const nuevosErrores = {};
 
-    if (!validarFormulario()) return;
+    if (!form.fecha) nuevosErrores.fecha = "La fecha es requerida";
+    if (!form.horario) nuevosErrores.horario = "El horario es requerido";
+    if (!form.categoriaServicio) nuevosErrores.categoriaServicio = "Debe seleccionar una categoría";
+    if (!form.motivoConsulta.trim()) nuevosErrores.motivoConsulta = "El motivo es requerido";
+    if (!form.anotaciones.trim()) nuevosErrores.anotaciones = "Las anotaciones son requeridas";
+    if (!form.profesional) nuevosErrores.profesional = "Debe seleccionar un profesional";
+    if (!form.monto) nuevosErrores.monto = "El monto es requerido";
 
-    console.log("Datos de la consulta:", form);
-    alert("Datos cargados correctamente");
+    setErrores(nuevosErrores);
+    return Object.keys(nuevosErrores).length === 0;
   }
 
-  const pageStyle = {
-    minHeight: "100vh",
-    background: "#fbf9ff",
-    padding: "32px 24px",
-    fontFamily: "Arial, Helvetica, sans-serif",
-    color: "#24113f",
-  };
+  function limpiarFormulario() {
+    setForm({
+      nombreDueno: "",
+      email: "",
+      nombreMascota: "",
+      especie: "",
+      raza: "",
+      edad: "",
+      sexo: "",
+      peso: "",
+      fecha: "",
+      horario: "",
+      categoriaServicio: "",
+      motivoConsulta: "",
+      anotaciones: "",
+      profesional: "",
+      monto: "",
+    });
 
-  const containerStyle = {
-    maxWidth: "980px",
-    margin: "0 auto",
-  };
+    setErrores({});
+    setPasoActual(1);
+  }
 
-  const bannerStyle = {
-    background: "linear-gradient(135deg, #8b3df5, #5f22d9)",
-    borderRadius: "26px",
-    padding: "44px 46px",
-    color: "white",
-    marginBottom: "32px",
-    boxShadow: "0 12px 28px rgba(95, 34, 217, 0.22)",
-  };
+  async function handleSubmit(e) {
+    e.preventDefault();
 
-  const cardStyle = {
-    background: "white",
-    border: "1px solid #eee7ff",
-    borderRadius: "26px",
-    padding: "34px",
-  };
+    setErrorApi("");
+    setSuccessMessage("");
 
-  const gridStyle = {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "22px",
-  };
+    if (pasoActual === 1) {
+      if (!validarPasoUno()) return;
+      setErrores({});
+      setPasoActual(2);
+      return;
+    }
 
-  const labelStyle = {
-    display: "block",
-    marginBottom: "8px",
-    fontSize: "16px",
-    fontWeight: "800",
-    color: "#24113f",
-  };
+    if (!validarPasoDos()) return;
 
-  const inputStyle = (error) => ({
-    width: "100%",
-    height: "58px",
-    border: error ? "2px solid #e74c3c" : "none",
-    borderRadius: "22px",
-    background: error ? "#fff5f5" : "#f1ecff",
-    padding: "0 20px",
-    fontSize: "16px",
-    color: "#24113f",
-    outline: "none",
-    boxSizing: "border-box",
-  });
+    const token = localStorage.getItem("token");
 
-  const errorStyle = {
-    color: "#e74c3c",
-    fontSize: "13px",
-    fontWeight: "700",
-    margin: "6px 0 0",
-  };
+    if (!token) {
+      setErrorApi("No se encontró el token de sesión. Iniciá sesión nuevamente.");
+      return;
+    }
 
-  const titleStyle = {
-    margin: "0 0 22px",
-    fontSize: "24px",
-    fontWeight: "900",
-  };
+    const body = {
+      dueno: {
+        nombre: form.nombreDueno.trim(),
+        email: form.email.trim(),
+      },
+      mascota: {
+        nombre: form.nombreMascota.trim(),
+        especie: form.especie,
+        raza: form.raza.trim(),
+        edad: form.edad.trim(),
+        sexo: form.sexo,
+        peso: form.peso.trim(),
+      },
+      consulta: {
+        fecha: form.fecha,
+        horario: form.horario,
+        categoriaServicio: form.categoriaServicio,
+        motivoConsulta: form.motivoConsulta.trim(),
+        anotaciones: form.anotaciones.trim(),
+        profesional: form.profesional,
+        monto: Number(form.monto),
+      },
+    };
+
+    setIsLoading(true);
+
+    try {
+      const respuesta = await fetch(`${API_URL}/historial-clinico`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const datos = await respuesta.json();
+
+      if (!respuesta.ok) {
+        setErrorApi(datos.message || "Error al registrar la consulta.");
+        return;
+      }
+
+      setSuccessMessage("Consulta registrada correctamente.");
+      limpiarFormulario();
+    } catch (error) {
+      console.error(error);
+      setErrorApi("Error de conexión. Intentá de nuevo.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
-    <div style={pageStyle}>
-      <div style={containerStyle}>
-        <div style={bannerStyle}>
-          <h1 style={{ margin: 0, fontSize: "38px", fontWeight: "900" }}>
-            Registrá una consulta
-          </h1>
-          <p style={{ margin: "12px 0 0", fontSize: "22px", opacity: 0.9 }}>
-            Cargá los datos del dueño y la mascota de tu última consulta.
-          </p>
-        </div>
+    <div className="registrar-consulta-layout">
+      <Sidebar role="veterinaria" />
 
-        <form onSubmit={handleSubmit} style={cardStyle}>
-          <h2 style={titleStyle}>Datos del dueño</h2>
+      <div className="registrar-consulta-content">
+        <TopBar title="Historial Clínico" notifications={2} />
 
-          <div style={gridStyle}>
-            <div>
-              <label style={labelStyle}>Nombre</label>
-              <input
-                style={inputStyle(errores.nombreDueno)}
-                name="nombreDueno"
-                placeholder="Ingresá el nombre"
-                value={form.nombreDueno}
-                onChange={handleChange}
-              />
-              {errores.nombreDueno && <p style={errorStyle}>{errores.nombreDueno}</p>}
+        <main className="registrar-consulta-main">
+          <div className="registrar-consulta-container">
+            <div className="registrar-consulta-banner">
+              <p className="registrar-consulta-step">Paso {pasoActual} de 2</p>
+
+              <h1 className="registrar-consulta-title">Registrá una consulta</h1>
+
+              <p className="registrar-consulta-subtitle">
+                {pasoActual === 1
+                  ? "Cargá los datos del dueño y la mascota de tu última consulta."
+                  : "Cargá los datos médicos de la consulta."}
+              </p>
             </div>
 
-            <div>
-              <label style={labelStyle}>Email</label>
-              <input
-                style={inputStyle(errores.email)}
-                name="email"
-                type="email"
-                placeholder="Ingresá el email"
-                value={form.email}
-                onChange={handleChange}
-              />
-              {errores.email && <p style={errorStyle}>{errores.email}</p>}
-            </div>
+            {errorApi && (
+              <div className="registrar-consulta-alert registrar-consulta-alert-error">
+                ❌ {errorApi}
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="registrar-consulta-alert registrar-consulta-alert-success">
+                ✅ {successMessage}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="registrar-consulta-form">
+              {pasoActual === 1 && (
+                <>
+                  <h2 className="registrar-consulta-section-title">Datos del dueño</h2>
+
+                  <div className="registrar-consulta-grid">
+                    <Input
+                      label="Nombre"
+                      placeholder="Ingresá el nombre"
+                      value={form.nombreDueno}
+                      onChange={(e) => actualizarCampo("nombreDueno", e.target.value)}
+                      error={errores.nombreDueno}
+                    />
+
+                    <Input
+                      label="Email"
+                      type="email"
+                      placeholder="Ingresá el email"
+                      value={form.email}
+                      onChange={(e) => actualizarCampo("email", e.target.value)}
+                      error={errores.email}
+                    />
+                  </div>
+
+                  <h2 className="registrar-consulta-section-title registrar-consulta-section-title-spaced">
+                    Datos de la mascota
+                  </h2>
+
+                  <div className="registrar-consulta-grid">
+                    <Input
+                      label="Nombre"
+                      placeholder="Ingresá el nombre"
+                      value={form.nombreMascota}
+                      onChange={(e) => actualizarCampo("nombreMascota", e.target.value)}
+                      error={errores.nombreMascota}
+                    />
+
+                    <Select
+                      label="Especie"
+                      placeholder="Seleccioná una especie"
+                      opciones={["Perro", "Gato", "Ave", "Otro"]}
+                      value={form.especie}
+                      onChange={(e) => actualizarCampo("especie", e.target.value)}
+                      error={errores.especie}
+                    />
+
+                    <Input
+                      label="Raza"
+                      placeholder="Ingresá la raza"
+                      value={form.raza}
+                      onChange={(e) => actualizarCampo("raza", e.target.value)}
+                      error={errores.raza}
+                    />
+
+                    <Input
+                      label="Fecha de nacimiento / Edad aproximada"
+                      placeholder="Ej: 2 años"
+                      value={form.edad}
+                      onChange={(e) => actualizarCampo("edad", e.target.value)}
+                      error={errores.edad}
+                    />
+
+                    <Select
+                      label="Sexo"
+                      placeholder="Seleccioná el sexo"
+                      opciones={["Hembra", "Macho"]}
+                      value={form.sexo}
+                      onChange={(e) => actualizarCampo("sexo", e.target.value)}
+                      error={errores.sexo}
+                    />
+
+                    <Input
+                      label="Peso"
+                      placeholder="Ej: 3kg"
+                      value={form.peso}
+                      onChange={(e) => actualizarCampo("peso", e.target.value)}
+                      error={errores.peso}
+                    />
+                  </div>
+                </>
+              )}
+
+              {pasoActual === 2 && (
+                <>
+                  <h2 className="registrar-consulta-section-title">Datos de la consulta</h2>
+
+                  <div className="registrar-consulta-grid">
+                    <Input
+                      label="Fecha"
+                      type="date"
+                      value={form.fecha}
+                      onChange={(e) => actualizarCampo("fecha", e.target.value)}
+                      error={errores.fecha}
+                    />
+
+                    <Select
+                      label="Horario"
+                      placeholder="Seleccioná un horario"
+                      opciones={["09:00", "10:00", "11:00", "12:00", "15:00", "16:00"]}
+                      value={form.horario}
+                      onChange={(e) => actualizarCampo("horario", e.target.value)}
+                      error={errores.horario}
+                    />
+
+                    <Select
+                      label="Categoría del servicio"
+                      placeholder="Seleccioná una categoría"
+                      opciones={["Vacunación", "Consulta", "Control", "Cirugía", "Urgencia"]}
+                      value={form.categoriaServicio}
+                      onChange={(e) => actualizarCampo("categoriaServicio", e.target.value)}
+                      error={errores.categoriaServicio}
+                    />
+
+                    <Select
+                      label="Profesional a cargo"
+                      placeholder="Seleccioná un profesional"
+                      opciones={["Dra. Laura Méndez", "Dr. Juan López", "Dra. Sofía Pérez"]}
+                      value={form.profesional}
+                      onChange={(e) => actualizarCampo("profesional", e.target.value)}
+                      error={errores.profesional}
+                    />
+
+                    <Input
+                      label="Motivo de consulta"
+                      placeholder="Ej: Vacuna Antirrábica Anual"
+                      value={form.motivoConsulta}
+                      onChange={(e) => actualizarCampo("motivoConsulta", e.target.value)}
+                      error={errores.motivoConsulta}
+                    />
+
+                    <Input
+                      label="Monto"
+                      placeholder="$0"
+                      value={formatearMonto(form.monto)}
+                      onChange={(e) => actualizarMonto(e.target.value)}
+                      error={errores.monto}
+                    />
+                  </div>
+
+                  <div className="registrar-consulta-textarea-wrapper">
+                    <label className="registrar-consulta-label">Anotaciones</label>
+
+                    <textarea
+                      className={`registrar-consulta-textarea ${
+                        errores.anotaciones ? "registrar-consulta-textarea-error" : ""
+                      }`}
+                      placeholder="Escribí las anotaciones de la consulta..."
+                      value={form.anotaciones}
+                      onChange={(e) => actualizarCampo("anotaciones", e.target.value)}
+                    />
+
+                    {errores.anotaciones && (
+                      <p className="registrar-consulta-error-text">{errores.anotaciones}</p>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <div className="registrar-consulta-actions">
+                {pasoActual === 2 && (
+                  <Button
+                    type="button"
+                    texto="← Volver"
+                    variante="secundario"
+                    tamaño="mediano"
+                    disabled={isLoading}
+                    onClick={() => {
+                      setErrores({});
+                      setPasoActual(1);
+                    }}
+                  />
+                )}
+
+                <Button
+                  type="submit"
+                  texto={
+                    isLoading
+                      ? "Registrando..."
+                      : pasoActual === 1
+                      ? "Continuar →"
+                      : "Registrar consulta"
+                  }
+                  variante="primario"
+                  tamaño="mediano"
+                  disabled={isLoading}
+                />
+              </div>
+            </form>
           </div>
-
-          <h2 style={{ ...titleStyle, marginTop: "28px" }}>Datos de la mascota</h2>
-
-          <div style={gridStyle}>
-            <div>
-              <label style={labelStyle}>Nombre</label>
-              <input
-                style={inputStyle(errores.nombreMascota)}
-                name="nombreMascota"
-                placeholder="Ingresá el nombre"
-                value={form.nombreMascota}
-                onChange={handleChange}
-              />
-              {errores.nombreMascota && <p style={errorStyle}>{errores.nombreMascota}</p>}
-            </div>
-
-            <div>
-              <label style={labelStyle}>Especie</label>
-              <select
-                style={inputStyle(errores.especie)}
-                name="especie"
-                value={form.especie}
-                onChange={handleChange}
-              >
-                <option value="">Seleccioná una especie</option>
-                <option value="Perro">Perro</option>
-                <option value="Gato">Gato</option>
-                <option value="Ave">Ave</option>
-                <option value="Otro">Otro</option>
-              </select>
-              {errores.especie && <p style={errorStyle}>{errores.especie}</p>}
-            </div>
-
-            <div>
-              <label style={labelStyle}>Raza</label>
-              <input
-                style={inputStyle(errores.raza)}
-                name="raza"
-                placeholder="Ingresá la raza"
-                value={form.raza}
-                onChange={handleChange}
-              />
-              {errores.raza && <p style={errorStyle}>{errores.raza}</p>}
-            </div>
-
-            <div>
-              <label style={labelStyle}>Fecha de nacimiento / Edad aproximada</label>
-              <input
-                style={inputStyle(errores.edad)}
-                name="edad"
-                placeholder="Ej: 2 años"
-                value={form.edad}
-                onChange={handleChange}
-              />
-              {errores.edad && <p style={errorStyle}>{errores.edad}</p>}
-            </div>
-
-            <div>
-              <label style={labelStyle}>Sexo</label>
-              <select
-                style={inputStyle(errores.sexo)}
-                name="sexo"
-                value={form.sexo}
-                onChange={handleChange}
-              >
-                <option value="">Seleccioná el sexo</option>
-                <option value="Hembra">Hembra</option>
-                <option value="Macho">Macho</option>
-              </select>
-              {errores.sexo && <p style={errorStyle}>{errores.sexo}</p>}
-            </div>
-
-            <div>
-              <label style={labelStyle}>Peso</label>
-              <input
-                style={inputStyle(errores.peso)}
-                name="peso"
-                placeholder="Ej: 3kg"
-                value={form.peso}
-                onChange={handleChange}
-              />
-              {errores.peso && <p style={errorStyle}>{errores.peso}</p>}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "center", marginTop: "38px" }}>
-            <button
-              type="submit"
-              style={{
-                width: "520px",
-                height: "68px",
-                border: "none",
-                borderRadius: "18px",
-                background: "#0f9d73",
-                color: "white",
-                fontSize: "22px",
-                fontWeight: "900",
-                cursor: "pointer",
-                boxShadow: "0 12px 22px rgba(15,157,115,0.28)",
-              }}
-            >
-              Continuar →
-            </button>
-          </div>
-        </form>
+        </main>
       </div>
     </div>
   );
