@@ -2,6 +2,7 @@
   display: flex;
   min-height: 100vh;
   background: #fbf9ff;
+  font-family: "Inter", sans-serif;
 }
 
 .registrar-consulta-content {
@@ -13,8 +14,7 @@
 .registrar-consulta-main {
   flex: 1;
   padding: 32px 24px;
-  font-family: Arial, Helvetica, sans-serif;
-  color: #24113f;
+  color: #2b2142;
 }
 
 .registrar-consulta-container {
@@ -26,27 +26,29 @@
   background: linear-gradient(135deg, #8b3df5, #5f22d9);
   border-radius: 26px;
   padding: 44px 46px;
-  color: white;
+  color: #ffffff;
   margin-bottom: 32px;
   box-shadow: 0 12px 28px rgba(95, 34, 217, 0.22);
 }
 
 .registrar-consulta-step {
   margin: 0 0 10px;
-  font-size: 15px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
   opacity: 0.85;
 }
 
 .registrar-consulta-title {
   margin: 0;
-  font-size: 38px;
-  font-weight: 900;
+  font-size: 34px;
+  line-height: 42px;
+  font-weight: 800;
 }
 
 .registrar-consulta-subtitle {
-  margin: 12px 0 0;
-  font-size: 22px;
+  margin: 10px 0 0;
+  font-size: 16px;
+  line-height: 24px;
   opacity: 0.9;
 }
 
@@ -54,7 +56,8 @@
   padding: 14px 18px;
   border-radius: 14px;
   margin-bottom: 18px;
-  font-weight: 800;
+  font-weight: 600;
+  font-size: 14px;
 }
 
 .registrar-consulta-alert-error {
@@ -70,7 +73,7 @@
 }
 
 .registrar-consulta-form {
-  background: white;
+  background: #ffffff;
   border: 1px solid #eee7ff;
   border-radius: 26px;
   padding: 34px;
@@ -78,8 +81,10 @@
 
 .registrar-consulta-section-title {
   margin: 0 0 22px;
-  font-size: 24px;
-  font-weight: 900;
+  font-size: 22px;
+  line-height: 30px;
+  font-weight: 700;
+  color: #2b2142;
 }
 
 .registrar-consulta-section-title-spaced {
@@ -99,35 +104,39 @@
 .registrar-consulta-label {
   display: block;
   margin-bottom: 8px;
-  font-size: 16px;
-  font-weight: 800;
-  color: #24113f;
+  color: #2b2142;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .registrar-consulta-textarea {
   width: 100%;
   min-height: 128px;
-  border: none;
-  border-radius: 22px;
-  background: #f1ecff;
-  padding: 18px 20px;
-  font-size: 16px;
-  color: #24113f;
+  border: 1px solid #e5ddf8;
+  border-radius: 14px;
+  background-color: #ffffff;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 20px;
+  color: #2b2142;
   outline: none;
   resize: vertical;
   box-sizing: border-box;
-  font-family: inherit;
+  font-family: "Inter", sans-serif;
+}
+
+.registrar-consulta-textarea:focus {
+  border-color: #7c3aed;
 }
 
 .registrar-consulta-textarea-error {
-  border: 2px solid #e74c3c;
+  border-color: #ef4444;
   background: #fff5f5;
 }
 
 .registrar-consulta-error-text {
-  color: #e74c3c;
+  color: #ef4444;
   font-size: 13px;
-  font-weight: 700;
   margin: 6px 0 0;
 }
 
@@ -149,10 +158,12 @@
 
   .registrar-consulta-title {
     font-size: 30px;
+    line-height: 38px;
   }
 
   .registrar-consulta-subtitle {
-    font-size: 18px;
+    font-size: 15px;
+    line-height: 22px;
   }
 
   .registrar-consulta-actions {

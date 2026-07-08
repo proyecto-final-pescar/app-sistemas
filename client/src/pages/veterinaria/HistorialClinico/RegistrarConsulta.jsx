@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Input from "../../../components/ui/input/Input";
 import Select from "../../../components/ui/select/Select";
 import Button from "../../../components/ui/button/Button";
@@ -6,17 +6,19 @@ import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import "./RegistrarConsulta.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api`;
 
 function RegistrarConsulta() {
   const [pasoActual, setPasoActual] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [errorApi, setErrorApi] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [profesionales, setProfesionales] = useState([]);
 
   const [form, setForm] = useState({
     nombreDueno: "",
     email: "",
+    mascotaId: "",
     nombreMascota: "",
     especie: "",
     raza: "",
@@ -24,23 +26,73 @@ function RegistrarConsulta() {
     sexo: "",
     peso: "",
     fecha: "",
-    horario: "",
+    hora: "",
     categoriaServicio: "",
     motivoConsulta: "",
     anotaciones: "",
-    profesional: "",
+    profesionalId: "",
     monto: "",
   });
 
   const [errores, setErrores] = useState({});
 
+  useEffect(() => {
+    async function obtenerProfesionales() {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setErrorApi("No se encontró el token de sesión. Iniciá sesión nuevamente.");
+        return;
+      }
+
+      try {
+        const respuesta = await fetch(`${API_URL}/veterinarias`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const datos = await respuesta.json();
+
+        console.log("Respuesta GET /veterinarias:", datos);
+
+        if (!respuesta.ok) {
+          setErrorApi(datos.message || "Error al cargar los profesionales.");
+          return;
+        }
+
+        const profesionalesBackend =
+          datos.profesionales ||
+          datos.veterinaria?.profesionales ||
+          datos.data?.profesionales ||
+          datos.veterinarias?.[0]?.profesionales ||
+          [];
+
+        setProfesionales(profesionalesBackend);
+      } catch (error) {
+        console.error(error);
+        setErrorApi("Error de conexión al cargar los profesionales.");
+      }
+    }
+
+    obtenerProfesionales();
+  }, []);
+
   function actualizarCampo(campo, valor) {
-    setForm({ ...form, [campo]: valor });
+    setForm((prevForm) => ({
+      ...prevForm,
+      [campo]: valor,
+    }));
+
     setErrorApi("");
     setSuccessMessage("");
 
     if (errores[campo]) {
-      setErrores({ ...errores, [campo]: "" });
+      setErrores((prevErrores) => ({
+        ...prevErrores,
+        [campo]: "",
+      }));
     }
   }
 
@@ -57,14 +109,41 @@ function RegistrarConsulta() {
   function validarPasoUno() {
     const nuevosErrores = {};
 
-    if (!form.nombreDueno.trim()) nuevosErrores.nombreDueno = "El nombre del dueño es requerido";
-    if (!form.email.trim()) nuevosErrores.email = "El email es requerido";
-    if (!form.nombreMascota.trim()) nuevosErrores.nombreMascota = "El nombre de la mascota es requerido";
-    if (!form.especie) nuevosErrores.especie = "Debe seleccionar una especie";
-    if (!form.raza.trim()) nuevosErrores.raza = "La raza es requerida";
-    if (!form.edad.trim()) nuevosErrores.edad = "La edad es requerida";
-    if (!form.sexo) nuevosErrores.sexo = "Debe seleccionar el sexo";
-    if (!form.peso.trim()) nuevosErrores.peso = "El peso es requerido";
+    if (!form.nombreDueno.trim()) {
+      nuevosErrores.nombreDueno = "El nombre del dueño es requerido";
+    }
+
+    if (!form.email.trim()) {
+      nuevosErrores.email = "El email es requerido";
+    }
+
+    if (!form.mascotaId.trim()) {
+      nuevosErrores.mascotaId = "El ID de la mascota es requerido";
+    }
+
+    if (!form.nombreMascota.trim()) {
+      nuevosErrores.nombreMascota = "El nombre de la mascota es requerido";
+    }
+
+    if (!form.especie) {
+      nuevosErrores.especie = "Debe seleccionar una especie";
+    }
+
+    if (!form.raza.trim()) {
+      nuevosErrores.raza = "La raza es requerida";
+    }
+
+    if (!form.edad.trim()) {
+      nuevosErrores.edad = "La edad es requerida";
+    }
+
+    if (!form.sexo) {
+      nuevosErrores.sexo = "Debe seleccionar el sexo";
+    }
+
+    if (!form.peso.trim()) {
+      nuevosErrores.peso = "El peso es requerido";
+    }
 
     setErrores(nuevosErrores);
     return Object.keys(nuevosErrores).length === 0;
@@ -73,13 +152,33 @@ function RegistrarConsulta() {
   function validarPasoDos() {
     const nuevosErrores = {};
 
-    if (!form.fecha) nuevosErrores.fecha = "La fecha es requerida";
-    if (!form.horario) nuevosErrores.horario = "El horario es requerido";
-    if (!form.categoriaServicio) nuevosErrores.categoriaServicio = "Debe seleccionar una categoría";
-    if (!form.motivoConsulta.trim()) nuevosErrores.motivoConsulta = "El motivo es requerido";
-    if (!form.anotaciones.trim()) nuevosErrores.anotaciones = "Las anotaciones son requeridas";
-    if (!form.profesional) nuevosErrores.profesional = "Debe seleccionar un profesional";
-    if (!form.monto) nuevosErrores.monto = "El monto es requerido";
+    if (!form.fecha) {
+      nuevosErrores.fecha = "La fecha es requerida";
+    }
+
+    if (!form.hora) {
+      nuevosErrores.hora = "La hora es requerida";
+    }
+
+    if (!form.categoriaServicio) {
+      nuevosErrores.categoriaServicio = "Debe seleccionar una categoría";
+    }
+
+    if (!form.motivoConsulta.trim()) {
+      nuevosErrores.motivoConsulta = "El motivo es requerido";
+    }
+
+    if (!form.anotaciones.trim()) {
+      nuevosErrores.anotaciones = "Las anotaciones son requeridas";
+    }
+
+    if (!form.profesionalId) {
+      nuevosErrores.profesionalId = "Debe seleccionar un profesional";
+    }
+
+    if (!form.monto) {
+      nuevosErrores.monto = "El monto es requerido";
+    }
 
     setErrores(nuevosErrores);
     return Object.keys(nuevosErrores).length === 0;
@@ -89,6 +188,7 @@ function RegistrarConsulta() {
     setForm({
       nombreDueno: "",
       email: "",
+      mascotaId: "",
       nombreMascota: "",
       especie: "",
       raza: "",
@@ -96,11 +196,11 @@ function RegistrarConsulta() {
       sexo: "",
       peso: "",
       fecha: "",
-      horario: "",
+      hora: "",
       categoriaServicio: "",
       motivoConsulta: "",
       anotaciones: "",
-      profesional: "",
+      profesionalId: "",
       monto: "",
     });
 
@@ -116,6 +216,7 @@ function RegistrarConsulta() {
 
     if (pasoActual === 1) {
       if (!validarPasoUno()) return;
+
       setErrores({});
       setPasoActual(2);
       return;
@@ -131,28 +232,17 @@ function RegistrarConsulta() {
     }
 
     const body = {
-      dueno: {
-        nombre: form.nombreDueno.trim(),
-        email: form.email.trim(),
-      },
-      mascota: {
-        nombre: form.nombreMascota.trim(),
-        especie: form.especie,
-        raza: form.raza.trim(),
-        edad: form.edad.trim(),
-        sexo: form.sexo,
-        peso: form.peso.trim(),
-      },
-      consulta: {
-        fecha: form.fecha,
-        horario: form.horario,
-        categoriaServicio: form.categoriaServicio,
-        motivoConsulta: form.motivoConsulta.trim(),
-        anotaciones: form.anotaciones.trim(),
-        profesional: form.profesional,
-        monto: Number(form.monto),
-      },
+      mascotaId: form.mascotaId.trim(),
+      profesionalId: form.profesionalId,
+      fecha: form.fecha,
+      hora: form.hora,
+      categoriaServicio: form.categoriaServicio,
+      motivoConsulta: form.motivoConsulta.trim(),
+      anotaciones: form.anotaciones.trim(),
+      monto: Number(form.monto),
     };
+
+    console.log("Body enviado al backend:", body);
 
     setIsLoading(true);
 
@@ -246,6 +336,14 @@ function RegistrarConsulta() {
 
                   <div className="registrar-consulta-grid">
                     <Input
+                      label="ID de la mascota"
+                      placeholder="Ingresá el ID de la mascota"
+                      value={form.mascotaId}
+                      onChange={(e) => actualizarCampo("mascotaId", e.target.value)}
+                      error={errores.mascotaId}
+                    />
+
+                    <Input
                       label="Nombre"
                       placeholder="Ingresá el nombre"
                       value={form.nombreMascota}
@@ -312,35 +410,61 @@ function RegistrarConsulta() {
                     />
 
                     <Select
-                      label="Horario"
-                      placeholder="Seleccioná un horario"
+                      label="Hora"
+                      placeholder="Seleccioná una hora"
                       opciones={["09:00", "10:00", "11:00", "12:00", "15:00", "16:00"]}
-                      value={form.horario}
-                      onChange={(e) => actualizarCampo("horario", e.target.value)}
-                      error={errores.horario}
+                      value={form.hora}
+                      onChange={(e) => actualizarCampo("hora", e.target.value)}
+                      error={errores.hora}
                     />
 
                     <Select
                       label="Categoría del servicio"
                       placeholder="Seleccioná una categoría"
-                      opciones={["Vacunación", "Consulta", "Control", "Cirugía", "Urgencia"]}
+                      opciones={["Vacunación", "Consulta", "Control", "Cirugía"]}
                       value={form.categoriaServicio}
                       onChange={(e) => actualizarCampo("categoriaServicio", e.target.value)}
                       error={errores.categoriaServicio}
                     />
 
-                    <Select
-                      label="Profesional a cargo"
-                      placeholder="Seleccioná un profesional"
-                      opciones={["Dra. Laura Méndez", "Dr. Juan López", "Dra. Sofía Pérez"]}
-                      value={form.profesional}
-                      onChange={(e) => actualizarCampo("profesional", e.target.value)}
-                      error={errores.profesional}
-                    />
+                    <div className="select-container">
+                      <label className="select-label">Profesional a cargo</label>
+
+                      <select
+                        className={`select-campo ${
+                          form.profesionalId === "" ? "select-placeholder" : ""
+                        }`}
+                        value={form.profesionalId}
+                        onChange={(e) => actualizarCampo("profesionalId", e.target.value)}
+                      >
+                        <option value="" disabled>
+                          Seleccioná un profesional
+                        </option>
+
+                        {profesionales.map((profesional) => {
+                          const id = profesional.id || profesional._id;
+                          const nombre =
+                            profesional.nombre ||
+                            profesional.nombreCompleto ||
+                            profesional.email ||
+                            "Profesional sin nombre";
+
+                          return (
+                            <option key={id} value={id}>
+                              {nombre}
+                            </option>
+                          );
+                        })}
+                      </select>
+
+                      {errores.profesionalId && (
+                        <p className="select-error">{errores.profesionalId}</p>
+                      )}
+                    </div>
 
                     <Input
                       label="Motivo de consulta"
-                      placeholder="Ej: Vacuna Antirrábica Anual"
+                      placeholder="Ej: Vacuna antirrábica anual"
                       value={form.motivoConsulta}
                       onChange={(e) => actualizarCampo("motivoConsulta", e.target.value)}
                       error={errores.motivoConsulta}
@@ -368,7 +492,9 @@ function RegistrarConsulta() {
                     />
 
                     {errores.anotaciones && (
-                      <p className="registrar-consulta-error-text">{errores.anotaciones}</p>
+                      <p className="registrar-consulta-error-text">
+                        {errores.anotaciones}
+                      </p>
                     )}
                   </div>
                 </>
