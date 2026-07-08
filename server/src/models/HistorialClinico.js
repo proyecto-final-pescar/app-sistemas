@@ -16,8 +16,8 @@ const HistorialClinicoSchema = new mongoose.Schema(
 
     profesionalId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
       required: [true, "El profesional a cargo es requerido"],
+     
     },
 
     veterinariaId: {
@@ -49,15 +49,6 @@ const HistorialClinicoSchema = new mongoose.Schema(
         message: "{VALUE} no es una categoría de servicio válida",
       },
       required: [true, "La categoría del servicio es requerida"],
-    },
-
-    estado: {
-      type: String,
-      enum: {
-        values: ["Completado", "Con seguimiento", "Pendiente"],
-        message: "{VALUE} no es un estado válido",
-      },
-      default: "Completado",
     },
 
     motivoConsulta: {

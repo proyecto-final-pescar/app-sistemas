@@ -8,6 +8,7 @@ import usuariosRouter from './usuarios.js';
 import veterinariasRouter from './veterinarias.js';
 import disponibilidadRouter from './disponibilidad.js';
 import placesRouter from './places.js'; //!AGREGADO 
+import historialClinicoRouter from './historialClinico.js';
 
 const router = Router()
 
@@ -25,5 +26,5 @@ router.use('/disponibilidad', disponibilidadRouter);
 
 router.use('/places', placesRouter); //!AGREGADO
 
-
+router.use('/', historialClinicoRouter);
 export default router;
