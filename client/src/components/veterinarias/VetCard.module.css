@@ -1,0 +1,149 @@
+.card {
+  background: #ffffff;
+  border: 1.5px solid #ede9fe;
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card:hover {
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.12);
+  border-color: #c4b5fd;
+  transform: translateY(-1px);
+}
+
+.activa {
+  border-color: #7c3aed;
+  border-left: 4px solid #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+/* ── Header ── */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.headerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.nombre {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1f1f2e;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.direccion {
+  font-size: 0.76rem;
+  color: #6b7280;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Badge abierto/cerrado ── */
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.abierto {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.cerrado {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* ── Meta info ── */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: #4b5563;
+}
+
+.metaIcon {
+  font-size: 0.85rem;
+}
+
+.urgencias {
+  font-weight: 600;
+  color: #dc2626;
+  background: #fff1f2;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+}
+
+/* ── Tags especialidades ── */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  background: #ede9fe;
+  color: #5b21b6;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.01em;
+}
+
+/* ── Botón ── */
+.btn {
+  width: 100%;
+  padding: 11px;
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+  letter-spacing: 0.01em;
+}
+
+.btn:hover {
+  background: #6d28d9;
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
