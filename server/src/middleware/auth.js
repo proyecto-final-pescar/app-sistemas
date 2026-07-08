@@ -28,7 +28,7 @@ const verifyToken = (req, res, next) => {
         req.user = {
             id: decoded.id,
             email: decoded.email,
-            rol: decoded.rol
+            rol: decoded.role
         };
 
         // Continuar a la siguiente función

@@ -17,7 +17,7 @@ export const obtenerHistorialMascota = async (req, res) => {
     try {
         const mascotaId = req.params.id; // ID de la mascota que viene en la URL
         const usuarioId = req.user.id; // ID del usuario logueado
-        const rolUsuario = req.user.role; // Rol del usuario logueado
+        const rolUsuario = req.user.rol; // Rol del usuario logueado
 
         // Busco la mascota para verificar si existe y quién es su dueño
         const mascota = await Mascota.findById(mascotaId);
