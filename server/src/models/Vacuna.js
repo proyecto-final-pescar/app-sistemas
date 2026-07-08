@@ -1,6 +1,6 @@
 import mongoose from 'mongoose'
 
-const laboratorioSchema = new mongoose.Schema(
+const vacunaSchema = new mongoose.Schema(
   {
     mascotaId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -20,30 +20,25 @@ const laboratorioSchema = new mongoose.Schema(
     consultaId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Consulta',
-      default: null // Opcional, por si se adjunta desde una consulta puntual
+      default: null // Opcional, por si se vincula a una consulta puntual
     },
     nombre: {
       type: String,
-      required: [true, 'El nombre del estudio es requerido'],
+      required: [true, 'El nombre de la vacuna es requerido'],
       trim: true
-      // Ej: "Hemograma Completo", "Radiografía", "Ecografía"
+      // Ej: "Séxtuple", "Antirrábica", "Bordetella"
     },
-    fecha: {
+    fechaAplicada: {
       type: Date,
-      required: [true, 'La fecha es requerida']
-    },
-    /* urlArchivo: {
-      type: String,
-      trim: true,
-      default: null
-    } */
+      required: [true, 'La fecha de aplicación es requerida']
+    }
   },
   {
     timestamps: true,
-    collection: 'laboratorios'
+    collection: 'vacunas'
   }
 )
 
-const Laboratorio = mongoose.model('Laboratorio', laboratorioSchema)
+const Vacuna = mongoose.model('Vacuna', vacunaSchema)
 
-export default Laboratorio
+export default Vacuna
