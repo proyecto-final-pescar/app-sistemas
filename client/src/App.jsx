@@ -6,7 +6,7 @@ import PrivateRoute from "./components/PrivateRoute";
 import CitasAgendadas from './pages/veterinaria/CitasAgendadas/CitasAgendadas';
 
 import Login from "./pages/public/Login/Login";
-import Registro from "./pages/public/registro/Registro";
+import Registro from "./pages/public/Registro/Registro";
 import Landing from "./pages/public/LandingPage/Landing";
 import MisMascotas from "./pages/tutor/MisMascotas/MisMascotas";
 import Turnos from "./pages/tutor/Turnos/Turnos";
@@ -27,22 +27,22 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/register" element={<Registro />} />
-        <Route path="/home" element={<Landing />} />
-        <Route path="/mascotas" element={<MisMascotas />} />
-        <Route path="/turnos" element={<Turnos />} />
+        <Route path="/home" element={<PrivateRoute><Landing /></PrivateRoute>} />
+        <Route path="/mascotas" element={<PrivateRoute><MisMascotas /></PrivateRoute>} />
+        <Route path="/turnos" element={<PrivateRoute><Turnos /></PrivateRoute>} />
         <Route
           path="/turnos/agendar/:veterinariaId"
-          element={<AgendarTurnos />}
+          element={<PrivateRoute><AgendarTurnos /></PrivateRoute>}
         />
-        <Route path="/foro" element={<Foro />} />
-        <Route path="/veterinarias" element={<h1>Sección Veterinarias</h1>} />
-        <Route path="/agenda" element={<CitasAgendadas />} />
-        <Route path="/urgencias" element={<Emergencias />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/dashboard" element={<AdminDashboard />} />
+        <Route path="/foro" element={<PrivateRoute><Foro /></PrivateRoute>} />
+        <Route path="/veterinarias" element={<PrivateRoute><h1>Sección Veterinarias</h1></PrivateRoute>} />
+        <Route path="/agenda" element={<PrivateRoute><CitasAgendadas /></PrivateRoute>} />
+        <Route path="/urgencias" element={<PrivateRoute><Emergencias /></PrivateRoute>} />
+        <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
+        <Route path="/dashboard" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
         <Route
           path="/"
-          element={
+          element={<PrivateRoute>
             <div
               style={{
                 display: "flex",
@@ -94,7 +94,7 @@ function App() {
                 </main>
               </div>
             </div>
-          }
+          </PrivateRoute>}
         />
         <Route path="*" element={<NotFound />} />
       </Routes>
