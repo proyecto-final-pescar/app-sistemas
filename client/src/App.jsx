@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/layout/Sidebar";
 import TopBar from "./components/layout/TopBar";
+import PrivateRoute from "./components/PrivateRoute";
 import CitasAgendadas from './pages/veterinaria/CitasAgendadas/CitasAgendadas';
 
 import Login from "./pages/public/Login/Login";
@@ -22,8 +23,9 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/registro-veterinaria" element={<RegistroDeVeterinaria />} />
+        <Route path="/registro-veterinaria" element={<PrivateRoute><RegistroDeVeterinaria /></PrivateRoute>} />
         <Route path="/login" element={<Login />} />
+        <Route path="/registro" element={<Registro />} />
         <Route path="/register" element={<Registro />} />
         <Route path="/home" element={<Landing />} />
         <Route path="/mascotas" element={<MisMascotas />} />
