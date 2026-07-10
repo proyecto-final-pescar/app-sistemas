@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
+
 function Login() {
   const navigate = useNavigate();
   const { setUsuario } = useAuth();
@@ -27,7 +29,7 @@ function Login() {
       return data;
     }
 
-    return data?.message || data?.error || "No se pudo iniciar sesion.";
+    return data?.message || data?.mensaje || data?.error || "No se pudo iniciar sesion.";
   };
 
   const handleSubmit = async (event) => {
@@ -36,13 +38,13 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: formData.email,
+          email: formData.email.trim().toLowerCase(),
           password: formData.password,
         }),
       });
@@ -56,9 +58,15 @@ function Login() {
 
       const token = data.token || data.jwt || data.accessToken;
       const user = data.user || data.usuario || {};
+
+      if (!token) {
+        setError("No se recibio un token de autenticacion.");
+        return;
+      }
+
       const userData = {
         id: user.id || user._id || data.id,
-        email: user.email || data.email || formData.email,
+        email: user.email || data.email || formData.email.trim().toLowerCase(),
         rol: user.rol || user.role || data.rol || data.role,
       };
 
@@ -67,9 +75,22 @@ function Login() {
       setUsuario(userData);
 
       const rol = userData.rol;
-      if (rol === "dueno") navigate("/home");
-      if (rol === "veterinaria") navigate("/agenda");
-      if (rol === "administrador") navigate("/dashboard");
+      if (rol === "dueno") {
+        navigate("/home", { replace: true });
+        return;
+      }
+
+      if (rol === "veterinaria") {
+        navigate("/agenda", { replace: true });
+        return;
+      }
+
+      if (rol === "administrador") {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      navigate("/home", { replace: true });
     } catch (requestError) {
       setError(requestError.message);
     } finally {
