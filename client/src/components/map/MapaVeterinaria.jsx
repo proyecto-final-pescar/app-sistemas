@@ -47,43 +47,27 @@ const MapaVeterinarias = () => {
     const cargarVeterinarias = async () => {
       setIsLoading(true);
       try {
-        // Simulación de consulta a la API
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        const veterinariasMock = [
-          {
-            id: 1,
-            nombre: "VetCenter Palermo 24h",
-            distancia: "0.8 km",
-            position: { lat: -34.5885, lng: -58.4225 },
-          },
-          {
-            id: 2,
-            nombre: "Veterinaria San Roque",
-            distancia: "1.4 km",
-            position: { lat: -34.608, lng: -58.372 },
-          },
-        ];
-
-        setData(veterinariasMock);
-        /* //
-        const token = localStorage.getItem("token");
+        const { lat, lng } = miUbicacion;
 
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/veterinarias`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          },
+          `${import.meta.env.VITE_API_URL}/api/veterinarias/buscar?lat=${lat}&lng=${lng}&radio=50000`,
         );
 
         if (!response.ok) throw new Error("Error al obtener las veterinarias");
 
-        const veterinarias = await response.json();
-        setData(veterinarias); */
+        const json = await response.json();
+
+        const veterinarias = json.data.map((vete) => ({
+          id: vete._id,
+          nombre: vete.nombre,
+          direccion: vete.direccion,
+          position: {
+            lat: vete.coordenadas.coordinates[1], // índice 1 = latitud
+            lng: vete.coordenadas.coordinates[0], // índice 0 = longitud
+          },
+        }));
+
+        setData(veterinarias);
       } catch {
         setError(
           "No se pudieron cargar las veterinarias. Intentá de nuevo más tarde.",
@@ -94,7 +78,7 @@ const MapaVeterinarias = () => {
     };
 
     cargarVeterinarias();
-  }, []);
+  }, [miUbicacion]);
 
   const handleMarkerClick = (vete) => {
     setVeteSeleccionada(vete);

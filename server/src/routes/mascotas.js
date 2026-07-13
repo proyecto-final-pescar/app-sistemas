@@ -5,7 +5,8 @@ import {
     obtenerMascotas,
     crearMascota,
     actualizarMascota,
-    eliminarMascota
+    eliminarMascota,
+    obtenerHistorialMascota
 } from '../controllers/mascotaController.js';
 
 const router = Router();
@@ -15,6 +16,9 @@ router.get('/', authMiddleware, obtenerMascotas);
 
 // Ruta para crear una nueva mascota
 router.post('/', authMiddleware, crearMascota);
+
+// Ruta para obtener el historial clínico de una mascota por su ID
+router.get('/:id/historial', authMiddleware, obtenerHistorialMascota);
 
 // Ruta para actualizar una mascota existente por su ID
 router.put('/:id', authMiddleware, actualizarMascota);
