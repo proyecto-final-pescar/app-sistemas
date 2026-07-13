@@ -24,11 +24,14 @@ const verifyToken = (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+        const role = decoded.role || decoded.rol;
+
         // Adjuntar los datos del usuario al request
         req.user = {
             id: decoded.id,
             email: decoded.email,
-            rol: decoded.role
+            role,
+            rol: role
         };
 
         // Continuar a la siguiente función

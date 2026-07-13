@@ -2,10 +2,11 @@ import { useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/layout/Sidebar";
 import TopBar from "./components/layout/TopBar";
+import PrivateRoute from "./components/PrivateRoute";
 import CitasAgendadas from './pages/veterinaria/CitasAgendadas/CitasAgendadas';
 
 import Login from "./pages/public/Login/Login";
-import Registro from "./pages/public/registro/Registro";
+import Registro from "./pages/public/Registro/Registro";
 import Landing from "./pages/public/LandingPage/Landing";
 import MisMascotas from "./pages/tutor/MisMascotas/MisMascotas";
 import Turnos from "./pages/tutor/Turnos/Turnos";
@@ -15,6 +16,8 @@ import NotFound from "./pages/NotFound/NotFound";
 import Emergencias from "./pages/tutor/Emergencias/Emergencias";
 import RegistroDeVeterinaria from './pages/veterinaria/RegistroDeVeterinaria/RegistroDeVeterinaria';
 import AgendarTurnos from "./pages/tutor/Turnos/AgendarTurno";
+import HomeTutor from "./pages/tutor/HomeTutor/HomeTutor";
+import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
@@ -22,25 +25,27 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/registro-veterinaria" element={<RegistroDeVeterinaria />} />
+        <Route path="/registro-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><RegistroDeVeterinaria /></PrivateRoute>} />
         <Route path="/login" element={<Login />} />
+        <Route path="/registro" element={<Registro />} />
         <Route path="/register" element={<Registro />} />
-        <Route path="/home" element={<Landing />} />
-        <Route path="/mascotas" element={<MisMascotas />} />
-        <Route path="/turnos" element={<Turnos />} />
+        <Route path="/home" element={<PrivateRoute allowedRoles={["dueno"]}><HomeTutor /></PrivateRoute>} />
+         <Route path="/home-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><HomeVeterinaria /></PrivateRoute>} />
+        <Route path="/mascotas" element={<PrivateRoute allowedRoles={["dueno"]}><MisMascotas /></PrivateRoute>} />
+        <Route path="/turnos" element={<PrivateRoute allowedRoles={["dueno"]}><Turnos /></PrivateRoute>} />
         <Route
           path="/turnos/agendar/:veterinariaId"
-          element={<AgendarTurnos />}
+          element={<PrivateRoute allowedRoles={["dueno"]}><AgendarTurnos /></PrivateRoute>}
         />
-        <Route path="/foro" element={<Foro />} />
-        <Route path="/veterinarias" element={<h1>Sección Veterinarias</h1>} />
-        <Route path="/agenda" element={<CitasAgendadas />} />
-        <Route path="/urgencias" element={<Emergencias />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/dashboard" element={<AdminDashboard />} />
+        <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
+        <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><h1>Sección Veterinarias</h1></PrivateRoute>} />
+        <Route path="/agenda" element={<PrivateRoute allowedRoles={["veterinaria"]}><CitasAgendadas /></PrivateRoute>} />
+        <Route path="/urgencias" element={<PrivateRoute allowedRoles={["dueno"]}><Emergencias /></PrivateRoute>} />
+        <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
+        <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route
           path="/"
-          element={
+          element={<PrivateRoute>
             <div
               style={{
                 display: "flex",
@@ -92,7 +97,7 @@ function App() {
                 </main>
               </div>
             </div>
-          }
+          </PrivateRoute>}
         />
         <Route path="*" element={<NotFound />} />
       </Routes>

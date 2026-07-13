@@ -47,11 +47,11 @@ export const crearPublicacion = async (req, res) => {
   try {
     const usuarioId = req.user.id;
 
-    const { foto, nombre, zona, descripcionFisica, contacto } = req.body;
+    const { foto, nombre, zona, descripcion, fecha, contacto } = req.body;
 
-    if (!foto || !zona || !descripcionFisica || !contacto) {
+    if (!foto || !zona || !descripcion || !fecha || !contacto) {
       return res.status(400).json({
-        message: 'Los campos foto, zona, descripción física y contacto son requeridos'
+        message: 'Los campos foto, zona, descripción, fecha y contacto son requeridos'
       });
     }
 
@@ -59,9 +59,11 @@ export const crearPublicacion = async (req, res) => {
       foto,
       nombre,
       zona,
-      descripcionFisica,
+      descripcion,
+      fecha,
       contacto,
       usuarioId
+      // estado arranca en 'activa' por defecto
     });
 
     const publicacionGuardada = await nuevaPublicacion.save();
@@ -93,7 +95,7 @@ export const actualizarPublicacion = async (req, res) => {
       return res.status(403).json({ message: 'No tenés permiso para editar esta publicación' });
     }
 
-    const camposPermitidos = ['foto', 'nombre', 'zona', 'descripcionFisica', 'contacto', 'estado'];
+    const camposPermitidos = ['foto', 'nombre', 'zona', 'descripcion', 'fecha', 'contacto', 'estado'];
 
     camposPermitidos.forEach((campo) => {
       if (req.body[campo] !== undefined) {
@@ -116,7 +118,7 @@ export const actualizarPublicacion = async (req, res) => {
   }
 };
 
-// PATCH /publicaciones/:id/estado: cambia el estado a "buscando" o "encontrado"
+// PATCH /publicaciones/:id/estado: cambia el estado a "activa" o "cerrada"
 export const cambiarEstado = async (req, res) => {
   try {
     const { id } = req.params;
@@ -124,8 +126,8 @@ export const cambiarEstado = async (req, res) => {
     const esAdmin = req.user.role === 'administrador';
     const { estado } = req.body;
 
-    if (!estado || !['buscando', 'encontrado'].includes(estado)) {
-      return res.status(400).json({ message: 'El estado debe ser "buscando" o "encontrado"' });
+    if (!estado || !['activa', 'cerrada'].includes(estado)) {
+      return res.status(400).json({ message: 'El estado debe ser "activa" o "cerrada"' });
     }
 
     const publicacion = await Publicacion.findById(id);
