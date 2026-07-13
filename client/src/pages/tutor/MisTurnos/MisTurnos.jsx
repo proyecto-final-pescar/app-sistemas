@@ -3,6 +3,7 @@ import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
 import Badge from "../../../components/common/Badge";
+import { FaCalendarAlt, FaClock, FaHospital, FaPaw } from "react-icons/fa";
 import { obtenerTurnosPorUsuario, cancelarTurno } from "../../../services/turnosService";
 import {
   filtrarProximos,
@@ -19,7 +20,8 @@ export default function MisTurnos() {
   const [tab, setTab] = useState("proximos");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [cancelando, setCancelando] = useState(null); // id del turno que se está cancelando
+  const [cancelando, setCancelando] = useState(null);
+  const [menuAbierto, setMenuAbierto] = useState(null); // guarda el _id del turno con menú abierto
 
   useEffect(() => {
     const cargarTurnos = async () => {
@@ -37,6 +39,12 @@ export default function MisTurnos() {
     cargarTurnos();
   }, []);
 
+  useEffect(() => {
+    const cerrarMenu = () => setMenuAbierto(null);
+    document.addEventListener("click", cerrarMenu);
+    return () => document.removeEventListener("click", cerrarMenu);
+  }, []);
+
   const handleCancelar = async (turnoId) => {
     const confirmar = window.confirm("¿Estás seguro que querés cancelar este turno?");
     if (!confirmar) return;
@@ -44,7 +52,6 @@ export default function MisTurnos() {
     setCancelando(turnoId);
     try {
       await cancelarTurno(turnoId);
-      // Actualiza el estado del turno en la lista sin volver a llamar al backend
       setTurnos((prev) =>
         prev.map((t) =>
           t._id === turnoId ? { ...t, estado: "cancelado" } : t
@@ -89,25 +96,55 @@ export default function MisTurnos() {
 
           {/* Banner próximo turno */}
           {turnoMasProximo && (
-            <div className={styles.banner}>
-              <div className={styles.bannerInfo}>
-                <div className={styles.bannerIcon}>🐾</div>
-                <div>
-                  <p className={styles.bannerLabel}>Próximo turno</p>
-                  <p className={styles.bannerTitulo}>
-                    {turnoMasProximo.motivo} · {turnoMasProximo.mascotaId?.nombre || "Mascota"}
-                  </p>
-                  <p className={styles.bannerMeta}>
-                    <span>📅 {formatearFechaLarga(turnoMasProximo.fecha)}</span>
-                    <span>🕒 {turnoMasProximo.hora} hs</span>
-                    {/* Diferencia clave respecto a la vista veterinaria: muestra la clínica */}
-                    <span>🏥 {turnoMasProximo.veterinariaId?.nombre || "Veterinaria"}</span>
-                  </p>
-                </div>
-              </div>
-              <Button texto="Ver detalles →" variante="secundario" tamaño="chico" />
-            </div>
-          )}
+  <div className={styles.banner}>
+    <div className={styles.bannerInfo}>
+      <div className={styles.bannerIcon}>
+        <FaPaw size={22} color="white" />
+      </div>
+      <div>
+        <p className={styles.bannerLabel}>Próximo turno</p>
+        <p className={styles.bannerTitulo}>
+          {turnoMasProximo.motivo} · {turnoMasProximo.mascotaId?.nombre || "Mascota"}
+        </p>
+        <p className={styles.bannerMeta}>
+          <span>
+            <FaCalendarAlt size={12} color="rgba(255,255,255,0.85)" />{" "}
+            {formatearFechaLarga(turnoMasProximo.fecha)}
+          </span>
+          <span>
+            <FaClock size={12} color="rgba(255,255,255,0.85)" />{" "}
+            {turnoMasProximo.hora} hs
+          </span>
+          <span>
+            <FaHospital size={12} color="rgba(255,255,255,0.85)" />{" "}
+            {turnoMasProximo.veterinariaId?.nombre || "Veterinaria"}
+          </span>
+        </p>
+      </div>
+    </div>
+
+    {/* Botones del banner */}
+    <div className={styles.bannerAcciones}>
+      <button className={styles.bannerBtn}>Ver detalles</button>
+      {turnoMasProximo.estado === "pendiente" && (
+        <button className={`${styles.bannerBtn} ${styles.bannerBtnPagar}`}>
+          Pagar
+        </button>
+      )}
+      {new Date(turnoMasProximo.fecha) > new Date() &&
+        turnoMasProximo.estado !== "cancelado" &&
+        turnoMasProximo.estado !== "atendido" && (
+          <button
+            className={`${styles.bannerBtn} ${styles.bannerBtnCancelar}`}
+            onClick={() => handleCancelar(turnoMasProximo._id)}
+            disabled={cancelando === turnoMasProximo._id}
+          >
+            {cancelando === turnoMasProximo._id ? "Cancelando..." : "Cancelar"}
+          </button>
+        )}
+    </div>
+  </div>
+)}
 
           {/* Lista de turnos */}
           <div className={styles.card}>
@@ -141,28 +178,66 @@ export default function MisTurnos() {
                     <div className={styles.turnoTags}>
                       {badge && <Badge texto={badge.texto} variante={badge.variante} />}
                       <span className={styles.turnoMascota}>
-                        🐾 {turno.mascotaId?.nombre || "Mascota"}
+                        <FaPaw size={12} color="#6b7280" />{" "}
+                        {turno.mascotaId?.nombre || "Mascota"}
                       </span>
                     </div>
                     <p className={styles.turnoMotivo}>{turno.motivo}</p>
                     <p className={styles.turnoMeta}>
-                      <span>🕒 {turno.hora} hs</span>
-                      {/* Diferencia clave: muestra la veterinaria en lugar del tutor */}
-                      <span>🏥 {turno.veterinariaId?.nombre || "Veterinaria"}</span>
+                      <span>
+                        <FaClock size={12} color="#8276ab" />{" "}
+                        {turno.hora} hs
+                      </span>
+                      <span>
+                        <FaHospital size={12} color="#8276ab" />{" "}
+                        {turno.veterinariaId?.nombre || "Veterinaria"}
+                        {(() => {
+                          const prof = turno.veterinariaId?.profesionales?.find(
+                            p => p._id.toString() === turno.profesionalId?.toString()
+                          );
+                          return prof ? ` · ${prof.nombre}` : "";
+                        })()}
+                      </span>
                     </p>
                   </div>
 
-                  {/* Diferencia clave: dos acciones en lugar de una */}
                   <div className={styles.turnoAcciones}>
-                    <Button texto="Ver detalles →" variante="secundario" tamaño="chico" />
-                    {puedeCancelar && (
-                      <Button
-                        texto={cancelando === turno._id ? "Cancelando..." : "Cancelar"}
-                        variante="peligro"
-                        tamaño="chico"
-                        onClick={() => handleCancelar(turno._id)}
-                        disabled={cancelando === turno._id}
-                      />
+                    <button
+                      className={styles.menuBtn}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMenuAbierto(menuAbierto === turno._id ? null : turno._id);
+                      }}
+                    >
+                      ⋮
+                    </button>
+
+                    {menuAbierto === turno._id && (
+                      <div className={styles.dropdown}>
+                        <button className={styles.dropdownItem} onClick={() => { }}>
+                          Ver detalles
+                        </button>
+
+                        {turno.estado === "pendiente" && (
+                          <button className={styles.dropdownItem} onClick={() => { }}>
+                            Pagar
+                          </button>
+                        )}
+
+                        {puedeCancelar && (
+                          <button
+                            className={styles.dropdownItem}
+
+                            onClick={() => {
+                              setMenuAbierto(null);
+                              handleCancelar(turno._id);
+                            }}
+                            disabled={cancelando === turno._id}
+                          >
+                            {cancelando === turno._id ? "Cancelando..." : "Cancelar"}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

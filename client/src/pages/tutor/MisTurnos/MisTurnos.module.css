@@ -116,9 +116,144 @@
 
 /* Clase nueva — no existe en CitasAgendadas */
 .turnoAcciones {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.bannerMeta span,
+.turnoMeta span {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
+  gap: 5px;
+}
+
+.turnoAcciones button {
+  width: 100%;
+}
+
+.turnoAccionesFila {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.turnoAccionesFila button {
+  flex: 1;
+}
+
+.menuBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  color: #8276ab;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.menuBtn:hover {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: 28px;
+  background: white;
+  border: 1px solid #ede9fe;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12);
+  z-index: 10;
+  min-width: 150px;
+  overflow: hidden;
+}
+
+.dropdownItem {
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1f1739;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  font-family: 'Inter', sans-serif;
+}
+
+.dropdownItem:hover {
+  background: #f5f3ff;
+}
+
+.dropdownItem:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.card {
+  overflow: visible; /* antes era overflow: hidden */
+}
+
+.turnoRow {
+  overflow: visible;
+}
+
+.bannerAcciones {
+  display: flex;
+  flex-direction: row; /* antes era column */
   gap: 8px;
   flex-shrink: 0;
+}
+
+.bannerBtn {
+  padding: 8px 20px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: white;
+  color: #1f1739;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 110px;
+  text-align: center;
+}
+
+.bannerBtn:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.bannerBtnPagar {
+  border-color: #059669;
+  background: #059669;
+  color: white;
+}
+
+.bannerBtnPagar:hover {
+  background: #047857;
+  border-color: #047857;
+}
+
+.bannerBtnCancelar {
+  border-color: #ef4444;
+  background: #ef4444;
+  color: white;
+}
+
+.bannerBtnCancelar:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.bannerBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
