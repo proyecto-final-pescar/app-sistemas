@@ -92,7 +92,14 @@ function Login() {
 
       navigate("/home", { replace: true });
     } catch (requestError) {
-      setError(requestError.message);
+      
+      //  cambiamos requestError.message porque es un mensaje tecnico (ej: "Failed to fetch")
+      // por algo mas amigable 
+      if (requestError instanceof TypeError) {
+        setError("No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.");
+      } else {
+        setError("Ocurrió un error inesperado. Por favor intentá nuevamente.");
+      }
     } finally {
       setIsLoading(false);
     }

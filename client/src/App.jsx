@@ -23,23 +23,23 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/registro-veterinaria" element={<PrivateRoute><RegistroDeVeterinaria /></PrivateRoute>} />
+        <Route path="/registro-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><RegistroDeVeterinaria /></PrivateRoute>} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/register" element={<Registro />} />
-        <Route path="/home" element={<PrivateRoute><Landing /></PrivateRoute>} />
-        <Route path="/mascotas" element={<PrivateRoute><MisMascotas /></PrivateRoute>} />
-        <Route path="/turnos" element={<PrivateRoute><Turnos /></PrivateRoute>} />
+        <Route path="/home" element={<PrivateRoute allowedRoles={["dueno"]}><Landing /></PrivateRoute>} />
+        <Route path="/mascotas" element={<PrivateRoute allowedRoles={["dueno"]}><MisMascotas /></PrivateRoute>} />
+        <Route path="/turnos" element={<PrivateRoute allowedRoles={["dueno"]}><Turnos /></PrivateRoute>} />
         <Route
           path="/turnos/agendar/:veterinariaId"
-          element={<PrivateRoute><AgendarTurnos /></PrivateRoute>}
+          element={<PrivateRoute allowedRoles={["dueno"]}><AgendarTurnos /></PrivateRoute>}
         />
-        <Route path="/foro" element={<PrivateRoute><Foro /></PrivateRoute>} />
-        <Route path="/veterinarias" element={<PrivateRoute><h1>Sección Veterinarias</h1></PrivateRoute>} />
-        <Route path="/agenda" element={<PrivateRoute><CitasAgendadas /></PrivateRoute>} />
-        <Route path="/urgencias" element={<PrivateRoute><Emergencias /></PrivateRoute>} />
-        <Route path="/admin" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
-        <Route path="/dashboard" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
+        <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
+        <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><h1>Sección Veterinarias</h1></PrivateRoute>} />
+        <Route path="/agenda" element={<PrivateRoute allowedRoles={["veterinaria"]}><CitasAgendadas /></PrivateRoute>} />
+        <Route path="/urgencias" element={<PrivateRoute allowedRoles={["dueno"]}><Emergencias /></PrivateRoute>} />
+        <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
+        <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route
           path="/"
           element={<PrivateRoute>
