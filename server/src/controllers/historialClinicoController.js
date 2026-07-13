@@ -17,7 +17,7 @@ export const obtenerHistorialClinico = async (req, res) => {
       .populate('profesionalId', 'name')
       .sort({ fecha: -1, hora: -1 });
 
-    return res.json(historial);
+    return res.status(200).json({ success: true, data: historial })
   } catch (error) {
     console.error('Error en GET /historial/:mascotaId:', error);
     return res.status(500).json({ message: 'Error al obtener el historial clínico' });
@@ -26,7 +26,7 @@ export const obtenerHistorialClinico = async (req, res) => {
 
 export const obtenerEntradaHistorialClinico = async (req, res) => {
   try {
-    return res.json(req.entradaHistorial);
+    return res.status(200).json({ success: true, data: req.entradaHistorial })
   } catch (error) {
     console.error('Error en GET /historial/entrada/:id:', error);
     return res.status(500).json({ message: 'Error al obtener la entrada del historial clínico' });
