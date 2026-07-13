@@ -76,12 +76,12 @@ function Login() {
 
       const rol = userData.rol;
       if (rol === "dueno") {
-        navigate("/home", { replace: true });
+        navigate("/mascotas", { replace: true }); /*/home*/
         return;
       }
 
       if (rol === "veterinaria") {
-        navigate("/agenda", { replace: true });
+        navigate("/registro-veterinaria", { replace: true });  /*/home-veterinaria */
         return;
       }
 
