@@ -16,6 +16,8 @@ import NotFound from "./pages/NotFound/NotFound";
 import Emergencias from "./pages/tutor/Emergencias/Emergencias";
 import RegistroDeVeterinaria from './pages/veterinaria/RegistroDeVeterinaria/RegistroDeVeterinaria';
 import AgendarTurnos from "./pages/tutor/Turnos/AgendarTurno";
+import HomeTutor from "./pages/tutor/HomeTutor/HomeTutor";
+import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
 
 function App() {
   const [activePage, setActivePage] = useState("Dashboard");
@@ -27,7 +29,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/register" element={<Registro />} />
-        <Route path="/home" element={<PrivateRoute allowedRoles={["dueno"]}><Landing /></PrivateRoute>} />
+        <Route path="/home" element={<PrivateRoute allowedRoles={["dueno"]}><HomeTutor /></PrivateRoute>} />
+         <Route path="/home-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><HomeVeterinaria /></PrivateRoute>} />
         <Route path="/mascotas" element={<PrivateRoute allowedRoles={["dueno"]}><MisMascotas /></PrivateRoute>} />
         <Route path="/turnos" element={<PrivateRoute allowedRoles={["dueno"]}><Turnos /></PrivateRoute>} />
         <Route
