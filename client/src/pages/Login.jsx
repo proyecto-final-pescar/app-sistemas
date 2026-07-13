@@ -67,6 +67,7 @@ function Login() {
       const userData = {
         id: user.id || user._id || data.id,
         email: user.email || data.email || formData.email.trim().toLowerCase(),
+           nombre: user.nombre || user.name || data.nombre || data.name,
         rol: user.rol || user.role || data.rol || data.role,
       };
 

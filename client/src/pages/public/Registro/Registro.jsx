@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import Input from "../../../components/ui/input/Input";
 import Button from "../../../components/ui/button/Button";
 import Card from "../../../components/ui/card/Card";
-import logoMyPet from "../../../assets/logo-mypet.png";
 import "./Registro.css";
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -105,14 +104,14 @@ function Registro() {
 
   return (
     <main className="registro-page">
+      <header className="brand">
+        <img src="/logo-mypet.svg" alt="" className="brand-icon" />
+        <img src="/mypet2.svg" alt="MyPet" className="brand-logo" />
+      </header>
+
       <Card className="registro-card">
         <header className="registro-header">
-          <div className="registro-logo">
-            <img src={logoMyPet} alt="Logo MyPet" />
-          </div>
-
           <h1>Crear cuenta</h1>
-
           <h2>Unite a miles de familias que cuidan mejor a sus mascotas</h2>
         </header>
 
@@ -129,7 +128,7 @@ function Registro() {
               onClick={() => setRol("dueno")}
             >
               <div className="role-icon">
-              <span>👤</span>
+                <span>👤</span>
               </div>
 
               <strong>Soy Tutor</strong>
@@ -194,6 +193,13 @@ function Registro() {
               disabled={enviando}
             />
           </div>
+
+          <p className="login-text">
+            ¿Ya tenés cuenta?{" "}
+            <a href="/login" className="login-link">
+              Iniciá sesión
+            </a>
+          </p>
         </form>
       </Card>
     </main>
