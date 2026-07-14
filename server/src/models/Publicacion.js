@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const PublicacionSchema = new mongoose.Schema({
   usuarioId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Usuario',
+    ref: 'User',
     required: true
   },
   foto: {
@@ -42,9 +42,6 @@ const PublicacionSchema = new mongoose.Schema({
   timestamps: true
 });
 
-const Publicacion = mongoose.model(
-  "Publicacion",
-  PublicacionSchema,
-);
+const Publicacion = mongoose.model('Publicacion', PublicacionSchema);
 
 export default Publicacion;
