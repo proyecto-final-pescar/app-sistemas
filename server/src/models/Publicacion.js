@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const PublicacionSchema = new mongoose.Schema({
   usuarioId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Usuario',
+    ref: 'User',
     required: true
   },
   foto: {
