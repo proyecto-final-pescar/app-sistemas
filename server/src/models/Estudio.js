@@ -32,11 +32,11 @@ const estudioSchema = new mongoose.Schema(
       type: Date,
       required: [true, 'La fecha es requerida']
     },
-    /* urlArchivo: {
+      urlArchivo: {
       type: String,
       trim: true,
       default: null
-    } */
+    } 
   },
   {
     timestamps: true,
@@ -44,6 +44,6 @@ const estudioSchema = new mongoose.Schema(
   }
 )
 
-const Estudio = mongoose.model('Estudio', EstudioSchema)
+const Estudio = mongoose.model('Estudio', estudioSchema)
 
 export default Estudio

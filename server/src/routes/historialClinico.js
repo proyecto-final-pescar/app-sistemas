@@ -10,17 +10,17 @@ import historialAccess from '../middleware/historialAccess.js';
 const router = Router();
 
 router.get(
-  '/historial/entrada/:id',
-  verifyToken,
-  historialAccess,
-  obtenerEntradaHistorialClinico
-);
-
-router.get(
   '/historial/:mascotaId',
   verifyToken,
   historialAccess,
   obtenerHistorialClinico
+);
+
+router.get(
+  '/historial/entrada/:id',
+  verifyToken,
+  historialAccess,
+  obtenerEntradaHistorialClinico
 );
 
 router.post(

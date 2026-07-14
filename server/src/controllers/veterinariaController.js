@@ -179,7 +179,7 @@ export const actualizarVeterinaria = async (req, res) => {
     try {
         const { id } = req.params;
         const usuarioId = req.user.id;
-        const esAdmin = req.user.role === 'administrador';
+        const esAdmin = req.user.role === 'administrador' ;
 
         // Buscamos solo si está activa
         const veterinaria = await Veterinaria.findOne({ _id: id, estado: 'activa' });
