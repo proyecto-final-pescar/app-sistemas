@@ -6,7 +6,7 @@ import {
   eliminarVacuna
 } from '../controllers/vacunaController.js'
 import verifyToken, { authorize } from '../middleware/auth.js'
-import { verificarAccesoMascota } from '../middleware/historialAccess.js'
+import historialAccess from '../middleware/historialAccess.js'
 
 const router = Router()
 
@@ -18,25 +18,27 @@ router.post('/vacunas',
 
 router.get('/vacunas/mascota/:mascotaId',
   verifyToken,
-  authorize('dueño', 'veterinaria'),
-  verificarAccesoMascota,
+  authorize('dueno', 'veterinaria'),
+  historialAccess,
   obtenerVacunasPorMascota
 )
 
 router.get('/vacunas/:id',
   verifyToken,
-  authorize('dueño', 'veterinaria'),
+  authorize('dueno', 'veterinaria'),
   obtenerVacunaPorId
 )
 
-router.put('/vacunas/:id',
+/*  router.put('/vacunas/:id',
    verifyToken,
    authorize('veterinaria'),
    actualizarVacuna
+ ) */
+
+ router.delete('/vacunas/:id',
+   verifyToken,
+   authorize('veterinaria'),
+   eliminarVacuna
  )
 
-/* router.delete('/vacunas/:id',
-  verifyToken,
-  authorize('veterinaria'),
-  eliminarVacuna
-) */
+export default router

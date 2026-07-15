@@ -6,7 +6,7 @@ import {
   eliminarEstudio
 } from '../controllers/estudioController.js'
 import verifyToken, { authorize } from '../middleware/auth.js'
-import { verificarAccesoMascota } from '../middleware/historialAccess.js'
+import historialAccess from '../middleware/historialAccess.js'
 
 const router = Router()
 
@@ -19,7 +19,7 @@ router.post('/estudios',
 router.get('/estudios/mascota/:mascotaId',
   verifyToken,
   authorize('dueño', 'veterinaria'),
-  verificarAccesoMascota,
+  historialAccess,
   obtenerEstudiosPorMascota
 )
 
@@ -29,11 +29,11 @@ router.get('/estudios/:id',
   obtenerEstudioPorId
 )
 
- router.put('/estudios/:id',
+/*  router.put('/estudios/:id',
    verifyToken,
    authorize('veterinaria'),
    actualizarEstudio
- )
+ ) */
 
 router.delete('/estudios/:id',
   verifyToken,

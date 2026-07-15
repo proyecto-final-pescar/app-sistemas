@@ -4,21 +4,21 @@ import {
   actualizarFichaMedica
 } from '../controllers/fichaMedicaController.js'
 import verifyToken, { authorize } from '../middleware/auth.js'
-import { verificarAccesoMascota } from '../middleware/historialAccess.js'
+import historialAccess from '../middleware/historialAccess.js'
 
 const router = Router()
 
 router.get('/ficha-medica/:mascotaId',
   verifyToken,
   authorize('dueño', 'veterinaria'),
-  verificarAccesoMascota,
+  historialAccess,
   obtenerFichaMedica
 )
 
 router.put('/ficha-medica/:mascotaId',
   verifyToken,
   authorize('veterinaria'),
-  verificarAccesoMascota,
+  historialAccess,
   actualizarFichaMedica
 )
 

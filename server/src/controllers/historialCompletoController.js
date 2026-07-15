@@ -1,6 +1,6 @@
 import Mascota from '../models/Mascota.js'
 import FichaMedica from '../models/FichaMedica.js'
-import Consulta from '../models/Consulta.js'
+import HistorialClinico from '../models/HistorialClinico.js'
 import Vacuna from '../models/Vacuna.js'
 import Estudio from '../models/Estudio.js'
 
@@ -9,14 +9,14 @@ export const obtenerHistorialCompleto = async (req, res) => {
     const { mascotaId } = req.params
 
     // Todas las consultas en paralelo para mayor velocidad
-    const [mascota, fichaMedica, consultas, vacunas, estudios] = await Promise.all([
+    const [mascota, fichaMedica, historialClinico, vacunas, estudios] = await Promise.all([
       
       Mascota.findById(mascotaId)
         .populate('dueñoId', 'nombre email'),
 
       FichaMedica.findOne({ mascotaId }),
 
-      Consulta.find({ mascotaId })
+      HistorialClinico.find({ mascotaId })
         .populate('profesionalId', 'nombre')
         .populate('veterinariaId', 'nombre direccion')
         .sort({ fecha: -1 }),
@@ -42,7 +42,7 @@ export const obtenerHistorialCompleto = async (req, res) => {
       data: {
         mascota,
         fichaMedica,
-        consultas,
+        historialClinico,
         vacunas,
         estudios
       }

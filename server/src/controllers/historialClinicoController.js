@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import HistorialClinico from '../models/HistorialClinico.js';
 import Mascota from '../models/Mascota.js';
 import Veterinaria from '../models/Veterinaria.js';
+import FichaMedica from '../models/FichaMedica.js';
 
 export const obtenerHistorialClinico = async (req, res) => {
   try {
@@ -51,7 +52,7 @@ export const crearHistorialClinico = async (req, res) => {
     const categoriasValidas = ['Vacunación', 'Control', 'Consulta', 'Cirugía'];
     const estadosValidos = ['Completado', 'Con seguimiento', 'Pendiente'];
 
-   
+
     if (!mascotaId || !mongoose.Types.ObjectId.isValid(mascotaId)) {
       return res.status(400).json({ message: 'La mascota es inválida' });
     }
@@ -148,7 +149,7 @@ export const crearHistorialClinico = async (req, res) => {
         message: 'No se encontró una veterinaria asociada a este usuario'
       });
     }
- // Validar que el profesional exista dentro del listado de la veterinaria
+    // Validar que el profesional exista dentro del listado de la veterinaria
     const profesional = veterinaria.profesionales.id(profesionalId);
 
     if (!profesional) {
@@ -173,6 +174,15 @@ export const crearHistorialClinico = async (req, res) => {
     });
 
     await nuevoHistorial.save();
+
+    // Crear FichaMedica automáticamente si no existe
+    const fichaExistente = await FichaMedica.findOne({ mascotaId })
+    if (!fichaExistente) {
+      await FichaMedica.create({
+        mascotaId,
+        dueñoId: mascota.dueñoId
+      })
+    }
 
     return res.status(201).json({
       message: 'Historial clínico creado correctamente',

@@ -151,7 +151,7 @@ export const actualizarVacuna = async (req, res) => {
     }
 }
 
-/* export const eliminarVacuna = async (req, res) => {
+export const eliminarVacuna = async (req, res) => {
     try {
         const vacuna = await Vacuna.findById(req.params.id)
 
@@ -183,4 +183,4 @@ export const actualizarVacuna = async (req, res) => {
             message: 'Error interno del servidor'
         })
     }
-} */
+}
