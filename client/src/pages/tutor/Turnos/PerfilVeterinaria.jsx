@@ -2,8 +2,15 @@ import { useEffect, useState } from "react";
 import { href, useNavigate, useParams } from "react-router-dom";
 import { getVeterinariaById } from "../../../services/veterinariaService";
 import "./PerfilVeterinaria.css";
-
+import Sidebar from "../../../components/layout/Sidebar";
 import Button from "../../../components/ui/button/Button.jsx" 
+import styles from "../../../styles/MisMascotas.module.css";
+import TopBar from "../../../components/layout/TopBar";
+import InfoItem from "../../../components/ui/info/InfoItem.jsx";
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import EmergencyOutlinedIcon from '@mui/icons-material/EmergencyOutlined';
 
 
 function EmptyState({ icon, message }) {
@@ -15,7 +22,7 @@ function EmptyState({ icon, message }) {
   );
 }
 
-function ProfessionalChip({ nombre, especialidad }) {
+function ProfessionalChip({ nombre, especialidad, email }) {
   const inicial = nombre ? nombre.charAt(0).toUpperCase() : "?";
 
   return (
@@ -24,30 +31,11 @@ function ProfessionalChip({ nombre, especialidad }) {
       <div className="perfil-vet__pro-info">
         <span className="perfil-vet__pro-name">{nombre}</span>
         <span className="perfil-vet__pro-specialty">{especialidad}</span>
+        <span className="perfil-vet__pro-email">{email}</span>
       </div>
     </div>
   );
 }
-
-const IconPin = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
-    <circle cx="12" cy="9" r="2.5" />
-  </svg>
-);
-
-const IconPhone = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.09 1.18 2 2 0 012.08 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 8.09a16 16 0 006 6l.86-.86a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
-  </svg>
-);
-
-const IconMail = () => (
-  <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="4" width="20" height="16" rx="2" />
-    <path d="M22 7l-10 7L2 7" />
-  </svg>
-);
 
 
 function formatPrecio(valor) {
@@ -128,16 +116,19 @@ export default function PerfilVeterinaria() {
     nombre,
     direccion,
     email,
+    urgencias24hs,
     telefono,
     profesionales = [],   
     servicios     = [],   
     horarios      = [],
   } = veterinaria;
 
-
-  console.log(veterinaria.horarios); 
-
   return (
+    <div className={styles.layout}>
+    <Sidebar role="tutor" />
+    <div className={styles.pageWrapper}>
+    <TopBar title="Perfil" />
+
     <div className="perfil-vet">
       <div className="perfil-vet__container">
 
@@ -165,32 +156,15 @@ export default function PerfilVeterinaria() {
         {}
         {}
         <div className="perfil-vet__info-grid">
-          {direccion && (
-            <div className="perfil-vet__info-item">
-              <span className="perfil-vet__info-label">
-                <IconPin /> Dirección
-              </span>
-              <p className="perfil-vet__info-value">{direccion}</p>
-            </div>
-          )}
-
-          {telefono && (
-            <div className="perfil-vet__info-item">
-              <span className="perfil-vet__info-label">
-                <IconPhone /> Teléfono
-              </span>
-              <p className="perfil-vet__info-value">{telefono}</p>
-            </div>
-          )}
-
-          {email && (
-            <div className="perfil-vet__info-item">
-              <span className="perfil-vet__info-label">
-                <IconMail /> Email
-              </span>
-              <p className="perfil-vet__info-value">{email}</p>
-            </div>
-          )}
+            <InfoItem icon={LocationOnOutlinedIcon} label="Dirección" value={direccion} />
+  <InfoItem icon={PhoneOutlinedIcon} label="Teléfono" value={telefono} />
+  <InfoItem icon={EmailOutlinedIcon} label="Email" value={email} />
+  <InfoItem
+    icon={EmergencyOutlinedIcon}
+    label="Emergencias 24hs"
+    value={urgencias24hs ? "Disponible" : "No disponible"}
+    className={urgencias24hs ? "activo" : "inactivo"}
+  />
         </div>
 
         {/* ── Profesionales ── */}
@@ -206,6 +180,7 @@ export default function PerfilVeterinaria() {
                   key={prof._id || prof.id}
                   nombre={prof.nombre}
                   especialidad={prof.especialidad}
+                  email={prof.email}
                 />
               ))}
             </div>
@@ -248,25 +223,27 @@ export default function PerfilVeterinaria() {
           </h2>
 
           {
-<div className="perfil-vet__schedule-grid">
-  {horarios && Object.entries(horarios).map(([dia, h]) => (
-    <div key={dia} className="perfil-vet__schedule-row">
-      <span className="perfil-vet__schedule-day">
-        {dia.charAt(0).toUpperCase() + dia.slice(1)}
-      </span>
-      {(!h?.desde || !h?.hasta) ? (
-        <span className="perfil-vet__schedule-closed">Cerrado</span>
-      ) : (
-        <span className="perfil-vet__schedule-time">
-          {h.desde} – {h.hasta}
-        </span>
-      )}
-      </div>
-    ))}
-    </div>
-    }
-    </div>
-    </div>
-    </div>
+            <div className="perfil-vet__schedule-grid">
+              {horarios && Object.entries(horarios).map(([dia, h]) => (
+                <div key={dia} className="perfil-vet__schedule-row">
+                  <span className="perfil-vet__schedule-day">
+                    {dia.charAt(0).toUpperCase() + dia.slice(1)}
+                    </span>
+                    {(!h?.desde || !h?.hasta) ? (
+                      <span className="perfil-vet__schedule-closed">Cerrado</span>
+                    ) : (
+                    <span className="perfil-vet__schedule-time">
+                      {h.desde} – {h.hasta}
+                      </span>
+                    )}
+                    </div>
+                  ))}
+                  </div>
+                  }
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
   );
 }
