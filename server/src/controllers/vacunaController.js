@@ -67,7 +67,7 @@ export const obtenerVacunasPorMascota = async (req, res) => {
 
         const vacunas = await Vacuna.find({ mascotaId })
             .populate('profesionalId', 'nombre email')
-            .populate('consultaId', 'fecha categoriaServicio')
+            .populate('historialClinicoId', 'fecha categoriaServicio')
             .sort({ fechaAplicada: -1 })
 
         return res.status(200).json({
@@ -89,7 +89,7 @@ export const obtenerVacunaPorId = async (req, res) => {
         const vacuna = await Vacuna.findById(req.params.id)
             .populate('profesionalId', 'nombre email')
             .populate('mascotaId', 'nombre especie')
-            .populate('consultaId', 'fecha categoriaServicio')
+            .populate('historialClinicoId', 'fecha categoriaServicio')
 
         if (!vacuna) {
             return res.status(404).json({

@@ -17,9 +17,9 @@ const estudioSchema = new mongoose.Schema(
       ref: 'User',
       required: [true, 'El profesional es requerido']
     },
-    consultaId: {
+    historialClinicoId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Consulta',
+      ref: 'HistorialClinico',
       default: null // Opcional, por si se adjunta desde una consulta puntual
     },
     nombre: {

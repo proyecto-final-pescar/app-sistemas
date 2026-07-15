@@ -11,6 +11,7 @@ import vacunasRouter from './vacuna.routes.js';
 import estudiosRouter from './estudio.routes.js';
 import fichaMedicaRouter from './fichaMedica.routes.js'; 
 import historialCompletoRouter from './historialCompleto.routes.js'; 
+import publicacionesRouter from './publicaciones.js';
 
 const router = Router()
 
@@ -26,5 +27,5 @@ router.use('/', vacunasRouter);
 router.use('/', estudiosRouter); 
 router.use('/', fichaMedicaRouter); 
 router.use('/', historialCompletoRouter); 
-
+router.use('/publicaciones', publicacionesRouter);
 export default router;

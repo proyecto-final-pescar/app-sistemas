@@ -79,7 +79,7 @@ export const obtenerEstudiosPorMascota = async (req, res) => {
 
         const estudios = await Estudio.find({ mascotaId })
             .populate('profesionalId', 'nombre email')
-            .populate('consultaId', 'fecha categoriaServicio')
+            .populate('historialClinicoId', 'fecha categoriaServicio')
             .sort({ fecha: -1 })
 
         return res.status(200).json({
@@ -101,7 +101,7 @@ export const obtenerEstudioPorId = async (req, res) => {
         const estudio = await Estudio.findById(req.params.id)
             .populate('profesionalId', 'nombre email')
             .populate('mascotaId', 'nombre especie')
-            .populate('consultaId', 'fecha categoriaServicio')
+            .populate('historialClinicoId', 'fecha categoriaServicio')
 
         if (!estudio) {
             return res.status(404).json({
