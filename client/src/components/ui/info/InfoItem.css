@@ -1,0 +1,36 @@
+.info-item {
+  background-color: #ffffff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.info-item__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+
+.info-item__value {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+  padding-left: 24px;
+}
+
+.info-item__value.activo {
+  color: #16a34a; /* verde */
+  font-weight: bold;
+}
+
+.info-item__value.inactivo {
+  color: #dc2626; /* rojo */
+  font-weight: bold;
+}
