@@ -9,11 +9,8 @@ import veterinariasRouter from './veterinarias.js';
 import disponibilidadRouter from './disponibilidad.js';
 import placesRouter from './places.js'; //!AGREGADO 
 import historialClinicoRouter from './historialClinico.js';
-<<<<<<< HEAD
 import turnosRouter from './rutasTurnos.js';
-=======
 import publicacionesRouter from './publicaciones.js';
->>>>>>> a63b8432420fb6e2ba39f9955dea4b906c6e5a8c
 
 const router = Router()
 
@@ -27,8 +24,5 @@ router.use('/places', placesRouter); //!AGREGADO
 router.use('/turnos', turnosRouter);
 router.use('/', historialClinicoRouter);
 
-<<<<<<< HEAD
-=======
 router.use('/publicaciones', publicacionesRouter);
->>>>>>> a63b8432420fb6e2ba39f9955dea4b906c6e5a8c
 export default router;
