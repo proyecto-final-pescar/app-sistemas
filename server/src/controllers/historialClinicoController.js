@@ -3,6 +3,36 @@ import HistorialClinico from '../models/HistorialClinico.js';
 import Mascota from '../models/Mascota.js';
 import Veterinaria from '../models/Veterinaria.js';
 
+export const obtenerHistorialClinico = async (req, res) => {
+  try {
+    const mascotaId = req.params.mascotaId || req.params.id;
+    const filtro = { mascotaId };
+
+    if (req.historialAccess?.rol === 'veterinaria') {
+      filtro.veterinariaId = req.historialAccess.veterinariaId;
+    }
+
+    const historial = await HistorialClinico.find(filtro)
+      .populate('veterinariaId', 'nombre')
+      .populate('profesionalId', 'name')
+      .sort({ fecha: -1, hora: -1 });
+
+    return res.status(200).json({ success: true, data: historial })
+  } catch (error) {
+    console.error('Error en GET /historial/:mascotaId:', error);
+    return res.status(500).json({ message: 'Error al obtener el historial clínico' });
+  }
+};
+
+export const obtenerEntradaHistorialClinico = async (req, res) => {
+  try {
+    return res.status(200).json({ success: true, data: req.entradaHistorial })
+  } catch (error) {
+    console.error('Error en GET /historial/entrada/:id:', error);
+    return res.status(500).json({ message: 'Error al obtener la entrada del historial clínico' });
+  }
+};
+
 export const crearHistorialClinico = async (req, res) => {
   try {
     const {

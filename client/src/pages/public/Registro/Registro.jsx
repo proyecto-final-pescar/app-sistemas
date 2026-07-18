@@ -1,11 +1,14 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Input from "../../../components/ui/input/Input";
 import Button from "../../../components/ui/button/Button";
 import Card from "../../../components/ui/card/Card";
-import logoMyPet from "../../../assets/logo-mypet.png";
 import "./Registro.css";
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
+
 function Registro() {
+  const navigate = useNavigate();
   const [rol, setRol] = useState("");
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -13,6 +16,8 @@ function Registro() {
   const [confirmarPassword, setConfirmarPassword] = useState("");
 
   const [errores, setErrores] = useState({});
+  const [errorGeneral, setErrorGeneral] = useState("");
+  const [enviando, setEnviando] = useState(false);
 
   function validarFormulario() {
     const nuevosErrores = {};
@@ -48,32 +53,65 @@ function Registro() {
     return Object.keys(nuevosErrores).length === 0;
   }
 
-  function manejarSubmit(evento) {
+  const obtenerMensajeError = (data) => {
+    if (typeof data === "string") {
+      return data;
+    }
+
+    return data?.message || data?.mensaje || data?.error || "No se pudo crear la cuenta.";
+  };
+
+  async function manejarSubmit(evento) {
     evento.preventDefault();
+    setErrorGeneral("");
 
     const formularioValido = validarFormulario();
 
-    if (formularioValido) {
-      console.log({
-        rol,
-        nombre,
-        email,
-        password,
-        confirmarPassword,
+    if (!formularioValido) {
+      return;
+    }
+
+    try {
+      setEnviando(true);
+
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: nombre.trim(),
+          email: email.trim().toLowerCase(),
+          password,
+          role: rol,
+        }),
       });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setErrorGeneral(obtenerMensajeError(data));
+        return;
+      }
+
+      navigate("/login", { replace: true });
+    } catch (error) {
+      setErrorGeneral(error.message || "No se pudo crear la cuenta.");
+    } finally {
+      setEnviando(false);
     }
   }
 
   return (
     <main className="registro-page">
+      <header className="brand">
+        <img src="/logo-mypet.svg" alt="" className="brand-icon" />
+        <img src="/mypet2.svg" alt="MyPet" className="brand-logo" />
+      </header>
+
       <Card className="registro-card">
         <header className="registro-header">
-          <div className="registro-logo">
-            <img src={logoMyPet} alt="Logo MyPet" />
-          </div>
-
           <h1>Crear cuenta</h1>
-
           <h2>Unite a miles de familias que cuidan mejor a sus mascotas</h2>
         </header>
 
@@ -85,12 +123,12 @@ function Registro() {
           <div className="roles-container">
             <div
               className={`role-card ${
-                rol === "tutor" ? "role-card-selected" : ""
+                rol === "dueno" ? "role-card-selected" : ""
               }`}
-              onClick={() => setRol("tutor")}
+              onClick={() => setRol("dueno")}
             >
               <div className="role-icon">
-              <span>👤</span>
+                <span>👤</span>
               </div>
 
               <strong>Soy Tutor</strong>
@@ -98,9 +136,9 @@ function Registro() {
 
             <div
               className={`role-card ${
-                rol === "veterinario" ? "role-card-selected" : ""
+                rol === "veterinaria" ? "role-card-selected" : ""
               }`}
-              onClick={() => setRol("veterinario")}
+              onClick={() => setRol("veterinaria")}
             >
               <div className="role-icon">
                 <span>🩺</span>
@@ -144,14 +182,24 @@ function Registro() {
             error={errores.confirmarPassword}
           />
 
+          {errorGeneral && <p className="input-error">{errorGeneral}</p>}
+
           <div className="registro-button">
             <Button
               type="submit"
-              texto="Crear Cuenta ->"
+              texto={enviando ? "Creando cuenta..." : "Crear Cuenta ->"}
               variante="primario"
               tamaño="mediano"
+              disabled={enviando}
             />
           </div>
+
+          <p className="login-text">
+            ¿Ya tenés cuenta?{" "}
+            <a href="/login" className="login-link">
+              Iniciá sesión
+            </a>
+          </p>
         </form>
       </Card>
     </main>
