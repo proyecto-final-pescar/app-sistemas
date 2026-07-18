@@ -57,7 +57,7 @@ export default function PerfilVeterinaria() {
   const [error, setError]             = useState(null);   
   const handleReservarTurno = () => {
     console.log("Turno reservado!");
-      navigate(`/turnos/agendar/${veterinaria._id}`);;
+      navigate(`/turnos/agendar/${veterinaria._id}`);
   };
   useEffect(() => {
 
@@ -222,28 +222,33 @@ export default function PerfilVeterinaria() {
             Horarios de atención
           </h2>
 
-          {
+          {horarios && Object.keys(horarios).length > 0 ? (
             <div className="perfil-vet__schedule-grid">
-              {horarios && Object.entries(horarios).map(([dia, h]) => (
+              {Object.entries(horarios).map(([dia, h]) => (
                 <div key={dia} className="perfil-vet__schedule-row">
                   <span className="perfil-vet__schedule-day">
                     {dia.charAt(0).toUpperCase() + dia.slice(1)}
-                    </span>
-                    {(!h?.desde || !h?.hasta) ? (
-                      <span className="perfil-vet__schedule-closed">Cerrado</span>
-                    ) : (
+                  </span>
+                  {(!h?.desde || !h?.hasta) ? (
+                    <span className="perfil-vet__schedule-closed">Cerrado</span>
+                  ) : (
                     <span className="perfil-vet__schedule-time">
                       {h.desde} – {h.hasta}
-                      </span>
-                    )}
-                    </div>
-                  ))}
-                  </div>
-                  }
-                  </div>
+                    </span>
+                  )}
                 </div>
-              </div>
+              ))}
             </div>
-          </div>
+          ) : (
+            <EmptyState
+              icon="🕐"
+              message="Aún no se cargaron los horarios de atención."
+            />
+          )}
+        </div>
+      </div>
+    </div>
+    </div>
+    </div>
   );
 }
