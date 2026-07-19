@@ -34,7 +34,7 @@ function App() {
           element={<PrivateRoute allowedRoles={["dueno"]}><AgendarTurnos /></PrivateRoute>}
         />
         <Route path="/tutor/veterinarias/:id" element={<PerfilVeterinaria />} />
-        <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
+        <Route path="/foro"element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>}/>
         <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><h1>Sección Veterinarias</h1></PrivateRoute>} />
         <Route path="/agenda" element={<PrivateRoute allowedRoles={["veterinaria"]}><CitasAgendadas /></PrivateRoute>} />
         <Route path="/urgencias" element={<PrivateRoute allowedRoles={["dueno"]}><Emergencias /></PrivateRoute>} />
