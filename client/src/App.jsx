@@ -21,6 +21,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/foro" element={<Foro />} />
+        //<Route path="/foro" element={<PrivateRoute><Foro /></PrivateRoute>} />
         <Route path="/registro-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><RegistroDeVeterinaria /></PrivateRoute>} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
