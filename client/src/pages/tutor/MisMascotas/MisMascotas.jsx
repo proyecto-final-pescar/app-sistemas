@@ -5,7 +5,7 @@ import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
 import MascotaCard from "../../../components/mascotas/MascotaCard";
 import AddPetCard from "../../../components/mascotas/AddPetCard";
-import FormularioMascota from "../../../components/forms/FormularioMascota.jsx";
+import FormularioMascota from "../../../components/forms/FormularioMascota/FormularioMascota.jsx";
 import Modal from "../../../components/layout/modal/Modal";
 import {
   obtenerMascotas,

@@ -1,6 +1,6 @@
 import './Modal.css';
 
-function Modal ({onClick, isOpen, onClose, children})
+function Modal({ isOpen, onClose, children })
 {
     if (!isOpen) {
 

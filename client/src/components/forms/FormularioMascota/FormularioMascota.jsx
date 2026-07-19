@@ -1,14 +1,14 @@
 import { useState } from "react";
 import "./FormularioMascota.css";
 
-import Input from "../ui/input/Input";
-import Select from "../ui/select/Select";
-import Button from "../ui/button/Button";
+import Input from "../../ui/input/Input";
+import Select from "../../ui/select/Select";
+import Button from "../../ui/button/Button";
 import {
   crearMascota,
   actualizarMascota,
-} from "../../services/MascotaService";
-import { subirImagen } from "../../services/uploadService";
+} from "../../../services/MascotaService";
+import { subirImagen } from "../../../services/uploadService";
 
 function FormularioMascota({
   mascotaInicial = null,
@@ -139,11 +139,7 @@ async function manejarSubmit(evento) {
   )}
   <input type="file" accept="image/*" onChange={manejarCambioFoto} />
 </label>
-
-
-      
   
-
       <Input
         label="Nombre"
         placeholder="Ej: Luna"
