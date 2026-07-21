@@ -12,8 +12,10 @@ import NotFound from "./pages/NotFound/NotFound";
 import Emergencias from "./pages/tutor/Emergencias/Emergencias";
 import RegistroDeVeterinaria from './pages/veterinaria/RegistroDeVeterinaria/RegistroDeVeterinaria';
 import AgendarTurnos from "./pages/tutor/Turnos/AgendarTurno";
+import PerfilVeterinaria from "./pages/tutor/Turnos/PerfilVeterinaria";
 import HomeTutor from "./pages/tutor/HomeTutor/HomeTutor";
 import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
+
 
 function App() {
   return (
@@ -31,6 +33,7 @@ function App() {
           path="/turnos/agendar/:veterinariaId"
           element={<PrivateRoute allowedRoles={["dueno"]}><AgendarTurnos /></PrivateRoute>}
         />
+        <Route path="/tutor/veterinarias/:id" element={<PerfilVeterinaria />} />
         <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
         <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><h1>Sección Veterinarias</h1></PrivateRoute>} />
         <Route path="/agenda" element={<PrivateRoute allowedRoles={["veterinaria"]}><CitasAgendadas /></PrivateRoute>} />

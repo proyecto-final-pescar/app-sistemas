@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
-
-const API_BASE_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:3000"
-).replace(/\/$/, "");
+import api from "../services/api.js";
 
 function Login() {
   const navigate = useNavigate();
@@ -45,23 +42,10 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email.trim().toLowerCase(),
-          password: formData.password,
-        }),
+      const { data } = await api.post("/auth/login", {
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
       });
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        setError(getErrorMessage(data));
-        return;
-      }
 
       const token = data.token || data.jwt || data.accessToken;
       const user = data.user || data.usuario || {};
@@ -100,9 +84,11 @@ function Login() {
 
       navigate("/home", { replace: true });
     } catch (requestError) {
-      //  cambiamos requestError.message porque es un mensaje tecnico (ej: "Failed to fetch")
-      // por algo mas amigable
-      if (requestError instanceof TypeError) {
+      const responseData = requestError.response?.data;
+
+      if (responseData) {
+        setError(getErrorMessage(responseData));
+      } else if (requestError.request) {
         setError(
           "No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.",
         );
