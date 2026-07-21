@@ -10,7 +10,7 @@ const router = Router()
 
 router.get('/ficha-medica/:mascotaId',
   verifyToken,
-  authorize('dueño', 'veterinaria'),
+  authorize('dueno', 'veterinaria'),
   historialAccess,
   obtenerFichaMedica
 )

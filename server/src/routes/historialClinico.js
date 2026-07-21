@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  actualizarHistorialClinico,
   crearHistorialClinico,
   obtenerEntradaHistorialClinico,
   obtenerHistorialClinico
@@ -29,5 +30,12 @@ router.post(
   authorize('veterinaria'),
   crearHistorialClinico
 );
+
+router.put(
+  '/historial-clinico/:id',
+  verifyToken,
+  authorize('veterianria'),
+  actualizarHistorialClinico
+)
 
 export default router;

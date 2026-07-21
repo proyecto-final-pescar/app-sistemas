@@ -205,3 +205,145 @@ export const crearHistorialClinico = async (req, res) => {
     });
   }
 };
+
+export const actualizarHistorialClinico = async (req, res) => {
+  try {
+    const historialClinico = await HistorialClinico.findById(req.params.id)
+
+    if (!historialClinico) {
+      return res.status(404).json({
+        success: false,
+        message: 'Consulta no encontrada'
+      })
+    }
+
+    const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id })
+    if (!veterinaria || consulta.veterinariaId.toString() !== veterinaria._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo podés editar consultas de tu veterinaria'
+      })
+    }
+
+    // Extraer solo los campos permitidos
+    const {
+      fecha,
+      hora,
+      categoriaServicio,
+      motivoConsulta,
+      anotaciones,
+      monto,
+      urlPdf
+    } = req.body
+
+    const categoriasValidas = ['Vacunación', 'Control', 'Consulta', 'Cirugía']
+
+    // Validar y actualizar solo campos que vienen y no están vacíos
+    if (fecha !== undefined) {
+      const fechaValida = new Date(fecha)
+      if (isNaN(fechaValida.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'La fecha no es válida'
+        })
+      }
+      historialClinico.fecha = fechaValida
+    }
+
+    if (hora !== undefined) {
+      if (!hora.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'La hora no puede estar vacía'
+        })
+      }
+      const formatoHora = /^([01]\d|2[0-3]):([0-5]\d)$/
+      if (!formatoHora.test(hora.trim())) {
+        return res.status(400).json({
+          success: false,
+          message: 'La hora debe tener formato HH:MM'
+        })
+      }
+      historialClinico.hora = hora.trim()
+    }
+
+    if (categoriaServicio !== undefined) {
+      if (!categoriasValidas.includes(categoriaServicio)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Categoría de servicio no válida',
+          categoriasValidas
+        })
+      }
+      historialClinico.categoriaServicio = categoriaServicio
+    }
+
+    if (motivoConsulta !== undefined) {
+      if (!motivoConsulta.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'El motivo de consulta no puede estar vacío'
+        })
+      }
+      historialClinico.motivoConsulta = motivoConsulta.trim()
+    }
+
+    if (anotaciones !== undefined) {
+      if (!anotaciones.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Las anotaciones no pueden estar vacías'
+        })
+      }
+      historialClinico.anotaciones = anotaciones.trim()
+    }
+
+    if (monto !== undefined) {
+      if (typeof monto !== 'number' || isNaN(monto) || monto < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'El monto debe ser un número mayor o igual a 0'
+        })
+      }
+      historialClinico.monto = monto
+    }
+
+    if (urlPdf !== undefined) {
+      if (urlPdf && urlPdf.trim()) {
+        try {
+          new URL(urlPdf)
+        } catch {
+          return res.status(400).json({
+            success: false,
+            message: 'La URL del PDF no es válida'
+          })
+        }
+        historialClinico.urlPdf = urlPdf.trim()
+      } else {
+        historialClinico.urlPdf = null
+      }
+    }
+
+    await historialClinico.save()
+
+    return res.status(200).json({
+      success: true,
+      data: historialClinico
+    })
+
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      const errores = Object.values(error.errors).map(e => e.message)
+      return res.status(400).json({
+        success: false,
+        message: 'Error de validación',
+        errores
+      })
+    }
+    console.error('Error en actualizarConsulta:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    })
+  }
+}

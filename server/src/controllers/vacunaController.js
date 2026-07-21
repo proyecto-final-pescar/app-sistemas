@@ -3,7 +3,7 @@ import Mascota from '../models/Mascota.js'
 
 export const crearVacuna = async (req, res) => {
     try {
-        const { mascotaId, consultaId, nombre, fechaAplicada } = req.body
+        const { mascotaId, historialClinicoId, nombre, fechaAplicada } = req.body
 
         if (!mascotaId || !nombre || !fechaAplicada) {
             return res.status(400).json({
@@ -32,7 +32,7 @@ export const crearVacuna = async (req, res) => {
             mascotaId,
             dueñoId: mascota.dueñoId,
             profesionalId: req.user.id,
-            consultaId: consultaId || null,
+            historialClinicoId: historialClinicoId || null,
             nombre: nombre.trim(),
             fechaAplicada: fechaValida
         })
@@ -123,23 +123,44 @@ export const actualizarVacuna = async (req, res) => {
             })
         }
 
-        //      Solo el veterinario que la creó puede editarla
-        if (vacuna.profesionalId.toString() !== req.usuario.id) {
+        if (vacuna.profesionalId.toString() !== req.user.id) {
             return res.status(403).json({
                 success: false,
                 message: 'Solo podés editar vacunas que vos registraste'
             })
         }
 
-        const vacunaActualizada = await Vacuna.findByIdAndUpdate(
-            req.params.id,
-            { ...req.body },
-            { new: true, runValidators: true }
-        )
+        // Solo se permiten estos campos
+        const { nombre, fechaAplicada, historialClinicoId } = req.body
+
+        if (nombre !== undefined) {
+            if (!nombre.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'El nombre no puede estar vacío'
+                })
+            }
+            vacuna.nombre = nombre.trim()
+        }
+
+        if (fechaAplicada !== undefined) {
+            const fechaValida = new Date(fechaAplicada)
+            if (isNaN(fechaValida.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'La fecha no es válida'
+                })
+            }
+            vacuna.fechaAplicada = fechaValida
+        }
+
+        if (historialClinicoId !== undefined) vacuna.historialClinicoId = historialClinicoId || null
+
+        await vacuna.save()
 
         return res.status(200).json({
             success: true,
-            data: vacunaActualizada
+            data: vacuna
         })
 
     } catch (error) {
@@ -162,7 +183,7 @@ export const eliminarVacuna = async (req, res) => {
             })
         }
 
-        if (vacuna.profesionalId.toString() !== req.usuario.id) {
+        if (vacuna.profesionalId.toString() !== req.user.id) {
             return res.status(403).json({
                 success: false,
                 message: 'Solo podés eliminar vacunas que vos registraste'
