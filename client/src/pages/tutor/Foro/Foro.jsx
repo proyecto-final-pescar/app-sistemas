@@ -5,8 +5,10 @@ import {
   CheckCircle2,
   ChevronDown,
   Flag,
+  ImageOff,
   Mail,
   MapPin,
+  MessageCircle,
   Phone,
   Plus,
   RefreshCw,
@@ -46,9 +48,9 @@ const TABS_ESTADO = [
   { value: "cerrada", label: "Resueltos" },
 ];
 
-// Config de cada tipo de confirmación que puede pedirse en el foro.
-// Un solo ConfirmModal se reutiliza para las tres, así no hay que
-// declarar tres modales casi idénticos.
+
+// Un solo ConfirmModal se reutiliza para  distintas posibilidades, así no hay que
+// declarar tres modales 
 const CONFIG_CONFIRMACION = {
   eliminar: {
     titulo: "Eliminar publicación",
@@ -135,6 +137,25 @@ const getContactHref = (contacto) => {
   return "";
 };
 
+// wa.me necesita solo dígitos (sin +, espacios ni guiones) e idealmente
+// con codigo de país incluido.
+
+const getWhatsAppHref = (contacto) => {
+  const valor = contacto?.trim();
+
+  if (!valor) {
+    return "";
+  }
+
+  const digitos = valor.replace(/\D/g, "");
+
+  if (digitos.length < 6) {
+    return "";
+  }
+
+  return `https://wa.me/${digitos}`;
+};
+
 function Foro() {
   const { usuario } = useAuth();
 
@@ -200,11 +221,7 @@ function Foro() {
   }, [filtroEstado, filtroZona]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      cargarPublicaciones();
-    }, 0);
-
-    return () => clearTimeout(timer);
+    cargarPublicaciones();
   }, [cargarPublicaciones]);
 
   useEffect(() => {
@@ -281,7 +298,6 @@ function Foro() {
       );
       await cambiarEstadoPublicacion(publicacion._id, "cerrada");
       setSuccess("Caso marcado como encontrado.");
-      await cargarPublicaciones();
     } catch (err) {
       console.error("Error al cambiar estado:", err);
       setPublicaciones(publicacionesPrevias);
@@ -378,14 +394,64 @@ function Foro() {
       );
     }
 
+    const esMail = contactHref.startsWith("mailto:");
+    const esTelefono = contactHref.startsWith("tel:");
+    const whatsappHref = esTelefono ? getWhatsAppHref(publicacion.contacto) : "";
+
+    //  si el contacto es un Email: un solo boton  que abre el cliente de mail.
+    if (esMail) {
+      return (
+        <a
+          className={styles.contactButton}
+          href={contactHref}
+          title={`Escribir a ${publicacion.contacto}`}
+          onClick={(event) => handleContactar(event, publicacion.contacto)}
+        >
+          <Mail size={16} />
+          <span className={styles.contactButtonText}>{publicacion.contacto}</span>
+        </a>
+      );
+    }
+
+    // si el contacto es un telefono: dos opciones, WhatsApp y llamada, para que la persona elija
+    if (esTelefono && whatsappHref) {
+      return (
+        <div className={styles.contactButtons}>
+          <a
+            className={styles.whatsappButton}
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Escribir por WhatsApp a ${publicacion.contacto}`}
+          >
+            <MessageCircle size={16} />
+            WhatsApp
+          </a>
+          <a
+            className={styles.contactButton}
+            href={contactHref}
+            title={`Llamar a ${publicacion.contacto}`}
+          >
+            <Phone size={16} />
+            Llamar
+          </a>
+        </div>
+      );
+    }
+
+    // Fallback: contacto en un formato que no  se pudo interpretar 
+    //  Copiamos el texto.
     return (
       <a
         className={styles.contactButton}
-        href={contactHref || "#contacto"}
+        href="#contacto"
+        title={publicacion.contacto ? `Contacto: ${publicacion.contacto}` : "Contactar al dueño"}
         onClick={(event) => handleContactar(event, publicacion.contacto)}
       >
         <Phone size={16} />
-        Contactar al dueño
+        <span className={styles.contactButtonText}>
+          {publicacion.contacto || "Contactar al dueño"}
+        </span>
       </a>
     );
   };
@@ -495,11 +561,24 @@ function Foro() {
                 return (
                   <article className={styles.card} key={publicacion._id}>
                     <div className={styles.imageWrap}>
-                      <img
-                        className={styles.image}
-                        src={publicacion.foto}
-                        alt={publicacion.nombre || "Mascota perdida"}
-                      />
+                      {publicacion.foto ? (
+                        <img
+                          className={styles.image}
+                          src={publicacion.foto}
+                          alt={publicacion.nombre || "Mascota perdida"}
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                            event.currentTarget.nextElementSibling?.classList.add(styles.imagePlaceholderVisible);
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        className={`${styles.imagePlaceholder} ${!publicacion.foto ? styles.imagePlaceholderVisible : ""}`}
+                        aria-hidden={Boolean(publicacion.foto)}
+                      >
+                        <ImageOff size={28} />
+                        <span>Sin foto</span>
+                      </div>
                       <span className={`${styles.badge} ${cerrada ? styles.badgeFound : styles.badgeLost}`}>
                         {cerrada ? "Encontrado" : "Se busca"}
                       </span>
@@ -534,17 +613,6 @@ function Foro() {
 
                       <p className={styles.description}>{publicacion.descripcion}</p>
                       <p className={styles.owner}>Publicado por {getOwnerName(publicacion)}</p>
-
-                      {publicacion.contacto && (
-                        <p className={styles.contacto}>
-                          {getContactHref(publicacion.contacto).startsWith("mailto:") ? (
-                            <Mail size={15} />
-                          ) : (
-                            <Phone size={15} />
-                          )}
-                          {publicacion.contacto}
-                        </p>
-                      )}
 
                       <div className={styles.actions}>{renderAcciones(publicacion)}</div>
                     </div>

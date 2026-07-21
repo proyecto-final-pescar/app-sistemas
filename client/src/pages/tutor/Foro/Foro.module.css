@@ -69,6 +69,7 @@
   min-height: 42px;
   border: 0;
   border-radius: 14px;
+  box-sizing: border-box;
   font: inherit;
   font-size: 14px;
   font-weight: 700;
@@ -216,6 +217,25 @@
   display: block;
 }
 
+.imagePlaceholder {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #a79fc4;
+  background: #f1ecfb;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.imagePlaceholderVisible {
+  display: flex;
+}
+
 .badge {
   position: absolute;
   top: 12px;
@@ -287,24 +307,85 @@
 }
 
 .actions {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 9px;
+  min-width: 0;
   margin-top: 2px;
 }
 
 .ownerActions {
-  display: grid;
-  grid-template-columns: 1fr auto;
+  display: flex;
   gap: 9px;
+  min-width: 0;
+}
+
+.ownerActions > .successButton,
+.ownerActions > .outlineSuccessButton {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+}
+
+.ownerActions > .dangerButton {
+  flex: 0 0 auto;
 }
 
 .contactButton,
 .successButton {
   width: 100%;
+  min-width: 0;
   min-height: 40px;
   padding: 0 14px;
   color: #ffffff;
   background: #6d28d9;
+  text-decoration: none;
+}
+
+.contactButtonText {
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contactButtons {
+  display: flex;
+  gap: 9px;
+  min-width: 0;
+}
+
+.contactButtons .whatsappButton,
+.contactButtons .contactButton {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+}
+
+.whatsappButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  min-width: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 14px;
+  box-sizing: border-box;
+  color: #ffffff;
+  background: #25d366;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.whatsappButton:hover {
+  transform: translateY(-1px);
 }
 
 .successButton {
