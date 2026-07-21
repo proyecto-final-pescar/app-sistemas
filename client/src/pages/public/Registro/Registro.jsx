@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom";
 import Input from "../../../components/ui/input/Input";
 import Button from "../../../components/ui/button/Button";
 import Card from "../../../components/ui/card/Card";
+import api from "../../../services/api";
 import "./Registro.css";
-
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/$/, "");
 
 function Registro() {
   const navigate = useNavigate();
@@ -74,29 +73,25 @@ function Registro() {
     try {
       setEnviando(true);
 
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: nombre.trim(),
-          email: email.trim().toLowerCase(),
-          password,
-          role: rol,
-        }),
+      await api.post("/auth/register", {
+        name: nombre.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+        role: rol,
       });
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        setErrorGeneral(obtenerMensajeError(data));
-        return;
-      }
 
       navigate("/login", { replace: true });
     } catch (error) {
-      setErrorGeneral(error.message || "No se pudo crear la cuenta.");
+      
+      const responseData = error.response?.data;
+
+      if (responseData) {
+        setErrorGeneral(obtenerMensajeError(responseData));
+      } else if (error.request) {
+        setErrorGeneral("No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.");
+      } else {
+        setErrorGeneral("No se pudo crear la cuenta.");
+      }
     } finally {
       setEnviando(false);
     }
