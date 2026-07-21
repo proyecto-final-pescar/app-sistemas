@@ -7,9 +7,10 @@ import mascotasRouter from './mascotas.js';
 import usuariosRouter from './usuarios.js';
 import veterinariasRouter from './veterinarias.js';
 import disponibilidadRouter from './disponibilidad.js';
-import placesRouter from './places.js'; //!AGREGADO 
+import placesRouter from './places.js'; 
 import historialClinicoRouter from './historialClinico.js';
 import publicacionesRouter from './publicaciones.js';
+import dashboardRouter from './dashboard.js';
 
 const router = Router()
 
@@ -25,9 +26,12 @@ router.use('/veterinarias', veterinariasRouter);
 
 router.use('/disponibilidad', disponibilidadRouter);
 
-router.use('/places', placesRouter); //!AGREGADO
+router.use('/places', placesRouter); 
 
 router.use('/', historialClinicoRouter);
 
 router.use('/publicaciones', publicacionesRouter);
+
+router.use('/admin/dashboard', dashboardRouter); 
+
 export default router;
