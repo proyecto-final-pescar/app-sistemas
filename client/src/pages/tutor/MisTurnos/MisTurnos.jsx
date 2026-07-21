@@ -3,6 +3,7 @@ import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
 import Badge from "../../../components/common/Badge";
+import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
 import { FaCalendarAlt, FaClock, FaHospital, FaPaw } from "react-icons/fa";
 import { obtenerTurnosPorUsuario, cancelarTurno } from "../../../services/turnosService";
 import {
@@ -21,7 +22,8 @@ export default function MisTurnos() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [cancelando, setCancelando] = useState(null);
-  const [menuAbierto, setMenuAbierto] = useState(null); // guarda el _id del turno con menú abierto
+  const [modalCancelar, setModalCancelar] = useState(null);
+  const [menuAbierto, setMenuAbierto] = useState(null);
 
   useEffect(() => {
     const cargarTurnos = async () => {
@@ -45,16 +47,17 @@ export default function MisTurnos() {
     return () => document.removeEventListener("click", cerrarMenu);
   }, []);
 
-  const handleCancelar = async (turnoId) => {
-    const confirmar = window.confirm("¿Estás seguro que querés cancelar este turno?");
-    if (!confirmar) return;
+  const handleCancelar = async () => {
+    if (!modalCancelar) return;
 
-    setCancelando(turnoId);
+    setCancelando(modalCancelar);
+    setModalCancelar(null);
+
     try {
-      await cancelarTurno(turnoId);
+      await cancelarTurno(modalCancelar);
       setTurnos((prev) =>
         prev.map((t) =>
-          t._id === turnoId ? { ...t, estado: "cancelado" } : t
+          t._id === modalCancelar ? { ...t, estado: "cancelado" } : t
         )
       );
     } catch (err) {
@@ -96,55 +99,55 @@ export default function MisTurnos() {
 
           {/* Banner próximo turno */}
           {turnoMasProximo && (
-  <div className={styles.banner}>
-    <div className={styles.bannerInfo}>
-      <div className={styles.bannerIcon}>
-        <FaPaw size={22} color="white" />
-      </div>
-      <div>
-        <p className={styles.bannerLabel}>Próximo turno</p>
-        <p className={styles.bannerTitulo}>
-          {turnoMasProximo.motivo} · {turnoMasProximo.mascotaId?.nombre || "Mascota"}
-        </p>
-        <p className={styles.bannerMeta}>
-          <span>
-            <FaCalendarAlt size={12} color="rgba(255,255,255,0.85)" />{" "}
-            {formatearFechaLarga(turnoMasProximo.fecha)}
-          </span>
-          <span>
-            <FaClock size={12} color="rgba(255,255,255,0.85)" />{" "}
-            {turnoMasProximo.hora} hs
-          </span>
-          <span>
-            <FaHospital size={12} color="rgba(255,255,255,0.85)" />{" "}
-            {turnoMasProximo.veterinariaId?.nombre || "Veterinaria"}
-          </span>
-        </p>
-      </div>
-    </div>
+            <div className={styles.banner}>
+              <div className={styles.bannerInfo}>
+                <div className={styles.bannerIcon}>
+                  <FaPaw size={22} color="white" />
+                </div>
+                <div>
+                  <p className={styles.bannerLabel}>Próximo turno</p>
+                  <p className={styles.bannerTitulo}>
+                    {turnoMasProximo.motivo} · {turnoMasProximo.mascotaId?.nombre || "Mascota"}
+                  </p>
+                  <p className={styles.bannerMeta}>
+                    <span>
+                      <FaCalendarAlt size={12} color="rgba(255,255,255,0.85)" />{" "}
+                      {formatearFechaLarga(turnoMasProximo.fecha)}
+                    </span>
+                    <span>
+                      <FaClock size={12} color="rgba(255,255,255,0.85)" />{" "}
+                      {turnoMasProximo.hora} hs
+                    </span>
+                    <span>
+                      <FaHospital size={12} color="rgba(255,255,255,0.85)" />{" "}
+                      {turnoMasProximo.veterinariaId?.nombre || "Veterinaria"}
+                    </span>
+                  </p>
+                </div>
+              </div>
 
-    {/* Botones del banner */}
-    <div className={styles.bannerAcciones}>
-      <button className={styles.bannerBtn}>Ver detalles</button>
-      {turnoMasProximo.estado === "pendiente" && (
-        <button className={`${styles.bannerBtn} ${styles.bannerBtnPagar}`}>
-          Pagar
-        </button>
-      )}
-      {new Date(turnoMasProximo.fecha) > new Date() &&
-        turnoMasProximo.estado !== "cancelado" &&
-        turnoMasProximo.estado !== "atendido" && (
-          <button
-            className={`${styles.bannerBtn} ${styles.bannerBtnCancelar}`}
-            onClick={() => handleCancelar(turnoMasProximo._id)}
-            disabled={cancelando === turnoMasProximo._id}
-          >
-            {cancelando === turnoMasProximo._id ? "Cancelando..." : "Cancelar"}
-          </button>
-        )}
-    </div>
-  </div>
-)}
+              {/* Botones del banner */}
+              <div className={styles.bannerAcciones}>
+                <button className={styles.bannerBtn}>Ver detalles</button>
+                {turnoMasProximo.estado === "pendiente" && (
+                  <button className={`${styles.bannerBtn} ${styles.bannerBtnPagar}`}>
+                    Pagar
+                  </button>
+                )}
+                {new Date(turnoMasProximo.fecha) > new Date() &&
+                  turnoMasProximo.estado !== "cancelado" &&
+                  turnoMasProximo.estado !== "atendido" && (
+                    <button
+                      className={`${styles.bannerBtn} ${styles.bannerBtnCancelar}`}
+                      onClick={() => setModalCancelar(turnoMasProximo._id)}
+                      disabled={cancelando === turnoMasProximo._id}
+                    >
+                      {cancelando === turnoMasProximo._id ? "Cancelando..." : "Cancelar"}
+                    </button>
+                  )}
+              </div>
+            </div>
+          )}
 
           {/* Lista de turnos */}
           <div className={styles.card}>
@@ -214,12 +217,12 @@ export default function MisTurnos() {
 
                     {menuAbierto === turno._id && (
                       <div className={styles.dropdown}>
-                        <button className={styles.dropdownItem} onClick={() => { }}>
+                        <button className={styles.dropdownItem} onClick={() => {}}>
                           Ver detalles
                         </button>
 
                         {turno.estado === "pendiente" && (
-                          <button className={styles.dropdownItem} onClick={() => { }}>
+                          <button className={styles.dropdownItem} onClick={() => {}}>
                             Pagar
                           </button>
                         )}
@@ -227,10 +230,10 @@ export default function MisTurnos() {
                         {puedeCancelar && (
                           <button
                             className={styles.dropdownItem}
-
+                            style={{ color: "#ef4444" }}
                             onClick={() => {
                               setMenuAbierto(null);
-                              handleCancelar(turno._id);
+                              setModalCancelar(turno._id);
                             }}
                             disabled={cancelando === turno._id}
                           >
@@ -246,6 +249,19 @@ export default function MisTurnos() {
           </div>
         </div>
       </div>
+
+      {/* Modal de confirmación de cancelación */}
+      <ConfirmModal
+        abierto={modalCancelar !== null}
+        titulo="¿Cancelar turno?"
+        mensaje="Esta acción no se puede deshacer. ¿Estás seguro que querés cancelar este turno?"
+        textoConfirmar="Sí, cancelar"
+        textoCancelar="Volver"
+        varianteConfirmar="peligro"
+        onConfirm={handleCancelar}
+        onCancel={() => setModalCancelar(null)}
+        confirmando={cancelando !== null}
+      />
     </div>
   );
 }
