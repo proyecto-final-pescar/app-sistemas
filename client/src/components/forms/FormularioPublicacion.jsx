@@ -1,8 +1,9 @@
 import { useState } from "react";
-import "./FormularioMascota.css";
+import "../forms/FormularioMascota/FormularioMascota.css";
 import "../ui/input/input.css";
 
 import Input from "../ui/input/Input";
+import Select from "../ui/select/Select";
 import Button from "../ui/button/Button";
 import { crearPublicacion } from "../../services/publicacionService";
 import { subirImagen } from "../../services/uploadService";
@@ -12,6 +13,20 @@ const getFechaLocalInput = () => {
   fecha.setMinutes(fecha.getMinutes() - fecha.getTimezoneOffset());
   return fecha.toISOString().slice(0, 10);
 };
+
+const barriosCABA = [
+  "Agronomía", "Almagro", "Balvanera", "Barracas", "Belgrano",
+  "Boedo", "Caballito", "Chacarita", "Coghlan", "Colegiales",
+  "Constitución", "Flores", "Floresta", "La Boca", "La Paternal",
+  "Liniers", "Mataderos", "Monserrat", "Monte Castro", "Nueva Pompeya",
+  "Núñez", "Palermo", "Parque Avellaneda", "Parque Chacabuco",
+  "Parque Chas", "Parque Patricios", "Puerto Madero", "Recoleta",
+  "Retiro", "Saavedra", "San Cristóbal", "San Nicolás", "San Telmo",
+  "Vélez Sarsfield", "Versalles", "Villa Crespo", "Villa del Parque",
+  "Villa Devoto", "Villa General Mitre", "Villa Lugano", "Villa Luro",
+  "Villa Ortúzar", "Villa Pueyrredón", "Villa Real", "Villa Riachuelo",
+  "Villa Santa Rita", "Villa Soldati", "Villa Urquiza",
+];
 
 function FormularioPublicacion({ onCancelar, onGuardado }) {
   const fechaMaxima = getFechaLocalInput();
@@ -24,6 +39,7 @@ function FormularioPublicacion({ onCancelar, onGuardado }) {
   const [contacto, setContacto] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [errores, setErrores] = useState({});
+  const [errorGeneral, setErrorGeneral] = useState("");
 
   function validarFormularioPublicacion() {
     const nuevosErrores = {};
@@ -33,7 +49,7 @@ function FormularioPublicacion({ onCancelar, onGuardado }) {
     }
 
     if (zona.trim() === "") {
-      nuevosErrores.zona = "Ingresá el barrio o zona";
+      nuevosErrores.zona = "Seleccioná el barrio o zona";
     }
 
     if (fecha.trim() === "") {
@@ -60,6 +76,7 @@ function FormularioPublicacion({ onCancelar, onGuardado }) {
     if (!validarFormularioPublicacion()) return;
 
     setGuardando(true);
+    setErrorGeneral("");
 
     try {
       const urlFoto = await subirImagen(foto);
@@ -76,6 +93,7 @@ function FormularioPublicacion({ onCancelar, onGuardado }) {
       onGuardado?.();
     } catch (error) {
       console.error(error);
+      setErrorGeneral("No se pudo crear la publicación. Intentá de nuevo.");
     } finally {
       setGuardando(false);
     }
@@ -125,10 +143,10 @@ function FormularioPublicacion({ onCancelar, onGuardado }) {
         onChange={(evento) => setNombre(evento.target.value)}
       />
 
-      {/* Input libre, no select — pedido explícito de Camila */}
-      <Input
+      <Select
         label="Zona / Barrio"
-        placeholder="Ej: Almagro"
+        placeholder="Seleccioná una zona"
+        opciones={barriosCABA}
         value={zona}
         onChange={(evento) => setZona(evento.target.value)}
         error={errores.zona}
@@ -161,6 +179,8 @@ function FormularioPublicacion({ onCancelar, onGuardado }) {
         onChange={(evento) => setContacto(evento.target.value)}
         error={errores.contacto}
       />
+
+      {errorGeneral && <p className="input-error">{errorGeneral}</p>}
 
       <div className="formulario-acciones">
         <Button
