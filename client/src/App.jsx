@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import PrivateRoute from "./components/PrivateRoute";
 import CitasAgendadas from './pages/veterinaria/CitasAgendadas/CitasAgendadas';
+import MisTurnos from "./pages/tutor/MisTurnos/MisTurnos";
 
 import Login from "./pages/public/Login/Login";
 import Registro from "./pages/public/Registro/Registro";
@@ -29,6 +30,7 @@ function App() {
         <Route path="/home-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><HomeVeterinaria /></PrivateRoute>} />
         <Route path="/mascotas" element={<PrivateRoute allowedRoles={["dueno"]}><MisMascotas /></PrivateRoute>} />
         <Route path="/turnos" element={<PrivateRoute allowedRoles={["dueno"]}><Turnos /></PrivateRoute>} />
+        <Route path="/mis-turnos" element={<PrivateRoute allowedRoles={["dueno"]}><MisTurnos /></PrivateRoute>}/>
         <Route
           path="/turnos/agendar/:veterinariaId"
           element={<PrivateRoute allowedRoles={["dueno"]}><AgendarTurnos /></PrivateRoute>}
