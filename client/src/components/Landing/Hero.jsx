@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import Badge from "../ui/badge/Badge";
 import Button from "../ui/button/Button";
 
+
 const Hero = () => {
   const navigate = useNavigate();
 
