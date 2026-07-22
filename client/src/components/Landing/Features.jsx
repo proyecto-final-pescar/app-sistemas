@@ -1,5 +1,6 @@
 import Card from "../ui/card/Card";
 import Badge from "../ui/badge/Badge";
+import styles from "./Features.module.css";
 
 const features = [
   {
@@ -62,93 +63,36 @@ const features = [
 
 const Features = () => {
   return (
-    <section
-      style={{
-        width: "100%",
-        backgroundColor: "#ffffff",
-        padding: "80px 24px",
-        fontFamily: "'Inter', Arial, Helvetica, sans-serif",
-      }}
-    >
-      <div style={{ maxWidth: "1120px", margin: "0 auto", textAlign: "center" }}>
-        <h2
-          style={{
-            margin: 0,
-            fontSize: "32px",
-            fontWeight: 800,
-            letterSpacing: "-0.4px",
-            color: "#1c1533",
-          }}
-        >
-          Todo lo que necesitás,{" "}
-          <span style={{ color: "#7c3aed" }}>siempre disponible</span>
+    <section className={styles.section}>
+      <div className={styles.container}>
+        <h2 className={styles.title}>
+          Todo lo que necesitás, <span className={styles.titleAccent}>siempre disponible</span>
         </h2>
-        <p
-          style={{
-            margin: "16px auto 0",
-            maxWidth: "540px",
-            color: "#7c6aa6",
-            fontSize: "16px",
-            lineHeight: "24px",
-          }}
-        >
+        <p className={styles.subtitle}>
           Diseñado para dueños de mascotas en Buenos Aires que quieren acceso
           inmediato a toda la información médica de su compañero.
         </p>
 
-        <div
-          style={{
-            marginTop: "56px",
-            display: "flex",
-            gap: "24px",
-            flexWrap: "wrap",
-          }}
-        >
+        <div className={styles.grid}>
           {features.map((feature) => (
-            <div key={feature.title} style={{ flex: "1 1 300px", minWidth: "260px" }}>
-            <Card>
-              <div style={{ textAlign: "left" }}>
-                <span
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: "44px",
-                    height: "44px",
-                    borderRadius: "12px",
-                    backgroundColor: feature.iconBg,
-                    color: feature.iconColor,
-                  }}
-                >
-                  {feature.icon}
-                </span>
+            <div key={feature.title} className={styles.cardWrapper}>
+              <Card>
+                <div className={styles.cardContent}>
+                  <span
+                    className={styles.iconWrapper}
+                    style={{ backgroundColor: feature.iconBg, color: feature.iconColor }}
+                  >
+                    {feature.icon}
+                  </span>
 
-                <div style={{ marginTop: "16px" }}>
-                  <Badge texto={feature.badgeTexto} variante={feature.badgeVariante} />
+                  <div className={styles.badgeWrapper}>
+                    <Badge texto={feature.badgeTexto} variante={feature.badgeVariante} />
+                  </div>
+
+                  <h3 className={styles.cardTitle}>{feature.title}</h3>
+                  <p className={styles.cardDescription}>{feature.description}</p>
                 </div>
-
-                <h3
-                  style={{
-                    margin: "12px 0 0",
-                    fontSize: "18px",
-                    fontWeight: 700,
-                    color: "#1c1533",
-                  }}
-                >
-                  {feature.title}
-                </h3>
-                <p
-                  style={{
-                    margin: "8px 0 0",
-                    color: "#7c6aa6",
-                    fontSize: "14px",
-                    lineHeight: "22px",
-                  }}
-                >
-                  {feature.description}
-                </p>
-              </div>
-            </Card>
+              </Card>
             </div>
           ))}
         </div>

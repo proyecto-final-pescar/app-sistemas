@@ -1,12 +1,13 @@
 import NavbarPublic from "../../../components/layout/NavbarPublic";
 import Footer from "../../../components/layout/Footer";
-import Hero from "../../../components/landing/Hero";
-import Features from "../../../components/landing/Features";
-import CtaSection from "../../../components/landing/CtaSection";
+import Hero from "../../../components/Landing/Hero";
+import Features from "../../../components/Landing/Features";
+import CtaSection from "../../../components/Landing/CtaSection";
+import styles from "./Landing.module.css";
 
 const Landing = () => {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#ffffff" }}>
+     <div className={styles.landingWrapper}>
       <NavbarPublic />
       <Hero />
       <Features />
