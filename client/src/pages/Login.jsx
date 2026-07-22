@@ -38,7 +38,7 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {//!
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -150,7 +150,7 @@ function Login() {
           <label style={styles.field}>
             <span style={styles.labelRow}>
               <span style={styles.label}>Contraseña</span>
-              <a href="/recuperar-password" style={styles.forgotLink}>
+              <a href="/forgot-password" style={styles.forgotLink}>
                 ¿Olvidaste tu contraseña?
               </a>
             </span>

@@ -1,0 +1,85 @@
+/* PanelAuth.css - estilo global coherente con tus variables */
+.panel-auth {
+  min-height: 100vh;
+  background-color: var(--color-fondo-secciones);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  font-family: var(--fuente-texto);
+}
+
+.panel-auth__logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  height: 72px;
+  margin-bottom: 20px;
+  padding: 8px;
+  border-radius: 20px;
+}
+
+/* Si pasás dos imágenes, se muestran lado a lado */
+.panel-auth__logo img,
+.panel-auth__logo svg {
+    width: 4rem;
+    display: block;
+    object-fit: contain;
+}
+#logoRight{
+    width: 96px;
+    height: 96px;
+}
+#logoLeft{
+    width: 58px;
+    height: 58px;
+}
+
+/* Card */
+.panel-auth__card {
+  background-color: var(--color-blanco);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  overflow: hidden;
+  box-shadow: 0 4px 32px rgba(124, 58, 237, 0.1);
+}
+
+/* Barra de acento superior */
+.panel-auth__card-accent {
+  height: 5px;
+  background: var(--gradiente-primario);
+}
+
+.panel-auth__body {
+  padding: 40px 40px 36px;
+}
+
+.panel-auth__title {
+  font-family: var(--fuente-titulos);
+  font-size: var(--titulo-interno-size);
+  font-weight: var(--titulo-interno-weight);
+  color: var(--color-texto-principal);
+  text-align: center;
+  margin: 0 0 8px;
+}
+
+.panel-auth__subtitle {
+  font-size: var(--texto-form-size);
+  color: var(--color-texto-secundario);
+  text-align: center;
+  margin: 0 0 28px;
+  line-height: var(--texto-form-line-height);
+}
+
+.panel-auth__content {
+  margin-top: 6px;
+}
+
+@media (max-width: 520px) {
+  .panel-auth__body { padding: 28px 24px 24px; }
+  .panel-auth__logo { height: 64px; gap: 6px; padding: 6px; }
+  .panel-auth__logo img { width: 36px; height: 36px; }
+}
