@@ -23,7 +23,6 @@ export default function ResetPassword() {
   const [verPassword, setVerPassword]   = useState(false);
   const [verConfirmar, setVerConfirmar] = useState(false);
 
-  // Guard: si no hay token mostramos la vista de link inválido dentro del panel
   if (!token) {
     return (
       <PanelAuth

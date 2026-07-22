@@ -1,8 +1,3 @@
-// ============================================================
-// ForgotPassword.jsx
-// Ruta: /forgot-password
-// ============================================================
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -18,18 +13,15 @@ import logo2 from "../../../../public/mypet2.svg";
 import { MdOutlineMarkEmailRead } from "react-icons/md";
 
 export default function ForgotPassword() {
-  // ── Estado ─────────────────────────────────────────────────
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [enviado, setEnviado] = useState(false);
 
-  // ── Handler del formulario ──────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
-    // validateEmail debe devolver true si es válido, o un string con el error
     const result = validateEmail(email);
     if (result !== true) {
       setError(result);
@@ -50,7 +42,6 @@ export default function ForgotPassword() {
     }
   };
 
-  // ── Render usando PanelAuth como wrapper visual ─────────────
   return (
     <PanelAuth
       logoLeft={logo}
@@ -58,7 +49,7 @@ export default function ForgotPassword() {
       titulo="Recuperar contraseña"
       subtitulo="Ingresá tu email y te enviamos un link para restablecerla"
     >
-      {/* Mantengo las clases BEM que ya tenés en ForgotPassword.css */}
+
       <div className="forgot__content">
         {enviado ? (
           <div className="forgot__success">

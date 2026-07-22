@@ -1,12 +1,6 @@
-import React from "react";
 import PropTypes from "prop-types";
 import "./PanelAuth.css";
 
-/**
- * PanelAuth
- * - Wrapper visual global (no CSS Modules) para pantallas de auth
- * - Ahora acepta dos logos: logoLeft y logoRight (ambos opcionales)
- */
 export default function PanelAuth({ logoLeft, logoRight, titulo, subtitulo, children }) {
   return (
     <div className="panel-auth">
