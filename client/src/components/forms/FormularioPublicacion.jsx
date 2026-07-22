@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "../forms/FormularioMascota/FormularioMascota.css";
+import "./FormularioMascota.css";
 import "../ui/input/input.css";
 
 import Input from "../ui/input/Input";
