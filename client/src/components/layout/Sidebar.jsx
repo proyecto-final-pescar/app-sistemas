@@ -2,6 +2,7 @@
 
 import TutorMenu from "./TutorMenu";
 import VeterinariaMenu from "./VeterinariaMenu";
+import AdminMenu from "./AdminMenu"; 
 import { useAuth } from "../../hooks/useAuth.js";
 import { useNavigate } from "react-router-dom";
 
@@ -55,6 +56,7 @@ const Sidebar = () => {
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 12px 0" }}>
          {rol === "veterinaria" && <VeterinariaMenu />}
          {rol === "dueno" && <TutorMenu />}
+           {rol === "administrador" && <AdminMenu />}  
       </div>
 
       {/* Bloque inferior */}
