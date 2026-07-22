@@ -23,7 +23,10 @@ const HomeVeterinaria = () => {
 
   useEffect(() => {
     async function cargarDatosHome() {
+      if (!usuario) return;
+
       try {
+        setLoading(true);
         const miVet = await obtenerMiVeterinaria();
         if (miVet && miVet.nombre) {
           setNombreVet(miVet.nombre);
@@ -34,10 +37,8 @@ const HomeVeterinaria = () => {
 
         const fechaHoyStr = new Date().toISOString().split("T")[0];
 
-        // 2. Obtener y procesar Turnos (Próximo turno y contador del día)
         const todosLosTurnos = await obtenerTurnosPorVeterinaria(vetId);
 
-        // Filtramos el más cercano que esté pendiente o confirmado
         const pendientes = todosLosTurnos.filter(
           (t) => t.estado === "pendiente" || t.estado === "confirmado",
         );
@@ -45,14 +46,12 @@ const HomeVeterinaria = () => {
           setProximoTurno(pendientes[0]);
         }
 
-        // Contamos cuántos turnos están agendados para el día de hoy
         const hoyTurnos = todosLosTurnos.filter((t) => {
           const fechaTurno = new Date(t.fecha).toISOString().split("T")[0];
           return fechaTurno === fechaHoyStr;
         });
         setConsultasHoy(hoyTurnos.length);
 
-        // 3. Consultar disponibilidad de la semana (Llamada directa al endpoint)
         const resDispo = await api.get(
           `/disponibilidad/${vetId}?fecha=${fechaHoyStr}`,
         );
