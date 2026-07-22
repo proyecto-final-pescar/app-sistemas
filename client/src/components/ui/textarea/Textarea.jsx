@@ -1,11 +1,12 @@
-import './Textarea.css';
+import "./Textarea.css";
 
 function Textarea({
   label,
   placeholder,
-  error
+  value,
+  onChange,
+  error,
 }) {
-
   let mensajeError = null;
 
   if (error) {
@@ -18,7 +19,6 @@ function Textarea({
 
   return (
     <div className="textarea-container">
-
       <label className="textarea-label">
         {label}
       </label>
@@ -26,17 +26,13 @@ function Textarea({
       <textarea
         className="textarea-campo"
         placeholder={placeholder}
+        value={value}
+        onChange={onChange}
       />
 
       {mensajeError}
-
     </div>
   );
 }
 
 export default Textarea;
-
-/* <Textarea
-  label="Motivo del rechazo (se enviará por email)"
-  placeholder="Ingrese el motivo del rechazo"
-/> */
