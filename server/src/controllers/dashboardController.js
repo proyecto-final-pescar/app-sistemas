@@ -37,7 +37,7 @@ function mapDayOfWeekToLabel(dayOfWeek) {
 }
 
 // Los turnos "atendido" quedan afuera de los filtros del dashboard (pedido de diseño)
-const ESTADOS_DASHBOARD = ['pendiente', 'confirmado', 'cancelado'];
+const ESTADOS_DASHBOARD = ['pendiente', 'confirmado', 'cancelado', 'atendido'];
 
 // ---------- Controller ----------
 
