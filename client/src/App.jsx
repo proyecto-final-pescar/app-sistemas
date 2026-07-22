@@ -1,7 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import PrivateRoute from "./components/PrivateRoute";
 import CitasAgendadas from './pages/veterinaria/CitasAgendadas/CitasAgendadas';
-
 import Login from "./pages/public/Login/Login";
 import Registro from "./pages/public/Registro/Registro";
 import MisMascotas from "./pages/tutor/MisMascotas/MisMascotas";
@@ -15,6 +14,8 @@ import AgendarTurnos from "./pages/tutor/Turnos/AgendarTurno";
 import PerfilVeterinaria from "./pages/tutor/Turnos/PerfilVeterinaria";
 import HomeTutor from "./pages/tutor/HomeTutor/HomeTutor";
 import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
+import Landing from "./pages/public/LandingPage/Landing";
+
 
 
 function App() {
@@ -40,11 +41,7 @@ function App() {
         <Route path="/urgencias" element={<PrivateRoute allowedRoles={["dueno"]}><Emergencias /></PrivateRoute>} />
         <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
-
-        {/* "/" sin usar por ahora: lo primero que ve cualquiera que entra
-            a la app es el login. Luego debria ser el landing */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
-
+        <Route path="/" element={<Landing />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
