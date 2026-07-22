@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
-import Badge from "../../../components/common/Badge";
+import Badge from "../../../components/ui/badge/Badge";
 import { obtenerMiVeterinaria } from "../../../services/veterinariaService";
 import { obtenerTurnosPorVeterinaria } from "../../../services/turnosService";
 import {

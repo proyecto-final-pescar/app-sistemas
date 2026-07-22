@@ -1,0 +1,16 @@
+.section {
+  width: 100%;
+  background-color: var(--color-fondo-claro);
+  padding: 64px 24px;
+  font-family: "Inter", Arial, Helvetica, sans-serif;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.buttonRow {
+  display: flex;
+  justify-content: center;
+}
