@@ -12,5 +12,3 @@ build/
 # Sistema operativo
 .DS_Store
 Thumbs.db
-
-scripts/
