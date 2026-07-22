@@ -11,12 +11,31 @@ import { iniciarJobsTurnos } from './jobs/turnoJobs.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
+/*
 const corsOptions = {
     origin: process.env.CLIENT_URL,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
-}
+}*/
+/*modificacion hecha para que pueda usar el localhost*/
+const corsOptions = {
+  origin: (origin, callback) => {
+    const allowed = new Set([
+      ...(process.env.CLIENT_URL || "").split(",").map(o => o.trim()).filter(Boolean),
+      "http://localhost:5173",
+      "http://127.0.0.1:5173"
+    ]);
+
+    if (!origin || allowed.has(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 
 app.use(cors(corsOptions));
 app.use(express.json());

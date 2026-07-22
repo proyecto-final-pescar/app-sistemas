@@ -24,11 +24,14 @@ const verifyToken = (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+        const role = decoded.role || decoded.rol;
+
         // Adjuntar los datos del usuario al request
         req.user = {
             id: decoded.id,
             email: decoded.email,
-            rol: decoded.rol
+            role,
+            rol: role
         };
 
         // Continuar a la siguiente función
@@ -47,4 +50,17 @@ const verifyToken = (req, res, next) => {
     }
 };
 
+// Verifica que el usuario autenticado tenga uno de los roles permitidos
+const authorize = (...rolesPermitidos) => {
+    return (req, res, next) => {
+        if (!req.user || !rolesPermitidos.includes(req.user.role)) {
+            return res.status(403).json({
+                error: 'No tenés permisos para realizar esta acción'
+            });
+        }
+        next();
+    };
+};
+
+export { verifyToken, authorize };
 export default verifyToken;

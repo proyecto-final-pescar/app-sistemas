@@ -6,6 +6,7 @@
     --color-texto-secundario: #7E6FA0;
     --color-fondo-claro: #EDE9FE;
     --color-blanco: #FFFFFF;
+    --color-fondo-secciones: #f7f7fb;
 
     /* Degradado del panel destacado */
     --gradiente-primario: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%);

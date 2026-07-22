@@ -10,8 +10,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
+<<<<<<< HEAD
     "@vis.gl/react-google-maps": "^1.8.3",
     "axios": "^1.18.1",
+=======
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^9.2.0",
+    "@mui/material": "^9.2.0",
+    "@vis.gl/react-google-maps": "^1.8.3",
+    "axios": "^1.18.0",
+    "lucide-react": "^1.23.0",
+>>>>>>> 44806bc9c75271979cbd61f581d03ce95d69115a
     "prop-types": "^15.8.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",

@@ -1,5 +1,5 @@
 import Mascota from '../models/Mascota.js'; // Importo el modelo de Mascota para interactuar con la base de datos
-
+import HistorialClinico from '../models/HistorialClinico.js';
 // GET /mascotas: devuelve las mascotas del usuario logueado
 export const obtenerMascotas = async (req, res) => {
     try {
@@ -12,7 +12,51 @@ export const obtenerMascotas = async (req, res) => {
         res.status(500).json({ message: 'Error interno del servidor' });
     }
 };
+// GET /mascotas/:id/historial: devuelve el historial clínico de una mascota
+export const obtenerHistorialMascota = async (req, res) => {
+    try {
+        const mascotaId = req.params.id; // ID de la mascota que viene en la URL
+        const usuarioId = req.user.id; // ID del usuario logueado
+        const rolUsuario = req.user.rol; // Rol del usuario logueado
 
+        // Busco la mascota para verificar si existe y quién es su dueño
+        const mascota = await Mascota.findById(mascotaId);
+
+        if (!mascota) {
+            return res.status(404).json({ message: 'Mascota no encontrada' });
+        }
+
+        // Verifico si el usuario logueado es el dueño de la mascota
+        const esDueño = mascota.dueñoId.toString() === usuarioId;
+
+        // En el modelo User los roles son: dueno, veterinaria, administrador
+        const tieneRolPermitido =
+            rolUsuario === 'veterinaria' || rolUsuario === 'administrador';
+
+        if (!esDueño && !tieneRolPermitido) {
+            return res.status(403).json({
+                message: 'No tenés permiso para ver el historial clínico de esta mascota'
+            });
+        }
+
+        // Busco el historial clínico de la mascota,
+        // incluyendo nombre de veterinaria y profesional
+        const historial = await HistorialClinico.find({ mascotaId: mascotaId })
+            .populate('veterinariaId', 'nombre')
+            .populate('profesionalId', 'name')
+            .sort({ fecha: -1, hora: -1 });
+
+        res.json(historial);
+
+    } catch (error) {
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: 'El id de la mascota no es válido' });
+        }
+
+        console.error('Error en GET /mascotas/:id/historial:', error);
+        res.status(500).json({ message: 'Error al obtener el historial clínico' });
+    }
+};
 // POST /mascotas: Crea una nueva mascota
 export const crearMascota = async (req, res) => {
     try {
