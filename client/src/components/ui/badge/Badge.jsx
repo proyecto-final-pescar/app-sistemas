@@ -1,4 +1,4 @@
-// client/src/components/common/Badge.jsx
+// client/src/components/ui/badge/Badge
 import "./Badge.css";
 
 function Badge({ texto, variante }) {

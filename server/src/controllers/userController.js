@@ -1,7 +1,102 @@
 import User from '../models/User.js';
 import Mascota from '../models/Mascota.js';
+import Turno from '../models/Turno.js';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
+
+
+// GET /usuarios: listado paginado de usuarios 
+//  panel "Gestión de Dueños"
+export const listarUsuarios = async (req, res) => {
+    try {
+        const {
+            nombre,
+            email,
+            telefono,
+            estado, 
+            page = 1,
+            limit = 10
+        } = req.query;
+
+        const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+        const limitNum = Math.max(parseInt(limit, 10) || 10, 1);
+
+        
+        const filtro = { role: 'dueno' };
+
+        if (nombre) {
+            filtro.name = { $regex: nombre.trim(), $options: 'i' };
+        }
+        if (email) {
+            filtro.email = { $regex: email.trim(), $options: 'i' };
+        }
+        if (telefono) {
+            filtro.telefono = { $regex: telefono.trim(), $options: 'i' };
+        }
+        if (estado === 'true' || estado === 'false') {
+            filtro.active = estado === 'true';
+        }
+
+        const total = await User.countDocuments(filtro);
+
+        const usuarios = await User.find(filtro)
+            .sort({ createdAt: -1 })
+            .skip((pageNum - 1) * limitNum)
+            .limit(limitNum);
+
+        const ahora = new Date();
+
+        // Para cada usuario de la pag con mascotas y turnos.
+         // con paginacion
+        const data = await Promise.all(usuarios.map(async (usuario) => {
+            const [cantidadMascotas, turnosProximos, turnosPasados] = await Promise.all([
+                Mascota.countDocuments({ dueñoId: usuario._id }),
+                Turno.countDocuments({
+                    usuarioId: usuario._id,
+                    fecha: { $gte: ahora },
+                    estado: { $ne: 'cancelado' } // no contamos cancelados 
+                }),
+                Turno.countDocuments({
+                    usuarioId: usuario._id,
+                    fecha: { $lt: ahora },
+                    estado: { $ne: 'cancelado' } 
+                })
+            ]);
+
+            return {
+                id: usuario._id,
+                nombre: usuario.name,
+                email: usuario.email,
+                telefono: usuario.telefono || null,
+                mascotas: cantidadMascotas,
+                registro: usuario.createdAt,
+                turnos: {
+                    proximos: turnosProximos,
+                    pasados: turnosPasados
+                },
+                active: usuario.active
+            };
+        }));
+
+        return res.status(200).json({
+            success: true,
+            data,
+            pagination: {
+                total,
+                page: pageNum,
+                limit: limitNum,
+                totalPages: Math.ceil(total / limitNum)
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en listarUsuarios:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor al listar usuarios'
+        });
+    }
+};
 
 
 // GET /usuarios/:id: devuelve el perfil de un usuario junto con sus mascotas
@@ -58,7 +153,7 @@ export const obtenerPerfilUsuario = async (req, res) => {
 
 export const crearUsuarioAdmin = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, telefono } = req.body;
 
     // 1. Validación de datos faltantes
     if (!name || !email || !password || !role) {
@@ -92,6 +187,13 @@ export const crearUsuarioAdmin = async (req, res) => {
         validaciones.push(`El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}.`);
     }
 
+    // Validar tel opcional 
+    if (telefono !== undefined && telefono !== null && telefono.trim() !== '') {
+        if (!/^[\d\s()+-]{6,20}$/.test(telefono.trim())) {
+            validaciones.push('El teléfono debe contener solo números, espacios, +, - o paréntesis (6 a 20 caracteres).');
+        }
+    }
+
     // Si hay errores de validación, cortamos la ejecución y respondemos (HTTP 400)
     if (validaciones.length > 0) {
         return res.status(400).json({
@@ -120,6 +222,7 @@ export const crearUsuarioAdmin = async (req, res) => {
       email: email.toLowerCase().trim(),
       password: hashedPassword,
       role,
+      telefono: telefono ? telefono.trim() : undefined,
       active: true,
       historialSesiones: []
     });
@@ -205,7 +308,7 @@ export const darDeBajaUsuario = async (req, res) => {
 export const actualizarUsuarioAdmin = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, email, password, role, active } = req.body;
+        const { name, email, password, role, active, telefono } = req.body;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
@@ -273,6 +376,18 @@ export const actualizarUsuarioAdmin = async (req, res) => {
                 validaciones.push('El estado activo debe ser true (activo) o false (inactivo).');
             } else {
                 usuario.active = active;
+            }
+        }
+
+        if (telefono !== undefined) {
+            const telefonoLimpio = telefono === null ? '' : telefono.trim();
+            if (telefonoLimpio === '') {
+                // Permite vaciar el teléfono explícitamente
+                usuario.telefono = undefined;
+            } else if (!/^[\d\s()+-]{6,20}$/.test(telefonoLimpio)) {
+                validaciones.push('El teléfono debe contener solo números, espacios, +, - o paréntesis (6 a 20 caracteres).');
+            } else {
+                usuario.telefono = telefonoLimpio;
             }
         }
 
