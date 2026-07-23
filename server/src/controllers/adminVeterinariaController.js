@@ -4,11 +4,34 @@ import Turno from '../models/Turno.js';
 // GET /api/admin/veterinarias
 export const obtenerVeterinariasAdmin = async (req, res) => {
     try {
-        const veterinarias = await Veterinaria.find();
+        const pagina = parseInt(req.query.pagina) || 1;
+        const limite = parseInt(req.query.limite) || 10;
+        const saltar = (pagina - 1) * limite;
+
+        const filtro = {};
+
+        if (req.query.estado) {
+            filtro.estado = req.query.estado;
+        }
+
+        if (req.query.nombre) {
+            filtro.nombre = { $regex: req.query.nombre, $options: 'i' };
+        }
+
+        const [veterinarias, total] = await Promise.all([
+            Veterinaria.find(filtro).skip(saltar).limit(limite),
+            Veterinaria.countDocuments(filtro)
+        ]);
 
         return res.status(200).json({
             success: true,
-            data: veterinarias
+            data: veterinarias,
+            paginacion: {
+                total,
+                pagina,
+                limite,
+                totalPaginas: Math.ceil(total / limite)
+            }
         });
 
     } catch (error) {
@@ -56,7 +79,7 @@ export const obtenerVeterinariaAdminPorId = async (req, res) => {
 
 
 // POST /api/admin/veterinarias
-export const crearVeterinariaAdmin = async (req, res) => {
+/* export const crearVeterinariaAdmin = async (req, res) => {
     try {
         const {
             nombre,
@@ -114,7 +137,7 @@ export const crearVeterinariaAdmin = async (req, res) => {
             message: 'Error interno del servidor'
         });
     }
-};
+}; */
 
 
 // PUT /api/admin/veterinarias/:id
@@ -241,5 +264,59 @@ export const eliminarVeterinariaAdmin = async (req, res) => {
         return res.status(500).json({
             message: 'Error interno del servidor'
         });
+    }
+};
+
+export const aprobarVeterinaria = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const veterinaria = await Veterinaria.findById(id);
+
+        if (!veterinaria) {
+            return res.status(404).json({ message: 'La veterinaria no existe.' });
+        }
+
+        veterinaria.estado = 'activa';
+        await veterinaria.save();
+
+        return res.status(200).json({
+            success: true,
+            data: veterinaria
+        });
+
+    } catch (error) {
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: 'El id de la veterinaria no es válido' });
+        }
+        console.error('Error en PATCH /api/admin/veterinarias/:id/aprobar:', error);
+        return res.status(500).json({ message: 'Error interno del servidor' });
+    }
+};
+
+export const rechazarVeterinaria = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const veterinaria = await Veterinaria.findById(id);
+
+        if (!veterinaria) {
+            return res.status(404).json({ message: 'La veterinaria no existe.' });
+        }
+
+        veterinaria.estado = 'suspendida';
+        await veterinaria.save();
+
+        return res.status(200).json({
+            success: true,
+            data: veterinaria
+        });
+
+    } catch (error) {
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: 'El id de la veterinaria no es válido' });
+        }
+        console.error('Error en PATCH /api/admin/veterinarias/:id/rechazar:', error);
+        return res.status(500).json({ message: 'Error interno del servidor' });
     }
 };
