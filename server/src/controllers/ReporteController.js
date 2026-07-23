@@ -4,12 +4,6 @@ import Publicacion from '../models/Publicacion.js';
 // GET /reportes/resumen: agrupa los reportes por publicacion (cantidad total y pendientes) — solo admin
 export const obtenerResumenReportes = async (req, res) => {
   try {
-    const esAdmin = req.user.role === 'administrador';
-
-    if (!esAdmin) {
-      return res.status(403).json({ message: 'No tenés permiso para ver los reportes' });
-    }
-
     const resumen = await Reporte.aggregate([
       {
         $group: {
@@ -24,7 +18,7 @@ export const obtenerResumenReportes = async (req, res) => {
       { $sort: { pendientes: -1, cantidadReportes: -1 } }
     ]);
 
-    //  los datos de cada publicación para mostrar en el listado
+    //  los datos de cada publicacion para mostrar en el listado
     const publicacionIds = resumen.map((r) => r._id);
     const publicaciones = await Publicacion.find({ _id: { $in: publicacionIds } })
       .select('nombre foto zona estado');
@@ -52,19 +46,13 @@ export const obtenerResumenReportes = async (req, res) => {
 // GET /reportes: devuelve todos los reportes 
 export const obtenerReportes = async (req, res) => {
   try {
-    const esAdmin = req.user.role === 'administrador';
-
-    if (!esAdmin) {
-      return res.status(403).json({ message: 'No tenés permiso para ver los reportes' });
-    }
-
     const { estado, publicacionId } = req.query;
 
     const filtros = {};
     if (publicacionId) filtros.publicacionId = publicacionId;
 
     // por publicacion
-    // se muestran los reportes pendientes
+    // se muestran los reportes pendientes 
     if (estado) {
       filtros.estado = estado;
     } else if (publicacionId) {
@@ -86,12 +74,6 @@ export const obtenerReportes = async (req, res) => {
 // GET /reportes/:id: devuelve el detalle de un reporte — solo admin
 export const obtenerReportePorId = async (req, res) => {
   try {
-    const esAdmin = req.user.role === 'administrador';
-
-    if (!esAdmin) {
-      return res.status(403).json({ message: 'No tenés permiso para ver este reporte' });
-    }
-
     const { id } = req.params;
 
     const reporte = await Reporte.findById(id)
@@ -118,9 +100,15 @@ export const crearReporte = async (req, res) => {
     const usuarioId = req.user.id;
     const { publicacionId, motivo, descripcion } = req.body;
 
-    if (!publicacionId || !motivo || !descripcion) {
+    if (!publicacionId || !motivo) {
       return res.status(400).json({
-        message: 'Los campos publicacionId, motivo y descripción son requeridos'
+        message: 'Los campos publicacionId y motivo son requeridos'
+      });
+    }
+
+    if (motivo === 'otro' && !descripcion) {
+      return res.status(400).json({
+        message: 'La descripción es requerida cuando el motivo es "otro"'
       });
     }
 
@@ -128,6 +116,11 @@ export const crearReporte = async (req, res) => {
 
     if (!publicacion) {
       return res.status(404).json({ message: 'La publicación que intentás reportar no existe.' });
+    }
+
+    // un usuario no puede reportar su propia publicacion
+    if (publicacion.usuarioId.toString() === usuarioId) {
+      return res.status(400).json({ message: 'No podés reportar tu propia publicación' });
     }
 
     const nuevoReporte = new Reporte({
@@ -159,12 +152,6 @@ export const crearReporte = async (req, res) => {
 // PATCH /reportes/:id/estado: cambia el estado del reporte — solo admin
 export const cambiarEstadoReporte = async (req, res) => {
   try {
-    const esAdmin = req.user.role === 'administrador';
-
-    if (!esAdmin) {
-      return res.status(403).json({ message: 'No tenés permiso para cambiar el estado de este reporte' });
-    }
-
     const { id } = req.params;
     const { estado } = req.body;
 
@@ -194,12 +181,6 @@ export const cambiarEstadoReporte = async (req, res) => {
 // DELETE /reportes/:id: elimina un reporte — solo admin
 export const eliminarReporte = async (req, res) => {
   try {
-    const esAdmin = req.user.role === 'administrador';
-
-    if (!esAdmin) {
-      return res.status(403).json({ message: 'No tenés permiso para eliminar este reporte' });
-    }
-
     const { id } = req.params;
 
     const reporte = await Reporte.findById(id);

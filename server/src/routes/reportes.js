@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import verifyToken from '../middleware/auth.js';
+import esAdmin from '../middleware/esAdmin.js';
 import {
+  obtenerResumenReportes,
   obtenerReportes,
   obtenerReportePorId,
   crearReporte,
@@ -10,19 +12,22 @@ import {
 
 const router = Router();
 
-// GET /reportes — requiere autenticacion -solo admin
-router.get('/', verifyToken, obtenerReportes);
+// GET /reportes/resumen 
+router.get('/resumen', verifyToken, esAdmin, obtenerResumenReportes);
 
-// GET /reportes/:id — requiere autenticacion -solo admin
-router.get('/:id', verifyToken, obtenerReportePorId);
+// GET /reportes — lista de reportes. — solo admin
+router.get('/', verifyToken, esAdmin, obtenerReportes);
 
-// POST /reportes — requiere autenticación (cualquier usuario logueado)
+// GET /reportes/:id — solo admin
+router.get('/:id', verifyToken, esAdmin, obtenerReportePorId);
+
+// POST /reportes — requiere autenticacion (cualquier usuario logueado)
 router.post('/', verifyToken, crearReporte);
 
-// PATCH /reportes/:id/estado — cambia el estado (solo admin)
-router.patch('/:id/estado', verifyToken, cambiarEstadoReporte);
+// PATCH /reportes/:id/estado — cambia el estado — solo admin
+router.patch('/:id/estado', verifyToken, esAdmin, cambiarEstadoReporte);
 
-// DELETE /reportes/:id — requiere autenticación (solo admin)
-router.delete('/:id', verifyToken, eliminarReporte);
+// DELETE /reportes/:id — solo admin
+router.delete('/:id', verifyToken, esAdmin, eliminarReporte);
 
 export default router;

@@ -28,16 +28,21 @@ const ReporteSchema = new mongoose.Schema({
   },
   descripcion: {
     type: String,
-    required: [true, 'La descripción del reporte es requerida'],
     trim: true,
-    maxlength: [300, 'La descripción no puede superar los 300 caracteres']
+    maxlength: [300, 'La descripción no puede superar los 300 caracteres'],
+    required: [
+      function () {
+        return this.motivo === 'otro';
+      },
+      'La descripción es requerida.'
+    ]
   },
   estado: {
     type: String,
-    enum: ['pendiente', 'revisado', 'descartado'],// pendiente es cuando esta en la badeja del admin y no se tomo ninguna decision , revisado se tomo una decision (eliminar publi y/o tambien se baneo user)
-                                                 // descartado ->se descarto el reporte -> icon del circulo
+    enum: ['pendiente', 'revisado', 'descartado'],
     default: 'pendiente'
-  }
+  }// pendiente es cuando esta en la badeja del admin y no se tomo ninguna decision , revisado se tomo una decision (eliminar publi y/o tambien se baneo user)
+   // descartado ->se descarto el reporte -> icon del circulo
 }, {
   timestamps: true
 });
