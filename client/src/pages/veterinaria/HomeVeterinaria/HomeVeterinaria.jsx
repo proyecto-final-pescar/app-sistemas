@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
 import { obtenerMiVeterinaria } from "../../../services/veterinariaService";
 import { obtenerTurnosPorVeterinaria } from "../../../services/turnosService";
-import api from "../../../services/api";
+import { obtenerDisponibilidadPorFecha } from "../../../services/disponibilidadService";
 
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
@@ -21,6 +21,13 @@ const HomeVeterinaria = () => {
   const [cuposLibres, setCuposLibres] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  const formatearFechaLocal = (fecha) => {
+    const anio = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const dia = String(fecha.getDate()).padStart(2, "0");
+    return `${anio}-${mes}-${dia}`;
+  };
+
   useEffect(() => {
     async function cargarDatosHome() {
       if (!usuario) return;
@@ -35,7 +42,7 @@ const HomeVeterinaria = () => {
         const vetId = miVet?._id;
         if (!vetId) return;
 
-        const fechaHoyStr = new Date().toISOString().split("T")[0];
+        const fechaHoyStr = formatearFechaLocal(new Date());
 
         const todosLosTurnos = await obtenerTurnosPorVeterinaria(vetId);
 
@@ -47,16 +54,17 @@ const HomeVeterinaria = () => {
         }
 
         const hoyTurnos = todosLosTurnos.filter((t) => {
-          const fechaTurno = new Date(t.fecha).toISOString().split("T")[0];
+          const fechaTurno = formatearFechaLocal(new Date(t.fecha));
           return fechaTurno === fechaHoyStr;
         });
         setConsultasHoy(hoyTurnos.length);
 
-        const resDispo = await api.get(
-          `/disponibilidad/${vetId}?fecha=${fechaHoyStr}`,
+        const resDispo = await obtenerDisponibilidadPorFecha(
+          vetId,
+          fechaHoyStr,
         );
-        if (resDispo.data?.success) {
-          setCuposLibres(resDispo.data.data.totalDisponibles);
+        if (resDispo?.success) {
+          setCuposLibres(resDispo.data.totalDisponibles);
         }
       } catch (error) {
         console.error("Error cargando las métricas del Home:", error);
@@ -92,7 +100,7 @@ const HomeVeterinaria = () => {
         />
 
         {/* Contenido de Home */}
-        <div className={styles.main}>
+        <div className={styles.contentWrap}>
           {/* Panel de Bienvenida */}
           <div className={styles.welcomePanel}>
             <h1 className={styles.welcomeTitle}>Hola, {nombreVet}</h1>
