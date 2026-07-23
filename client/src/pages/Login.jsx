@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
 import api from "../services/api.js";
+import { obtenerMiVeterinaria } from "../services/veterinariaService.js";
 
 function Login() {
   const navigate = useNavigate();
@@ -73,7 +74,22 @@ function Login() {
       }
 
       if (rol === "veterinaria") {
-        navigate("/home-veterinaria", { replace: true }); /*/home-veterinaria */
+        try {
+          const miVeterinaria = await obtenerMiVeterinaria();
+          const tienePerfilCompletado = Boolean(
+            miVeterinaria?._id || miVeterinaria?.nombre,
+          );
+
+          if (tienePerfilCompletado) {
+            navigate("/home-veterinaria", { replace: true });
+          } else {
+            navigate("/registro-veterinaria", { replace: true });
+          }
+        } catch (vetError) {
+          // Si la API responde error (ej. 404 porque aún no existe el
+          // perfil de veterinaria), asumimos que falta completar el registro.
+          navigate("/registro-veterinaria", { replace: true });
+        }
         return;
       }
 
