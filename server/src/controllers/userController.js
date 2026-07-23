@@ -149,14 +149,12 @@ export const crearUsuarioAdmin = async (req, res) => {
   }
 };
 
-// ==========================================
+
 // 3. BAJA LÓGICA (SOFT DELETE) POR ADMIN
-// ==========================================
 export const darDeBajaUsuario = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // 1. Validar formato de ID de Mongoose
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -164,7 +162,6 @@ export const darDeBajaUsuario = async (req, res) => {
       });
     }
 
-    // 2. Buscar el usuario
     const usuario = await User.findById(id);
 
     if (!usuario) {
@@ -174,7 +171,6 @@ export const darDeBajaUsuario = async (req, res) => {
       });
     }
 
-    // 3. Regla de Negocio: Verificar si ya está dado de baja
     if (!usuario.active) {
       return res.status(400).json({
         success: false,
@@ -182,11 +178,9 @@ export const darDeBajaUsuario = async (req, res) => {
       });
     }
 
-    // 4. Ejecutar el Soft Delete
     usuario.active = false;
     await usuario.save();
 
-    // 5. Respuesta Exitosa
     return res.status(200).json({
       success: true,
       message: 'Cuenta de usuario desactivada exitosamente.',
@@ -206,15 +200,13 @@ export const darDeBajaUsuario = async (req, res) => {
     });
   }
 };
-// ==========================================
+
 // 4. MODIFICACIÓN DE USUARIO (POR ADMIN)
-// ==========================================
 export const actualizarUsuarioAdmin = async (req, res) => {
     try {
         const { id } = req.params;
         const { name, email, password, role, active } = req.body;
 
-        // 1. Validar formato de ID de Mongoose
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
                 success: false,
@@ -231,12 +223,8 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             });
         }
 
-        // 3. Array para ir acumulando errores de validación manual
         const validaciones = [];
 
-        // --- VALIDACIONES DE CAMPOS (Solo si vienen en el request) ---
-
-        // Validar Nombre
         if (name !== undefined) {
             if (name.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(name.trim())) {
                 validaciones.push('El nombre debe tener al menos 3 caracteres y contener solo letras.');
@@ -245,14 +233,11 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             }
         }
 
-        // Validar y chequear Email
         if (email !== undefined) {
             const emailLimpio = email.toLowerCase().trim();
             if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(emailLimpio)) {
                 validaciones.push('El formato del email no es válido.');
             } else {
-                // REGLA DE NEGOCIO: Verificar si el nuevo email ya lo usa OTRO usuario
-                // Buscamos un usuario con ese email, pero que su ID sea distinto ($ne: not equal) al que estamos editando
                 const emailOcupado = await User.findOne({ email: emailLimpio, _id: { $ne: id } });
                 
                 if (emailOcupado) {
@@ -265,7 +250,6 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             }
         }
 
-        // Validar Contraseña (solo si el admin decide cambiarla)
         if (password !== undefined) {
             if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password)) {
                 validaciones.push('La nueva contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número.');
@@ -275,7 +259,6 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             }
         }
 
-        // Validar Rol
         if (role !== undefined) {
             const rolesPermitidos = ['administrador', 'tutor', 'veterinaria', 'dueno'];
             if (!rolesPermitidos.includes(role)) {
@@ -285,7 +268,6 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             }
         }
 
-        // Modificar estado Activo (El admin puede reactivar usuarios dados de baja)
         if (active !== undefined) {
             if (typeof active !== 'boolean') {
                 validaciones.push('El estado activo debe ser true (activo) o false (inactivo).');
@@ -294,7 +276,6 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             }
         }
 
-        // 4. Si hubo algún error en las validaciones, cortamos la ejecución (HTTP 400)
         if (validaciones.length > 0) {
             return res.status(400).json({
                 success: false,
@@ -303,16 +284,13 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             });
         }
 
-        // 5. Guardar los cambios en la base de datos
         await usuario.save();
 
-        // 6. Preparar la respuesta (Ocultando datos sensibles)
         const userResponse = usuario.toObject();
         delete userResponse.password;
         delete userResponse.resetPasswordToken;
         delete userResponse.resetPasswordExpires;
 
-        // 7. Respuesta exitosa (HTTP 200 OK)
         return res.status(200).json({
             success: true,
             message: 'Usuario actualizado correctamente.',
@@ -320,7 +298,6 @@ export const actualizarUsuarioAdmin = async (req, res) => {
         });
 
     } catch (error) {
-        // Atajar errores de Mongoose por si se escapó algo
         if (error.name === 'ValidationError') {
             const messages = Object.values(error.errors).map(val => val.message);
             return res.status(400).json({ 
