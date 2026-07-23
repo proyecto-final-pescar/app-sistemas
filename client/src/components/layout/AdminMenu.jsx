@@ -2,30 +2,43 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 const menuItems = [
   {
-    label: "Home",
-    path: "/home",
+    label: "Dashboard",
+    path: "/dashboard",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-        <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
+        <rect x="3" y="3" width="7" height="9" rx="1" />
+        <rect x="14" y="3" width="7" height="5" rx="1" />
+        <rect x="14" y="12" width="7" height="9" rx="1" />
+        <rect x="3" y="16" width="7" height="5" rx="1" />
       </svg>
     ),
   },
   {
-    label: "Historial Médico",
-    path: "/historial-medico",
+    label: "Dueños",
+    path: "/admin-duenos",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="12" y1="11" x2="12" y2="17" />
-        <line x1="9" y1="14" x2="15" y2="14" />
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
+  {
+    label: "Veterinarias",
+    path: "/admin-veterinarias",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 9l9-7 9 7" />
+        <path d="M9 22V12h6v10" />
+        <path d="M5 10v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V10" />
       </svg>
     ),
   },
   {
     label: "Turnos",
-    path: "/mis-turnos",
+    path: "/admin-turnos",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -36,46 +49,24 @@ const menuItems = [
     ),
   },
   {
-    label: "Mis Mascotas",
-    path: "/mascotas",
+    label: "Foro Mascotas Perdidas",
+    path: "/admin-foro-mascotas-perdidas",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 21C12 21 4 13.5 4 8.5C4 5.42 6.42 3 9.5 3C11 3 12 4 12 4C12 4 13 3 14.5 3C17.58 3 20 5.42 20 8.5C20 13.5 12 21 12 21Z" />
-      </svg>
-    ),
-  },
-  {
-    label: "Urgencias 24h",
-    path: "/urgencias",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-        <line x1="12" y1="9" x2="12" y2="13" />
-        <line x1="12" y1="17" x2="12.01" y2="17" />
-      </svg>
-    ),
-  },
-  {
-    label: "Foro Perdidos",
-    path: "/foro",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+        <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
       </svg>
     ),
   },
 ];
 
-const TutorMenu = () => {
+const AdminMenu = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   return (
     <nav style={{ padding: "8px 0", fontFamily: "'Inter', Arial, Helvetica, sans-serif" }}>
       {menuItems.map((item) => {
-        // Resalta el ítem activo comparando contra la URL real, no contra
-        // un estado externo. Así funciona sin importar por dónde se haya
-        // entrado a la página (click en el menú, refresh, link directo).
         const isActive = location.pathname === item.path;
         return (
           <button
@@ -115,6 +106,16 @@ const TutorMenu = () => {
           >
             <span style={{ flexShrink: 0 }}>{item.icon}</span>
             {item.label}
+            {isActive && (
+              <span style={{
+                marginLeft: "auto",
+                width: "6px",
+                height: "6px",
+                borderRadius: "50%",
+                backgroundColor: "#7c3aed",
+                flexShrink: 0,
+              }} />
+            )}
           </button>
         );
       })}
@@ -122,4 +123,4 @@ const TutorMenu = () => {
   );
 };
 
-export default TutorMenu;
+export default AdminMenu;

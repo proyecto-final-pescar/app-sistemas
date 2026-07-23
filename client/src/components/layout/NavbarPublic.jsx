@@ -64,6 +64,15 @@ const NavbarPublic = () => {
             fontFamily: "'Inter', Arial, Helvetica, sans-serif",
             textDecoration: "none",
             backgroundColor: "#ffffff",
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = "#7c3aed";
+            e.target.style.color = "#ffffff";
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = "#ffffff";
+            e.target.style.color = "#7c3aed";
           }}
         >
           Iniciar Sesión
