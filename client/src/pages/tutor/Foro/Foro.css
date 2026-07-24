@@ -1,0 +1,21 @@
+
+
+.btn-nueva-publicacion {
+  background-color: #7C3AED;
+  color: #FFFFFF;
+
+  border: none;
+  border-radius: 14px;
+
+  padding: 14px 24px;
+
+  font-family: "Inter", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.btn-nueva-publicacion:hover {
+  background-color: #6D28D9;
+}

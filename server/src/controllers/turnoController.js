@@ -17,27 +17,35 @@ const horasHastaTurno = (turno) => {
 
 export const obtenerTurnos = async (req, res) => {
   try {
-    const { veterinariaId, estado } = req.query;
+    const { veterinariaId, usuarioId, estado } = req.query;
 
-    if (!veterinariaId) {
-      return res.status(400).json({ message: 'Falta el id de la veterinaria' });
+    if (!veterinariaId && !usuarioId) {
+      return res.status(400).json({ message: 'Falta veterinariaId o usuarioId' });
     }
 
-    const filtro = { veterinariaId };
+    const filtro = {};
+
+    if (veterinariaId) filtro.veterinariaId = veterinariaId;
+
+    if (usuarioId === 'me') filtro.usuarioId = req.user.id;
+    else if (usuarioId) filtro.usuarioId = usuarioId;
+
     if (estado) filtro.estado = estado;
 
     const turnos = await Turno.find(filtro)
       .populate('mascotaId', 'nombre especie')
       .populate('usuarioId', 'nombre email')
+      .populate('veterinariaId', 'nombre direccion')
       .sort({ fecha: 1, hora: 1 });
 
     res.status(200).json({
       success: true,
       data: { turnos }
     });
+
   } catch (error) {
     if (error.name === 'CastError') {
-      return res.status(400).json({ message: 'El id de la veterinaria no es válido' });
+      return res.status(400).json({ message: 'El id enviado no es válido' });
     }
     console.error('Error en obtenerTurnos:', error);
     res.status(500).json({ message: 'Error interno del servidor' });

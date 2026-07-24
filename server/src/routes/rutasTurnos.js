@@ -6,8 +6,8 @@ import { ownerTurno } from '../middleware/ownerTurno.js';
 
 const router = Router();
 
-router.post('/turnos', verifyToken, reservarTurno);
-router.patch('/turnos/:id/cancelar', verifyToken, ownerTurno, cancelarTurno);
-router.get('/turnos', verifyToken, obtenerTurnos);
+router.post('/', verifyToken, reservarTurno);
+router.patch('/:id/cancelar', verifyToken, ownerTurno, cancelarTurno);
+router.get('/', verifyToken, obtenerTurnos);
 
 export default router;

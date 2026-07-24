@@ -139,11 +139,7 @@ async function manejarSubmit(evento) {
   )}
   <input type="file" accept="image/*" onChange={manejarCambioFoto} />
 </label>
-
-
-      
   
-
       <Input
         label="Nombre"
         placeholder="Ej: Luna"

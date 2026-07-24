@@ -91,7 +91,7 @@ const Emergencias = () => {
     setVetSeleccionada(null);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/veterinarias/buscar?lat=${lat}&lng=${lng}&radio=${radioKm * 1000}`,
+        `${import.meta.env.VITE_API_URL}/veterinarias/buscar?lat=${lat}&lng=${lng}&radio=${radioKm * 1000}`,
         { headers: { "Content-Type": "application/json" } }
       );
       if (!response.ok) throw new Error();
