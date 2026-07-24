@@ -21,10 +21,23 @@ const HomeVeterinaria = () => {
   const [cuposLibres, setCuposLibres] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const formatearFechaLocal = (fecha) => {
+  const formatearFechaLocal = (fechaInput) => {
+    if (!fechaInput) return "";
+
+    let fecha;
+
+    if (typeof fechaInput === "string") {
+      const soloFecha = fechaInput.split("T")[0];
+      const [anio, mes, dia] = soloFecha.split("-").map(Number);
+      fecha = new Date(anio, mes - 1, dia, 12, 0, 0); // Ajuste de hora para evitar desfase
+    } else {
+      fecha = new Date(fechaInput);
+    }
+
     const anio = fecha.getFullYear();
     const mes = String(fecha.getMonth() + 1).padStart(2, "0");
     const dia = String(fecha.getDate()).padStart(2, "0");
+
     return `${anio}-${mes}-${dia}`;
   };
 
@@ -54,7 +67,7 @@ const HomeVeterinaria = () => {
         }
 
         const hoyTurnos = todosLosTurnos.filter((t) => {
-          const fechaTurno = formatearFechaLocal(new Date(t.fecha));
+          const fechaTurno = formatearFechaLocal(t.fecha);
           return fechaTurno === fechaHoyStr;
         });
         setConsultasHoy(hoyTurnos.length);
@@ -82,8 +95,18 @@ const HomeVeterinaria = () => {
   // Formateador de fechas interno para la vista del turno
   const formatearFecha = (fechaStr) => {
     if (!fechaStr) return "";
+
+    let fecha;
+    if (typeof fechaStr === "string") {
+      const soloFecha = fechaStr.split("T")[0]; // Toma "2026-07-23"
+      const [anio, mes, dia] = soloFecha.split("-").map(Number);
+      fecha = new Date(anio, mes - 1, dia, 12, 0, 0);
+    } else {
+      fecha = new Date(fechaStr);
+    }
+
     const opciones = { weekday: "long", day: "numeric", month: "long" };
-    return new Date(fechaStr).toLocaleDateString("es-AR", opciones);
+    return fecha.toLocaleDateString("es-AR", opciones);
   };
 
   return (
