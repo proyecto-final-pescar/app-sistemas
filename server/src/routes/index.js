@@ -11,6 +11,7 @@ import placesRouter from './places.js';
 import historialClinicoRouter from './historialClinico.js';
 import turnosRouter from './rutasTurnos.js';
 import publicacionesRouter from './publicaciones.js';
+import reportesRouter from './reportes.js';
 import dashboardRouter from './dashboard.js';
 
 const router = Router()
@@ -21,12 +22,11 @@ router.use('/mascotas', mascotasRouter);
 router.use('/usuarios', usuariosRouter);
 router.use('/veterinarias', veterinariasRouter);
 router.use('/disponibilidad', disponibilidadRouter);
-router.use('/places', placesRouter); //!AGREGADO
+router.use('/places', placesRouter); 
 router.use('/turnos', turnosRouter);
 router.use('/', historialClinicoRouter);
-
 router.use('/publicaciones', publicacionesRouter);
-
+router.use('/reportes', reportesRouter);
 router.use('/admin/dashboard', dashboardRouter); 
 
 export default router;

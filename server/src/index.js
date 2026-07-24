@@ -7,6 +7,7 @@ import connectDB from './config/db.js'
 import routes from './routes/index.js'
 import uploadRoutes from './routes/uploadRoutes.js'
 import { iniciarJobsTurnos } from './jobs/turnoJobs.js';
+import adminVeterinariasRoutes from './routes/adminVeterinariaRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -42,15 +43,16 @@ app.use(express.json());
 app.use('/api', routes);
 app.use('/api/upload', uploadRoutes)
 connectDB();
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en puerto ${PORT}`);
-});
 
 app.get('/', (req, res) => {
     res.json({ message: 'Servidor funcionando' });
 });
 
 iniciarJobsTurnos(); // arranca el cron de liberación automática
+
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en puerto ${PORT}`);
+});
 
 /*import verifyToken from './middleware/auth.js';*/
 
