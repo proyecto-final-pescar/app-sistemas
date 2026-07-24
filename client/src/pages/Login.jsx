@@ -37,6 +37,7 @@ function Login() {
     setIsLoading(true);
 
     try {
+
       const { data } = await api.post("/auth/login", {
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
@@ -138,7 +139,7 @@ function Login() {
           <label style={styles.field}>
             <span style={styles.labelRow}>
               <span style={styles.label}>Contraseña</span>
-              <a href="/recuperar-password" style={styles.forgotLink}>
+              <a href="/forgot-password" style={styles.forgotLink}>
                 ¿Olvidaste tu contraseña?
               </a>
             </span>

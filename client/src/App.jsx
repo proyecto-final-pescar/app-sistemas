@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import PrivateRoute from "./components/PrivateRoute";
 import CitasAgendadas from './pages/veterinaria/CitasAgendadas/CitasAgendadas';
 import MisTurnos from "./pages/tutor/MisTurnos/MisTurnos";
-
 import Login from "./pages/public/Login/Login";
 import Registro from "./pages/public/Registro/Registro";
 import MisMascotas from "./pages/tutor/MisMascotas/MisMascotas";
@@ -16,6 +15,8 @@ import AgendarTurnos from "./pages/tutor/Turnos/AgendarTurno";
 import PerfilVeterinaria from "./pages/tutor/Turnos/PerfilVeterinaria";
 import HomeTutor from "./pages/tutor/HomeTutor/HomeTutor";
 import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
+import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
+import ResetPassword  from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
 
 
@@ -28,6 +29,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/register" element={<Registro />} />
+        <Route path="/forgot-password"        element={<ForgotPassword />} />   {/* ← nueva */}
+        <Route path="/reset-password"  element={<ResetPassword />} />    {/* ← nueva */}
         <Route path="/home" element={<PrivateRoute allowedRoles={["dueno"]}><HomeTutor /></PrivateRoute>} />
         <Route path="/home-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><HomeVeterinaria /></PrivateRoute>} />
         <Route path="/mascotas" element={<PrivateRoute allowedRoles={["dueno"]}><MisMascotas /></PrivateRoute>} />
@@ -44,6 +47,9 @@ function App() {
         <Route path="/urgencias" element={<PrivateRoute allowedRoles={["dueno"]}><Emergencias /></PrivateRoute>} />
         <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
+        <Route path="/tutor/dashboard" element={<AdminDashboard />} />
+        
+
         <Route path="/" element={<Landing />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
