@@ -1,0 +1,158 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background:#f8f6ff;
+}
+
+.pageWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Buscador y chips dentro del PanelDestacado */
+
+.buscador {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.inputBuscar {
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  border: none;
+  padding: 0 16px;
+  font-size: 15px;
+  outline: none;
+}
+
+.btnBuscar {
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 12px;
+  border: none;
+  background: #22A96B;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnBuscar:hover {
+  background: #1c8f5a;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.chip {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.chip:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.chipActivo {
+  background: #fff;
+  color: #6B4FBB;
+  font-weight: 600;
+}
+
+/*  foro de perdidos + resumen de salud */
+
+.foroPerdidos {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FDF3D8;
+  border-left: 4px solid #E0A100;
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.btnVerPublicaciones {
+  background: #7A3E12;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.resumenSalud {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.resumenSalud header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resumenSalud header a {
+  color: #6B4FBB;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+/* Resultados de búsqueda */
+
+.resultados {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.listaResultados {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.emptyHint {
+  color: #6b6b6b;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.errorBanner {
+  background: #FDEAEA;
+  color: #B02A2A;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.skeletonCard {
+  height: 96px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e6e6e6 37%, #f0f0f0 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}

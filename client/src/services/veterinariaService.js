@@ -16,3 +16,11 @@ export const getAllVeterinarias = async () => {
   const response = await api.get("/veterinarias");
   return response.data;
 };
+
+// GET /veterinarias/buscar?lat=&lng=&radio=  veterinarias  cercanas 
+export const buscarVeterinariasCercanas = async ({ lat, lng, radio }) => {
+  const { data } = await api.get("/veterinarias/buscar", {
+    params: { lat, lng, radio },
+  });
+  return data.data;
+};
