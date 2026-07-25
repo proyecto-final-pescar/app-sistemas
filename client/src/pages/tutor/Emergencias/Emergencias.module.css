@@ -1,4 +1,3 @@
-
 .layout {
   display: flex;
   height: 100vh;
@@ -201,6 +200,45 @@
   font-family: var(--fuente-texto);
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sinResultados p {
+  margin: 0;
+}
+
+.btnAmpliarBusqueda {
+  flex-shrink: 0;
+  background: var(--color-primario);
+  color: var(--color-blanco);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: var(--fuente-texto);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.btnAmpliarBusqueda:hover {
+  background: #6d28d9;
+}
+
+/* Aviso de radio ampliado en el panel derecho */
+.avisoAmpliada {
+  background: var(--color-fondo-claro);
+  color: var(--color-primario);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: var(--fuente-texto);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin: 0;
+  flex-shrink: 0;
 }
 
 /* ── Marcadores ── */
