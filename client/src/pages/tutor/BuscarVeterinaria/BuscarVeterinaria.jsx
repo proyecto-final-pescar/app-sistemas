@@ -8,17 +8,17 @@ import {
   getAllVeterinarias,
   buscarVeterinariasCercanas,
 } from "../../../services/veterinariaService";
+import { calcularEstadoApertura } from "../../../utils/horarios";
 import styles from "../../../pages/tutor/HomeTutor/HomeTutor.module.css";
 
 const RADIO_DEFAULT_METROS = 5000;
 
 const FILTROS = ["Emergencias", "Vacunación", "Cerca mío"];
 
-
 function matchFiltro(vet, filtro) {
   if (!filtro) return true;
   if (filtro === "Emergencias") return !!vet.urgencias24hs;
-  if (filtro === "Vacunación") return !!vet.especialidades?.includes("Vacunación")> 0;
+  if (filtro === "Vacunación") return !!vet.especialidades?.includes("Vacunación");
   return true;
 }
 
@@ -40,8 +40,8 @@ const BuscarVeterinaria = () => {
 
   const [inputValue, setInputValue] = useState(query);
 
-  const [veterinarias, setVeterinarias] = useState([]); 
-  const [cercanas, setCercanas] = useState(null); 
+  const [veterinarias, setVeterinarias] = useState([]);
+  const [cercanas, setCercanas] = useState(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -55,8 +55,7 @@ const BuscarVeterinaria = () => {
       setLoading(true);
       setError(null);
       const res = await getAllVeterinarias();
-      // getAllVeterinarias  devuelve el body completo ({success, data}),
-      
+      // getAllVeterinarias devuelve el body completo ({success, data}),
       const lista = Array.isArray(res) ? res : res?.data ?? [];
       setVeterinarias(lista);
     } catch (err) {
@@ -127,7 +126,6 @@ const BuscarVeterinaria = () => {
 
   const resultados = useMemo(() => {
     if (filtro === "Cerca mío") {
-      
       return (cercanas ?? []).filter((v) => matchTexto(v, query));
     }
     return veterinarias.filter((v) => matchTexto(v, query) && matchFiltro(v, filtro));
@@ -135,20 +133,16 @@ const BuscarVeterinaria = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const next = new URLSearchParams(searchParams);
+    const next = new URLSearchParams();
     if (inputValue.trim()) {
       next.set("q", inputValue.trim());
-    } else {
-      next.delete("q");
     }
     setSearchParams(next);
   };
 
   const handleFiltro = (f) => {
-    const next = new URLSearchParams(searchParams);
-    if (filtro === f) {
-      next.delete("filtro"); 
-    } else {
+    const next = new URLSearchParams();
+    if (filtro !== f) {
       next.set("filtro", f);
     }
     setSearchParams(next);
@@ -164,6 +158,9 @@ const BuscarVeterinaria = () => {
         <TopBar title="Buscar Veterinaria" />
 
         <main className={styles.content}>
+          <button type="button" className={styles.volverInicio} onClick={() => navigate("/home")}>
+            ← Volver al inicio
+          </button>
           <PanelDestacado
             titulo="Encontrá la veterinaria ideal"
             subtitulo="Encontrá la mejor atención para tu mejor amigo."
@@ -212,16 +209,19 @@ const BuscarVeterinaria = () => {
               </p>
             ) : (
               <div className={styles.listaResultados}>
-                {resultados.map((vet) => (
-                  <VetCard
-                    key={vet._id}
-                    vet={vet}
-                    variante="fila"
-                    // falta calcular la hora de cierre
-                    abierta={vet.abierta ?? true}
-                    onVerDetalle={() => handleVerClinica(vet._id)}
-                  />
-                ))}
+                {resultados.map((vet) => {
+                
+                  const { abierta, horaCierre } = calcularEstadoApertura(vet);
+                  return (
+                    <VetCard
+                      key={vet._id}
+                      vet={{ ...vet, horaCierre }}
+                      variante="fila"
+                      abierta={abierta}
+                      onVerDetalle={() => handleVerClinica(vet._id)}
+                    />
+                  );
+                })}
               </div>
             )}
           </section>

@@ -11,7 +11,7 @@ import Button from "../../../components/ui/button/Button";
 import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
 
 import styles from "../../../styles/AgendarTurno.module.css";
-const API_URL = import.meta.env.VITE_API_URL;  // duplicaba /api
+const API_URL = import.meta.env.VITE_API_URL;  
 
 // Helper para formatear fechas a YYYY-MM-DD sin desfasajes de zona horaria
 const formatearFechaId = (date) => {

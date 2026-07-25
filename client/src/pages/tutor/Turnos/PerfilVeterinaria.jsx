@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { href, useNavigate, useParams } from "react-router-dom";
-import { getVeterinariaById } from "../../../services/veterinariaService";
+import {
+  getVeterinariaById,
+  calificarVeterinaria,
+  obtenerMiResena,
+} from "../../../services/veterinariaService";
 import "./PerfilVeterinaria.css";
 import Sidebar from "../../../components/layout/Sidebar";
 import Button from "../../../components/ui/button/Button.jsx" 
 import styles from "../../../styles/MisMascotas.module.css";
 import TopBar from "../../../components/layout/TopBar";
 import InfoItem from "../../../components/ui/info/InfoItem.jsx";
+import RatingInput from "../../../components/ui/rating-input/RatingInput.jsx";
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
@@ -54,11 +59,39 @@ export default function PerfilVeterinaria() {
 
   const [veterinaria, setVeterinaria] = useState(null);   
   const [loading, setLoading]         = useState(true);   
-  const [error, setError]             = useState(null);   
+  const [error, setError]             = useState(null);
+
+  const [miCalificacion, setMiCalificacion] = useState(null);
+  const [enviandoCalificacion, setEnviandoCalificacion] = useState(false);
+  const [errorCalificacion, setErrorCalificacion] = useState(null);
+
   const handleReservarTurno = () => {
     console.log("Turno reservado!");
       navigate(`/turnos/agendar/${veterinaria._id}`);
   };
+
+  const handleCalificar = async (valor) => {
+    try {
+      setEnviandoCalificacion(true);
+      setErrorCalificacion(null);
+      const resultado = await calificarVeterinaria(id, valor);
+      setMiCalificacion(resultado.miCalificacion);
+      // Ase actualiza el promedio  de reseñas
+      setVeterinaria((prev) => ({
+        ...prev,
+        rating: resultado.rating,
+        cantidadResenias: resultado.cantidadResenias,
+      }));
+    } catch (err) {
+      console.error("Error al calificar veterinaria:", err);
+      setErrorCalificacion(
+        err.response?.data?.message || "No pudimos guardar tu calificación. Intentá de nuevo."
+      );
+    } finally {
+      setEnviandoCalificacion(false);
+    }
+  };
+
   useEffect(() => {
 
     const fetchVeterinaria = async () => {
@@ -83,7 +116,13 @@ export default function PerfilVeterinaria() {
     };
 
     fetchVeterinaria();
-  }, [id]); 
+  }, [id]);
+
+  useEffect(() => {
+    obtenerMiResena(id)
+      .then(setMiCalificacion)
+      .catch((err) => console.error("Error al obtener mi reseña:", err));
+  }, [id]);
 
 
   if (loading) {
@@ -143,8 +182,20 @@ export default function PerfilVeterinaria() {
           </button>
           </div>
         <div className="perfil-vet__header">
-          <h1 className="perfil-vet__name">{nombre}</h1>
-          
+          <div className="perfil-vet__title-group">
+            <h1 className="perfil-vet__name">{nombre}</h1>
+            {veterinaria.rating != null && (
+              <span className="perfil-vet__rating">
+                ★ {veterinaria.rating.toFixed(1)}
+                {veterinaria.cantidadResenias > 0 && (
+                  <span className="perfil-vet__rating-count">
+                    {" "}({veterinaria.cantidadResenias})
+                  </span>
+                )}
+              </span>
+            )}
+          </div>
+
           <Button
             texto="Reservar turno"
             variante="primario"
@@ -165,6 +216,21 @@ export default function PerfilVeterinaria() {
     value={urgencias24hs ? "Disponible" : "No disponible"}
     className={urgencias24hs ? "activo" : "inactivo"}
   />
+        </div>
+
+        {/* ── Calificar esta veterinaria ── */}
+        <div className="perfil-vet__card">
+          <h2 className="perfil-vet__card-title">
+            {miCalificacion ? "Tu calificación" : "Calificá tu experiencia"}
+          </h2>
+          <RatingInput
+            value={miCalificacion}
+            onSelect={handleCalificar}
+            disabled={enviandoCalificacion}
+          />
+          {errorCalificacion && (
+            <p className="perfil-vet__rating-error">{errorCalificacion}</p>
+          )}
         </div>
 
         {/* ── Profesionales ── */}

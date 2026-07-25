@@ -17,6 +17,25 @@
   gap: 24px;
 }
 
+.volverInicio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6d28d9;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0;
+  transition: opacity 0.15s;
+}
+
+.volverInicio:hover {
+  opacity: 0.7;
+}
+
 /* Buscador y chips dentro del PanelDestacado */
 
 .buscador {
@@ -89,6 +108,24 @@
   padding: 16px 20px;
 }
 
+.foroPerdidosInfo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.foroPerdidosIcono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #FBE7B6;
+  color: #B45309;
+}
+
 .btnVerPublicaciones {
   background: #7A3E12;
   color: #fff;
@@ -117,7 +154,7 @@
   text-decoration: none;
 }
 
-/* Resultados de búsqueda */
+/* Resultados de busqueda */
 
 .resultados {
   display: flex;
