@@ -18,7 +18,7 @@ const IconAlerta = () => (
 
 const HomeTutor = () => {
   const navigate = useNavigate();
-  const usuario = useAuth();
+ const { usuario } = useAuth(); 
   const [query, setQuery] = useState("");
 
   const irABuscar = (q) => {
