@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
-import Badge from "../../../components/common/Badge";
+import Badge from "../../../components/ui/badge/Badge";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
 import { FaCalendarAlt, FaClock, FaHospital, FaPaw } from "react-icons/fa";
 import { obtenerTurnosPorUsuario, cancelarTurno } from "../../../services/turnosService";
