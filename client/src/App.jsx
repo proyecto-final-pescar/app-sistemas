@@ -14,6 +14,7 @@ import RegistroDeVeterinaria from './pages/veterinaria/RegistroDeVeterinaria/Reg
 import AgendarTurnos from "./pages/tutor/Turnos/AgendarTurno";
 import HomeTutor from "./pages/tutor/HomeTutor/HomeTutor";
 import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
+import GestionVeterinarias from './pages/admin/GestionVeterinarias/GestionVeterinarias';
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
 
         <Route path="*" element={<NotFound />} />
+        <Route path="/admin/veterinarias" element={<GestionVeterinarias />} />
       </Routes>
     </BrowserRouter>
   );
