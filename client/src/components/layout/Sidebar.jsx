@@ -27,12 +27,12 @@ const ETIQUETAS_ROL = {
   administrador: "Administrador",
 };
 
-const Sidebar = () => {
+const Sidebar = ({ role }) => {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
 
  
-  const rol = usuario?.rol;
+  const rol = usuario?.rol || role;
 
   const nombreMostrado = usuario?.nombre || usuario?.email || "Usuario";
   const inicial = nombreMostrado.charAt(0).toUpperCase();

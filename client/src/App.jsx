@@ -18,6 +18,7 @@ import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria
 import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword  from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
+import GestionUsuarios from "./pages/admin/GestionUsuarios/GestionUsuarios";
 
 
 
@@ -48,6 +49,7 @@ function App() {
         <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/tutor/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin-duenos" element={<PrivateRoute allowedRoles={["administrador"]}><GestionUsuarios /></PrivateRoute> }/>
         
 
         <Route path="/" element={<Landing />} />
