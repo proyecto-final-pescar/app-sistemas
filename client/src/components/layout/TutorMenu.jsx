@@ -2,8 +2,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 const menuItems = [
   {
-    label: "Dashboard",
-    path: "/",
+    label: "Home",
+    path: "/home",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
@@ -25,7 +25,7 @@ const menuItems = [
   },
   {
     label: "Turnos",
-    path: "/turnos",
+    path: "/mis-turnos",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />

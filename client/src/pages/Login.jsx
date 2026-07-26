@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth.js";
+import api from "../services/api.js";
+import { obtenerMiVeterinaria } from "../services/veterinariaService.js";
 
 function Login() {
   const navigate = useNavigate();
@@ -27,7 +29,12 @@ function Login() {
       return data;
     }
 
-    return data?.message || data?.error || "No se pudo iniciar sesion.";
+    return (
+      data?.message ||
+      data?.mensaje ||
+      data?.error ||
+      "No se pudo iniciar sesion."
+    );
   };
 
   const handleSubmit = async (event) => {
@@ -36,29 +43,24 @@ function Login() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
+
+      const { data } = await api.post("/auth/login", {
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
       });
-
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        setError(getErrorMessage(data));
-        return;
-      }
 
       const token = data.token || data.jwt || data.accessToken;
       const user = data.user || data.usuario || {};
+
+      if (!token) {
+        setError("No se recibio un token de autenticacion.");
+        return;
+      }
+
       const userData = {
         id: user.id || user._id || data.id,
-        email: user.email || data.email || formData.email,
+        email: user.email || data.email || formData.email.trim().toLowerCase(),
+        nombre: user.nombre || user.name || data.nombre || data.name,
         rol: user.rol || user.role || data.rol || data.role,
       };
 
@@ -67,11 +69,49 @@ function Login() {
       setUsuario(userData);
 
       const rol = userData.rol;
-      if (rol === "dueno") navigate("/home");
-      if (rol === "veterinaria") navigate("/agenda");
-      if (rol === "administrador") navigate("/dashboard");
+      if (rol === "dueno") {
+        navigate("/mascotas", { replace: true }); /*/home*/
+        return;
+      }
+
+      if (rol === "veterinaria") {
+        try {
+          const miVeterinaria = await obtenerMiVeterinaria();
+          const tienePerfilCompletado = Boolean(
+            miVeterinaria?._id || miVeterinaria?.nombre,
+          );
+
+          if (tienePerfilCompletado) {
+            navigate("/home-veterinaria", { replace: true });
+          } else {
+            navigate("/registro-veterinaria", { replace: true });
+          }
+        } catch (vetError) {
+          // Si la API responde error (ej. 404 porque aún no existe el
+          // perfil de veterinaria), asumimos que falta completar el registro.
+          navigate("/registro-veterinaria", { replace: true });
+        }
+        return;
+      }
+
+      if (rol === "administrador") {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      navigate("/home", { replace: true });
     } catch (requestError) {
-      setError(requestError.message);
+      const responseData = requestError.response?.data;
+
+      if (responseData) {
+        setError(getErrorMessage(responseData));
+      } else if (requestError.request) {
+        setError(
+          "No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.",
+        );
+      } else {
+        setError("Ocurrió un error inesperado. Por favor intentá nuevamente.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -121,7 +161,7 @@ function Login() {
           <label style={styles.field}>
             <span style={styles.labelRow}>
               <span style={styles.label}>Contraseña</span>
-              <a href="/recuperar-password" style={styles.forgotLink}>
+              <a href="/forgot-password" style={styles.forgotLink}>
                 ¿Olvidaste tu contraseña?
               </a>
             </span>
@@ -141,7 +181,9 @@ function Login() {
               />
               <button
                 type="button"
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
                 onClick={() => setShowPassword((currentValue) => !currentValue)}
                 style={styles.passwordButton}
               >
@@ -204,26 +246,76 @@ function Login() {
 
 function EnvelopeIcon() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect width="18" height="14" x="3" y="5" rx="2" stroke="currentColor" strokeWidth="2" />
-      <path d="m4 7 8 6 8-6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect
+        width="18"
+        height="14"
+        x="3"
+        y="5"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="m4 7 8 6 8-6"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
     </svg>
   );
 }
 
 function LockIcon() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect width="16" height="11" x="4" y="10" rx="2" stroke="currentColor" strokeWidth="2" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect
+        width="16"
+        height="11"
+        x="4"
+        y="10"
+        rx="2"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M8 10V7a4 4 0 0 1 8 0v3"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="2"
+      />
     </svg>
   );
 }
 
 function EyeIcon() {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" />
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"
+        stroke="currentColor"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
       <circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="2" />
     </svg>
   );

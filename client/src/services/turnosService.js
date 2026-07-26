@@ -9,6 +9,13 @@ export const obtenerTurnosPorVeterinaria = async (veterinariaId, estado) => {
   return data.data.turnos;
 };
 
+export const obtenerTurnosPorUsuario = async () => {
+  const { data } = await api.get("/turnos", {
+    params: { usuarioId: "me" }
+  });
+  return data.data.turnos;
+};
+
 // PATCH /turnos/:id/cancelar
 export const cancelarTurno = async (turnoId) => {
   const { data } = await api.patch(`/turnos/${turnoId}/cancelar`);

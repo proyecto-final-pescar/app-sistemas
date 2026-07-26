@@ -1,61 +1,97 @@
 .registro-page {
   min-height: 100vh;
-  background-color: #f6f1ff;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 40px 16px;
-}
-
-.registro-card {
-  width: 100%;
-  max-width: 520px;
-  background-color: white;
-  border: 1px solid #e9ddff;
-  border-radius: 24px;
-  padding: 40px 48px;
-}
-
-.registro-header {
-  text-align: center;
-  margin-bottom: 32px;
-}
-
-.registro-header h1 {
-  font-size: 40px;
-  color: #1f1235;
-  margin-bottom: 12px;
-}
-
-.registro-header h2 {
-  font-size: 15px;
-  font-weight: 400;
-  color: #8b75b7;
-}
-
-.roles-container {
-  display: flex;
-  gap: 16px;
-}
-
-.role-card {
-  flex: 1;
-  min-height: 120px;
-
-  border: 2px solid #e9ddff;
-  border-radius: 16px;
-
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 14px;
+  padding: 20px 20px 28px;
+  box-sizing: border-box;
+  background-color: #f6f1ff;
+}
 
-  gap: 12px;
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.brand-icon {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(124, 58, 237, 0.24);
+}
+
+.brand-logo {
+  width: 80px;
+  height: auto;
+  object-fit: contain;
+}
+
+.registro-card {
+  width: 100%;
+  max-width: 400px;
+  background-color: white;
+  border: 1px solid #e9ddff;
+  border-radius: 20px;
+  padding: 26px 28px;
+  box-sizing: border-box;
+}
+
+.registro-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.registro-header h1 {
+  font-size: 22px;
+  color: #1f1235;
+  margin: 0 0 4px;
+}
+
+.registro-header h2 {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: #8b75b7;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.registro-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.roles-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.role-card {
+  flex: 1;
+  min-height: 64px;
+
+  border: 2px solid #e9ddff;
+  border-radius: 12px;
+
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
 
   cursor: pointer;
 }
 
-
+.role-card strong {
+  font-size: 13px;
+}
 
 .role-card:hover {
   border-color: #c4b5fd;
@@ -66,18 +102,27 @@
   background-color: #faf7ff;
 }
 
-.input-container {
-  margin-bottom: 20px;
+.role-icon {
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  border-radius: 50%;
+  background-color: #f1eaff;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 13px;
 }
 
 .input-label {
   display: block;
   font-weight: 600;
   color: #1f1235;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+  font-size: 13px;
 }
-
-
 
 .input-campo:focus {
   outline: none;
@@ -86,39 +131,29 @@
 
 .input-error {
   color: #ef4444;
-  font-size: 13px;
-  margin-top: 6px;
+  font-size: 12px;
+  margin-top: 3px;
 }
 
 .registro-button {
-  border-radius: 16px;
+  border-radius: 14px;
   font-weight: 600;
+  margin-top: 10px;
 }
 
 .registro-button .btn {
   width: 100%;
 }
 
-.registro-logo {
-  width: 52px;
-  height: 52px;
-  margin: 0 auto 18px;
-  border-radius: 16px;
-  background-color: #7c3aed;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.login-text {
+  margin: 10px 0 0;
+  color: #8276ab;
+  font-size: 13px;
+  text-align: center;
 }
 
-.role-icon {
-  width: 42px;
-  height: 42px;
-  margin: 0 auto 12px;
-  border-radius: 50%;
-  background-color: #f1eaff;
+.login-link {
   color: #7c3aed;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-weight: 500;
+  text-decoration: none;
 }

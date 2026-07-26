@@ -4,12 +4,14 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import VetCard from "../../../components/veterinarias/VetCard";
+import api from "../../../services/api";
 import styles from "./Emergencias.module.css";
 
 const BUENOS_AIRES = { lat: -34.6037, lng: -58.3816 };
 const DIAS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
-const ESPECIALIDADES = ["Todas", "Clínica General", "Cirugía", "Dermatología", "Cardiología", "Laboratorio", "Internación"];
+const ESPECIALIDADES = ["Todas", "Clínica General", "Cirugía", "Dermatología", "Cardiología", "Laboratorio", "Internación","Vacunación"];
 const RADIOS = [1, 5, 10];
+const RADIO_MAXIMO_AMPLIADO = 50000; //  el tope del back
 
 
 const estaAbierta = (vet) => {
@@ -81,34 +83,39 @@ const Emergencias = () => {
   const [solo24hs, setSolo24hs]             = useState(false);
   const [busqueda, setBusqueda]             = useState("");
   const [cercaMioActivo, setCercaMioActivo] = useState(false);
+  const [busquedaAmpliada, setBusquedaAmpliada] = useState(false);
 
   const coordsRef = useRef(null);
 
-  const buscarVeterinarias = useCallback(async (lat, lng) => {
+  const buscarVeterinarias = useCallback(async (lat, lng, radioOverride) => {
     setIsLoading(true);
     setError("");
     setSinResultados(false);
     setVetSeleccionada(null);
+    const radioAUsar = radioOverride ?? radioKm * 1000;
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/veterinarias/buscar?lat=${lat}&lng=${lng}&radio=${radioKm * 1000}`,
-        { headers: { "Content-Type": "application/json" } }
-      );
-      if (!response.ok) throw new Error();
-      const json = await response.json();
+      const { data: json } = await api.get("/veterinarias/buscar", {
+        params: { lat, lng, radio: radioAUsar },
+      });
       const lista = json.data ?? [];
-     if (lista.length === 0) {
+      if (lista.length === 0) {
         setSinResultados(true);
-          setVeterinarias([]);
-        } else {
-          setVeterinarias(lista);
-        }
+        setVeterinarias([]);
+      } else {
+        setVeterinarias(lista);
+      }
+      setBusquedaAmpliada(radioOverride === RADIO_MAXIMO_AMPLIADO);
     } catch {
       setError("No se pudieron cargar las veterinarias. Intentá de nuevo más tarde.");
     } finally {
       setIsLoading(false);
     }
   }, [radioKm]);
+
+  const handleAmpliarBusqueda = () => {
+    if (!coordsRef.current) return;
+    buscarVeterinarias(coordsRef.current.lat, coordsRef.current.lng, RADIO_MAXIMO_AMPLIADO);
+  };
 
   useEffect(() => {
     const onSuccess = (pos) => {
@@ -126,15 +133,20 @@ const Emergencias = () => {
     navigator.geolocation
       ? navigator.geolocation.getCurrentPosition(onSuccess, onError)
       : onError();
-  }, []); // eslint-disable-line
+  }, []); 
 
   useEffect(() => {
     if (!coordsRef.current) return;
     buscarVeterinarias(coordsRef.current.lat, coordsRef.current.lng);
-  }, [radioKm]); // eslint-disable-line
+  }, [radioKm]); 
 
   const veterinariasFiltradas = veterinarias
-    .filter((v) => filtroEsp === "Todas" || v.especialidades?.includes(filtroEsp))
+    .filter((v) =>
+      filtroEsp === "Todas" ||
+      v.especialidades?.some(
+        (esp) => esp.toLowerCase() === filtroEsp.toLowerCase()
+      )
+    )
     .filter((v) => !solo24hs || v.urgencias24hs)
     .filter((v) =>
       busqueda.trim() === "" ||
@@ -162,6 +174,7 @@ const Emergencias = () => {
   const handleRadioChange = (e) => {
     setRadioKm(Number(e.target.value));
     setCercaMioActivo(false);
+    setBusquedaAmpliada(false);
   };
 
   return (
@@ -227,7 +240,14 @@ const Emergencias = () => {
               <div className={styles.mapaWrapper}>
                 {sinResultados && (
                   <div className={styles.sinResultados}>
-                    No encontramos veterinarias en un radio de {radioKm} km.
+                    <p>No encontramos veterinarias en un radio de {radioKm} km.</p>
+                    <button
+                      type="button"
+                      className={styles.btnAmpliarBusqueda}
+                      onClick={handleAmpliarBusqueda}
+                    >
+                      Ampliar búsqueda a 50 km
+                    </button>
                   </div>
                 )}
                 <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
@@ -333,6 +353,11 @@ const Emergencias = () => {
                 {/* Resumen y lista */}
                 {!error && (
                   <>
+                    {busquedaAmpliada && veterinariasFiltradas.length > 0 && (
+                      <p className={styles.avisoAmpliada}>
+                        Mostrando resultados en un radio ampliado de 50 km.
+                      </p>
+                    )}
                     <p className={styles.resumen}>
                       {abiertas} clínica{abiertas !== 1 ? "s" : ""} abierta{abiertas !== 1 ? "s" : ""} · {veterinariasFiltradas.length} en total
                     </p>

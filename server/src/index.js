@@ -2,34 +2,34 @@ import "dotenv/config";
 
 import express from "express";
 import cors from "cors";
+
 import connectDB from "./config/db.js";
 import routes from "./routes/index.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
-import rutasTurnos from "./routes/rutasTurnos.js";
 import { iniciarJobsTurnos } from "./jobs/turnoJobs.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const allowedOrigins = [
-  "http://localhost:5173",
+const allowedOrigins = new Set([
   ...(process.env.CLIENT_URL || "")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean),
-];
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.has(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Origen no permitido por CORS"));
     }
   },
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
 };
 
 app.use(cors(corsOptions));
@@ -40,16 +40,14 @@ app.use("/api/upload", uploadRoutes);
 
 connectDB();
 
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
-});
-
 app.get("/", (req, res) => {
   res.json({ message: "Servidor funcionando" });
 });
 
-app.use("/api", rutasTurnos);
-
 iniciarJobsTurnos();
+
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en puerto ${PORT}`);
+});
 
 export default app;

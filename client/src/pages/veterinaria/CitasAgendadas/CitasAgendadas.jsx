@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
-import Badge from "../../../components/common/Badge";
+import Badge from "../../../components/ui/badge/Badge";
 
 import { obtenerMiVeterinaria } from "../../../services/veterinariaService";
 import { obtenerTurnosPorVeterinaria } from "../../../services/turnosService";
@@ -39,6 +39,7 @@ export default function CitasAgendadas() {
         if (!veterinaria?._id) {
           throw new Error("No se encontró la veterinaria del usuario.");
         }
+
         const data = await obtenerTurnosPorVeterinaria(veterinaria._id);
 
         setTurnos(Array.isArray(data) ? data : []);
@@ -83,7 +84,6 @@ export default function CitasAgendadas() {
         <TopBar title="Turnos veterinaria" notifications={2} />
 
         <div className={styles.content}>
-          {/* Pestañas */}
           <div className={styles.tabs}>
             <Button
               type="button"
@@ -102,7 +102,6 @@ export default function CitasAgendadas() {
             />
           </div>
 
-          {/* Banner del turno más próximo */}
           {turnoMasProximo && (
             <div className={styles.banner}>
               <div className={styles.bannerInfo}>
@@ -142,7 +141,6 @@ export default function CitasAgendadas() {
             </div>
           )}
 
-          {/* Lista de turnos */}
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               {listaVisible.length} turno
@@ -151,26 +149,19 @@ export default function CitasAgendadas() {
             </div>
 
             {loading && (
-              <p className={styles.estadoVacio}>
-                Cargando turnos...
-              </p>
+              <p className={styles.estadoVacio}>Cargando turnos...</p>
             )}
 
             {!loading && error && (
-              <p className={styles.estadoVacio}>
-                {error}
-              </p>
+              <p className={styles.estadoVacio}>{error}</p>
             )}
 
-            {!loading &&
-              !error &&
-              listaVisible.length === 0 && (
-                <p className={styles.estadoVacio}>
-                  No hay turnos{" "}
-                  {tab === "proximos" ? "próximos" : "pasados"} para
-                  mostrar.
-                </p>
-              )}
+            {!loading && !error && listaVisible.length === 0 && (
+              <p className={styles.estadoVacio}>
+                No hay turnos{" "}
+                {tab === "proximos" ? "próximos" : "pasados"} para mostrar.
+              </p>
+            )}
 
             {!loading &&
               !error &&
@@ -184,13 +175,9 @@ export default function CitasAgendadas() {
                     className={styles.turnoRow}
                   >
                     <div className={styles.fechaBox}>
-                      <span className={styles.fechaDia}>
-                        {dia}
-                      </span>
+                      <span className={styles.fechaDia}>{dia}</span>
 
-                      <span className={styles.fechaMes}>
-                        {mes}
-                      </span>
+                      <span className={styles.fechaMes}>{mes}</span>
                     </div>
 
                     <div className={styles.turnoInfo}>

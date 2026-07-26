@@ -1,23 +1,25 @@
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./components/PrivateRoute";
+
+import CitasAgendadas from "./pages/veterinaria/CitasAgendadas/CitasAgendadas";
+import RegistrarConsulta from "./pages/veterinaria/HistorialClinico/RegistrarConsulta";
+import RegistroDeVeterinaria from "./pages/veterinaria/RegistroDeVeterinaria/RegistroDeVeterinaria";
+import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
+
+import MisTurnos from "./pages/tutor/MisTurnos/MisTurnos";
+import MisMascotas from "./pages/tutor/MisMascotas/MisMascotas";
+import Turnos from "./pages/tutor/Turnos/Turnos";
+import AgendarTurnos from "./pages/tutor/Turnos/AgendarTurno";
+import PerfilVeterinaria from "./pages/tutor/Turnos/PerfilVeterinaria";
+import Foro from "./pages/tutor/Foro/Foro";
+import Emergencias from "./pages/tutor/Emergencias/Emergencias";
+import HomeTutor from "./pages/tutor/HomeTutor/HomeTutor";
 
 import Login from "./pages/public/Login/Login";
 import Registro from "./pages/public/Registro/Registro";
-
-import MisMascotas from "./pages/tutor/MisMascotas/MisMascotas";
-import Turnos from "./pages/tutor/Turnos/Turnos";
-import Foro from "./pages/tutor/Foro/Foro";
-import Emergencias from "./pages/tutor/Emergencias/Emergencias";
-
-import CitasAgendadas from "./pages/veterinaria/CitasAgendadas/CitasAgendadas";
-import RegistroDeVeterinaria from "./pages/veterinaria/RegistroDeVeterinaria/RegistroDeVeterinaria";
-import RegistrarConsulta from "./pages/veterinaria/HistorialClinico/RegistrarConsulta";
+import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
+import ResetPassword from "./pages/public/ResetPassword/ResetPassword";
+import Landing from "./pages/public/LandingPage/Landing";
 
 import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
 import NotFound from "./pages/NotFound/NotFound";
@@ -26,17 +28,35 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rutas públicas */}
+        <Route
+          path="/registro-veterinaria"
+          element={
+            <PrivateRoute allowedRoles={["veterinaria"]}>
+              <RegistroDeVeterinaria />
+            </PrivateRoute>
+          }
+        />
+
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/register" element={<Registro />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Rutas del tutor */}
         <Route
           path="/home"
           element={
             <PrivateRoute allowedRoles={["dueno"]}>
-              <Navigate to="/mascotas" replace />
+              <HomeTutor />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/home-veterinaria"
+          element={
+            <PrivateRoute allowedRoles={["veterinaria"]}>
+              <HomeVeterinaria />
             </PrivateRoute>
           }
         />
@@ -60,6 +80,29 @@ function App() {
         />
 
         <Route
+          path="/mis-turnos"
+          element={
+            <PrivateRoute allowedRoles={["dueno"]}>
+              <MisTurnos />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/turnos/agendar/:veterinariaId"
+          element={
+            <PrivateRoute allowedRoles={["dueno"]}>
+              <AgendarTurnos />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/tutor/veterinarias/:id"
+          element={<PerfilVeterinaria />}
+        />
+
+        <Route
           path="/foro"
           element={
             <PrivateRoute allowedRoles={["dueno"]}>
@@ -73,34 +116,6 @@ function App() {
           element={
             <PrivateRoute allowedRoles={["dueno"]}>
               <h1>Sección Veterinarias</h1>
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/urgencias"
-          element={
-            <PrivateRoute allowedRoles={["dueno"]}>
-              <Emergencias />
-            </PrivateRoute>
-          }
-        />
-
-        {/* Rutas de veterinaria */}
-        <Route
-          path="/registro-veterinaria"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <RegistroDeVeterinaria />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/home-veterinaria"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <Navigate to="/agenda" replace />
             </PrivateRoute>
           }
         />
@@ -123,7 +138,15 @@ function App() {
           }
         />
 
-        {/* Rutas del administrador */}
+        <Route
+          path="/urgencias"
+          element={
+            <PrivateRoute allowedRoles={["dueno"]}>
+              <Emergencias />
+            </PrivateRoute>
+          }
+        />
+
         <Route
           path="/admin"
           element={
@@ -142,8 +165,9 @@ function App() {
           }
         />
 
-        {/* Redirecciones */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/tutor/dashboard" element={<AdminDashboard />} />
+
+        <Route path="/" element={<Landing />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

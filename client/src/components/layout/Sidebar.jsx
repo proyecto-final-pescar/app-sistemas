@@ -2,6 +2,9 @@
 
 import TutorMenu from "./TutorMenu";
 import VeterinariaMenu from "./VeterinariaMenu";
+import AdminMenu from "./AdminMenu"; 
+import { useAuth } from "../../hooks/useAuth.js";
+import { useNavigate } from "react-router-dom";
 
 const IconConfig = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -16,7 +19,25 @@ const IconCollapse = () => (
   </svg>
 );
 
-const Sidebar = ({ role = "tutor" }) => {
+
+// para la etiqueta de usuario
+const ETIQUETAS_ROL = {
+  dueno: "Tutor",
+  veterinaria: "Veterinario",
+  administrador: "Administrador",
+};
+
+const Sidebar = () => {
+  const { usuario, logout } = useAuth();
+  const navigate = useNavigate();
+
+ 
+  const rol = usuario?.rol;
+
+  const nombreMostrado = usuario?.nombre || usuario?.email || "Usuario";
+  const inicial = nombreMostrado.charAt(0).toUpperCase();
+  const etiquetaRol = ETIQUETAS_ROL[rol] || "Usuario";
+
   return (
     <aside style={{
       width: "260px", minWidth: "260px", height: "100vh",
@@ -33,8 +54,9 @@ const Sidebar = ({ role = "tutor" }) => {
 
       {/* Menú principal */}
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 12px 0" }}>
-         {role === "veterinaria" && <VeterinariaMenu />}
-         {role === "tutor" && <TutorMenu />}
+         {rol === "veterinaria" && <VeterinariaMenu />}
+         {rol === "dueno" && <TutorMenu />}
+           {rol === "administrador" && <AdminMenu />}  
       </div>
 
       {/* Bloque inferior */}
@@ -47,14 +69,14 @@ const Sidebar = ({ role = "tutor" }) => {
             backgroundColor: "#7c3aed", color: "#ffffff",
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: "13px", fontWeight: 600, flexShrink: 0,
-          }}>J</div>
+          }}>{inicial}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: "#1f1739", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Juan López</p>
-            <p style={{ margin: 0, fontSize: "11px", color: "#8276ab" }}>Veterinario · CABA</p>
+            <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: "#1f1739", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nombreMostrado}</p>
+            <p style={{ margin: 0, fontSize: "11px", color: "#8276ab" }}>{etiquetaRol}</p>
           </div>
           <button
             title="Cerrar sesión"
-            onClick={() => { localStorage.clear(); window.location.href = "/login"; }}
+            onClick={() => { logout(); navigate("/login", { replace: true }); }}
             style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", flexShrink: 0, border: "none", borderRadius: "8px", backgroundColor: "transparent", color: "#c4b5fd", cursor: "pointer" }}
             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff1f4"; e.currentTarget.style.color = "#a31d34"; }}
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#c4b5fd"; }}

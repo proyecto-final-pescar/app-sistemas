@@ -19,6 +19,11 @@ const userSchema = new mongoose.Schema(
       required: [true, 'La contraseña es requerida'],
       minlength: [8, 'La contraseña debe tener mínimo 8 caracteres']
     },
+    telefono: {
+      type: String,
+      trim: true
+      // agrego el telefono de forma opcional 
+    },
     role: {
       type: String,
       required: [true, 'El rol es requerido'],

@@ -14,7 +14,6 @@ const mascotaSchema = new mongoose.Schema(
     },
     raza: {
       type: String,
-      required: [true, 'La raza es requerida'],
       trim: true
     },
 
