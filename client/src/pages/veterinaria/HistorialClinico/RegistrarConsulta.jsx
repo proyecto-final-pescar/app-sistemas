@@ -1,87 +1,307 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+
 import Input from "../../../components/ui/input/Input";
-import Select from "../../../components/ui/select/Select";
 import Button from "../../../components/ui/button/Button";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
-import "./RegistrarConsulta.css";
 
-const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api`;
+import "./RegistrarConsulta.css";
+const API_URL = `${
+  import.meta.env.VITE_API_URL || "http://localhost:3000"
+}/api`;
+
+const estadoInicialFormulario = {
+  nombreDueno: "",
+  email: "",
+  mascotaId: "",
+  profesionalId: "",
+
+  nombreMascota: "",
+  especie: "",
+  raza: "",
+  edad: "",
+  sexo: "",
+  peso: "",
+
+  fecha: "",
+  hora: "",
+  categoriaServicio: "",
+  motivoConsulta: "",
+  anotaciones: "",
+  monto: "",
+};
+
+function convertirFechaParaInput(fecha) {
+  if (!fecha) return "";
+
+  const valorFecha = String(fecha);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(valorFecha)) {
+    return valorFecha;
+  }
+
+  const fechaConvertida = new Date(valorFecha);
+
+  if (Number.isNaN(fechaConvertida.getTime())) {
+    return valorFecha.slice(0, 10);
+  }
+
+  return fechaConvertida.toISOString().slice(0, 10);
+}
+
+function obtenerId(valor) {
+  if (!valor) return "";
+
+  if (typeof valor === "string") {
+    return valor;
+  }
+
+  return valor._id || valor.id || "";
+}
+
+function obtenerNombrePersona(persona) {
+  if (!persona || typeof persona !== "object") {
+    return "";
+  }
+
+  return (
+    persona.nombreCompleto ||
+    persona.nombre ||
+    persona.apellido ||
+    persona.email ||
+    ""
+  );
+}
 
 function RegistrarConsulta() {
+  const { turnoId } = useParams();
+
   const [pasoActual, setPasoActual] = useState(1);
+
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingTurno, setIsLoadingTurno] = useState(true);
+
   const [errorApi, setErrorApi] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [profesionales, setProfesionales] = useState([]);
 
-  const [form, setForm] = useState({
-    nombreDueno: "",
-    email: "",
-    mascotaId: "",
-    nombreMascota: "",
-    especie: "",
-    raza: "",
-    edad: "",
-    sexo: "",
-    peso: "",
-    fecha: "",
-    hora: "",
-    categoriaServicio: "",
-    motivoConsulta: "",
-    anotaciones: "",
-    profesionalId: "",
-    monto: "",
-  });
+  const [nombreProfesional, setNombreProfesional] = useState("");
 
+  const [form, setForm] = useState(estadoInicialFormulario);
   const [errores, setErrores] = useState({});
 
   useEffect(() => {
-    async function obtenerProfesionales() {
+    const obtenerTurno = async () => {
+      if (!turnoId) {
+        setErrorApi(
+          "No se recibió el identificador del turno."
+        );
+        setIsLoadingTurno(false);
+        return;
+      }
+
       const token = localStorage.getItem("token");
 
       if (!token) {
-        setErrorApi("No se encontró el token de sesión. Iniciá sesión nuevamente.");
+        setErrorApi(
+          "No se encontró el token de sesión. Iniciá sesión nuevamente."
+        );
+        setIsLoadingTurno(false);
         return;
       }
 
       try {
-        const respuesta = await fetch(`${API_URL}/veterinarias`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        setIsLoadingTurno(true);
+        setErrorApi("");
+        setSuccessMessage("");
 
-        const datos = await respuesta.json();
+        const respuesta = await fetch(
+          `${API_URL}/turnos/${turnoId}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-        console.log("Respuesta GET /veterinarias:", datos);
+       const datos = await respuesta.json().catch(() => ({}));
+
+        console.log(
+          "Respuesta GET /api/turnos/:turnoId:",
+          datos
+        );
 
         if (!respuesta.ok) {
-          setErrorApi(datos.message || "Error al cargar los profesionales.");
+          throw new Error(
+            datos.message ||
+              "No se pudo cargar la información del turno."
+          );
+        }
+        const turno =
+          datos.turno ||
+          datos.data?.turno ||
+          datos.data ||
+          datos;
+
+      
+         const mascota =
+          typeof turno.mascotaId === "object"
+            ? turno.mascotaId
+            : turno.mascota ||
+              turno.mascotaData ||
+              {};
+
+        const dueno =
+          typeof turno.usuarioId === "object"
+            ? turno.usuarioId
+            : mascota.usuarioId ||
+              mascota.dueno ||
+              mascota.tutor ||
+              turno.usuario ||
+              turno.dueno ||
+              turno.tutor ||
+              {};
+
+        const profesional =
+          typeof turno.profesionalId === "object"
+            ? turno.profesionalId
+            : turno.profesional ||
+              turno.veterinario ||
+              turno.veterinarioId ||
+              {};
+
+        const mascotaIdObtenido =
+          obtenerId(turno.mascotaId) ||
+          obtenerId(mascota);
+
+        const profesionalIdObtenido =
+          obtenerId(turno.profesionalId) ||
+          obtenerId(turno.profesional) ||
+          obtenerId(turno.veterinarioId) ||
+          obtenerId(profesional);
+
+        const nombreProfesionalObtenido =
+          obtenerNombrePersona(profesional) ||
+          turno.nombreProfesional ||
+          turno.profesionalNombre ||
+          "";
+
+        setNombreProfesional(
+          nombreProfesionalObtenido ||
+            "Profesional asignado"
+        );
+
+        setForm((formAnterior) => ({
+          ...formAnterior,
+
+          nombreDueno:
+            dueno.nombreCompleto ||
+            dueno.nombre ||
+            turno.nombreDueno ||
+            "",
+
+          email:
+            dueno.email ||
+            turno.emailDueno ||
+            "",
+
+          mascotaId:
+            mascotaIdObtenido,
+
+          nombreMascota:
+            mascota.nombre ||
+            mascota.nombreMascota ||
+            turno.nombreMascota ||
+            "",
+
+          especie:
+            mascota.especie ||
+            turno.especie ||
+            "",
+
+          raza:
+            mascota.raza ||
+            turno.raza ||
+            "",
+
+          edad:
+            mascota.edad !== undefined &&
+            mascota.edad !== null
+              ? String(mascota.edad)
+              : mascota.fechaNacimiento ||
+                turno.edad ||
+                "",
+
+          sexo:
+            mascota.sexo ||
+            turno.sexo ||
+            "",
+
+          peso:
+            mascota.peso !== undefined &&
+            mascota.peso !== null
+              ? String(mascota.peso)
+              : turno.peso ||
+                "",
+
+          profesionalId:
+            profesionalIdObtenido,
+
+          fecha:
+            convertirFechaParaInput(turno.fecha),
+
+          hora:
+            turno.hora ||
+            turno.horario ||
+            "",
+
+          categoriaServicio:
+            turno.categoriaServicio ||
+            turno.categoria ||
+            turno.servicio?.categoria ||
+            turno.servicio?.nombre ||
+            turno.tipoConsulta ||
+            "Consulta",
+
+          motivoConsulta:
+            turno.motivoConsulta ||
+            turno.motivo ||
+            "",
+        }));
+
+        if (!mascotaIdObtenido) {
+          setErrorApi(
+            "El turno no tiene una mascota asociada correctamente."
+          );
           return;
         }
 
-        const profesionalesBackend =
-          datos.profesionales ||
-          datos.veterinaria?.profesionales ||
-          datos.data?.profesionales ||
-          datos.veterinarias?.[0]?.profesionales ||
-          [];
-
-        setProfesionales(profesionalesBackend);
+        if (!profesionalIdObtenido) {
+          setErrorApi(
+            "El turno no tiene un profesional asociado. El backend debe incluir profesionalId en la respuesta del turno."
+          );
+        }
       } catch (error) {
-        console.error(error);
-        setErrorApi("Error de conexión al cargar los profesionales.");
-      }
-    }
+        console.error(
+          "Error al obtener el turno:",
+          error
+        );
 
-    obtenerProfesionales();
-  }, []);
+        setErrorApi(
+          error.message ||
+            "Ocurrió un error al cargar la información del turno."
+        );
+      } finally {
+        setIsLoadingTurno(false);
+      }
+    };
+
+    obtenerTurno();
+  }, [turnoId]);
 
   function actualizarCampo(campo, valor) {
-    setForm((prevForm) => ({
-      ...prevForm,
+    setForm((formAnterior) => ({
+      ...formAnterior,
       [campo]: valor,
     }));
 
@@ -89,8 +309,8 @@ function RegistrarConsulta() {
     setSuccessMessage("");
 
     if (errores[campo]) {
-      setErrores((prevErrores) => ({
-        ...prevErrores,
+      setErrores((erroresAnteriores) => ({
+        ...erroresAnteriores,
         [campo]: "",
       }));
     }
@@ -98,54 +318,31 @@ function RegistrarConsulta() {
 
   function actualizarMonto(valor) {
     const valorSoloNumeros = valor.replace(/[^\d]/g, "");
+
     actualizarCampo("monto", valorSoloNumeros);
   }
 
   function formatearMonto(valor) {
     if (!valor) return "";
+
     return `$${Number(valor).toLocaleString("es-AR")}`;
   }
 
   function validarPasoUno() {
     const nuevosErrores = {};
 
-    if (!form.nombreDueno.trim()) {
-      nuevosErrores.nombreDueno = "El nombre del dueño es requerido";
+    if (!form.mascotaId) {
+      nuevosErrores.mascotaId =
+        "El turno no tiene una mascota asociada.";
     }
 
-    if (!form.email.trim()) {
-      nuevosErrores.email = "El email es requerido";
-    }
-
-    if (!form.mascotaId.trim()) {
-      nuevosErrores.mascotaId = "El ID de la mascota es requerido";
-    }
-
-    if (!form.nombreMascota.trim()) {
-      nuevosErrores.nombreMascota = "El nombre de la mascota es requerido";
-    }
-
-    if (!form.especie) {
-      nuevosErrores.especie = "Debe seleccionar una especie";
-    }
-
-    if (!form.raza.trim()) {
-      nuevosErrores.raza = "La raza es requerida";
-    }
-
-    if (!form.edad.trim()) {
-      nuevosErrores.edad = "La edad es requerida";
-    }
-
-    if (!form.sexo) {
-      nuevosErrores.sexo = "Debe seleccionar el sexo";
-    }
-
-    if (!form.peso.trim()) {
-      nuevosErrores.peso = "El peso es requerido";
+    if (!form.profesionalId) {
+      nuevosErrores.profesionalId =
+        "El turno no tiene un profesional asociado.";
     }
 
     setErrores(nuevosErrores);
+
     return Object.keys(nuevosErrores).length === 0;
   }
 
@@ -153,86 +350,76 @@ function RegistrarConsulta() {
     const nuevosErrores = {};
 
     if (!form.fecha) {
-      nuevosErrores.fecha = "La fecha es requerida";
+      nuevosErrores.fecha =
+        "El turno no tiene una fecha asociada.";
     }
 
     if (!form.hora) {
-      nuevosErrores.hora = "La hora es requerida";
+      nuevosErrores.hora =
+        "El turno no tiene una hora asociada.";
     }
 
     if (!form.categoriaServicio) {
-      nuevosErrores.categoriaServicio = "Debe seleccionar una categoría";
+      nuevosErrores.categoriaServicio =
+        "El turno no tiene una categoría asociada.";
     }
 
     if (!form.motivoConsulta.trim()) {
-      nuevosErrores.motivoConsulta = "El motivo es requerido";
+      nuevosErrores.motivoConsulta =
+        "El motivo de consulta es requerido.";
     }
 
     if (!form.anotaciones.trim()) {
-      nuevosErrores.anotaciones = "Las anotaciones son requeridas";
+      nuevosErrores.anotaciones =
+        "Las anotaciones son requeridas.";
     }
 
     if (!form.profesionalId) {
-      nuevosErrores.profesionalId = "Debe seleccionar un profesional";
+      nuevosErrores.profesionalId =
+        "El turno no tiene un profesional asociado.";
     }
 
     if (!form.monto) {
-      nuevosErrores.monto = "El monto es requerido";
+      nuevosErrores.monto =
+        "El monto es requerido.";
     }
 
     setErrores(nuevosErrores);
+
     return Object.keys(nuevosErrores).length === 0;
   }
 
-  function limpiarFormulario() {
-    setForm({
-      nombreDueno: "",
-      email: "",
-      mascotaId: "",
-      nombreMascota: "",
-      especie: "",
-      raza: "",
-      edad: "",
-      sexo: "",
-      peso: "",
-      fecha: "",
-      hora: "",
-      categoriaServicio: "",
-      motivoConsulta: "",
-      anotaciones: "",
-      profesionalId: "",
-      monto: "",
-    });
-
-    setErrores({});
-    setPasoActual(1);
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleSubmit(event) {
+    event.preventDefault();
 
     setErrorApi("");
     setSuccessMessage("");
 
     if (pasoActual === 1) {
-      if (!validarPasoUno()) return;
+      if (!validarPasoUno()) {
+        return;
+      }
 
       setErrores({});
       setPasoActual(2);
       return;
     }
 
-    if (!validarPasoDos()) return;
+    if (!validarPasoDos()) {
+      return;
+    }
 
     const token = localStorage.getItem("token");
 
     if (!token) {
-      setErrorApi("No se encontró el token de sesión. Iniciá sesión nuevamente.");
+      setErrorApi(
+        "No se encontró el token de sesión. Iniciá sesión nuevamente."
+      );
       return;
     }
 
     const body = {
-      mascotaId: form.mascotaId.trim(),
+      mascotaId: form.mascotaId,
       profesionalId: form.profesionalId,
       fecha: form.fecha,
       hora: form.hora,
@@ -242,35 +429,78 @@ function RegistrarConsulta() {
       monto: Number(form.monto),
     };
 
-    console.log("Body enviado al backend:", body);
+    console.log(
+      "Body enviado al backend:",
+      body
+    );
 
     setIsLoading(true);
 
     try {
-      const respuesta = await fetch(`${API_URL}/historial-clinico`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
+      const respuesta = await fetch(
+        `${API_URL}/historial-clinico`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(body),
+        }
+      );
 
-      const datos = await respuesta.json();
+      const datos = await respuesta.json().catch(() => ({}));
 
       if (!respuesta.ok) {
-        setErrorApi(datos.message || "Error al registrar la consulta.");
-        return;
+        throw new Error(
+          datos.message ||
+            "Error al registrar la consulta."
+        );
       }
 
-      setSuccessMessage("Consulta registrada correctamente.");
-      limpiarFormulario();
+      setSuccessMessage(
+        "Consulta registrada correctamente."
+      );
+
+      setErrores({});
     } catch (error) {
-      console.error(error);
-      setErrorApi("Error de conexión. Intentá de nuevo.");
+      console.error(
+        "Error al registrar la consulta:",
+        error
+      );
+
+      setErrorApi(
+        error.message ||
+          "Error de conexión. Intentá nuevamente."
+      );
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (isLoadingTurno) {
+    return (
+      <div className="registrar-consulta-layout">
+        <Sidebar role="veterinaria" />
+
+        <div className="registrar-consulta-content">
+          <TopBar
+            title="Historial Clínico"
+            notifications={2}
+          />
+
+          <main className="registrar-consulta-main">
+            <div className="registrar-consulta-container">
+              <div className="registrar-consulta-form">
+                <p>
+                  Cargando información del turno...
+                </p>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -278,19 +508,26 @@ function RegistrarConsulta() {
       <Sidebar role="veterinaria" />
 
       <div className="registrar-consulta-content">
-        <TopBar title="Historial Clínico" notifications={2} />
+        <TopBar
+          title="Historial Clínico"
+          notifications={2}
+        />
 
         <main className="registrar-consulta-main">
           <div className="registrar-consulta-container">
             <div className="registrar-consulta-banner">
-              <p className="registrar-consulta-step">Paso {pasoActual} de 2</p>
+              <p className="registrar-consulta-step">
+                Paso {pasoActual} de 2
+              </p>
 
-              <h1 className="registrar-consulta-title">Registrá una consulta</h1>
+              <h1 className="registrar-consulta-title">
+                Registrá una consulta
+              </h1>
 
               <p className="registrar-consulta-subtitle">
                 {pasoActual === 1
-                  ? "Cargá los datos del dueño y la mascota de tu última consulta."
-                  : "Cargá los datos médicos de la consulta."}
+                  ? "Verificá los datos del turno, el tutor y la mascota."
+                  : "Completá los datos médicos de la consulta."}
               </p>
             </div>
 
@@ -306,27 +543,30 @@ function RegistrarConsulta() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="registrar-consulta-form">
+            <form
+              onSubmit={handleSubmit}
+              className="registrar-consulta-form"
+            >
               {pasoActual === 1 && (
                 <>
-                  <h2 className="registrar-consulta-section-title">Datos del dueño</h2>
+                  <h2 className="registrar-consulta-section-title">
+                    Datos del dueño
+                  </h2>
 
                   <div className="registrar-consulta-grid">
                     <Input
                       label="Nombre"
-                      placeholder="Ingresá el nombre"
                       value={form.nombreDueno}
-                      onChange={(e) => actualizarCampo("nombreDueno", e.target.value)}
-                      error={errores.nombreDueno}
+                      readOnly
+                      disabled
                     />
 
                     <Input
                       label="Email"
                       type="email"
-                      placeholder="Ingresá el email"
                       value={form.email}
-                      onChange={(e) => actualizarCampo("email", e.target.value)}
-                      error={errores.email}
+                      readOnly
+                      disabled
                     />
                   </div>
 
@@ -336,137 +576,112 @@ function RegistrarConsulta() {
 
                   <div className="registrar-consulta-grid">
                     <Input
-                      label="ID de la mascota"
-                      placeholder="Ingresá el ID de la mascota"
-                      value={form.mascotaId}
-                      onChange={(e) => actualizarCampo("mascotaId", e.target.value)}
-                      error={errores.mascotaId}
+                      label="Nombre"
+                      value={form.nombreMascota}
+                      readOnly
+                      disabled
                     />
 
                     <Input
-                      label="Nombre"
-                      placeholder="Ingresá el nombre"
-                      value={form.nombreMascota}
-                      onChange={(e) => actualizarCampo("nombreMascota", e.target.value)}
-                      error={errores.nombreMascota}
-                    />
-
-                    <Select
                       label="Especie"
-                      placeholder="Seleccioná una especie"
-                      opciones={["Perro", "Gato", "Ave", "Otro"]}
                       value={form.especie}
-                      onChange={(e) => actualizarCampo("especie", e.target.value)}
-                      error={errores.especie}
+                      readOnly
+                      disabled
                     />
 
                     <Input
                       label="Raza"
-                      placeholder="Ingresá la raza"
                       value={form.raza}
-                      onChange={(e) => actualizarCampo("raza", e.target.value)}
-                      error={errores.raza}
+                      readOnly
+                      disabled
                     />
 
                     <Input
                       label="Fecha de nacimiento / Edad aproximada"
-                      placeholder="Ej: 2 años"
                       value={form.edad}
-                      onChange={(e) => actualizarCampo("edad", e.target.value)}
-                      error={errores.edad}
+                      readOnly
+                      disabled
                     />
 
-                    <Select
+                    <Input
                       label="Sexo"
-                      placeholder="Seleccioná el sexo"
-                      opciones={["Hembra", "Macho"]}
                       value={form.sexo}
-                      onChange={(e) => actualizarCampo("sexo", e.target.value)}
-                      error={errores.sexo}
+                      readOnly
+                      disabled
                     />
 
                     <Input
                       label="Peso"
-                      placeholder="Ej: 3kg"
                       value={form.peso}
-                      onChange={(e) => actualizarCampo("peso", e.target.value)}
-                      error={errores.peso}
+                      readOnly
+                      disabled
                     />
                   </div>
+
+                  {errores.mascotaId && (
+                    <p className="registrar-consulta-error-text">
+                      {errores.mascotaId}
+                    </p>
+                  )}
+
+                  {errores.profesionalId && (
+                    <p className="registrar-consulta-error-text">
+                      {errores.profesionalId}
+                    </p>
+                  )}
                 </>
               )}
 
               {pasoActual === 2 && (
                 <>
-                  <h2 className="registrar-consulta-section-title">Datos de la consulta</h2>
+                  <h2 className="registrar-consulta-section-title">
+                    Datos de la consulta
+                  </h2>
 
                   <div className="registrar-consulta-grid">
                     <Input
                       label="Fecha"
                       type="date"
                       value={form.fecha}
-                      onChange={(e) => actualizarCampo("fecha", e.target.value)}
+                      readOnly
+                      disabled
                       error={errores.fecha}
                     />
 
-                    <Select
+                    <Input
                       label="Hora"
-                      placeholder="Seleccioná una hora"
-                      opciones={["09:00", "10:00", "11:00", "12:00", "15:00", "16:00"]}
                       value={form.hora}
-                      onChange={(e) => actualizarCampo("hora", e.target.value)}
+                      readOnly
+                      disabled
                       error={errores.hora}
                     />
 
-                    <Select
+                    <Input
                       label="Categoría del servicio"
-                      placeholder="Seleccioná una categoría"
-                      opciones={["Vacunación", "Consulta", "Control", "Cirugía"]}
                       value={form.categoriaServicio}
-                      onChange={(e) => actualizarCampo("categoriaServicio", e.target.value)}
+                      readOnly
+                      disabled
                       error={errores.categoriaServicio}
                     />
 
-                    <div className="select-container">
-                      <label className="select-label">Profesional a cargo</label>
-
-                      <select
-                        className={`select-campo ${
-                          form.profesionalId === "" ? "select-placeholder" : ""
-                        }`}
-                        value={form.profesionalId}
-                        onChange={(e) => actualizarCampo("profesionalId", e.target.value)}
-                      >
-                        <option value="" disabled>
-                          Seleccioná un profesional
-                        </option>
-
-                        {profesionales.map((profesional) => {
-                          const id = profesional.id || profesional._id;
-                          const nombre =
-                            profesional.nombre ||
-                            profesional.nombreCompleto ||
-                            profesional.email ||
-                            "Profesional sin nombre";
-
-                          return (
-                            <option key={id} value={id}>
-                              {nombre}
-                            </option>
-                          );
-                        })}
-                      </select>
-
-                      {errores.profesionalId && (
-                        <p className="select-error">{errores.profesionalId}</p>
-                      )}
-                    </div>
+                    <Input
+                      label="Profesional a cargo"
+                      value={nombreProfesional}
+                      readOnly
+                      disabled
+                      error={errores.profesionalId}
+                    />
 
                     <Input
                       label="Motivo de consulta"
                       placeholder="Ej: Vacuna antirrábica anual"
                       value={form.motivoConsulta}
-                      onChange={(e) => actualizarCampo("motivoConsulta", e.target.value)}
+                      onChange={(event) =>
+                        actualizarCampo(
+                          "motivoConsulta",
+                          event.target.value
+                        )
+                      }
                       error={errores.motivoConsulta}
                     />
 
@@ -474,21 +689,32 @@ function RegistrarConsulta() {
                       label="Monto"
                       placeholder="$0"
                       value={formatearMonto(form.monto)}
-                      onChange={(e) => actualizarMonto(e.target.value)}
+                      onChange={(event) =>
+                        actualizarMonto(event.target.value)
+                      }
                       error={errores.monto}
                     />
                   </div>
 
                   <div className="registrar-consulta-textarea-wrapper">
-                    <label className="registrar-consulta-label">Anotaciones</label>
+                    <label className="registrar-consulta-label">
+                      Anotaciones
+                    </label>
 
                     <textarea
                       className={`registrar-consulta-textarea ${
-                        errores.anotaciones ? "registrar-consulta-textarea-error" : ""
+                        errores.anotaciones
+                          ? "registrar-consulta-textarea-error"
+                          : ""
                       }`}
                       placeholder="Escribí las anotaciones de la consulta..."
                       value={form.anotaciones}
-                      onChange={(e) => actualizarCampo("anotaciones", e.target.value)}
+                      onChange={(event) =>
+                        actualizarCampo(
+                          "anotaciones",
+                          event.target.value
+                        )
+                      }
                     />
 
                     {errores.anotaciones && (
@@ -501,33 +727,41 @@ function RegistrarConsulta() {
               )}
 
               <div className="registrar-consulta-actions">
-                {pasoActual === 2 && (
+                {pasoActual === 2 &&
+                  !successMessage && (
+                    <Button
+                      type="button"
+                      texto="← Volver"
+                      variante="secundario"
+                      tamaño="mediano"
+                      disabled={isLoading}
+                      onClick={() => {
+                        setErrores({});
+                        setPasoActual(1);
+                      }}
+                    />
+                  )}
+
+                {!successMessage && (
                   <Button
-                    type="button"
-                    texto="← Volver"
-                    variante="secundario"
+                    type="submit"
+                    texto={
+                      isLoading
+                        ? "Registrando..."
+                        : pasoActual === 1
+                          ? "Continuar →"
+                          : "Registrar consulta"
+                    }
+                    variante="primario"
                     tamaño="mediano"
-                    disabled={isLoading}
-                    onClick={() => {
-                      setErrores({});
-                      setPasoActual(1);
-                    }}
+                    disabled={
+                      isLoading ||
+                      isLoadingTurno ||
+                      !form.mascotaId ||
+                      !form.profesionalId
+                    }
                   />
                 )}
-
-                <Button
-                  type="submit"
-                  texto={
-                    isLoading
-                      ? "Registrando..."
-                      : pasoActual === 1
-                      ? "Continuar →"
-                      : "Registrar consulta"
-                  }
-                  variante="primario"
-                  tamaño="mediano"
-                  disabled={isLoading}
-                />
               </div>
             </form>
           </div>
