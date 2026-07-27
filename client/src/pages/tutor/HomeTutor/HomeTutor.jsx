@@ -84,7 +84,13 @@ const HomeTutor = () => {
                 <p>Ayudá a encontrar mascotas perdidas</p>
               </div>
             </div>
-            <a href="/foro"><button className={styles.btnVerPublicaciones}>Ver publicaciones ›</button></a>
+           <button
+            type="button"
+            className={styles.btnVerPublicaciones}
+            onClick={() => navigate("/foro")}
+          >
+            Ver publicaciones ›
+          </button>
           </section>
 
           <section className={styles.resumenSalud}>

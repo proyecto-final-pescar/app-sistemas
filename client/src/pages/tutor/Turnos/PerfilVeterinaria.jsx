@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { href, useNavigate, useParams } from "react-router-dom";
+import {useNavigate, useParams } from "react-router-dom";
 import {
   getVeterinariaById,
   calificarVeterinaria,
@@ -66,7 +66,7 @@ export default function PerfilVeterinaria() {
   const [errorCalificacion, setErrorCalificacion] = useState(null);
 
   const handleReservarTurno = () => {
-    console.log("Turno reservado!");
+   
       navigate(`/turnos/agendar/${veterinaria._id}`);
   };
 
