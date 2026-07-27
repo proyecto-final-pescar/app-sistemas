@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User as UserIcon, Bell, Shield, Camera, Save } from "lucide-react";
+import { User as UserIcon, Bell, Shield, Camera } from "lucide-react";
 import Sidebar from "../../components/layout/Sidebar";
 import TopBar from "../../components/layout/TopBar";
 import PanelDestacado from "../../components/ui/panel-destacado/PanelDestacado";
@@ -14,6 +14,12 @@ const ETIQUETAS_ROL = {
   veterinaria: "Veterinaria/o",
   administrador: "Administrador/a",
 };
+
+const EMOJI_ESPECIE = {
+  perro: "🐶",
+  gato: "🐱",
+};
+const TAMANIO_MAXIMO_FOTO = 5 * 1024 * 1024; // 5MB
 
 const TABS = [
   { id: "personales", label: "Datos Personales", icon: UserIcon },
@@ -34,10 +40,11 @@ function PerfilUsuario() {
     zona: "",
     fotoUrl: "",
   });
+  const [fotoArchivo, setFotoArchivo] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null);
 
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
-  const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [error, setError] = useState(null);
   const [mensajeExito, setMensajeExito] = useState(null);
 
@@ -60,7 +67,6 @@ function PerfilUsuario() {
           fotoUrl: perfilData.fotoUrl || "",
         });
       } catch (err) {
-        
         setError("No pudimos cargar tu perfil. Probá de nuevo en un momento.");
       } finally {
         setCargando(false);
@@ -70,48 +76,82 @@ function PerfilUsuario() {
     fetchPerfil();
   }, [usuarioId]);
 
+ 
+  useEffect(() => {
+    return () => {
+      if (fotoPreview) URL.revokeObjectURL(fotoPreview);
+    };
+  }, [fotoPreview]);
+
+  // Auto-oculta el mensaje de éxito a los 4 segundos. 
+  useEffect(() => {
+    if (!mensajeExito) return;
+
+    const timer = setTimeout(() => setMensajeExito(null), 4000);
+    return () => clearTimeout(timer);
+  }, [mensajeExito]);
+
+
   const handleChange = (campo) => (e) => {
     setFormData((prev) => ({ ...prev, [campo]: e.target.value }));
     setMensajeExito(null);
   };
 
-  const handleFotoChange = async (e) => {
+  const handleFotoChange = (e) => {
     const archivo = e.target.files?.[0];
+    e.target.value = "";
     if (!archivo) return;
 
-    try {
-      setSubiendoFoto(true);
-      setError(null);
-      const url = await subirImagen(archivo);
-      setFormData((prev) => ({ ...prev, fotoUrl: url }));
-    } catch (err) {
-      
-      setError("No pudimos subir la foto. Probá con otra imagen.");
-    } finally {
-      setSubiendoFoto(false);
-      e.target.value = "";
+    if (!archivo.type.startsWith("image/")) {
+      setError("El archivo tiene que ser una imagen.");
+      return;
     }
+
+    if (archivo.size > TAMANIO_MAXIMO_FOTO) {
+      setError("La imagen no puede pesar más de 5MB.");
+      return;
+    }
+
+    // Solo guardamos el archivo y una preview local; se sube recién al guardar.
+    setError(null);
+    setFotoArchivo(archivo);
+    setFotoPreview((prevUrl) => {
+      if (prevUrl) URL.revokeObjectURL(prevUrl);
+      return URL.createObjectURL(archivo);
+    });
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
     try {
       setGuardando(true);
       setError(null);
       setMensajeExito(null);
 
-      
+      // La foto recién se sube acá, al confirmar el guardado —
+    
+    let fotoUrlFinal = formData.fotoUrl;
+      if (fotoArchivo) {
+        fotoUrlFinal = await subirImagen(fotoArchivo, "perfiles");// la foto queda en la carpeta perfiles 
+      }
+
       const { data } = await api.put("/usuarios/perfil", {
         name: formData.name,
         email: formData.email,
         telefono: formData.telefono,
         zona: formData.zona,
-        fotoUrl: formData.fotoUrl,
+        fotoUrl: fotoUrlFinal,
       });
 
       const actualizado = data.data;
       setPerfil((prev) => ({ ...prev, ...actualizado, nombre: actualizado.name }));
+      setFormData((prev) => ({ ...prev, fotoUrl: actualizado.fotoUrl || "" }));
 
-      
+      if (fotoPreview) URL.revokeObjectURL(fotoPreview);
+      setFotoPreview(null);
+      setFotoArchivo(null);
+
       const usuarioActualizado = {
         ...usuario,
         nombre: actualizado.name,
@@ -123,7 +163,6 @@ function PerfilUsuario() {
 
       setMensajeExito("Perfil actualizado correctamente.");
     } catch (err) {
-      
       const mensajeBackend = err.response?.data?.errors?.[0] || err.response?.data?.message;
       setError(mensajeBackend || "No pudimos guardar los cambios. Revisá los datos e intentá de nuevo.");
     } finally {
@@ -143,7 +182,7 @@ function PerfilUsuario() {
         <>
           {perfil.mascotas?.map((mascota) => (
             <span key={mascota._id} className={styles.badge}>
-              {mascota.especie === "gato" ? "🐱" : "🐶"} {mascota.nombre}
+              {EMOJI_ESPECIE[mascota.especie] || "🐾"} {mascota.nombre}
             </span>
           ))}
           {anioRegistro && (
@@ -174,6 +213,8 @@ function PerfilUsuario() {
     ) : null;
   };
 
+  const fotoMostrar = fotoPreview || formData.fotoUrl;
+
   if (cargando) {
     return (
       <div className={styles.layout}>
@@ -198,8 +239,8 @@ function PerfilUsuario() {
           <PanelDestacado
             titulo={
               <div className={styles.tituloConAvatar}>
-                {formData.fotoUrl ? (
-                  <img src={formData.fotoUrl} alt={perfil?.nombre} className={styles.avatarPanelFoto} />
+                {fotoMostrar ? (
+                  <img src={fotoMostrar} alt={perfil?.nombre} className={styles.avatarPanelFoto} />
                 ) : (
                   <span className={styles.avatarPanel} aria-hidden="true">
                     {perfil?.nombre?.[0]?.toUpperCase() || "?"}
@@ -228,10 +269,10 @@ function PerfilUsuario() {
           </div>
 
           {tabActiva === "personales" && (
-            <div className={styles.card}>
+            <form className={styles.card} onSubmit={handleSubmit}>
               <div className={styles.avatarSeccion}>
-                {formData.fotoUrl ? (
-                  <img src={formData.fotoUrl} alt={formData.name} className={styles.avatarGrandeFoto} />
+                {fotoMostrar ? (
+                  <img src={fotoMostrar} alt={formData.name} className={styles.avatarGrandeFoto} />
                 ) : (
                   <div className={styles.avatarGrande}>
                     {formData.name?.[0]?.toUpperCase() || "?"}
@@ -247,15 +288,12 @@ function PerfilUsuario() {
                   </p>
                   <label className={styles.linkFoto}>
                     <Camera size={16} />
-                    {subiendoFoto ? "Subiendo..." : "Cambiar foto de perfil"}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFotoChange}
-                      disabled={subiendoFoto}
-                      hidden
-                    />
+                    Cambiar foto de perfil
+                    <input type="file" accept="image/*" onChange={handleFotoChange} hidden />
                   </label>
+                  {fotoArchivo && (
+                    <p className={styles.notaFoto}>Se guardará al hacer click en "Guardar Cambios".</p>
+                  )}
                 </div>
               </div>
 
@@ -285,13 +323,13 @@ function PerfilUsuario() {
               </div>
 
               <Button
+                type="submit"
                 texto={guardando ? "Guardando..." : "Guardar Cambios"}
                 variante="primario"
                 tamaño="mediano"
-                onClick={handleSubmit}
                 disabled={guardando}
               />
-            </div>
+            </form>
           )}
 
           {tabActiva === "notificaciones" && (

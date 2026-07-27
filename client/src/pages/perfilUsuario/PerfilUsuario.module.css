@@ -186,13 +186,18 @@
   font-family: var(--fuente-texto);
   font-size: 14px;
 }
-
 .mensajeExito {
   color: var(--color-cta);
   font-family: var(--fuente-texto);
   font-size: 14px;
 }
 
+.notaFoto {
+  color: var(--color-texto-secundario);
+  font-family: var(--fuente-texto);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
 @media (max-width: 768px) {
   .grid {
     grid-template-columns: 1fr;
