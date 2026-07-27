@@ -17,9 +17,9 @@ const estudioSchema = new mongoose.Schema(
       ref: 'User',
       required: [true, 'El profesional es requerido']
     },
-    consultaId: {
+    historialClinicoId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Consulta',
+      ref: 'HistorialClinico',
       default: null // Opcional, por si se adjunta desde una consulta puntual
     },
     nombre: {
@@ -32,11 +32,11 @@ const estudioSchema = new mongoose.Schema(
       type: Date,
       required: [true, 'La fecha es requerida']
     },
-    /* urlArchivo: {
+      urlArchivo: {
       type: String,
       trim: true,
       default: null
-    } */
+    } 
   },
   {
     timestamps: true,
@@ -44,6 +44,6 @@ const estudioSchema = new mongoose.Schema(
   }
 )
 
-const Estudio = mongoose.model('Estudio', EstudioSchema)
+const Estudio = mongoose.model('Estudio', estudioSchema)
 
 export default Estudio

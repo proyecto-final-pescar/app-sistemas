@@ -6,8 +6,8 @@ import cors from 'cors';
 import connectDB from './config/db.js'
 import routes from './routes/index.js'
 import uploadRoutes from './routes/uploadRoutes.js'
-import rutasTurnos from './routes/rutasTurnos.js';
 import { iniciarJobsTurnos } from './jobs/turnoJobs.js';
+import adminVeterinariasRoutes from './routes/adminVeterinariaRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,14 +20,19 @@ const corsOptions = {
 /*modificacion hecha para que pueda usar el localhost*/
 const corsOptions = {
   origin: (origin, callback) => {
-    const allowed = (process.env.CLIENT_URL || "").split(",").map(o => o.trim());
-    if (!origin || allowed.includes(origin)) {
+    const allowed = new Set([
+      ...(process.env.CLIENT_URL || "").split(",").map(o => o.trim()).filter(Boolean),
+      "http://localhost:5173",
+      "http://127.0.0.1:5173"
+    ]);
+
+    if (!origin || allowed.has(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
 
@@ -38,17 +43,16 @@ app.use(express.json());
 app.use('/api', routes);
 app.use('/api/upload', uploadRoutes)
 connectDB();
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en puerto ${PORT}`);
-});
 
 app.get('/', (req, res) => {
     res.json({ message: 'Servidor funcionando' });
 });
 
-app.use('/api', rutasTurnos);
-
 iniciarJobsTurnos(); // arranca el cron de liberación automática
+
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en puerto ${PORT}`);
+});
 
 /*import verifyToken from './middleware/auth.js';*/
 

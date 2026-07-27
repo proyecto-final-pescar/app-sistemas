@@ -1,12 +1,12 @@
 import mongoose from 'mongoose'
 
-const historialClinicoSchema = new mongoose.Schema(
+const fichaMedicaSchema = new mongoose.Schema(
   {
     mascotaId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Mascota',
       required: [true, 'La mascota es requerida'],
-      unique: true // Una mascota tiene un solo historial clínico
+      unique: true
     },
     dueñoId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -41,10 +41,10 @@ const historialClinicoSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    collection: 'historiales_clinicos'
+    collection: 'fichas_medicas'
   }
 )
 
-const HistorialClinico = mongoose.model('HistorialClinico', historialClinicoSchema)
+const FichaMedica = mongoose.model('FichaMedica', fichaMedicaSchema)
 
-export default HistorialClinico
+export default FichaMedica

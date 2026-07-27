@@ -1,4 +1,3 @@
-/* ── Variables ── */
 :root {
   --color-primario: #7c3aed;
   --color-cta: #059669;
@@ -11,37 +10,29 @@
   --color-borde: #e5e7eb;
 }
 
-/* ── Layout principal ── */
-.container {
-  padding: 16px;
-  background-color: var(--color-fondo);
+/* Layout */
+.layout {
+  display: flex;
   min-height: 100vh;
+  background-color: var(--color-fondo);
   font-family: "Inter", sans-serif;
 }
 
-/* ── Encabezado ── */
-.header {
-  margin-bottom: 16px;
-}
-
-.titulo {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--color-texto-principal);
-  margin: 0 0 4px 0;
-}
-
-.subtitulo {
-  font-size: 0.85rem;
-  color: var(--color-texto-secundario);
-  margin: 0;
-}
-
-/* ── Toolbar ── */
-.toolbar {
+.main {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  overflow: hidden;
+}
+
+.contenido {
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Toolbar */
+.toolbar {
   margin-bottom: 16px;
 }
 
@@ -61,17 +52,7 @@
   border-color: var(--color-primario);
 }
 
-.select {
-  padding: 10px 14px;
-  border: 1.5px solid var(--color-borde);
-  border-radius: 8px;
-  font-size: 0.9rem;
-  background-color: var(--color-blanco);
-  color: var(--color-texto-principal);
-  cursor: pointer;
-}
-
-/* ── Tabs ── */
+/* Tabs */
 .tabs {
   display: flex;
   gap: 8px;
@@ -102,13 +83,14 @@
   border-color: var(--color-primario);
 }
 
-/* ── Tabla (desktop) ── */
+/* Tabla (desktop) */
 .tablaWrapper {
+  display: none;
   width: 100%;
+  overflow-x: auto;
 }
 
 .tabla {
-  display: none; /* oculta en mobile */
   width: 100%;
   border-collapse: collapse;
   background-color: var(--color-blanco);
@@ -168,7 +150,7 @@
   font-size: 0.9rem;
 }
 
-/* ── Toggle de estado ── */
+/* Toggle */
 .toggle {
   width: 40px;
   height: 22px;
@@ -177,6 +159,7 @@
   cursor: pointer;
   transition: background-color 0.2s ease;
   position: relative;
+  flex-shrink: 0;
 }
 
 .toggle::after {
@@ -206,31 +189,28 @@
   left: 3px;
 }
 
-/* ── Acciones ── */
-.acciones {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
+/* Acciones */
 .accionesPendiente {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
 }
 
 .btnIcono {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  color: var(--color-texto-secundario);
   padding: 4px;
   border-radius: 4px;
+  display: flex;
+  align-items: center;
   transition: background-color 0.15s ease;
 }
 
 .btnIcono:hover {
   background-color: var(--color-fondo-claro);
+  color: var(--color-primario);
 }
 
 .btnAprobar {
@@ -243,6 +223,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.15s ease;
+  white-space: nowrap;
 }
 
 .btnAprobar:hover {
@@ -259,6 +240,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .btnRechazar:hover {
@@ -266,7 +248,7 @@
   color: white;
 }
 
-/* ── Cards (mobile) ── */
+/* Cards (mobile) */
 .cards {
   display: flex;
   flex-direction: column;
@@ -335,7 +317,44 @@
   margin-top: 8px;
 }
 
-/* ── Mensajes de estado ── */
+/* Paginación */
+.paginacion {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.paginaBtn {
+  padding: 6px 12px;
+  border: 1.5px solid var(--color-borde);
+  border-radius: 6px;
+  background-color: var(--color-blanco);
+  color: var(--color-texto-secundario);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.paginaBtn:hover:not(:disabled) {
+  border-color: var(--color-primario);
+  color: var(--color-primario);
+}
+
+.paginaBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.paginaBtnActiva {
+  background-color: var(--color-primario);
+  color: var(--color-blanco);
+  border-color: var(--color-primario);
+}
+
+/* Mensajes de estado */
 .estadoMensaje {
   text-align: center;
   padding: 2rem;
@@ -347,28 +366,18 @@
   color: #b91c1c;
 }
 
-/* ── Responsive: desktop ── */
+/* Desktop */
 @media (min-width: 768px) {
-  .container {
+  .contenido {
     padding: 24px;
   }
 
-  .titulo {
-    font-size: 1.75rem;
-  }
-
-  .toolbar {
-    flex-direction: row;
-    align-items: center;
-  }
-
   .buscador {
-    flex: 1;
+    max-width: 500px;
   }
 
-  /* En desktop mostramos tabla y ocultamos cards */
-  .tabla {
-    display: table;
+  .tablaWrapper {
+    display: block;
   }
 
   .cards {

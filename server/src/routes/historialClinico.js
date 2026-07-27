@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  actualizarHistorialClinico,
   crearHistorialClinico,
   obtenerEntradaHistorialClinico,
   obtenerHistorialClinico
@@ -10,17 +11,17 @@ import historialAccess from '../middleware/historialAccess.js';
 const router = Router();
 
 router.get(
-  '/historial/entrada/:id',
-  verifyToken,
-  historialAccess,
-  obtenerEntradaHistorialClinico
-);
-
-router.get(
   '/historial/:mascotaId',
   verifyToken,
   historialAccess,
   obtenerHistorialClinico
+);
+
+router.get(
+  '/historial/entrada/:id',
+  verifyToken,
+  historialAccess,
+  obtenerEntradaHistorialClinico
 );
 
 router.post(
@@ -29,5 +30,12 @@ router.post(
   authorize('veterinaria'),
   crearHistorialClinico
 );
+
+router.put(
+  '/historial-clinico/:id',
+  verifyToken,
+  authorize('veterianria'),
+  actualizarHistorialClinico
+)
 
 export default router;
