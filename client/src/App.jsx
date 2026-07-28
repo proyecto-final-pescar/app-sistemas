@@ -14,12 +14,13 @@ import PerfilVeterinaria from "./pages/tutor/Turnos/PerfilVeterinaria";
 import Foro from "./pages/tutor/Foro/Foro";
 import Emergencias from "./pages/tutor/Emergencias/Emergencias";
 import HomeTutor from "./pages/tutor/HomeTutor/HomeTutor";
-
-import Login from "./pages/public/Login/Login";
-import Registro from "./pages/public/Registro/Registro";
+import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
+import GestionVeterinarias from './pages/admin/GestionVeterinarias/GestionVeterinarias';
 import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
+import Login from "./pages/public/Login/Login";
+import Registro from "./pages/public/Registro/Registro";
 import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
 import NotFound from "./pages/NotFound/NotFound";
 import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
@@ -42,63 +43,15 @@ function App() {
         <Route path="/register" element={<Registro />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-
-        <Route
-          path="/home"
-          element={
-            <PrivateRoute allowedRoles={["dueno"]}>
-              <HomeTutor />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/home-veterinaria"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <HomeVeterinaria />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/mascotas"
-          element={
-            <PrivateRoute allowedRoles={["dueno"]}>
-              <MisMascotas />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/turnos"
-          element={
-            <PrivateRoute allowedRoles={["dueno"]}>
-              <Turnos />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/mis-turnos"
-          element={
-            <PrivateRoute allowedRoles={["dueno"]}>
-              <MisTurnos />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/turnos/agendar/:veterinariaId"
-          element={
-            <PrivateRoute allowedRoles={["dueno"]}>
-              <AgendarTurnos />
-            </PrivateRoute>
-          }
-        />
+        <Route path="/home" element={<PrivateRoute allowedRoles={["dueno"]}><HomeTutor /></PrivateRoute>} />
+        <Route path="/home-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><HomeVeterinaria /></PrivateRoute>} />
+        <Route path="/mascotas" element={<PrivateRoute allowedRoles={["dueno"]}><MisMascotas /></PrivateRoute>} />
+        <Route path="/turnos" element={<PrivateRoute allowedRoles={["dueno"]}><Turnos /></PrivateRoute>} />
+        <Route path="/mis-turnos" element={<PrivateRoute allowedRoles={["dueno"]}><MisTurnos /></PrivateRoute>} />
+        <Route path="/turnos/agendar/:veterinariaId" element={<PrivateRoute allowedRoles={["dueno"]}><AgendarTurnos /></PrivateRoute>} />
         <Route path="/tutor/veterinarias/:id" element={<PerfilVeterinaria />} />
         <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
-        <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><BuscarVeterinaria /></PrivateRoute>} />
+        <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><h1>Sección Veterinarias</h1></PrivateRoute>} />
         <Route path="/agenda" element={<PrivateRoute allowedRoles={["veterinaria"]}><CitasAgendadas /></PrivateRoute>} />
         <Route
           path="/historial/registrar/:turnoId"
@@ -112,7 +65,7 @@ function App() {
         <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/tutor/dashboard" element={<AdminDashboard />} />
-
+        <Route path="/admin/veterinarias" element={<PrivateRoute allowedRoles={["administrador"]}><GestionVeterinarias /></PrivateRoute>} />
         <Route path="/" element={<Landing />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
