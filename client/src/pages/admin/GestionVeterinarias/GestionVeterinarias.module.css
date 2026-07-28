@@ -1,21 +1,9 @@
-:root {
-  --color-primario: #7c3aed;
-  --color-cta: #059669;
-  --color-peligro: #dc2626;
-  --color-texto-principal: #1c1033;
-  --color-texto-secundario: #7e6fa0;
-  --color-fondo: #f8f7ff;
-  --color-fondo-claro: #ede9fe;
-  --color-blanco: #ffffff;
-  --color-borde: #e5e7eb;
-}
-
 /* Layout */
 .layout {
   display: flex;
   min-height: 100vh;
-  background-color: var(--color-fondo);
-  font-family: "Inter", sans-serif;
+  background-color: var(--color-fondo-secciones);
+  font-family: var(--fuente-texto);
 }
 
 .main {
@@ -39,9 +27,12 @@
 .buscador {
   width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid var(--color-borde);
+  border: 1.5px solid #e5e7eb;
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: var(--texto-form-size);
+  line-height: var(--texto-form-line-height);
+  letter-spacing: var(--texto-form-letter-spacing);
+  font-weight: var(--texto-form-weight);
   background-color: var(--color-blanco);
   color: var(--color-texto-principal);
   box-sizing: border-box;
@@ -62,12 +53,14 @@
 
 .tab {
   padding: 8px 20px;
-  border: 1.5px solid var(--color-borde);
+  border: 1.5px solid #e5e7eb;
   border-radius: 20px;
   background-color: var(--color-blanco);
   color: var(--color-texto-secundario);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--texto-nav-size);
+  line-height: var(--texto-nav-line-height);
+  letter-spacing: var(--texto-nav-letter-spacing);
+  font-weight: var(--texto-nav-weight);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -114,7 +107,7 @@
 }
 
 .tabla tbody tr {
-  border-bottom: 1px solid var(--color-borde);
+  border-bottom: 1px solid #e5e7eb;
   transition: background-color 0.1s ease;
 }
 
@@ -123,12 +116,12 @@
 }
 
 .tabla tbody tr:hover {
-  background-color: var(--color-fondo);
+  background-color: var(--color-fondo-secciones);
 }
 
 .tabla td {
   padding: 14px 16px;
-  font-size: 0.875rem;
+  font-size: var(--texto-form-size);
   color: var(--color-texto-principal);
   vertical-align: middle;
 }
@@ -216,7 +209,7 @@
 .btnAprobar {
   padding: 6px 16px;
   background-color: var(--color-cta);
-  color: white;
+  color: var(--color-blanco);
   border: none;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -233,8 +226,8 @@
 .btnRechazar {
   padding: 6px 16px;
   background-color: transparent;
-  color: var(--color-peligro);
-  border: 1.5px solid var(--color-peligro);
+  color: #dc2626;
+  border: 1.5px solid #dc2626;
   border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -244,8 +237,8 @@
 }
 
 .btnRechazar:hover {
-  background-color: var(--color-peligro);
-  color: white;
+  background-color: #dc2626;
+  color: var(--color-blanco);
 }
 
 /* Cards (mobile) */
@@ -257,7 +250,7 @@
 
 .card {
   background-color: var(--color-blanco);
-  border: 1.5px solid var(--color-borde);
+  border: 1.5px solid #e5e7eb;
   border-radius: 12px;
   padding: 14px;
   display: flex;
@@ -283,6 +276,7 @@
 }
 
 .cardNombre {
+  font-family: var(--fuente-titulos);
   font-weight: 700;
   font-size: 0.95rem;
   color: var(--color-texto-principal);
@@ -329,7 +323,7 @@
 
 .paginaBtn {
   padding: 6px 12px;
-  border: 1.5px solid var(--color-borde);
+  border: 1.5px solid #e5e7eb;
   border-radius: 6px;
   background-color: var(--color-blanco);
   color: var(--color-texto-secundario);

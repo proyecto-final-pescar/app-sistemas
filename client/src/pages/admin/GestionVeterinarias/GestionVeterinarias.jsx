@@ -21,12 +21,13 @@ const GestionVeterinarias = () => {
       setIsLoading(true);
       setError("");
       try {
-        const response = await api.get("/veterinarias");
+        const response = await api.get("/admin/veterinarias");
         const todas = response.data.data ?? [];
 
         setVeterinarias(todas.filter((v) => v.estado === "activa"));
-        setPendientes(todas.filter((v) => v.estado === "suspendida"));
-      } catch {
+        setPendientes(todas.filter((v) => v.estado === "pendiente"));
+      } catch (err) {
+        console.error("Error al cargar veterinarias:", err.response?.data || err.message);
         setError("No se pudieron cargar las veterinarias. Intentá de nuevo más tarde.");
       } finally {
         setIsLoading(false);
@@ -63,11 +64,12 @@ const GestionVeterinarias = () => {
 
   const handleAprobar = async (id) => {
     try {
-      await api.put(`/veterinarias/${id}`, { estado: "activa" });
+      await api.patch(`/admin/veterinarias/${id}/aprobar`);
       const aprobada = pendientes.find((v) => v._id === id);
       setPendientes((prev) => prev.filter((v) => v._id !== id));
       if (aprobada) setVeterinarias((prev) => [...prev, { ...aprobada, estado: "activa" }]);
-    } catch {
+    } catch (err) {
+      console.error("Error al aprobar:", err.response?.data || err.message);
       alert("Error al aprobar la veterinaria.");
     }
   };
@@ -75,9 +77,10 @@ const GestionVeterinarias = () => {
   const handleRechazar = async (id) => {
     if (!confirm("¿Estás seguro de que querés rechazar esta veterinaria?")) return;
     try {
-      await api.delete(`/veterinarias/${id}`);
+      await api.patch(`/admin/veterinarias/${id}/rechazar`);
       setPendientes((prev) => prev.filter((v) => v._id !== id));
-    } catch {
+    } catch (err) {
+      console.error("Error al rechazar:", err.response?.data || err.message);
       alert("Error al rechazar la veterinaria.");
     }
   };
@@ -85,11 +88,12 @@ const GestionVeterinarias = () => {
   const handleToggleEstado = async (vet) => {
     const nuevoEstado = vet.estado === "activa" ? "suspendida" : "activa";
     try {
-      await api.put(`/veterinarias/${vet._id}`, { estado: nuevoEstado });
+      await api.put(`/admin/veterinarias/${vet._id}`, { estado: nuevoEstado });
       setVeterinarias((prev) =>
         prev.map((v) => (v._id === vet._id ? { ...v, estado: nuevoEstado } : v))
       );
-    } catch {
+    } catch (err) {
+      console.error("Error al cambiar estado:", err.response?.data || err.message);
       alert("Error al cambiar el estado.");
     }
   };
@@ -187,7 +191,6 @@ const GestionVeterinarias = () => {
                     ) : (
                       listaVisible.map((vet) => (
                         <tr key={vet._id}>
-                          
                           <td>{vet.nombre}</td>
                           <td>
                             <span>{vet.email}</span><br />
@@ -223,7 +226,6 @@ const GestionVeterinarias = () => {
                   listaVisible.map((vet) => (
                     <div key={vet._id} className={styles.card}>
                       <div className={styles.cardHeader}>
-                        
                         <button
                           className={`${styles.toggle} ${vet.estado === "activa" ? styles.toggleOn : styles.toggleOff}`}
                           onClick={() => handleToggleEstado(vet)}
@@ -255,7 +257,7 @@ const GestionVeterinarias = () => {
               <div className={styles.tablaWrapper}>
                 <table className={styles.tabla}>
                   <thead>
-                    <tr> 
+                    <tr>
                       <th>Nombre</th>
                       <th>Contacto</th>
                       <th>Dirección</th>
@@ -270,7 +272,6 @@ const GestionVeterinarias = () => {
                     ) : (
                       pendientesVisibles.map((vet) => (
                         <tr key={vet._id}>
-                          
                           <td>{vet.nombre}</td>
                           <td>
                             <span>{vet.email}</span><br />
@@ -307,7 +308,6 @@ const GestionVeterinarias = () => {
                   pendientesVisibles.map((vet) => (
                     <div key={vet._id} className={styles.card}>
                       <div className={styles.cardHeader}>
-                        
                         <span className={styles.cardFecha}>{new Date(vet.createdAt).toLocaleDateString("es-AR")}</span>
                       </div>
                       <p className={styles.cardNombre}>{vet.nombre}</p>
