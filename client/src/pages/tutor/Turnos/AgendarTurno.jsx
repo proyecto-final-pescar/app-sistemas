@@ -11,8 +11,7 @@ import Button from "../../../components/ui/button/Button";
 import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
 
 import styles from "../../../styles/AgendarTurno.module.css";
-
-const API_URL = `${import.meta.env.VITE_API_URL}/api`;
+const API_URL = import.meta.env.VITE_API_URL;  
 
 // Helper para formatear fechas a YYYY-MM-DD sin desfasajes de zona horaria
 const formatearFechaId = (date) => {
@@ -135,11 +134,25 @@ const AgendarTurnos = () => {
 
         // 1. Obtener datos de la veterinaria y mascotas en paralelo (solo la primera vez)
         if (!veterinaria) {
+          const [resVetRaw, resMascotasRaw] = await Promise.all([
+            fetch(`${API_URL}/veterinarias/${veterinariaId}`, { headers }),
+            fetch(`${API_URL}/mascotas`, { headers }),
+          ]);
+
+          if (!resVetRaw.ok) {
+            const texto = await resVetRaw.text();
+            console.error("Fallo GET veterinarias:", resVetRaw.status, texto);
+            throw new Error(`Error ${resVetRaw.status} al buscar la veterinaria`);
+          }
+          if (!resMascotasRaw.ok) {
+            const texto = await resMascotasRaw.text();
+            console.error("Fallo GET mascotas:", resMascotasRaw.status, texto);
+            throw new Error(`Error ${resMascotasRaw.status} al buscar mascotas`);
+          }
+
           const [resVet, resMascotas] = await Promise.all([
-            fetch(`${API_URL}/veterinarias/${veterinariaId}`, { headers }).then(
-              (r) => r.json(),
-            ),
-            fetch(`${API_URL}/mascotas`, { headers }).then((r) => r.json()),
+            resVetRaw.json(),
+            resMascotasRaw.json(),
           ]);
 
           if (cancelado) return;
