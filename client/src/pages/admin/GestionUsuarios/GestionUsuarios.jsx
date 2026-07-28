@@ -1,225 +1,131 @@
-import { useMemo, useState } from "react";
-import { Eye, KeyRound } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Eye, X } from "lucide-react";
 
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 
+import {
+  actualizarEstadoUsuario,
+  listarUsuarios,
+} from "../../../services/usuarioService";
+
 import styles from "./GestionUsuarios.module.css";
 
-const usuariosIniciales = [
-  {
-    id: "D-1029",
-    nombre: "Juan Pérez",
-    email: "juan.perez@email.com",
-    telefono: "+54 11 1234-5678",
-    mascotas: 2,
-    fechaRegistro: "12/03/2026",
-    ultimoIngreso: "29/05/2026",
-    turnosProximos: 2,
-    turnosPasados: 5,
-    activo: true,
-  },
-  {
-    id: "D-1030",
-    nombre: "María Gómez",
-    email: "maria.g@email.com",
-    telefono: "+54 11 9876-5432",
-    mascotas: 0,
-    fechaRegistro: "15/04/2026",
-    ultimoIngreso: "30/05/2026",
-    turnosProximos: 0,
-    turnosPasados: 2,
-    activo: false,
-  },
-  {
-    id: "D-1031",
-    nombre: "Carlos Ruiz",
-    email: "carlos.r88@email.com",
-    telefono: "+54 11 4455-6677",
-    mascotas: 1,
-    fechaRegistro: "12/03/2026",
-    ultimoIngreso: "29/05/2026",
-    turnosProximos: 2,
-    turnosPasados: 10,
-    activo: true,
-  },
-  {
-    id: "D-1032",
-    nombre: "Laura Fernández",
-    email: "laura.fernandez@email.com",
-    telefono: "+54 11 2233-4455",
-    mascotas: 1,
-    fechaRegistro: "18/03/2026",
-    ultimoIngreso: "01/06/2026",
-    turnosProximos: 1,
-    turnosPasados: 4,
-    activo: true,
-  },
-  {
-    id: "D-1033",
-    nombre: "Martín López",
-    email: "martin.lopez@email.com",
-    telefono: "+54 11 7788-9900",
-    mascotas: 3,
-    fechaRegistro: "20/03/2026",
-    ultimoIngreso: "02/06/2026",
-    turnosProximos: 1,
-    turnosPasados: 7,
-    activo: true,
-  },
-  {
-    id: "D-1034",
-    nombre: "Sofía Martínez",
-    email: "sofia.martinez@email.com",
-    telefono: "+54 11 5544-3322",
-    mascotas: 2,
-    fechaRegistro: "22/03/2026",
-    ultimoIngreso: "03/06/2026",
-    turnosProximos: 2,
-    turnosPasados: 6,
-    activo: false,
-  },
-  {
-    id: "D-1035",
-    nombre: "Diego Ramírez",
-    email: "diego.ramirez@email.com",
-    telefono: "+54 11 6655-4433",
-    mascotas: 1,
-    fechaRegistro: "25/03/2026",
-    ultimoIngreso: "04/06/2026",
-    turnosProximos: 0,
-    turnosPasados: 3,
-    activo: true,
-  },
-  {
-    id: "D-1036",
-    nombre: "Valentina Torres",
-    email: "valentina.torres@email.com",
-    telefono: "+54 11 8877-6655",
-    mascotas: 4,
-    fechaRegistro: "27/03/2026",
-    ultimoIngreso: "05/06/2026",
-    turnosProximos: 3,
-    turnosPasados: 9,
-    activo: true,
-  },
-  {
-    id: "D-1037",
-    nombre: "Federico Castro",
-    email: "federico.castro@email.com",
-    telefono: "+54 11 3344-5566",
-    mascotas: 1,
-    fechaRegistro: "30/03/2026",
-    ultimoIngreso: "06/06/2026",
-    turnosProximos: 1,
-    turnosPasados: 2,
-    activo: false,
-  },
-  {
-    id: "D-1038",
-    nombre: "Camila Sánchez",
-    email: "camila.sanchez@email.com",
-    telefono: "+54 11 1122-3344",
-    mascotas: 2,
-    fechaRegistro: "02/04/2026",
-    ultimoIngreso: "07/06/2026",
-    turnosProximos: 2,
-    turnosPasados: 8,
-    activo: true,
-  },
-  {
-    id: "D-1039",
-    nombre: "Nicolás Herrera",
-    email: "nicolas.herrera@email.com",
-    telefono: "+54 11 9988-7766",
-    mascotas: 0,
-    fechaRegistro: "05/04/2026",
-    ultimoIngreso: "08/06/2026",
-    turnosProximos: 0,
-    turnosPasados: 1,
-    activo: true,
-  },
-  {
-    id: "D-1040",
-    nombre: "Julieta Acosta",
-    email: "julieta.acosta@email.com",
-    telefono: "+54 11 4466-8800",
-    mascotas: 3,
-    fechaRegistro: "08/04/2026",
-    ultimoIngreso: "09/06/2026",
-    turnosProximos: 1,
-    turnosPasados: 5,
-    activo: false,
-  },
-];
+const USUARIOS_POR_PAGINA = 4;
+
+const formatearFecha = (fecha) => {
+  if (!fecha) {
+    return "Sin información";
+  }
+
+  return new Intl.DateTimeFormat("es-AR").format(new Date(fecha));
+};
 
 function GestionUsuarios() {
-  const [usuarios, setUsuarios] = useState(usuariosIniciales);
+  const [usuarios, setUsuarios] = useState([]);
+
   const [busqueda, setBusqueda] = useState("");
   const [filtroNombre, setFiltroNombre] = useState("");
   const [filtroEmail, setFiltroEmail] = useState("");
   const [filtroTelefono, setFiltroTelefono] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
+
   const [paginaActual, setPaginaActual] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
 
-  const usuariosPorPagina = 4;
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [usuarioActualizando, setUsuarioActualizando] = useState(null);
 
-  const usuariosFiltrados = useMemo(() => {
-    const textoBusqueda = busqueda.trim().toLowerCase();
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
 
-    return usuarios.filter((usuario) => {
-      const coincideBusqueda =
-        !textoBusqueda ||
-        usuario.nombre.toLowerCase().includes(textoBusqueda) ||
-        usuario.email.toLowerCase().includes(textoBusqueda);
+  const cargarUsuarios = useCallback(async () => {
+    setCargando(true);
+    setError("");
 
-      const coincideNombre =
-        !filtroNombre ||
-        usuario.nombre.toLowerCase().includes(filtroNombre.toLowerCase());
+    try {
+      const busquedaLimpia = busqueda.trim();
 
-      const coincideEmail =
-        !filtroEmail ||
-        usuario.email.toLowerCase().includes(filtroEmail.toLowerCase());
+      const respuesta = await listarUsuarios({
+        nombre:
+          filtroNombre.trim() ||
+          (!busquedaLimpia.includes("@") ? busquedaLimpia : ""),
+        email:
+          filtroEmail.trim() ||
+          (busquedaLimpia.includes("@") ? busquedaLimpia : ""),
+        telefono: filtroTelefono.trim(),
+        estado: filtroEstado,
+        page: paginaActual,
+        limit: USUARIOS_POR_PAGINA,
+      });
 
-      const coincideTelefono =
-        !filtroTelefono || usuario.telefono.includes(filtroTelefono);
+      setUsuarios(respuesta.data || []);
+      setTotalPaginas(respuesta.pagination?.totalPages || 1);
+    } catch (errorPeticion) {
+      console.error("Error al cargar usuarios:", errorPeticion);
 
-      const coincideEstado =
-        !filtroEstado ||
-        (filtroEstado === "activo" && usuario.activo) ||
-        (filtroEstado === "inactivo" && !usuario.activo);
-
-      return (
-        coincideBusqueda &&
-        coincideNombre &&
-        coincideEmail &&
-        coincideTelefono &&
-        coincideEstado
+      setUsuarios([]);
+      setError(
+        errorPeticion.response?.data?.message ||
+          "No se pudieron cargar los usuarios. Intentá nuevamente."
       );
-    });
+    } finally {
+      setCargando(false);
+    }
   }, [
-    usuarios,
     busqueda,
     filtroNombre,
     filtroEmail,
     filtroTelefono,
     filtroEstado,
+    paginaActual,
   ]);
 
-  const totalPaginas = Math.ceil(
-    usuariosFiltrados.length / usuariosPorPagina
-  );
+  useEffect(() => {
+    const temporizador = setTimeout(() => {
+      cargarUsuarios();
+    }, 400);
 
-  const indiceUltimoUsuario = paginaActual * usuariosPorPagina;
-  const indicePrimerUsuario = indiceUltimoUsuario - usuariosPorPagina;
+    return () => clearTimeout(temporizador);
+  }, [cargarUsuarios]);
 
-  const usuariosPaginados = usuariosFiltrados.slice(
-    indicePrimerUsuario,
-    indiceUltimoUsuario
-  );
+  const reiniciarPagina = () => {
+    setPaginaActual(1);
+  };
 
-  const cambiarPagina = (numeroPagina) => {
-    setPaginaActual(numeroPagina);
+  const cambiarEstado = async (usuario) => {
+    const nuevoEstado = !usuario.active;
+
+    setUsuarioActualizando(usuario.id);
+    setError("");
+
+    try {
+      await actualizarEstadoUsuario(usuario.id, nuevoEstado);
+
+      setUsuarios((usuariosActuales) =>
+        usuariosActuales.map((usuarioActual) =>
+          usuarioActual.id === usuario.id
+            ? { ...usuarioActual, active: nuevoEstado }
+            : usuarioActual
+        )
+      );
+
+      if (usuarioSeleccionado?.id === usuario.id) {
+        setUsuarioSeleccionado((usuarioActual) => ({
+          ...usuarioActual,
+          active: nuevoEstado,
+        }));
+      }
+    } catch (errorPeticion) {
+      console.error("Error al actualizar usuario:", errorPeticion);
+
+      setError(
+        errorPeticion.response?.data?.message ||
+          "No se pudo modificar el estado del usuario."
+      );
+    } finally {
+      setUsuarioActualizando(null);
+    }
   };
 
   const irPaginaAnterior = () => {
@@ -230,67 +136,6 @@ function GestionUsuarios() {
     setPaginaActual((pagina) => Math.min(pagina + 1, totalPaginas));
   };
 
-  const reiniciarPagina = () => {
-    setPaginaActual(1);
-  };
-
-  const cambiarEstado = (id) => {
-    setUsuarios((usuariosActuales) =>
-      usuariosActuales.map((usuario) =>
-        usuario.id === id
-          ? { ...usuario, activo: !usuario.activo }
-          : usuario
-      )
-    );
-  };
-
-  const exportarCSV = () => {
-    const encabezados = [
-      "ID",
-      "Nombre",
-      "Email",
-      "Teléfono",
-      "Mascotas",
-      "Registro",
-      "Último ingreso",
-      "Turnos próximos",
-      "Turnos pasados",
-      "Estado",
-    ];
-
-    const filas = usuariosFiltrados.map((usuario) => [
-      usuario.id,
-      usuario.nombre,
-      usuario.email,
-      usuario.telefono,
-      usuario.mascotas,
-      usuario.fechaRegistro,
-      usuario.ultimoIngreso,
-      usuario.turnosProximos,
-      usuario.turnosPasados,
-      usuario.activo ? "Activo" : "Inactivo",
-    ]);
-
-    const contenidoCSV = [encabezados, ...filas]
-      .map((fila) =>
-        fila
-          .map((valor) => `"${String(valor).replaceAll('"', '""')}"`)
-          .join(",")
-      )
-      .join("\n");
-
-    const archivo = new Blob([contenidoCSV], {
-      type: "text/csv;charset=utf-8;",
-    });
-
-    const enlace = document.createElement("a");
-    enlace.href = URL.createObjectURL(archivo);
-    enlace.download = "gestion-duenos.csv";
-    enlace.click();
-
-    URL.revokeObjectURL(enlace.href);
-  };
-
   return (
     <div className={styles.page}>
       <Sidebar role="administrador" activeItem="Dueños" />
@@ -298,7 +143,7 @@ function GestionUsuarios() {
       <div className={styles.main}>
         <TopBar
           title="Gestión de Dueños"
-          subtitle="Domingo, 26 de julio de 2026"
+          subtitle="Administración de usuarios"
           notifications={2}
         />
 
@@ -317,20 +162,12 @@ function GestionUsuarios() {
                 }}
               />
             </div>
-
-            <button
-              type="button"
-              className={styles.exportButton}
-              onClick={exportarCSV}
-            >
-              Exportar CSV
-            </button>
           </section>
 
           <section className={styles.filters}>
             <span className={styles.filtersLabel}>
               <span aria-hidden="true">▽</span>
-              Filtros Avanzados:
+              Filtros avanzados:
             </span>
 
             <input
@@ -371,111 +208,116 @@ function GestionUsuarios() {
               }}
             >
               <option value="">Estado</option>
-              <option value="activo">Activo</option>
-              <option value="inactivo">Inactivo</option>
+              <option value="true">Activo</option>
+              <option value="false">Inactivo</option>
             </select>
           </section>
 
+          {error && (
+            <div className={styles.errorMessage} role="alert">
+              <span>{error}</span>
+
+              <button type="button" onClick={cargarUsuarios}>
+                Reintentar
+              </button>
+            </div>
+          )}
+
           <section className={styles.tableCard}>
             <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Contacto</th>
-                    <th>Mascotas</th>
-                    <th>
-                      Registro
-                      <br />
-                      Últ. Ingreso
-                    </th>
-                    <th>
-                      Turnos
-                      <br />
-                      (Próx | Pas)
-                    </th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
+              {cargando ? (
+                <div className={styles.loadingState}>
+                  Cargando usuarios...
+                </div>
+              ) : (
+                <>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Nombre</th>
+                        <th>Contacto</th>
+                        <th>Mascotas</th>
+                        <th>Registro</th>
+                        <th>
+                          Turnos
+                          <br />
+                          (Próx | Pas)
+                        </th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
 
-                <tbody>
-                  {usuariosPaginados.map((usuario) => (
-                    <tr key={usuario.id}>
-                      <td>{usuario.id}</td>
+                    <tbody>
+                      {usuarios.map((usuario) => (
+                        <tr key={usuario.id}>
+                          <td>{usuario.nombre}</td>
 
-                      <td>{usuario.nombre}</td>
+                          <td>
+                            <span>{usuario.email}</span>
+                            <span>{usuario.telefono || "Sin teléfono"}</span>
+                          </td>
 
-                      <td>
-                        <span>{usuario.email}</span>
-                        <span>{usuario.telefono}</span>
-                      </td>
+                          <td>
+                            <span className={styles.petCount}>
+                              {usuario.mascotas}
+                            </span>
+                          </td>
 
-                      <td>
-                        <span className={styles.petCount}>
-                          {usuario.mascotas}
-                        </span>
-                      </td>
+                          <td>{formatearFecha(usuario.registro)}</td>
 
-                      <td>
-                        <span>{usuario.fechaRegistro}</span>
-                        <span>{usuario.ultimoIngreso}</span>
-                      </td>
+                          <td>
+                            {usuario.turnos?.proximos ?? 0} |{" "}
+                            {usuario.turnos?.pasados ?? 0}
+                          </td>
 
-                      <td>
-                        {usuario.turnosProximos} | {usuario.turnosPasados}
-                      </td>
+                          <td>
+                            <button
+                              type="button"
+                              className={`${styles.toggle} ${
+                                usuario.active ? styles.toggleActive : ""
+                              }`}
+                              onClick={() => cambiarEstado(usuario)}
+                              disabled={usuarioActualizando === usuario.id}
+                              aria-label={
+                                usuario.active
+                                  ? `Desactivar a ${usuario.nombre}`
+                                  : `Activar a ${usuario.nombre}`
+                              }
+                            >
+                              <span />
+                            </button>
+                          </td>
 
-                      <td>
-                        <button
-                          type="button"
-                          className={`${styles.toggle} ${
-                            usuario.activo ? styles.toggleActive : ""
-                          }`}
-                          onClick={() => cambiarEstado(usuario.id)}
-                          aria-label={
-                            usuario.activo
-                              ? `Desactivar a ${usuario.nombre}`
-                              : `Activar a ${usuario.nombre}`
-                          }
-                        >
-                          <span />
-                        </button>
-                      </td>
+                          <td>
+                            <div className={styles.actions}>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setUsuarioSeleccionado(usuario)
+                                }
+                                aria-label={`Ver información de ${usuario.nombre}`}
+                                title="Ver información"
+                              >
+                                <Eye size={17} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
 
-                      <td>
-                        <div className={styles.actions}>
-                         <button
-                     type="button"
-                     aria-label={`Ver información de ${usuario.nombre}`}
-                     title="Ver información"
-                    >
-                    <Eye size={17} />
-                    </button>
-
-                <button
-                  type="button"
-                    aria-label={`Gestionar acceso de ${usuario.nombre}`}
-                    title="Gestionar acceso"
-                    >
-                <KeyRound size={17} />
-                </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {usuariosFiltrados.length === 0 && (
-                <p className={styles.emptyState}>
-                  No se encontraron dueños con esos filtros.
-                </p>
+                  {usuarios.length === 0 && !error && (
+                    <p className={styles.emptyState}>
+                      No se encontraron dueños con esos filtros.
+                    </p>
+                  )}
+                </>
               )}
             </div>
 
-            {usuariosFiltrados.length > 0 && (
+            {!cargando && !error && usuarios.length > 0 && (
               <div className={styles.pagination}>
                 <button
                   type="button"
@@ -492,7 +334,7 @@ function GestionUsuarios() {
                     <button
                       type="button"
                       key={numeroPagina}
-                      onClick={() => cambiarPagina(numeroPagina)}
+                      onClick={() => setPaginaActual(numeroPagina)}
                       className={
                         paginaActual === numeroPagina
                           ? styles.activePage
@@ -516,6 +358,76 @@ function GestionUsuarios() {
           </section>
         </main>
       </div>
+
+      {usuarioSeleccionado && (
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setUsuarioSeleccionado(null)}
+        >
+          <div
+            className={styles.modal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="titulo-modal-usuario"
+            onClick={(evento) => evento.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <h2 id="titulo-modal-usuario">
+                  Información del dueño
+                </h2>
+
+                <p>{usuarioSeleccionado.nombre}</p>
+              </div>
+
+              <button
+                type="button"
+                className={styles.closeButton}
+                onClick={() => setUsuarioSeleccionado(null)}
+                aria-label="Cerrar modal"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className={styles.modalContent}>
+              <p>
+                <strong>Email:</strong> {usuarioSeleccionado.email}
+              </p>
+
+              <p>
+                <strong>Teléfono:</strong>{" "}
+                {usuarioSeleccionado.telefono || "Sin teléfono"}
+              </p>
+
+              <p>
+                <strong>Mascotas:</strong>{" "}
+                {usuarioSeleccionado.mascotas}
+              </p>
+
+              <p>
+                <strong>Fecha de registro:</strong>{" "}
+                {formatearFecha(usuarioSeleccionado.registro)}
+              </p>
+
+              <p>
+                <strong>Turnos próximos:</strong>{" "}
+                {usuarioSeleccionado.turnos?.proximos ?? 0}
+              </p>
+
+              <p>
+                <strong>Turnos pasados:</strong>{" "}
+                {usuarioSeleccionado.turnos?.pasados ?? 0}
+              </p>
+
+              <p>
+                <strong>Estado:</strong>{" "}
+                {usuarioSeleccionado.active ? "Activo" : "Inactivo"}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
