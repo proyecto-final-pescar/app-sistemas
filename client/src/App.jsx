@@ -20,9 +20,9 @@ import Registro from "./pages/public/Registro/Registro";
 import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
-
 import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
 import NotFound from "./pages/NotFound/NotFound";
+import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
 
 function App() {
   return (
@@ -115,7 +115,7 @@ function App() {
           path="/veterinarias"
           element={
             <PrivateRoute allowedRoles={["dueno"]}>
-              <h1>Sección Veterinarias</h1>
+              <BuscarVeterinaria />
             </PrivateRoute>
           }
         />
@@ -164,7 +164,6 @@ function App() {
             </PrivateRoute>
           }
         />
-
         <Route path="/tutor/dashboard" element={<AdminDashboard />} />
 
         <Route path="/" element={<Landing />} />
