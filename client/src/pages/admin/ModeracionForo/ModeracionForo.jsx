@@ -18,6 +18,8 @@ export default function ModeracionForo() {
     const [modalBaja, setModalBaja] = useState(null);
     const [eliminando, setEliminando] = useState(false);
     const [filtroReportes, setFiltroReportes] = useState("");
+    const [paginaActual, setPaginaActual] = useState(1);
+    const ITEMS_POR_PAGINA = 10;
 
     useEffect(() => {
         const cargar = async () => {
@@ -81,6 +83,13 @@ export default function ModeracionForo() {
         return coincideBusqueda && coincideEstado && coincideZona && coincideReportes;
     });
 
+    const totalPaginas = Math.ceil(publicacionesFiltradas.length / ITEMS_POR_PAGINA);
+
+    const publicacionesPaginadas = publicacionesFiltradas.slice(
+        (paginaActual - 1) * ITEMS_POR_PAGINA,
+        paginaActual * ITEMS_POR_PAGINA
+    );
+
     return (
         <div className={styles.shell}>
             <Sidebar />
@@ -99,7 +108,7 @@ export default function ModeracionForo() {
                             placeholder="Buscar publicación..."
                             className={styles.buscador}
                             value={busqueda}
-                            onChange={(e) => setBusqueda(e.target.value)}
+                            onChange={(e) => { setBusqueda(e.target.value); setPaginaActual(1); }}
                         />
                     </div>
 
@@ -112,7 +121,7 @@ export default function ModeracionForo() {
                         <select
                             className={styles.select}
                             value={filtroEstado}
-                            onChange={(e) => setFiltroEstado(e.target.value)}
+                            onChange={(e) => { setFiltroEstado(e.target.value); setPaginaActual(1); }}
                         >
                             <option value="">Estado</option>
                             <option value="activa">Activa</option>
@@ -121,7 +130,7 @@ export default function ModeracionForo() {
                         <select
                             className={styles.select}
                             value={filtroReportes}
-                            onChange={(e) => setFiltroReportes(e.target.value)}
+                            onChange={(e) => { setFiltroZona(e.target.value); setPaginaActual(1); }}
                         >
                             <option value="">Reportes</option>
                             <option value="1-5">1 a 5 reportes</option>
@@ -133,7 +142,7 @@ export default function ModeracionForo() {
                             placeholder="Zona (Ej. Palermo)"
                             className={styles.inputZona}
                             value={filtroZona}
-                            onChange={(e) => setFiltroZona(e.target.value)}
+                            onChange={(e) => { setFiltroReportes(e.target.value); setPaginaActual(1); }}
                         />
                     </div>
 
@@ -173,7 +182,7 @@ export default function ModeracionForo() {
                                         </td>
                                     </tr>
                                 )}
-                                {!loading && !error && publicacionesFiltradas.map((item) => {
+                                {!loading && !error && publicacionesPaginadas.map((item) => {
                                     const pub = item.publicacion;
                                     const fecha = pub?.createdAt
                                         ? new Date(pub.createdAt).toLocaleDateString("es-AR")
@@ -241,11 +250,31 @@ export default function ModeracionForo() {
 
                     {/* Paginación placeholder */}
                     <div className={styles.paginacion}>
-                        <button className={styles.btnPag}>← Anterior</button>
-                        <button className={`${styles.btnPag} ${styles.btnPagActivo}`}>1</button>
-                        <button className={styles.btnPag}>2</button>
-                        <button className={styles.btnPag}>3</button>
-                        <button className={styles.btnPag}>Siguiente →</button>
+                        <button
+                            className={styles.btnPag}
+                            onClick={() => setPaginaActual((p) => Math.max(p - 1, 1))}
+                            disabled={paginaActual === 1}
+                        >
+                            ← Anterior
+                        </button>
+
+                        {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((num) => (
+                            <button
+                                key={num}
+                                className={`${styles.btnPag} ${paginaActual === num ? styles.btnPagActivo : ""}`}
+                                onClick={() => setPaginaActual(num)}
+                            >
+                                {num}
+                            </button>
+                        ))}
+
+                        <button
+                            className={styles.btnPag}
+                            onClick={() => setPaginaActual((p) => Math.min(p + 1, totalPaginas))}
+                            disabled={paginaActual === totalPaginas || totalPaginas === 0}
+                        >
+                            Siguiente →
+                        </button>
                     </div>
 
                 </div>
