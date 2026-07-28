@@ -23,6 +23,8 @@ import Landing from "./pages/public/LandingPage/Landing";
 
 import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
 import NotFound from "./pages/NotFound/NotFound";
+import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
+
 
 function App() {
   return (
@@ -96,39 +98,10 @@ function App() {
             </PrivateRoute>
           }
         />
-
-        <Route
-          path="/tutor/veterinarias/:id"
-          element={<PerfilVeterinaria />}
-        />
-
-        <Route
-          path="/foro"
-          element={
-            <PrivateRoute allowedRoles={["dueno"]}>
-              <Foro />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/veterinarias"
-          element={
-            <PrivateRoute allowedRoles={["dueno"]}>
-              <h1>Sección Veterinarias</h1>
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/agenda"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <CitasAgendadas />
-            </PrivateRoute>
-          }
-        />
-
+        <Route path="/tutor/veterinarias/:id" element={<PerfilVeterinaria />} />
+        <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
+        <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><BuscarVeterinaria /></PrivateRoute>} />
+        <Route path="/agenda" element={<PrivateRoute allowedRoles={["veterinaria"]}><CitasAgendadas /></PrivateRoute>} />
         <Route
           path="/historial/registrar/:turnoId"
           element={
@@ -137,34 +110,9 @@ function App() {
             </PrivateRoute>
           }
         />
-
-        <Route
-          path="/urgencias"
-          element={
-            <PrivateRoute allowedRoles={["dueno"]}>
-              <Emergencias />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/admin"
-          element={
-            <PrivateRoute allowedRoles={["administrador"]}>
-              <AdminDashboard />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute allowedRoles={["administrador"]}>
-              <AdminDashboard />
-            </PrivateRoute>
-          }
-        />
-
+        <Route path="/urgencias" element={<PrivateRoute allowedRoles={["dueno"]}><Emergencias /></PrivateRoute>} />
+        <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
+        <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/tutor/dashboard" element={<AdminDashboard />} />
 
         <Route path="/" element={<Landing />} />

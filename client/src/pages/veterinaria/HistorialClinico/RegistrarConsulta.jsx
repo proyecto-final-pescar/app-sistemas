@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 import Input from "../../../components/ui/input/Input";
 import Button from "../../../components/ui/button/Button";
@@ -7,9 +7,7 @@ import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 
 import "./RegistrarConsulta.css";
-const API_URL = `${
-  import.meta.env.VITE_API_URL || "http://localhost:3000"
-}/api`;
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 const estadoInicialFormulario = {
   nombreDueno: "",
@@ -75,6 +73,7 @@ function obtenerNombrePersona(persona) {
 
 function RegistrarConsulta() {
   const { turnoId } = useParams();
+  const navigate = useNavigate();
 
   const [pasoActual, setPasoActual] = useState(1);
 
@@ -88,6 +87,8 @@ function RegistrarConsulta() {
 
   const [form, setForm] = useState(estadoInicialFormulario);
   const [errores, setErrores] = useState({});
+
+  
 
   useEffect(() => {
     const obtenerTurno = async () => {
@@ -124,163 +125,56 @@ function RegistrarConsulta() {
           }
         );
 
-       const datos = await respuesta.json().catch(() => ({}));
-
-        console.log(
-          "Respuesta GET /api/turnos/:turnoId:",
-          datos
-        );
+        const datos = await respuesta.json().catch(() => ({}));
 
         if (!respuesta.ok) {
           throw new Error(
             datos.message ||
-              "No se pudo cargar la información del turno."
+            "No se pudo cargar la información del turno."
           );
         }
-        const turno =
-          datos.turno ||
-          datos.data?.turno ||
-          datos.data ||
-          datos;
 
-      
-         const mascota =
-          typeof turno.mascotaId === "object"
-            ? turno.mascotaId
-            : turno.mascota ||
-              turno.mascotaData ||
-              {};
+        const turno = datos.data;
 
-        const dueno =
-          typeof turno.usuarioId === "object"
-            ? turno.usuarioId
-            : mascota.usuarioId ||
-              mascota.dueno ||
-              mascota.tutor ||
-              turno.usuario ||
-              turno.dueno ||
-              turno.tutor ||
-              {};
+        const mascota = turno.mascotaId;
+        const dueno = turno.usuarioId;
+        const veterinaria = turno.veterinariaId;
 
-        const profesional =
-          typeof turno.profesionalId === "object"
-            ? turno.profesionalId
-            : turno.profesional ||
-              turno.veterinario ||
-              turno.veterinarioId ||
-              {};
-
-        const mascotaIdObtenido =
-          obtenerId(turno.mascotaId) ||
-          obtenerId(mascota);
-
-        const profesionalIdObtenido =
-          obtenerId(turno.profesionalId) ||
-          obtenerId(turno.profesional) ||
-          obtenerId(turno.veterinarioId) ||
-          obtenerId(profesional);
-
-        const nombreProfesionalObtenido =
-          obtenerNombrePersona(profesional) ||
-          turno.nombreProfesional ||
-          turno.profesionalNombre ||
-          "";
-
-        setNombreProfesional(
-          nombreProfesionalObtenido ||
-            "Profesional asignado"
+        const profesional = veterinaria?.profesionales?.find(
+          (p) => p._id.toString() === turno.profesionalId?.toString()
         );
+
+        setNombreProfesional(profesional?.nombre || "Profesional asignado");
 
         setForm((formAnterior) => ({
           ...formAnterior,
-
-          nombreDueno:
-            dueno.nombreCompleto ||
-            dueno.nombre ||
-            turno.nombreDueno ||
-            "",
-
-          email:
-            dueno.email ||
-            turno.emailDueno ||
-            "",
-
-          mascotaId:
-            mascotaIdObtenido,
-
-          nombreMascota:
-            mascota.nombre ||
-            mascota.nombreMascota ||
-            turno.nombreMascota ||
-            "",
-
-          especie:
-            mascota.especie ||
-            turno.especie ||
-            "",
-
-          raza:
-            mascota.raza ||
-            turno.raza ||
-            "",
-
-          edad:
-            mascota.edad !== undefined &&
-            mascota.edad !== null
-              ? String(mascota.edad)
-              : mascota.fechaNacimiento ||
-                turno.edad ||
-                "",
-
-          sexo:
-            mascota.sexo ||
-            turno.sexo ||
-            "",
-
-          peso:
-            mascota.peso !== undefined &&
-            mascota.peso !== null
-              ? String(mascota.peso)
-              : turno.peso ||
-                "",
-
-          profesionalId:
-            profesionalIdObtenido,
-
-          fecha:
-            convertirFechaParaInput(turno.fecha),
-
-          hora:
-            turno.hora ||
-            turno.horario ||
-            "",
-
-          categoriaServicio:
-            turno.categoriaServicio ||
-            turno.categoria ||
-            turno.servicio?.categoria ||
-            turno.servicio?.nombre ||
-            turno.tipoConsulta ||
-            "Consulta",
-
-          motivoConsulta:
-            turno.motivoConsulta ||
-            turno.motivo ||
-            "",
+          nombreDueno: dueno?.name || "",
+          email: dueno?.email || "",
+          mascotaId: mascota?._id || "",
+          nombreMascota: mascota?.nombre || "",
+          especie: mascota?.especie || "",
+          raza: mascota?.raza || "",
+          edad: mascota?.fechaNacimiento
+            ? convertirFechaParaInput(mascota.fechaNacimiento)
+            : "",
+          sexo: mascota?.sexo || "",
+          peso: mascota?.peso != null ? String(mascota.peso) : "",
+          profesionalId: turno.profesionalId || "",
+          fecha: convertirFechaParaInput(turno.fecha),
+          hora: turno.hora || "",
+          categoriaServicio: turno.categoriaServicio || "Consulta",
+          motivoConsulta: turno.motivo || "",
         }));
 
-        if (!mascotaIdObtenido) {
-          setErrorApi(
-            "El turno no tiene una mascota asociada correctamente."
-          );
+        if (!mascota?._id) {
+          setErrorApi("El turno no tiene una mascota asociada correctamente.");
           return;
         }
 
-        if (!profesionalIdObtenido) {
-          setErrorApi(
-            "El turno no tiene un profesional asociado. El backend debe incluir profesionalId en la respuesta del turno."
-          );
+        if (!turno.profesionalId) {
+          setErrorApi("El turno no tiene un profesional asociado.");
         }
+
       } catch (error) {
         console.error(
           "Error al obtener el turno:",
@@ -289,7 +183,7 @@ function RegistrarConsulta() {
 
         setErrorApi(
           error.message ||
-            "Ocurrió un error al cargar la información del turno."
+          "Ocurrió un error al cargar la información del turno."
         );
       } finally {
         setIsLoadingTurno(false);
@@ -429,11 +323,6 @@ function RegistrarConsulta() {
       monto: Number(form.monto),
     };
 
-    console.log(
-      "Body enviado al backend:",
-      body
-    );
-
     setIsLoading(true);
 
     try {
@@ -454,7 +343,7 @@ function RegistrarConsulta() {
       if (!respuesta.ok) {
         throw new Error(
           datos.message ||
-            "Error al registrar la consulta."
+          "Error al registrar la consulta."
         );
       }
 
@@ -468,10 +357,11 @@ function RegistrarConsulta() {
         "Error al registrar la consulta:",
         error
       );
+      setTimeout(() => navigate("/agenda"), 1500);
 
       setErrorApi(
         error.message ||
-          "Error de conexión. Intentá nuevamente."
+        "Error de conexión. Intentá nuevamente."
       );
     } finally {
       setIsLoading(false);
@@ -702,11 +592,10 @@ function RegistrarConsulta() {
                     </label>
 
                     <textarea
-                      className={`registrar-consulta-textarea ${
-                        errores.anotaciones
+                      className={`registrar-consulta-textarea ${errores.anotaciones
                           ? "registrar-consulta-textarea-error"
                           : ""
-                      }`}
+                        }`}
                       placeholder="Escribí las anotaciones de la consulta..."
                       value={form.anotaciones}
                       onChange={(event) =>
