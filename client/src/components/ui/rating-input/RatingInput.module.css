@@ -1,0 +1,28 @@
+.contenedor {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.estrella {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 28px;
+  line-height: 1;
+  color: #e2e8f0; /* estrella vacía */
+  cursor: pointer;
+  transition: color 0.12s ease, transform 0.1s ease;
+}
+
+.estrella:hover:not(:disabled) {
+  transform: scale(1.1);
+}
+
+.estrella:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.llena {
+  color: #f59e0b; /* estrella seleccionada */
+}
