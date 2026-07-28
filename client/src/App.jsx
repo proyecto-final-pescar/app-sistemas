@@ -19,7 +19,7 @@ import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword  from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
 import GestionUsuarios from "./pages/admin/GestionUsuarios/GestionUsuarios";
-
+import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
 
 
 function App() {
@@ -43,7 +43,7 @@ function App() {
         />
         <Route path="/tutor/veterinarias/:id" element={<PerfilVeterinaria />} />
         <Route path="/foro"element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>}/>
-        <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><h1>Sección Veterinarias</h1></PrivateRoute>} />
+        <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><BuscarVeterinaria /></PrivateRoute>} />
         <Route path="/agenda" element={<PrivateRoute allowedRoles={["veterinaria"]}><CitasAgendadas /></PrivateRoute>} />
         <Route path="/urgencias" element={<PrivateRoute allowedRoles={["dueno"]}><Emergencias /></PrivateRoute>} />
         <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
