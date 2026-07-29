@@ -5,7 +5,6 @@ import CitasAgendadas from "./pages/veterinaria/CitasAgendadas/CitasAgendadas";
 import RegistrarConsulta from "./pages/veterinaria/HistorialClinico/RegistrarConsulta";
 import RegistroDeVeterinaria from "./pages/veterinaria/RegistroDeVeterinaria/RegistroDeVeterinaria";
 import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
-
 import MisTurnos from "./pages/tutor/MisTurnos/MisTurnos";
 import MisMascotas from "./pages/tutor/MisMascotas/MisMascotas";
 import Turnos from "./pages/tutor/Turnos/Turnos";
@@ -14,11 +13,11 @@ import PerfilVeterinaria from "./pages/tutor/Turnos/PerfilVeterinaria";
 import Foro from "./pages/tutor/Foro/Foro";
 import Emergencias from "./pages/tutor/Emergencias/Emergencias";
 import HomeTutor from "./pages/tutor/HomeTutor/HomeTutor";
-import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
 import GestionVeterinarias from './pages/admin/GestionVeterinarias/GestionVeterinarias';
 import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
+import PerfilUsuario from "./pages/perfilUsuario/PerfilUsuario";
 import Login from "./pages/public/Login/Login";
 import Registro from "./pages/public/Registro/Registro";
 import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
@@ -65,6 +64,7 @@ function App() {
         <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/tutor/dashboard" element={<AdminDashboard />} />
+        <Route path="/perfil" element={<PerfilUsuario />} />
         <Route path="/admin/veterinarias" element={<PrivateRoute allowedRoles={["administrador"]}><GestionVeterinarias /></PrivateRoute>} />
         <Route path="/" element={<Landing />} />
         <Route path="*" element={<NotFound />} />
