@@ -16,10 +16,11 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export const subirImagen = async (archivo) => {
+export const subirImagen = async (archivo, carpeta = "mascotas") => {
   const formData = new FormData();
 
   formData.append("imagen", archivo);
+  formData.append("carpeta", carpeta);
 
   const { data } = await api.post("/upload", formData, {
     headers: {

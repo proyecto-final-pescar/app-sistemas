@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Mascota from '../models/Mascota.js';
+import Veterinaria from '../models/Veterinaria.js';
 import Turno from '../models/Turno.js';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
@@ -126,18 +127,39 @@ export const obtenerPerfilUsuario = async (req, res) => {
             });
         }
 
-        // Buscar las mascotas de ese usuario
-        const mascotas = await Mascota.find({ dueñoId: id });
+        // Datos adicionales según el rol: mascotas para dueños,
+        // ficha de la clínica para veterinarias. Admin no tiene ninguno.
+        let mascotas = [];
+        let veterinaria = null;
+
+        if (usuario.role === 'dueno') {
+            mascotas = await Mascota.find({ dueñoId: id });
+        } else if (usuario.role === 'veterinaria') {
+            const vet = await Veterinaria.findOne({ usuarioId: id })
+                .select('nombre especialidades estado');
+            if (vet) {
+                veterinaria = {
+                    nombre: vet.nombre,
+                    especialidades: vet.especialidades,
+                    estado: vet.estado
+                };
+            }
+        }
 
         // Armar la respuesta con los datos pedidos
         res.status(200).json({
             success: true,
             data: {
+                id: usuario._id,
                 nombre: usuario.name,
                 email: usuario.email,
+                telefono: usuario.telefono || null,
+                zona: usuario.zona || null,
+                fotoUrl: usuario.fotoUrl || null,
                 rol: usuario.role,
                 fechaRegistro: usuario.createdAt,
-                mascotas: mascotas
+                mascotas: mascotas,
+                veterinaria: veterinaria
             }
         });
 
@@ -429,6 +451,111 @@ export const actualizarUsuarioAdmin = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Error interno del servidor al intentar actualizar el usuario.'
+        });
+    }
+};
+
+// AUTO-EDICION DE PERFIL
+// El id se toma del token para que
+// sea imposible editar el perfil de otro usuario
+export const actualizarPerfilPropio = async (req, res) => {
+    try {
+        const usuarioId = req.user.id;
+        const { name, email, telefono, zona,fotoUrl } = req.body;
+
+        const usuario = await User.findById(usuarioId);
+        if (!usuario) {
+            return res.status(404).json({
+                success: false,
+                message: 'El usuario no existe.'
+            });
+        }
+
+        const validaciones = [];
+
+        if (name !== undefined) {
+            if (name.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(name.trim())) {
+                validaciones.push('El nombre debe tener al menos 3 caracteres y contener solo letras.');
+            } else {
+                usuario.name = name.trim();
+            }
+        }
+
+        if (email !== undefined) {
+            const emailLimpio = email.toLowerCase().trim();
+            if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(emailLimpio)) {
+                validaciones.push('El formato del email no es válido.');
+            } else {
+                const emailOcupado = await User.findOne({ email: emailLimpio, _id: { $ne: usuarioId } });
+                if (emailOcupado) {
+                    return res.status(409).json({
+                        success: false,
+                        message: 'Ese email ya está en uso por otra cuenta.'
+                    });
+                }
+                usuario.email = emailLimpio;
+            }
+        }
+
+        if (telefono !== undefined) {
+            const telefonoLimpio = telefono === null ? '' : telefono.trim();
+            if (telefonoLimpio === '') {
+                usuario.telefono = undefined;
+            } else if (!/^[\d\s()+-]{6,20}$/.test(telefonoLimpio)) {
+                validaciones.push('El teléfono debe contener solo números, espacios, +, - o paréntesis (6 a 20 caracteres).');
+            } else {
+                usuario.telefono = telefonoLimpio;
+            }
+        }
+
+        if (zona !== undefined) {
+            const zonaLimpia = zona === null ? '' : zona.trim();
+            if (zonaLimpia !== '' && zonaLimpia.length < 3) {
+                validaciones.push('La zona debe tener al menos 3 caracteres.');
+            } else {
+                usuario.zona = zonaLimpia === '' ? undefined : zonaLimpia;
+            }
+        } 
+        if (fotoUrl !== undefined) {
+            
+            usuario.fotoUrl = (fotoUrl === null || fotoUrl === '') ? undefined : fotoUrl.trim();
+        }
+
+        if (validaciones.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Error de validación en los datos ingresados.',
+                errors: validaciones
+            });
+        }
+
+        await usuario.save();
+
+        const userResponse = usuario.toObject();
+        delete userResponse.password;
+        delete userResponse.resetPasswordToken;
+        delete userResponse.resetPasswordExpires;
+
+        return res.status(200).json({
+            success: true,
+            message: 'Perfil actualizado correctamente.',
+            data: userResponse
+        });
+
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(val => val.message);
+            return res.status(400).json({
+                success: false,
+                message: 'Error en los datos proporcionados',
+                errors: messages
+            });
+        }
+
+        console.error('Error en actualizarPerfilPropio:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor al intentar actualizar el perfil.'
         });
     }
 };
