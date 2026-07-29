@@ -22,7 +22,7 @@
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
 }
 
-/* ── Header ── */
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -57,7 +57,15 @@
   text-overflow: ellipsis;
 }
 
-/* ── Badge abierto/cerrado ── */
+/* ── calificacion ── */
+.rating {
+  color: #b45309;
+  font-weight: 700;
+  margin-left: 8px;
+  font-size: 0.85rem;
+}
+
+/* ── Badge abierto/cerrado  ── */
 .badge {
   font-size: 0.7rem;
   font-weight: 700;
@@ -124,7 +132,7 @@
   letter-spacing: 0.01em;
 }
 
-/* ── Botón ── */
+/* ── Botón (variante grid) ── */
 .btn {
   width: 100%;
   padding: 11px;
@@ -145,5 +153,74 @@
 }
 
 .btn:active {
+  transform: translateY(0);
+}
+
+/* para cuando la card esta en el home*/
+.fila {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  gap: 16px;
+  cursor: default;
+}
+
+.fila:hover {
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.12);
+  border-color: #c4b5fd;
+  transform: none; 
+}
+
+.filaInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.filaInfo .nombre,
+.filaInfo .direccion {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.horarioFila {
+  font-size: 0.78rem;
+  color: #4b5563;
+  margin: 0;
+}
+
+.textoAbierto {
+  color: #065f46;
+  font-weight: 700;
+}
+
+.textoCerrado {
+  color: #991b1b;
+  font-weight: 700;
+}
+
+.btnFila {
+  flex-shrink: 0;
+  padding: 11px 22px;
+  background: #7c3aed;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+  letter-spacing: 0.01em;
+}
+
+.btnFila:hover {
+  background: #6d28d9;
+  transform: translateY(-1px);
+}
+
+.btnFila:active {
   transform: translateY(0);
 }

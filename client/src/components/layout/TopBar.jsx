@@ -117,26 +117,42 @@ const inicial = usuario?.nombre
 
        
       {/* Avatar del usuario */}
-<div
-  title={usuario?.name || "Usuario"}
-  style={{
-    width: "40px",
-    height: "40px",
-    borderRadius: "50%",
-    backgroundColor: "#7c3aed",
-    color: "#ffffff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    flexShrink: 0,
-    fontWeight: "700",
-    fontSize: "16px",
-    textTransform: "uppercase",
-  }}
->
-  {inicial}
-</div>
+{usuario?.fotoUrl ? (
+  <img
+    src={usuario.fotoUrl}
+    alt={usuario?.nombre || usuario?.name || "Usuario"}
+    title={usuario?.nombre || usuario?.name || "Usuario"}
+    style={{
+      width: "40px",
+      height: "40px",
+      borderRadius: "50%",
+      objectFit: "cover",
+      cursor: "pointer",
+      flexShrink: 0,
+    }}
+  />
+) : (
+  <div
+    title={usuario?.nombre || usuario?.name || "Usuario"}
+    style={{
+      width: "40px",
+      height: "40px",
+      borderRadius: "50%",
+      backgroundColor: "#7c3aed",
+      color: "#ffffff",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      flexShrink: 0,
+      fontWeight: "700",
+      fontSize: "16px",
+      textTransform: "uppercase",
+    }}
+  >
+    {inicial}
+  </div>
+)}
       </div>
     </header>
   );
