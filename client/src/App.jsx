@@ -17,6 +17,9 @@ import GestionVeterinarias from './pages/admin/GestionVeterinarias/GestionVeteri
 import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
+import GestionUsuarios from "./pages/admin/GestionUsuarios/GestionUsuarios";
+import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
+
 import PerfilUsuario from "./pages/perfilUsuario/PerfilUsuario";
 import Login from "./pages/public/Login/Login";
 import Registro from "./pages/public/Registro/Registro";
@@ -64,6 +67,9 @@ function App() {
         <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/tutor/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin-duenos" element={<PrivateRoute allowedRoles={["administrador"]}><GestionUsuarios /></PrivateRoute> }/>
+        
+
         <Route path="/perfil" element={<PerfilUsuario />} />
         <Route path="/admin/veterinarias" element={<PrivateRoute allowedRoles={["administrador"]}><GestionVeterinarias /></PrivateRoute>} />
         <Route path="/" element={<Landing />} />

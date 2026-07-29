@@ -5,6 +5,10 @@ import Turno from '../models/Turno.js';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
 
+// Escapa caracteres especiales de regex antes de usarlos en $regex.
+
+const escapeRegex = (texto) =>
+    texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // GET /usuarios: listado paginado de usuarios 
 //  panel "Gestión de Dueños"
@@ -26,13 +30,13 @@ export const listarUsuarios = async (req, res) => {
         const filtro = { role: 'dueno' };
 
         if (nombre) {
-            filtro.name = { $regex: nombre.trim(), $options: 'i' };
+            filtro.name = { $regex: escapeRegex(nombre.trim()), $options: 'i' };
         }
         if (email) {
-            filtro.email = { $regex: email.trim(), $options: 'i' };
+            filtro.email = { $regex: escapeRegex(email.trim()), $options: 'i' };
         }
         if (telefono) {
-            filtro.telefono = { $regex: telefono.trim(), $options: 'i' };
+            filtro.telefono = { $regex: escapeRegex(telefono.trim()), $options: 'i' };
         }
         if (estado === 'true' || estado === 'false') {
             filtro.active = estado === 'true';
@@ -98,7 +102,6 @@ export const listarUsuarios = async (req, res) => {
         });
     }
 };
-
 
 // GET /usuarios/:id: devuelve el perfil de un usuario junto con sus mascotas
 export const obtenerPerfilUsuario = async (req, res) => {
