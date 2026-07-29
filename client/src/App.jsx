@@ -1,11 +1,9 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./components/PrivateRoute";
-
 import CitasAgendadas from "./pages/veterinaria/CitasAgendadas/CitasAgendadas";
 import RegistrarConsulta from "./pages/veterinaria/HistorialClinico/RegistrarConsulta";
 import RegistroDeVeterinaria from "./pages/veterinaria/RegistroDeVeterinaria/RegistroDeVeterinaria";
 import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
-
 import MisTurnos from "./pages/tutor/MisTurnos/MisTurnos";
 import MisMascotas from "./pages/tutor/MisMascotas/MisMascotas";
 import Turnos from "./pages/tutor/Turnos/Turnos";
@@ -14,7 +12,6 @@ import PerfilVeterinaria from "./pages/tutor/Turnos/PerfilVeterinaria";
 import Foro from "./pages/tutor/Foro/Foro";
 import Emergencias from "./pages/tutor/Emergencias/Emergencias";
 import HomeTutor from "./pages/tutor/HomeTutor/HomeTutor";
-import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
 import GestionVeterinarias from './pages/admin/GestionVeterinarias/GestionVeterinarias';
 import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/public/ResetPassword/ResetPassword";
