@@ -110,6 +110,37 @@ export const reservarTurno = async (req, res) => {
   }
 };
 
+export const obtenerTurnoPorId = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const turno = await Turno.findById(id)
+      .populate('mascotaId', 'nombre especie raza fechaNacimiento sexo peso')
+      .populate('usuarioId', 'name email')
+      .populate('veterinariaId', 'nombre profesionales');
+
+    if (!turno) {
+      return res.status(404).json({ message: 'El recurso no existe.' });
+    }
+
+    if (turno.usuarioId?.toString() !== req.user.id && req.user.role !== 'administrador') {
+      const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id });
+      if (!veterinaria || turno.veterinariaId?._id?.toString() !== veterinaria._id.toString()) {
+        return res.status(403).json({ message: 'No tenés permisos para ver este turno.' });
+      }
+    }
+
+    res.status(200).json({ success: true, data: turno });
+
+  } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'El id del turno no es válido' });
+    }
+    console.error('Error en obtenerTurnoPorId:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 // PATCH /turnos/:id/cancelar (protegido con ownerTurno)
 export const cancelarTurno = async (req, res) => {
   try {
