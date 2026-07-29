@@ -18,8 +18,6 @@ import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
 import GestionUsuarios from "./pages/admin/GestionUsuarios/GestionUsuarios";
-import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
-
 import PerfilUsuario from "./pages/perfilUsuario/PerfilUsuario";
 import Login from "./pages/public/Login/Login";
 import Registro from "./pages/public/Registro/Registro";
