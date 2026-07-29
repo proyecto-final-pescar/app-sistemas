@@ -22,12 +22,37 @@
   gap: 20px;
 }
 
-/* ── Encabezado: nombre + volver ──────────────────────────── */
+/* ── Encabezado: nombre + calificacion +btn de agendar ─────────── */
 .perfil-vet__header {
   display: flex;
   align-items: center;
+  justify-content: space-between; 
   gap: 16px;
   margin-bottom: 8px;
+}
+
+.perfil-vet__title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.perfil-vet__rating {
+  color: #b45309;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.perfil-vet__rating-count {
+  color: #94a3b8;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.perfil-vet__rating-error {
+  color: #ef4444;
+  font-size: 13px;
+  margin-top: 8px;
 }
 
 .perfil-vet__back-btn {
@@ -292,6 +317,11 @@
 
 /* ── Responsive ───────────────────────────────────────────── */
 @media (max-width: 600px) {
+  .perfil-vet__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .perfil-vet__info-grid {
     grid-template-columns: 1fr;
   }
