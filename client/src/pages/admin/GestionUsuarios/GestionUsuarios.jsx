@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Eye, X } from "lucide-react";
 
 import Sidebar from "../../../components/layout/Sidebar";
@@ -11,7 +11,7 @@ import {
 
 import styles from "./GestionUsuarios.module.css";
 
-const USUARIOS_POR_PAGINA = 4;
+const USUARIOS_POR_PAGINA = 10;
 
 const formatearFecha = (fecha) => {
   if (!fecha) {
@@ -24,11 +24,21 @@ const formatearFecha = (fecha) => {
 function GestionUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
 
+  // Valores "en vivo": se actualizan en cada tecla, sin disparar fetch todavía.
   const [busqueda, setBusqueda] = useState("");
   const [filtroNombre, setFiltroNombre] = useState("");
   const [filtroEmail, setFiltroEmail] = useState("");
   const [filtroTelefono, setFiltroTelefono] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
+
+ 
+  const [filtrosAplicados, setFiltrosAplicados] = useState({
+    busqueda: "",
+    filtroNombre: "",
+    filtroEmail: "",
+    filtroTelefono: "",
+    filtroEstado: "",
+  });
 
   const [paginaActual, setPaginaActual] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
@@ -39,29 +49,54 @@ function GestionUsuarios() {
 
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
 
+  // NOTA 
+  // Si hay contenido en los filtros avanzados de Nombre o Email, el buscador
+  // general se deshabilita (en vez de quedar pisado ) para que el
+  // usuario entienda por qué no está buscando.
+  const busquedaGeneralDeshabilitada = Boolean(
+    filtroNombre.trim() || filtroEmail.trim()
+  );
+
+  // Referencia para poder abortar una petición anterior si todavía no
+  // termino cuando se dispara una nueva 
+  const controladorActualRef = useRef(null);
+
   const cargarUsuarios = useCallback(async () => {
+    controladorActualRef.current?.abort();
+    const controlador = new AbortController();
+    controladorActualRef.current = controlador;
+
     setCargando(true);
     setError("");
 
     try {
-      const busquedaLimpia = busqueda.trim();
+      const busquedaLimpia = filtrosAplicados.busqueda.trim();
 
       const respuesta = await listarUsuarios({
         nombre:
-          filtroNombre.trim() ||
+          filtrosAplicados.filtroNombre.trim() ||
           (!busquedaLimpia.includes("@") ? busquedaLimpia : ""),
         email:
-          filtroEmail.trim() ||
+          filtrosAplicados.filtroEmail.trim() ||
           (busquedaLimpia.includes("@") ? busquedaLimpia : ""),
-        telefono: filtroTelefono.trim(),
-        estado: filtroEstado,
+        telefono: filtrosAplicados.filtroTelefono.trim(),
+        estado: filtrosAplicados.filtroEstado,
         page: paginaActual,
         limit: USUARIOS_POR_PAGINA,
+        signal: controlador.signal,
       });
 
       setUsuarios(respuesta.data || []);
       setTotalPaginas(respuesta.pagination?.totalPages || 1);
     } catch (errorPeticion) {
+      
+      if (
+        errorPeticion.name === "CanceledError" ||
+        errorPeticion.code === "ERR_CANCELED"
+      ) {
+        return;
+      }
+
       console.error("Error al cargar usuarios:", errorPeticion);
 
       setUsuarios([]);
@@ -72,26 +107,32 @@ function GestionUsuarios() {
     } finally {
       setCargando(false);
     }
-  }, [
-    busqueda,
-    filtroNombre,
-    filtroEmail,
-    filtroTelefono,
-    filtroEstado,
-    paginaActual,
-  ]);
+  }, [filtrosAplicados, paginaActual]);
 
+  
   useEffect(() => {
     const temporizador = setTimeout(() => {
-      cargarUsuarios();
+      setFiltrosAplicados({
+        busqueda,
+        filtroNombre,
+        filtroEmail,
+        filtroTelefono,
+        filtroEstado,
+      });
+      setPaginaActual(1);
     }, 400);
 
     return () => clearTimeout(temporizador);
-  }, [cargarUsuarios]);
+  }, [busqueda, filtroNombre, filtroEmail, filtroTelefono, filtroEstado]);
 
-  const reiniciarPagina = () => {
-    setPaginaActual(1);
-  };
+  
+  useEffect(() => {
+    cargarUsuarios();
+
+    return () => {
+      controladorActualRef.current?.abort();
+    };
+  }, [cargarUsuarios]);
 
   const cambiarEstado = async (usuario) => {
     const nuevoEstado = !usuario.active;
@@ -136,6 +177,67 @@ function GestionUsuarios() {
     setPaginaActual((pagina) => Math.min(pagina + 1, totalPaginas));
   };
 
+
+  const modalRef = useRef(null);
+  const elementoConFocoPrevioRef = useRef(null);
+
+  useEffect(() => {
+    if (!usuarioSeleccionado) {
+      return;
+    }
+
+   
+    elementoConFocoPrevioRef.current = document.activeElement;
+
+    const nodoModal = modalRef.current;
+    const seleccionables =
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+    const obtenerFocosables = () =>
+      nodoModal
+        ? Array.from(nodoModal.querySelectorAll(seleccionables))
+        : [];
+
+    // Foco inicial dentro del modal.
+    const focosables = obtenerFocosables();
+    focosables[0]?.focus();
+
+    const manejarTeclado = (evento) => {
+      if (evento.key === "Escape") {
+        setUsuarioSeleccionado(null);
+        return;
+      }
+
+      if (evento.key !== "Tab") {
+        return;
+      }
+
+      const nodosFocosables = obtenerFocosables();
+      if (nodosFocosables.length === 0) {
+        return;
+      }
+
+      const primero = nodosFocosables[0];
+      const ultimo = nodosFocosables[nodosFocosables.length - 1];
+
+      if (evento.shiftKey && document.activeElement === primero) {
+        evento.preventDefault();
+        ultimo.focus();
+      } else if (!evento.shiftKey && document.activeElement === ultimo) {
+        evento.preventDefault();
+        primero.focus();
+      }
+    };
+
+    document.addEventListener("keydown", manejarTeclado);
+
+    return () => {
+      document.removeEventListener("keydown", manejarTeclado);
+      
+      elementoConFocoPrevioRef.current?.focus?.();
+    };
+  }, [usuarioSeleccionado]);
+
   return (
     <div className={styles.page}>
       <Sidebar role="administrador" activeItem="Dueños" />
@@ -149,19 +251,37 @@ function GestionUsuarios() {
 
         <main className={styles.content}>
           <section className={styles.toolbar}>
-            <div className={styles.searchBox}>
+            <div
+              className={styles.searchBox}
+              title={
+                busquedaGeneralDeshabilitada
+                  ? "Deshabilitado mientras usás el filtro de Nombre o Email"
+                  : undefined
+              }
+            >
               <span aria-hidden="true">⌕</span>
 
               <input
                 type="search"
-                placeholder="Buscar por nombre o email..."
+                placeholder={
+                  busquedaGeneralDeshabilitada
+                    ? "Buscador deshabilitado (hay un filtro avanzado activo)"
+                    : "Buscar por nombre o email..."
+                }
                 value={busqueda}
+                disabled={busquedaGeneralDeshabilitada}
                 onChange={(evento) => {
                   setBusqueda(evento.target.value);
-                  reiniciarPagina();
                 }}
               />
             </div>
+
+            {busquedaGeneralDeshabilitada && (
+              <p className={styles.searchHint}>
+                Buscador general deshabilitado: hay un filtro avanzado de
+                Nombre o Email activo. Borralo para volver a usarlo.
+              </p>
+            )}
           </section>
 
           <section className={styles.filters}>
@@ -176,7 +296,6 @@ function GestionUsuarios() {
               value={filtroNombre}
               onChange={(evento) => {
                 setFiltroNombre(evento.target.value);
-                reiniciarPagina();
               }}
             />
 
@@ -186,7 +305,6 @@ function GestionUsuarios() {
               value={filtroEmail}
               onChange={(evento) => {
                 setFiltroEmail(evento.target.value);
-                reiniciarPagina();
               }}
             />
 
@@ -196,7 +314,6 @@ function GestionUsuarios() {
               value={filtroTelefono}
               onChange={(evento) => {
                 setFiltroTelefono(evento.target.value);
-                reiniciarPagina();
               }}
             />
 
@@ -204,7 +321,6 @@ function GestionUsuarios() {
               value={filtroEstado}
               onChange={(evento) => {
                 setFiltroEstado(evento.target.value);
-                reiniciarPagina();
               }}
             >
               <option value="">Estado</option>
@@ -365,6 +481,7 @@ function GestionUsuarios() {
           onClick={() => setUsuarioSeleccionado(null)}
         >
           <div
+            ref={modalRef}
             className={styles.modal}
             role="dialog"
             aria-modal="true"

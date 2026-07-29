@@ -7,6 +7,10 @@ export const listarUsuarios = async ({
   estado = "",
   page = 1,
   limit = 4,
+  // signal: AbortSignal opcional. Permite que quien llama cancele una
+  // petición si ya no le interesa la respuesta  porque el
+  // usuario cambio de filtro y se disparo una peticion más nueva
+  signal,
 } = {}) => {
   const params = {
     page,
@@ -29,7 +33,7 @@ export const listarUsuarios = async ({
     params.estado = estado;
   }
 
-  const response = await api.get("/usuarios", { params });
+  const response = await api.get("/usuarios", { params, signal });
 
   return response.data;
 };
