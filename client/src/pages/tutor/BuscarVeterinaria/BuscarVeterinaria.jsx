@@ -8,7 +8,7 @@ import {
   getAllVeterinarias,
   buscarVeterinariasCercanas,
 } from "../../../services/veterinariaService";
-import { calcularEstadoApertura } from "../../../utils/horarios";
+import { calcularEstadoApertura } from "../../../utils/Horarios";
 import styles from "../../../pages/tutor/HomeTutor/HomeTutor.module.css";
 
 const RADIO_DEFAULT_METROS = 5000;
