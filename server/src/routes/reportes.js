@@ -8,7 +8,7 @@ import {
   crearReporte,
   cambiarEstadoReporte,
   eliminarReporte
-} from '../controllers/reporteController.js';
+} from '../controllers/ReporteController.js';
 
 const router = Router();
 
