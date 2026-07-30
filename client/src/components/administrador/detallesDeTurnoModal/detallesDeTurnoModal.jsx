@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { getTurnoAdminById } from "../../../services/adminService";
+import Badge from "../../ui/badge/Badge";
 import styles from "./detallesDeTurnoModal.module.css";
-
-const ESTADOS_VALIDOS = ["confirmado", "pendiente", "cancelado"];
 
 const obtenerIniciales = (nombre) => {
   if (!nombre) return "?";
@@ -74,11 +73,6 @@ function DetallesDeTurnoModal({ turnoId, onClose, onVerComprobante }) {
 
   if (!turnoId) return null;
 
-  const estadoClase =
-    turno && ESTADOS_VALIDOS.includes(turno.estado?.toLowerCase())
-      ? styles[turno.estado.toLowerCase()]
-      : styles.confirmado;
-
   const inicialesDueno = obtenerIniciales(turno?.usuarioId?.name);
 
   // Obtener nombre del profesional si existe profesionalId en el turno
@@ -126,9 +120,10 @@ function DetallesDeTurnoModal({ turnoId, onClose, onVerComprobante }) {
               <h2 id="detalles-turno-title" className={styles.title}>
                 Detalle del turno
               </h2>
-              <span className={`${styles.badge} ${estadoClase}`}>
-                {turno.estado}
-              </span>
+              <Badge
+                texto={turno.estado}
+                variante={turno.estado?.toLowerCase()}
+              />
             </div>
 
             {/* Sección: Información del turno */}

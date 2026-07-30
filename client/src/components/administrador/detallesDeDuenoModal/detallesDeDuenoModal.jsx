@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { obtenerUsuarioPorId } from "../../../services/adminService";
+import Badge from "../../ui/badge/Badge";
 import styles from "./detallesDeDuenoModal.module.css";
 
 const COLORES_MASCOTA = ["verde", "violeta"];
@@ -111,11 +112,10 @@ function DetallesDeDuenoModal({ duenoId, onClose }) {
                   <div className={styles.field}>
                     <span className={styles.label}>Estado</span>
                     <div>
-                      <span
-                        className={`${styles.badge} ${dueno.active ? styles.activa : styles.suspendida}`}
-                      >
-                        {dueno.active ? "Activa" : "Inactiva"}
-                      </span>
+                      <Badge
+                        texto={dueno.active ? "Activa" : "Inactiva"}
+                        variante={dueno.active ? "confirmado" : "cancelado"}
+                      />
                     </div>
                   </div>
 
