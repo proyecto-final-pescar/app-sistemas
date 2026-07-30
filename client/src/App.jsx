@@ -18,6 +18,7 @@ import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria
 import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword  from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
+import FichaPaciente from "./pages/veterinaria/HistorialClinico/FichaPaciente";
 
 
 
@@ -48,6 +49,7 @@ function App() {
         <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/tutor/dashboard" element={<AdminDashboard />} />
+        <Route path="/pacientes/:mascotaId" element={<PrivateRoute allowedRoles={["veterinaria"]}><FichaPaciente /></PrivateRoute>} />
         
 
         <Route path="/" element={<Landing />} />
