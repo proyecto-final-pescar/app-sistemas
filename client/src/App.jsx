@@ -5,7 +5,6 @@ import CitasAgendadas from "./pages/veterinaria/CitasAgendadas/CitasAgendadas";
 import RegistrarConsulta from "./pages/veterinaria/HistorialClinico/RegistrarConsulta";
 import RegistroDeVeterinaria from "./pages/veterinaria/RegistroDeVeterinaria/RegistroDeVeterinaria";
 import HomeVeterinaria from "./pages/veterinaria/HomeVeterinaria/HomeVeterinaria";
-
 import MisTurnos from "./pages/tutor/MisTurnos/MisTurnos";
 import MisMascotas from "./pages/tutor/MisMascotas/MisMascotas";
 import Turnos from "./pages/tutor/Turnos/Turnos";
@@ -14,13 +13,15 @@ import PerfilVeterinaria from "./pages/tutor/Turnos/PerfilVeterinaria";
 import Foro from "./pages/tutor/Foro/Foro";
 import Emergencias from "./pages/tutor/Emergencias/Emergencias";
 import HomeTutor from "./pages/tutor/HomeTutor/HomeTutor";
-
-import Login from "./pages/public/Login/Login";
-import Registro from "./pages/public/Registro/Registro";
+import GestionVeterinarias from './pages/admin/GestionVeterinarias/GestionVeterinarias';
 import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
 import ModeracionForo from "./pages/admin/ModeracionForo/ModeracionForo";
+import GestionUsuarios from "./pages/admin/GestionUsuarios/GestionUsuarios";
+import PerfilUsuario from "./pages/perfilUsuario/PerfilUsuario";
+import Login from "./pages/public/Login/Login";
+import Registro from "./pages/public/Registro/Registro";
 import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
 import NotFound from "./pages/NotFound/NotFound";
 import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
@@ -41,8 +42,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/register" element={<Registro />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />   {/* ← nueva */}
-        <Route path="/reset-password" element={<ResetPassword />} />    {/* ← nueva */}
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/home" element={<PrivateRoute allowedRoles={["dueno"]}><HomeTutor /></PrivateRoute>} />
         <Route path="/home-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><HomeVeterinaria /></PrivateRoute>} />
         <Route path="/mascotas" element={<PrivateRoute allowedRoles={["dueno"]}><MisMascotas /></PrivateRoute>} />
@@ -66,6 +67,11 @@ function App() {
         <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/tutor/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin-duenos" element={<PrivateRoute allowedRoles={["administrador"]}><GestionUsuarios /></PrivateRoute> }/>
+        
+
+        <Route path="/perfil" element={<PerfilUsuario />} />
+        <Route path="/admin/veterinarias" element={<PrivateRoute allowedRoles={["administrador"]}><GestionVeterinarias /></PrivateRoute>} />
         <Route path="/" element={<Landing />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
