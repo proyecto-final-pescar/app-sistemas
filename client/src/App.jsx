@@ -17,6 +17,7 @@ import GestionVeterinarias from './pages/admin/GestionVeterinarias/GestionVeteri
 import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
+import ModeracionForo from "./pages/admin/ModeracionForo/ModeracionForo";
 import GestionUsuarios from "./pages/admin/GestionUsuarios/GestionUsuarios";
 import PerfilUsuario from "./pages/perfilUsuario/PerfilUsuario";
 import Login from "./pages/public/Login/Login";
@@ -49,6 +50,7 @@ function App() {
         <Route path="/turnos" element={<PrivateRoute allowedRoles={["dueno"]}><Turnos /></PrivateRoute>} />
         <Route path="/mis-turnos" element={<PrivateRoute allowedRoles={["dueno"]}><MisTurnos /></PrivateRoute>} />
         <Route path="/turnos/agendar/:veterinariaId" element={<PrivateRoute allowedRoles={["dueno"]}><AgendarTurnos /></PrivateRoute>} />
+        <Route path="/admin-foro-mascotas-perdidas" element={<PrivateRoute allowedRoles={["administrador"]}><ModeracionForo /></PrivateRoute>}/>
         <Route path="/tutor/veterinarias/:id" element={<PerfilVeterinaria />} />
         <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
         <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><h1>Sección Veterinarias</h1></PrivateRoute>} />
