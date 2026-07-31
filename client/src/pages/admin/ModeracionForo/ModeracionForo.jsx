@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
-import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
 import {
-    obtenerPublicacionesConReportes,
-    eliminarPublicacion,
+    obtenerPublicacionesConReportes
 } from "../../../services/publicacionesService";
 import styles from "./ModeracionForo.module.css";
 
@@ -12,11 +10,7 @@ export default function ModeracionForo() {
     const [publicaciones, setPublicaciones] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [busqueda, setBusqueda] = useState("");
-    const [filtroEstado, setFiltroEstado] = useState("");
     const [filtroZona, setFiltroZona] = useState("");
-    const [modalBaja, setModalBaja] = useState(null);
-    const [eliminando, setEliminando] = useState(false);
     const [filtroReportes, setFiltroReportes] = useState("");
     const [paginaActual, setPaginaActual] = useState(1);
     const ITEMS_POR_PAGINA = 10;
@@ -37,35 +31,10 @@ export default function ModeracionForo() {
         cargar();
     }, []);
 
-    const handleEliminar = async () => {
-        if (!modalBaja) return;
-        setEliminando(true);
-        try {
-            await eliminarPublicacion(modalBaja);
-            setPublicaciones((prev) =>
-                prev.filter((p) => p.publicacionId?.toString() !== modalBaja)
-            );
-            setModalBaja(null);
-        } catch (err) {
-            setError("No se pudo dar de baja la publicación.");
-            setModalBaja(null);
-        } finally {
-            setEliminando(false);
-        }
-    };
-
     // Filtros aplicados en el cliente
     const publicacionesFiltradas = publicaciones.filter((item) => {
         const pub = item.publicacion;
         if (!pub) return false;
-
-        const coincideBusqueda = busqueda
-            ? pub.nombre?.toLowerCase().includes(busqueda.toLowerCase())
-            : true;
-
-        const coincideEstado = filtroEstado
-            ? pub.estado === filtroEstado
-            : true;
 
         const coincideZona = filtroZona
             ? pub.zona?.toLowerCase().includes(filtroZona.toLowerCase())
@@ -80,7 +49,7 @@ export default function ModeracionForo() {
             return true;
         })();
 
-        return coincideBusqueda && coincideEstado && coincideZona && coincideReportes;
+        return coincideZona && coincideReportes;
     });
 
     const totalPaginas = Math.ceil(publicacionesFiltradas.length / ITEMS_POR_PAGINA);
@@ -98,20 +67,6 @@ export default function ModeracionForo() {
 
                 <div className={styles.content}>
 
-                    {/* Barra superior */}
-                    <div className={styles.topBar}>
-                        <button className={styles.btnReportes}>
-                            Bandeja de entrada de Reportes
-                        </button>
-                        <input
-                            type="text"
-                            placeholder="Buscar publicación..."
-                            className={styles.buscador}
-                            value={busqueda}
-                            onChange={(e) => { setBusqueda(e.target.value); setPaginaActual(1); }}
-                        />
-                    </div>
-
                     {/* Filtros */}
                     <div className={styles.filtros}>
                         <span className={styles.filtrosLabel}>
@@ -120,17 +75,8 @@ export default function ModeracionForo() {
                         </span>
                         <select
                             className={styles.select}
-                            value={filtroEstado}
-                            onChange={(e) => { setFiltroEstado(e.target.value); setPaginaActual(1); }}
-                        >
-                            <option value="">Estado</option>
-                            <option value="activa">Activa</option>
-                            <option value="cerrada">Cerrada</option>
-                        </select>
-                        <select
-                            className={styles.select}
                             value={filtroReportes}
-                            onChange={(e) => { setFiltroZona(e.target.value); setPaginaActual(1); }}
+                            onChange={(e) => { setFiltroReportes(e.target.value); setPaginaActual(1); }} // cambiado
                         >
                             <option value="">Reportes</option>
                             <option value="1-5">1 a 5 reportes</option>
@@ -142,7 +88,7 @@ export default function ModeracionForo() {
                             placeholder="Zona (Ej. Palermo)"
                             className={styles.inputZona}
                             value={filtroZona}
-                            onChange={(e) => { setFiltroReportes(e.target.value); setPaginaActual(1); }}
+                            onChange={(e) => { setFiltroZona(e.target.value); setPaginaActual(1); }} // cambiado
                         />
                     </div>
 
@@ -151,13 +97,11 @@ export default function ModeracionForo() {
                         <table className={styles.tabla}>
                             <thead>
                                 <tr>
-                                    <th>ID</th>
                                     <th>Foto</th>
                                     <th>Mascota / Título</th>
                                     <th>Zona</th>
                                     <th>Creador</th>
                                     <th>Reportes</th>
-                                    <th>Estado</th>
                                     <th>Fecha de publicación</th>
                                     <th>Acciones</th>
                                 </tr>
@@ -165,7 +109,7 @@ export default function ModeracionForo() {
                             <tbody>
                                 {loading && (
                                     <tr>
-                                        <td colSpan="9" className={styles.estadoVacio}>
+                                        <td colSpan="7" className={styles.estadoVacio}>
                                             Cargando publicaciones...
                                         </td>
                                     </tr>
@@ -190,9 +134,6 @@ export default function ModeracionForo() {
 
                                     return (
                                         <tr key={item.publicacionId}>
-                                            <td className={styles.idCell}>
-                                                PUB-{item.publicacionId?.toString().slice(-4).toUpperCase()}
-                                            </td>
                                             <td>
                                                 {pub?.foto ? (
                                                     <img
@@ -220,21 +161,9 @@ export default function ModeracionForo() {
                                                     {item.cantidadReportes}
                                                 </span>
                                             </td>
-                                            <td>
-                                                <span className={`${styles.badge} ${pub?.estado === "activa" ? styles.badgeActiva : styles.badgeCerrada}`}>
-                                                    {pub?.estado === "activa" ? "Activa" : "Cerrada"}
-                                                </span>
-                                            </td>
                                             <td>{fecha}</td>
                                             <td>
                                                 <div className={styles.acciones}>
-                                                    {/* Placeholder — lo implementa el otro integrante */}
-                                                    <button className={styles.btnIcono} title="Dar de baja" onClick={() => setModalBaja(item.publicacionId?.toString())}>
-                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                            <circle cx="12" cy="12" r="10" />
-                                                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-                                                        </svg>
-                                                    </button>
                                                     {/* Placeholder — lo implementa el otro integrante */}
                                                     <button className={styles.btnIcono} title="Ver detalle">
                                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
@@ -279,18 +208,6 @@ export default function ModeracionForo() {
 
                 </div>
             </div>
-
-            <ConfirmModal
-                abierto={modalBaja !== null}
-                titulo="¿Dar de baja esta publicación?"
-                mensaje="Esta acción eliminará la publicación permanentemente. No se puede deshacer."
-                textoConfirmar="Sí, dar de baja"
-                textoCancelar="Cancelar"
-                varianteConfirmar="peligro"
-                onConfirm={handleEliminar}
-                onCancel={() => setModalBaja(null)}
-                confirmando={eliminando}
-            />
         </div>
     );
 }
