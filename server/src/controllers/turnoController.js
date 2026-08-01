@@ -17,7 +17,7 @@ const horasHastaTurno = (turno) => {
 
 export const obtenerTurnos = async (req, res) => {
   try {
-    const { veterinariaId, usuarioId, estado } = req.query;
+    const { veterinariaId, usuarioId, estado, tipo } = req.query;
 
     if (!veterinariaId && !usuarioId) {
       return res.status(400).json({ message: 'Falta veterinariaId o usuarioId' });
@@ -32,9 +32,11 @@ export const obtenerTurnos = async (req, res) => {
 
     if (estado) filtro.estado = estado;
 
+    if (tipo) filtro.tipo = tipo;
+
     const turnos = await Turno.find(filtro)
       .populate('mascotaId', 'nombre especie')
-      .populate('usuarioId', 'nombre email')
+      .populate('usuarioId', 'name email')
       .populate('veterinariaId', 'nombre direccion')
       .sort({ fecha: 1, hora: 1 });
 
@@ -52,12 +54,11 @@ export const obtenerTurnos = async (req, res) => {
   }
 };
 
-// POST /turnos -> reservar (crear) un turno
 export const reservarTurno = async (req, res) => {
   try {
     const { fecha, hora, motivo, mascotaId, veterinariaId, profesionalId, notas } = req.body;
 
-    if (!fecha || !hora || !motivo || !mascotaId || !veterinariaId) {
+    if (!fecha || !hora || !motivo || !mascotaId || !veterinariaId || !profesionalId) {
       return res.status(400).json({ message: 'Faltan datos obligatorios para reservar el turno' });
     }
 
@@ -66,41 +67,50 @@ export const reservarTurno = async (req, res) => {
       return res.status(404).json({ message: 'Veterinaria no disponible' });
     }
 
-    // Si se especifica un profesional, validar que pertenezca a esa veterinaria
-    if (profesionalId) {
-      const profesionalValido = veterinaria.profesionales.id(profesionalId);
-      if (!profesionalValido) {
-        return res.status(400).json({ message: 'El profesional no pertenece a esta veterinaria' });
+    // Validar que el profesional pertenezca a la veterinaria
+    const profesionalValido = veterinaria.profesionales.id(profesionalId);
+    if (!profesionalValido) {
+      return res.status(400).json({ message: 'El profesional no pertenece a esta veterinaria' });
+    }
+
+    // Buscar el slot disponible de forma atómica para evitar condiciones de carrera
+    // findOneAndUpdate garantiza que solo un usuario puede reservar el mismo slot
+    const turnoReservado = await Turno.findOneAndUpdate(
+      {
+        veterinariaId,
+        profesionalId,
+        fecha: new Date(fecha),
+        hora,
+        tipo: 'disponible'
+      },
+      {
+        $set: {
+          tipo: 'reservado',
+          estado: 'pendiente',
+          mascotaId,
+          usuarioId: req.user.id,
+          motivo,
+          notas: notas || null
+        }
+      },
+      {
+        new: true,       // devuelve el documento ya actualizado
+        runValidators: true
       }
+    );
+
+    // Si no encontró ningún slot disponible significa que ya fue reservado por otro usuario
+    if (!turnoReservado) {
+      return res.status(409).json({
+        message: 'Este turno ya no está disponible. Por favor elegí otro horario.'
+      });
     }
 
-    const turnoExistente = await Turno.findOne({
-      veterinariaId,
-      fecha,
-      hora,
-      estado: { $in: ['pendiente', 'confirmado', 'atendido'] }
-    });
-
-    if (turnoExistente) {
-      return res.status(400).json({ message: 'Ese horario ya está reservado' });
-    }
-
-    const nuevoTurno = await Turno.create({
-      fecha,
-      hora,
-      motivo,
-      mascotaId,
-      veterinariaId,
-      usuarioId: req.user.id,
-      profesionalId,
-      notas,
-      estado: 'pendiente'
-    });
-
-    res.status(201).json({
+    return res.status(200).json({
       success: true,
-      data: { turno: nuevoTurno }
+      data: { turno: turnoReservado }
     });
+
   } catch (error) {
     if (error.name === 'CastError') {
       return res.status(400).json({ message: 'Alguno de los ids enviados no es válido' });
@@ -197,5 +207,151 @@ export const liberarTurnosPendientesVencidos = async () => {
     }
   } catch (error) {
     console.error('Error en liberarTurnosPendientesVencidos:', error);
+  }
+};
+
+export const crearOfertaHoraria = async (req, res) => {
+  try {
+    const { especialidad, profesionales, dias, horaInicio, horaFin, recurrencia } = req.body;
+
+    // Validaciones
+    if (!especialidad || !profesionales?.length || !dias?.length || !horaInicio || !horaFin) {
+      return res.status(400).json({
+        message: 'Faltan datos obligatorios: especialidad, profesionales, dias, horaInicio y horaFin'
+      });
+    }
+
+    // Buscar la veterinaria del usuario logueado
+    const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id });
+    if (!veterinaria) {
+      return res.status(404).json({ message: 'No se encontró una veterinaria asociada a este usuario' });
+    }
+
+    // Buscar el servicio para obtener la duración
+    const servicio = veterinaria.servicios.find(
+      s => s.nombre.toLowerCase() === especialidad.toLowerCase() ||
+        s.categoria.toLowerCase() === especialidad.toLowerCase()
+    );
+
+    if (!servicio) {
+      return res.status(404).json({ message: 'No se encontró el servicio en tu veterinaria' });
+    }
+
+    const duracion = servicio.duracion;
+
+    // Validar que los profesionales pertenezcan a la veterinaria
+    for (const profId of profesionales) {
+      const profValido = veterinaria.profesionales.id(profId);
+      if (!profValido) {
+        return res.status(400).json({
+          message: `El profesional ${profId} no pertenece a esta veterinaria`
+        });
+      }
+    }
+
+    // Generar los slots de horario del día
+    const generarSlots = (horaInicio, horaFin, duracion) => {
+      const slots = [];
+      const [horaInicioH, horaInicioM] = horaInicio.split(':').map(Number);
+      const [horaFinH, horaFinM] = horaFin.split(':').map(Number);
+
+      let totalMinutos = horaInicioH * 60 + horaInicioM;
+      const finMinutos = horaFinH * 60 + horaFinM;
+
+      while (totalMinutos + duracion <= finMinutos) {
+        const horas = Math.floor(totalMinutos / 60).toString().padStart(2, '0');
+        const minutos = (totalMinutos % 60).toString().padStart(2, '0');
+        slots.push(`${horas}:${minutos}`);
+        totalMinutos += duracion;
+      }
+
+      return slots;
+    };
+
+    const slots = generarSlots(horaInicio, horaFin, duracion);
+
+    if (!slots.length) {
+      return res.status(400).json({
+        message: 'El rango horario no permite generar ningún turno con la duración definida'
+      });
+    }
+
+    // Expandir días según recurrencia
+    const expandirDias = (dias, recurrencia) => {
+      if (recurrencia === 'unica') return dias;
+
+      const diasExpandidos = new Set(dias.map(d => new Date(d).toISOString()));
+
+      const intervaloDias = {
+        semanal: 7,
+        quincenal: 15,
+        mensual: 30
+      }[recurrencia] || 7;
+
+      // Proyectar 4 semanas hacia adelante
+      dias.forEach(dia => {
+        const fecha = new Date(dia);
+        for (let i = 1; i <= 4; i++) {
+          const nuevaFecha = new Date(fecha);
+          nuevaFecha.setDate(nuevaFecha.getDate() + intervaloDias * i);
+          diasExpandidos.add(nuevaFecha.toISOString());
+        }
+      });
+
+      return Array.from(diasExpandidos).map(d => new Date(d));
+    };
+
+    const diasExpandidos = expandirDias(dias, recurrencia);
+
+    // Crear los turnos — uno por cada combinación de profesional, día y slot
+    const turnosACrear = [];
+
+    for (const dia of diasExpandidos) {
+      for (const profId of profesionales) {
+        for (const slot of slots) {
+          // Verificar que no exista ya un turno para ese profesional en ese día y hora
+          const existe = await Turno.findOne({
+            veterinariaId: veterinaria._id,
+            profesionalId: profId,
+            fecha: dia,
+            hora: slot
+          });
+
+          if (!existe) {
+            turnosACrear.push({
+              fecha: dia,
+              hora: slot,
+              tipo: 'disponible',
+              especialidad,
+              duracion,
+              veterinariaId: veterinaria._id,
+              profesionalId: profId,
+              estado: 'pendiente'
+            });
+          }
+        }
+      }
+    }
+
+    if (!turnosACrear.length) {
+      return res.status(400).json({
+        message: 'Todos los slots ya existen para los profesionales y días seleccionados'
+      });
+    }
+
+    const turnosCreados = await Turno.insertMany(turnosACrear);
+
+    return res.status(201).json({
+      success: true,
+      message: `Se crearon ${turnosCreados.length} turnos disponibles`,
+      data: { cantidad: turnosCreados.length, turnos: turnosCreados }
+    });
+
+  } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'Alguno de los ids enviados no es válido' });
+    }
+    console.error('Error en crearOfertaHoraria:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
   }
 };

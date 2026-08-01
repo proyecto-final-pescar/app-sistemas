@@ -15,14 +15,12 @@ const turnoSchema = new mongoose.Schema(
 
     motivo: {
       type: String,
-      required: [true, 'El motivo del turno es requerido'],
       trim: true
     },
 
     mascotaId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Mascota',
-      required: [true, 'La mascota es requerida']
     },
 
     veterinariaId: {
@@ -34,7 +32,6 @@ const turnoSchema = new mongoose.Schema(
     usuarioId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'El usuario es requerido']
     },
 
     estado: {
@@ -56,6 +53,23 @@ const turnoSchema = new mongoose.Schema(
     notas: {
       type: String,
       trim: true
+    },
+
+    tipo: {
+      type: String,
+      enum: ['disponible', 'reservado'],
+      default: 'disponible'
+    },
+
+    especialidad: {
+      type: String,
+      trim: true
+    },
+
+    duracion: {
+      type: Number,
+      min: [15, 'La duración mínima es de 15 minutos'],
+      default: 30
     }
   },
 

@@ -66,7 +66,6 @@ const veterinariaSchema = new mongoose.Schema(
           type: String,
           trim: true
         },
-
         nombre: {
           type: String,
           required: [true, 'El nombre del servicio es requerido'],
@@ -75,6 +74,12 @@ const veterinariaSchema = new mongoose.Schema(
         precio: {
           type: Number,
           required: [true, 'El precio del servicio es requerido']
+        },
+        duracion: {
+          type: Number,
+          required: [true, 'La duración del servicio es requerida'],
+          min: [15, 'La duración mínima es de 15 minutos'],
+          default: 30
         }
       }
     ],
@@ -99,92 +104,92 @@ const veterinariaSchema = new mongoose.Schema(
     ],
 
     horarios: {
-        lunes: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
+      lunes: {
+        desde: {
+          type: String,
+          trim: true
         },
-
-        martes: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
-        },
-
-        miercoles: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
-        },
-
-        jueves: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
-        },
-
-        viernes: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
-        },
-
-        sabado: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
-        },
-
-        domingo: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
+        hasta: {
+          type: String,
+          trim: true
         }
-},
+      },
 
-    urgencias24hs: {
-         type: Boolean,
-         default: false
+      martes: {
+        desde: {
+          type: String,
+          trim: true
+        },
+        hasta: {
+          type: String,
+          trim: true
+        }
+      },
+
+      miercoles: {
+        desde: {
+          type: String,
+          trim: true
+        },
+        hasta: {
+          type: String,
+          trim: true
+        }
+      },
+
+      jueves: {
+        desde: {
+          type: String,
+          trim: true
+        },
+        hasta: {
+          type: String,
+          trim: true
+        }
+      },
+
+      viernes: {
+        desde: {
+          type: String,
+          trim: true
+        },
+        hasta: {
+          type: String,
+          trim: true
+        }
+      },
+
+      sabado: {
+        desde: {
+          type: String,
+          trim: true
+        },
+        hasta: {
+          type: String,
+          trim: true
+        }
+      },
+
+      domingo: {
+        desde: {
+          type: String,
+          trim: true
+        },
+        hasta: {
+          type: String,
+          trim: true
+        }
+      }
     },
 
-  
+    urgencias24hs: {
+      type: Boolean,
+      default: false
+    },
+
+
     // como promedio de los documentos de la colección Resenia para la vet
-   
+
     rating: {
       type: Number,
       min: 0,
@@ -193,7 +198,7 @@ const veterinariaSchema = new mongoose.Schema(
     },
 
     // Cantidad de reseñas que componen el promedio de rating
-   
+
     cantidadResenias: {
       type: Number,
       default: 0
