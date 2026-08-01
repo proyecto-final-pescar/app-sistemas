@@ -21,3 +21,9 @@ export const cancelarTurno = async (turnoId) => {
   const { data } = await api.patch(`/turnos/${turnoId}/cancelar`);
   return data.data.turno;
 };
+
+
+export const crearOfertaHoraria = async (oferta) => {
+  const { data } = await api.post("/turnos/oferta", oferta);
+  return data;
+};

@@ -144,7 +144,7 @@ const HomeVeterinaria = () => {
             </div>
 
             <div className={styles.actionButtonsRow}>
-              <Link to="./">
+              <Link to="/cargar-turnos">
                 <Button
                   texto="Cargar turnos"
                   variante="secundario"
@@ -215,7 +215,7 @@ const HomeVeterinaria = () => {
                 <h4 className={styles.mainNumber}>{cuposLibres}</h4>
                 <p className={styles.subDetail}>horarios libres hoy</p>
               </div>
-              <Link to="./" className={styles.cardLink}>
+              <Link to="cargar-turnos" className={styles.cardLink}>
                 Cargar más turnos →
               </Link>
             </Card>

@@ -1,0 +1,317 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f9f8ff;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.content {
+  margin: 24px 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.estadoVacio {
+  text-align: center;
+  color: #8276ab;
+  padding: 40px;
+  font-size: 14px;
+}
+
+.alerta {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #fee2e2;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #fecaca;
+}
+
+.alertaExito {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #e6f9f2;
+  color: #07A35F;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid #b3e6d0;
+}
+
+.card {
+  background: white;
+  border-radius: 20px;
+  border: 1px solid #ede9fe;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cardTitulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f1739;
+}
+
+.cardTituloFila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.badgeExito {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #e6f9f2;
+  color: #07A35F;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #b3e6d0;
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.filaHorarios {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #ede9fe;
+  background: #faf9ff;
+  font-size: 13px;
+  color: #1f1739;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  cursor: pointer;
+}
+
+.select:focus {
+  border-color: #7c3aed;
+}
+
+.profesionalesGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid #ede9fe;
+  background: #faf9ff;
+  min-height: 44px;
+}
+
+.chipProf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid #ede9fe;
+  background: white;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.15s;
+}
+
+.chipProf:hover {
+  border-color: #7c3aed;
+  color: #7c3aed;
+}
+
+.chipProfActivo {
+  background: #f3ecfd;
+  border-color: #7c3aed;
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+.chipX {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.duracionBox {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #ede9fe;
+  background: #faf9ff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 44px;
+}
+
+.duracionValor {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f1739;
+}
+
+.duracionNota {
+  font-size: 11px;
+  color: #07A35F;
+}
+
+/* Cards de días */
+.diasGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+
+.diaCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 8px;
+  border-radius: 16px;
+  border: 1.5px solid #ede9fe;
+  background: white;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.15s;
+  min-height: 90px;
+  justify-content: center;
+}
+
+.diaCard:hover {
+  border-color: #7c3aed;
+  background: #faf9ff;
+}
+
+.diaCardActivo {
+  border-color: #07A35F;
+  background: #e6f9f2;
+}
+
+.diaNombre {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f1739;
+}
+
+.diaHora {
+  font-size: 12px;
+  font-weight: 700;
+  color: #07A35F;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #b3e6d0;
+}
+
+.diaEspecialidad {
+  font-size: 10px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.diaProfesionales {
+  font-size: 10px;
+  color: #6b7280;
+}
+
+/* Resumen */
+.resumen {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #f3ecfd;
+  border: 1px solid #ede9fe;
+  font-size: 13px;
+  color: #1f1739;
+  line-height: 1.5;
+}
+
+/* Botones */
+.botones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btnCancelar {
+  padding: 10px 24px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.15s;
+}
+
+.btnCancelar:hover {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+.btnGuardar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 999px;
+  border: none;
+  background: #7c3aed;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.15s;
+}
+
+.btnGuardar:hover {
+  background: #6d28d9;
+}
+
+.btnGuardar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
