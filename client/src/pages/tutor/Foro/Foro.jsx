@@ -21,6 +21,7 @@ import TopBar from "../../../components/layout/TopBar";
 import Modal from "../../../components/layout/modal/Modal";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
 import FormularioPublicacion from "../../../components/forms/FormularioPublicacion";
+import FormularioReporte from "../../../components/forms/FormularioReporte/FormularioReporte";
 import { useAuth } from "../../../hooks/useAuth";
 import {
   cambiarEstadoPublicacion,
@@ -168,6 +169,7 @@ function Foro() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [accionId, setAccionId] = useState("");
   const [reportadas, setReportadas] = useState(new Set());
+  const [publicacionAReportar, setPublicacionAReportar] = useState(null);
 
   // { tipo: 'eliminar' | 'reportar' | 'marcarEncontrada', publicacion }
   const [confirmacion, setConfirmacion] = useState(null);
@@ -247,11 +249,21 @@ function Foro() {
     setModalAbierto(false);
   };
 
+  const cerrarModalReporte = () => {
+  setPublicacionAReportar(null);
+  };
+
   const handlePublicacionGuardada = async () => {
     setModalAbierto(false);
     setFiltroEstado("activa");
     setSuccess("Publicación creada correctamente.");
     await cargarPublicaciones();
+  };
+
+  const handleReporteExitoso = (publicacionId) => {
+    setReportadas((current) => new Set(current).add(publicacionId));
+    setSuccess("Publicación reportada. Un administrador la va a revisar.");
+    setPublicacionAReportar(null);
   };
 
   // --- Confirmación unificada para eliminar / reportar / marcar encontrada ---
@@ -325,6 +337,7 @@ function Foro() {
     else if (tipo === "reportar") ejecutarReportar(publicacion);
   };
 
+
   const handleContactar = async (event, contacto) => {
     if (getContactHref(contacto)) {
       return;
@@ -342,7 +355,13 @@ function Foro() {
 
   const handleReportarClick = (publicacion) => {
     if (esPropia(publicacion)) return;
-    pedirConfirmacion("reportar", publicacion);
+    
+    if (!estaAutenticado) {
+        setError("Necesitás iniciar sesión para reportar una publicación.");
+        return;
+    }
+
+    setPublicacionAReportar(publicacion);
   };
 
   const renderAcciones = (publicacion) => {
@@ -628,6 +647,17 @@ function Foro() {
         <FormularioPublicacion
           onCancelar={cerrarModal}
           onGuardado={handlePublicacionGuardada}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(publicacionAReportar)}
+        onClose={cerrarModalReporte}
+      >
+        <FormularioReporte
+        publicacion={publicacionAReportar}
+          onCancelar={cerrarModalReporte}
+        onReportado={handleReporteExitoso}
         />
       </Modal>
 

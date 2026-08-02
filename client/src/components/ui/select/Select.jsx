@@ -34,11 +34,16 @@ function Select({
             {placeholder}
           </option>
 
-          {opciones.map((opcion) => (
-            <option key={opcion} value={opcion}>
-              {opcion}
-            </option>
-          ))}
+          {opciones.map((opcion) => {
+            const value = typeof opcion === "string" ? opcion : opcion.value;
+            const label = typeof opcion === "string" ? opcion : opcion.label;
+
+           return (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        );
+      })}
         </select>
 
       {mensajeError}
