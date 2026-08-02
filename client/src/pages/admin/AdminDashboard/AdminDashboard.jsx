@@ -4,6 +4,7 @@ import Sidebar from '../../../components/layout/Sidebar';
 import TopBar from '../../../components/layout/TopBar';
 import api from '../../../services/api';
 import styles from './AdminDashboard.module.css';
+import DetallesDeTurnoModal from '../../../components/administrador/detallesDeTurnoModal/detallesDeTurnoModal';
 
 const DIAS_LABEL = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
@@ -37,13 +38,13 @@ function StatCard({ icono, colorIcono, label, valor, delta, cargando }) {
   );
 }
 
-function TurnoRow({ turno }) {
+function TurnoRow({ turno, etiquetaFecha, onVerDetalles }) {
   const claveBadge = `badge${turno.estado.charAt(0).toUpperCase()}${turno.estado.slice(1)}`;
 
   return (
     <div className={styles.turnoRow}>
       <div className={styles.turnoHora}>
-        <span className={styles.turnoHoraLabel}>HOY</span>
+        <span className={styles.turnoHoraLabel}>{etiquetaFecha}</span>
         <span className={styles.turnoHoraValor}>{turno.hora}</span>
       </div>
 
@@ -68,7 +69,11 @@ function TurnoRow({ turno }) {
         <span className={styles.turnoProfesionalLabel}>Profesional asignado</span>
       </div>
 
-      <button className={styles.botonDetalles} type="button">
+      <button
+        className={styles.botonDetalles}
+        type="button"
+        onClick={() => onVerDetalles(turno._id)}
+      >
         Ver detalles
       </button>
     </div>
@@ -88,6 +93,8 @@ export default function Dashboard() {
   const [cargandoTurnos, setCargandoTurnos] = useState(true);
   const [errorTurnos, setErrorTurnos] = useState(null);
 
+  const [turnoSeleccionadoId, setTurnoSeleccionadoId] = useState(null);
+
   useEffect(() => {
     async function cargarMetrics() {
       try {
@@ -96,7 +103,7 @@ export default function Dashboard() {
         setMetrics(data.data);
         setErrorMetrics(null);
       } catch (err) {
-        
+       
         setErrorMetrics('No se pudieron cargar las métricas.');
       } finally {
         setCargandoMetrics(false);
@@ -142,6 +149,14 @@ export default function Dashboard() {
 
   const indiceHoy = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
   const diaActualLabel = DIAS_LABEL[indiceHoy];
+
+  const esFechaHoy = fecha === formatearFechaHoy();
+  const etiquetaFecha = esFechaHoy
+    ? 'HOY'
+    : new Date(`${fecha}T00:00:00`).toLocaleDateString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+      });
 
   return (
     <div className={styles.layout}>
@@ -193,6 +208,8 @@ export default function Dashboard() {
 
             {cargandoMetrics ? (
               <p className={styles.mensaje}>Cargando gráfico...</p>
+            ) : !metrics ? (
+              <p className={styles.mensaje}>No se pudo cargar el gráfico.</p>
             ) : (
               <div className={styles.barras}>
                 {metrics.turnos.porDia.map((dia) => {
@@ -258,13 +275,29 @@ export default function Dashboard() {
             ) : (
               <div className={styles.listaTurnos}>
                 {turnosFiltrados.map((turno) => (
-                  <TurnoRow key={turno._id} turno={turno} />
+                  <TurnoRow
+                    key={turno._id}
+                    turno={turno}
+                    etiquetaFecha={etiquetaFecha}
+                    onVerDetalles={setTurnoSeleccionadoId}
+                  />
                 ))}
               </div>
             )}
           </section>
         </div>
       </div>
+
+      {turnoSeleccionadoId && (
+        <DetallesDeTurnoModal
+          turnoId={turnoSeleccionadoId}
+          onClose={() => setTurnoSeleccionadoId(null)}
+          onVerComprobante={(pagoId) => {
+            // hasta que se implementen los pagos 
+            console.log('Ver comprobante del pago:', pagoId);
+          }}
+        />
+      )}
     </div>
   );
 }
