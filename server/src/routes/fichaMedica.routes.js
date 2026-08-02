@@ -1,25 +1,9 @@
 import { Router } from 'express'
-import {
-  obtenerFichaMedica,
-  actualizarFichaMedica
-} from '../controllers/fichaMedicaController.js'
-import verifyToken, { authorize } from '../middleware/auth.js'
-import historialAccess from '../middleware/historialAccess.js'
+import { verifyToken } from '../middleware/auth.js' // ⚠️ confirmar path real del middleware
+import { actualizarFichaMedica } from '../controllers/fichaMedicaController.js'
 
 const router = Router()
 
-router.get('/ficha-medica/:mascotaId',
-  verifyToken,
-  authorize('dueno', 'veterinaria'),
-  historialAccess,
-  obtenerFichaMedica
-)
-
-router.put('/ficha-medica/:mascotaId',
-  verifyToken,
-  authorize('veterinaria'),
-  historialAccess,
-  actualizarFichaMedica
-)
+router.put('/:mascotaId', verifyToken, actualizarFichaMedica)
 
 export default router

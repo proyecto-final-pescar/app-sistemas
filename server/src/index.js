@@ -3,6 +3,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 
+import fichaMedicaRoutes from './routes/fichaMedica.routes.js'
 import connectDB from "./config/db.js";
 import routes from "./routes/index.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
@@ -37,6 +38,8 @@ app.use(express.json());
 
 app.use("/api", routes);
 app.use("/api/upload", uploadRoutes);
+app.use('/api/ficha-medica', fichaMedicaRoutes)
+
 
 connectDB();
 
