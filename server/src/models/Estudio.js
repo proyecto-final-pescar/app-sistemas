@@ -1,5 +1,26 @@
 import mongoose from 'mongoose'
 
+export const crearEstudio = async (req, res) => {
+  try {
+    const { mascotaId, nombre, fecha, urlArchivo, profesionalId } = req.body
+    const dueñoId = req.user.id // Del token JWT
+
+    const estudio = new Estudio({
+      mascotaId,
+      dueñoId,
+      nombre,
+      fecha,
+      urlArchivo,
+      profesionalId: profesionalId || null
+    })
+
+    await estudio.save()
+    res.status(201).json({ success: true, data: estudio })
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message })
+  }
+}
+
 const estudioSchema = new mongoose.Schema(
   {
     mascotaId: {
@@ -37,6 +58,7 @@ const estudioSchema = new mongoose.Schema(
       trim: true,
       default: null
     } 
+    
   },
   {
     timestamps: true,

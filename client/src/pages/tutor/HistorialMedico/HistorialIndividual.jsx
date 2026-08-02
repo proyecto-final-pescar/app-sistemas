@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import api from '../../../services/api'
+import { subirArchivo } from '../../../services/uploadService'
 import Sidebar from '../../../components/layout/Sidebar'
 import TopBar from '../../../components/layout/TopBar'
 import Button from '../../../components/ui/button/Button'
@@ -19,28 +20,68 @@ export default function HistorialIndividual() {
 
   const [modalAbierto, setModalAbierto] = useState(false)
   const [mensajeExito, setMensajeExito] = useState(null)
+  
+  // Estados para carga de archivos
+  const fileInputRef = useRef(null)
+  const [cargandoArchivo, setCargandoArchivo] = useState(false)
 
   const mostrarExito = (mensaje) => {
     setMensajeExito(mensaje)
     setTimeout(() => setMensajeExito(null), 3000)
   }
 
-  useEffect(() => {
-    const fetchHistorial = async () => {
-      try {
-        const response = await api.get(`/historial-completo/${mascotaId}`)
-        if (response.data.success) {
-          setData(response.data.data)
-        }
-      } catch (err) {
-        setError(err.response?.data?.message || 'Error al cargar la ficha')
-      } finally {
-        setLoading(false)
+  const fetchHistorial = async () => {
+    try {
+      const response = await api.get(`/historial-completo/${mascotaId}`)
+      if (response.data.success) {
+        setData(response.data.data)
       }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al cargar la ficha')
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchHistorial()
   }, [mascotaId])
+
+  // Función para agregar archivo/estudio
+  const handleAgregarArchivo = async (e) => {
+    const archivo = e.target.files[0]
+    if (!archivo) return
+
+    try {
+      setCargandoArchivo(true)
+      
+      // Subir a Cloudinary
+      const urlArchivo = await subirArchivo(archivo, 'estudios')
+      
+      // Guardar en BD
+      await api.post(`/estudios`, {
+        mascotaId,
+        nombre: archivo.name.split('.')[0], // sin extensión
+        fecha: new Date(),
+        urlArchivo,
+        profesionalId: null // el usuario actual es el dueño, no profesional
+      })
+
+      // Recargar datos
+      await fetchHistorial()
+      mostrarExito('Estudio adjuntado correctamente')
+      setError(null)
+    } catch (err) {
+      setError('Error al subir el archivo')
+      console.error(err)
+    } finally {
+      setCargandoArchivo(false)
+      // Limpiar input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
 
   if (loading) return <div className={styles.container}>Cargando...</div>
   if (error) return <div className={styles.container}><p>{error}</p></div>
@@ -185,7 +226,6 @@ export default function HistorialIndividual() {
                     texto="Ver Consultas"
                     variante="secundario"
                     tamaño="mediano"
-                    // TODO: pendiente crear la página anterior/listado de consultas
                     onClick={() => navigate(-1)}
                   />
                 </div>
@@ -229,13 +269,20 @@ export default function HistorialIndividual() {
               <section className={styles.section}>
                 <div className={styles.sectionHeader}>
                   <h2 className={styles.sectionTitulo}>Estudios y Laboratorios</h2>
+                  {/* Input file oculto */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleAgregarArchivo}
+                    accept=".pdf,.jpg,.png,.jpeg,.gif,.doc,.docx"
+                    style={{ display: 'none' }}
+                  />
                   <Button
                     texto="Adjuntar nuevo estudio"
                     variante="secundario"
                     tamaño="chico"
-                    // TODO: pendiente definir con Camila/equipo quién carga esto (tutor o veterinario)
-                    // y el endpoint + Cloudinary antes de conectar este botón
-                    onClick={() => {}}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={cargandoArchivo}
                   />
                 </div>
                 {estudios && estudios.length > 0 ? (
@@ -268,9 +315,7 @@ export default function HistorialIndividual() {
             onCancelar={() => setModalAbierto(false)}
             onGuardado={() => {
               setModalAbierto(false)
-              api.get(`/historial-completo/${mascotaId}`).then((res) => {
-                if (res.data.success) setData(res.data.data)
-              })
+              fetchHistorial()
               mostrarExito('¡Ficha médica actualizada correctamente!')
             }}
           />

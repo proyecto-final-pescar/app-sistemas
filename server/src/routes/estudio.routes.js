@@ -15,7 +15,7 @@ const router = Router()
 
 router.post('/estudios',
   verifyToken,
-  authorize('veterinaria'),
+  authorize('dueno', 'veterinaria'),  //agregue dueño
   crearEstudio
 )
 

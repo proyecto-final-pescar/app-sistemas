@@ -1,27 +1,30 @@
 import cloudinary from '../config/cloudinary.js'
 
-// Whitelist de carpetas validas en Cloudinary. si no matchea aca, cae al default.
 const CARPETAS_PERMITIDAS = {
   mascotas: 'mypet/mascotas',
   perfiles: 'mypet/perfiles',
+  estudios: 'mypet/estudios'
 }
 const CARPETA_POR_DEFECTO = CARPETAS_PERMITIDAS.mascotas
 
 export const uploadImage = async (req, res) => {
   try {
-    if (!req.file) {
+    const file = req.files && req.files[0]
+
+    if (!file) {
       return res.status(400).json({ 
-        message: 'No se envió ninguna imagen' 
+        message: 'No se envió ningún archivo' 
       })
     }
 
-    const fileBase64 = req.file.buffer.toString('base64')
-    const fileToUpload = `data:${req.file.mimetype};base64,${fileBase64}`
+    const fileBase64 = file.buffer.toString('base64')
+    const fileToUpload = `data:${file.mimetype};base64,${fileBase64}`
 
     const carpetaDestino = CARPETAS_PERMITIDAS[req.body.carpeta] || CARPETA_POR_DEFECTO
 
     const resultado = await cloudinary.uploader.upload(fileToUpload, {
-      folder: carpetaDestino
+      folder: carpetaDestino,
+      resource_type: 'auto'
     })
 
     res.status(200).json({ 
@@ -30,9 +33,8 @@ export const uploadImage = async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ 
-      message: 'Error al subir la imagen', 
+      message: 'Error al subir el archivo', 
       error: error.message 
     })
   }
-
 }
