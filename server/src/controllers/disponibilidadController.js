@@ -116,12 +116,9 @@ export const obtenerDisponibilidad = async (req, res) => {
     );
 
     // 8. Buscar turnos ya ocupados para esa fecha y veterinaria
-    const fechaInicio = new Date(
-      anioSolicitado,
-      mesSolicitado - 1,
-      diaSolicitado,
-    );
-    const fechaFin = new Date(anioSolicitado, mesSolicitado - 1, diaSolicitado);
+    const fechaInicio = new Date(fecha);
+
+    const fechaFin = new Date(fecha);
     fechaFin.setDate(fechaFin.getDate() + 1);
 
     const turnosOcupados = await Turno.find({
