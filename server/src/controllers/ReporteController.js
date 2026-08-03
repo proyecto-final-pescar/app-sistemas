@@ -21,7 +21,8 @@ export const obtenerResumenReportes = async (req, res) => {
     //  los datos de cada publicacion para mostrar en el listado
     const publicacionIds = resumen.map((r) => r._id);
     const publicaciones = await Publicacion.find({ _id: { $in: publicacionIds } })
-      .select('nombre foto zona estado');
+      .select('nombre foto zona estado usuarioId createdAt')
+      .populate('usuarioId', 'name email');
 
     const publicacionesPorId = publicaciones.reduce((acc, pub) => {
       acc[pub._id.toString()] = pub;

@@ -181,7 +181,24 @@ const veterinariaSchema = new mongoose.Schema(
          type: Boolean,
          default: false
     },
-    
+
+  
+    // como promedio de los documentos de la colección Resenia para la vet
+   
+    rating: {
+      type: Number,
+      min: 0,
+      max: 5,
+      default: null
+    },
+
+    // Cantidad de reseñas que componen el promedio de rating
+   
+    cantidadResenias: {
+      type: Number,
+      default: 0
+    },
+
     usuarioId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
