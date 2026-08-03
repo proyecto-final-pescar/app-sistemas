@@ -35,6 +35,7 @@ function FormularioReporte({
   publicacion,
   onCancelar,
   onReportado,
+  onYaReportado,
 }) {
   const [motivo, setMotivo] = useState("");
   const [descripcion, setDescripcion] = useState("");
@@ -86,6 +87,12 @@ function FormularioReporte({
       const mensaje =
         error?.response?.data?.message ||
         "No pudimos enviar el reporte. Intentá nuevamente.";
+
+     
+     
+      if (error?.response?.status === 400 && mensaje === "Ya reportaste esta publicación") {
+        onYaReportado?.(publicacion);
+      }
 
       setErrorEnvio(mensaje);
     } finally {
