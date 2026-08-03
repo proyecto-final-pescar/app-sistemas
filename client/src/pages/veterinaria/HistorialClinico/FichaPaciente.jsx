@@ -141,6 +141,10 @@ const FichaPaciente = () => {
   const [tabActiva, setTabActiva] = useState("consultas");
   const [historial, setHistorial] = useState([]);
   const [mascota, setMascota] = useState(null);
+  // Reservado para cuando se conecte el tab "Ficha médica" con datos reales
+  const [fichaMedica, setFichaMedica] = useState(null);
+  const [vacunas, setVacunas] = useState([]);
+  const [estudios, setEstudios] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [filtroFecha, setFiltroFecha] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -153,16 +157,23 @@ const FichaPaciente = () => {
       setIsLoading(true);
       setError("");
       try {
-        // Traer historial clínico de la mascota
-        const res = await api.get(`/historial/${mascotaId}`);
-        const data = res.data.data ?? res.data ?? [];
-        setHistorial(Array.isArray(data) ? data : []);
+        //  trae mascota + historial + ficha médica +
+        // vacunas + estudios 
+        const res = await api.get(`/historial-completo/${mascotaId}`);
+        const data = res.data.data ?? {};
 
-        // Traer datos de la mascota
-        const resMascota = await api.get(`/mascotas/${mascotaId}`);
-        setMascota(resMascota.data.data ?? resMascota.data ?? null);
-      } catch {
-        setError("No se pudo cargar el historial. Intentá de nuevo más tarde.");
+        setHistorial(Array.isArray(data.historialClinico) ? data.historialClinico : []);
+        setMascota(data.mascota ?? null);
+        setFichaMedica(data.fichaMedica ?? null);
+        setVacunas(Array.isArray(data.vacunas) ? data.vacunas : []);
+        setEstudios(Array.isArray(data.estudios) ? data.estudios : []);
+      } catch (err) {
+        if (err.response?.status === 403) {
+          setError("Todavía no tenés acceso al historial de esta mascota. El acceso se habilita cuando el turno esté confirmado.");
+        } else {
+          setError("No se pudo cargar el historial. Intentá de nuevo más tarde.");
+        }
+
       } finally {
         setIsLoading(false);
       }
@@ -173,10 +184,13 @@ const FichaPaciente = () => {
 
   // Filtros en tiempo real
   const historialFiltrado = historial.filter((entrada) => {
+    const texto = busqueda.trim().toLowerCase();
+
     const coincideTexto =
-      entrada.motivoConsulta?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      entrada.anotaciones?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      entrada.categoriaServicio?.toLowerCase().includes(busqueda.toLowerCase());
+      texto === "" ||
+      entrada.motivoConsulta?.toLowerCase().includes(texto) ||
+      entrada.anotaciones?.toLowerCase().includes(texto) ||
+      entrada.categoriaServicio?.toLowerCase().includes(texto);
 
     const coincideFecha = filtroFecha
       ? new Date(entrada.fecha).toISOString().slice(0, 10) === filtroFecha

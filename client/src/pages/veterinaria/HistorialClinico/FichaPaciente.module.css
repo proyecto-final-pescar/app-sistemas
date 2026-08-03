@@ -1,20 +1,11 @@
-:root {
-  --color-primario: #7c3aed;
-  --color-cta: #059669;
-  --color-texto-principal: #1c1033;
-  --color-texto-secundario: #7e6fa0;
-  --color-fondo: #f8f7ff;
-  --color-fondo-claro: #ede9fe;
-  --color-blanco: #ffffff;
-  --color-borde: #e5e7eb;
-}
+
 
 /* Layout */
 .layout {
   display: flex;
   min-height: 100vh;
-  background-color: var(--color-fondo);
-  font-family: "Inter", sans-serif;
+  background-color: #f8f7ff;
+  font-family: var(--fuente-texto);
 }
 
 .main {
@@ -84,7 +75,7 @@
 .btnRegistrar {
   padding: 10px 20px;
   background-color: var(--color-primario);
-  color: white;
+  color: var(--color-blanco);
   border: none;
   border-radius: 20px;
   font-size: 0.875rem;
@@ -104,7 +95,7 @@
   display: flex;
   gap: 8px;
   margin-bottom: 20px;
-  border-bottom: 1px solid var(--color-borde);
+  border-bottom: 1px solid #e5e7eb;
   padding-bottom: 0;
 }
 
@@ -142,7 +133,7 @@
 .buscador {
   width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid var(--color-borde);
+  border: 1.5px solid #e5e7eb;
   border-radius: 8px;
   font-size: 0.9rem;
   background-color: var(--color-blanco);
@@ -157,7 +148,7 @@
 
 .inputFecha {
   padding: 10px 14px;
-  border: 1.5px solid var(--color-borde);
+  border: 1.5px solid #e5e7eb;
   border-radius: 8px;
   font-size: 0.9rem;
   background-color: var(--color-blanco);
@@ -181,7 +172,7 @@
   display: flex;
   gap: 14px;
   background-color: var(--color-blanco);
-  border: 1.5px solid var(--color-borde);
+  border: 1.5px solid #e5e7eb;
   border-radius: 12px;
   padding: 16px;
   transition: box-shadow 0.15s ease;
@@ -252,8 +243,16 @@
   font-size: 0.95rem;
 }
 
+/* Error real (fallas de red/servidor) */
 .estadoError {
   color: #b91c1c;
+}
+
+/* Acceso restringido por reglas de negocio (ej: turno pendiente/cancelado).
+   No es una falla del sistema, por eso usa el mismo tono neutro que
+   .estadoMensaje en vez del rojo de .estadoError. */
+.estadoSinAcceso {
+  color: var(--color-texto-secundario);
 }
 
 /* Modal */
@@ -281,7 +280,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px 16px;
-  border-bottom: 1px solid var(--color-borde);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .modalTitulo {
@@ -320,7 +319,7 @@
 .input {
   width: 100%;
   padding: 10px 14px;
-  border: 1.5px solid var(--color-borde);
+  border: 1.5px solid #e5e7eb;
   border-radius: 8px;
   font-size: 0.9rem;
   color: var(--color-texto-principal);
@@ -360,13 +359,13 @@
   justify-content: flex-end;
   gap: 10px;
   padding: 16px 24px 20px;
-  border-top: 1px solid var(--color-borde);
+  border-top: 1px solid #e5e7eb;
 }
 
 .btnCancelar {
   padding: 9px 20px;
   background: none;
-  border: 1.5px solid var(--color-borde);
+  border: 1.5px solid #e5e7eb;
   border-radius: 20px;
   font-size: 0.875rem;
   font-weight: 500;
@@ -382,7 +381,7 @@
 .btnConfirmar {
   padding: 9px 20px;
   background-color: var(--color-primario);
-  color: white;
+  color: var(--color-blanco);
   border: none;
   border-radius: 20px;
   font-size: 0.875rem;
