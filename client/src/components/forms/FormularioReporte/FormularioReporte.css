@@ -121,6 +121,32 @@
   line-height: 1.4;
 }
 
+.avisoYaReportado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 8px 4px 4px;
+}
+
+.avisoYaReportadoIcono {
+  color: #7c3aed;
+}
+
+.avisoYaReportadoTitulo {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1c1033;
+}
+
+.avisoYaReportadoTexto {
+  margin: 0;
+  color: #7e6fa0;
+  font-size: 14px;
+  line-height: 1.5;
+}
 
 @media (max-width: 520px) {
   .formulario-reporte {
