@@ -32,9 +32,15 @@ export const eliminarPublicacion = async (id) => {
   return response.data;
 };
 
+export const obtenerPublicacionesConReportes = async () => {
+  const response = await api.get("/reportes/resumen");
+  return normalizarRespuesta(response);
+};
+
 export default {
   obtenerPublicaciones,
   crearPublicacion,
   cambiarEstadoPublicacion,
   eliminarPublicacion,
+  obtenerPublicacionesConReportes,
 };
