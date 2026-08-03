@@ -208,7 +208,7 @@ const veterinariaSchema = new mongoose.Schema(
     estado: {
       type: String,
       enum: ['activa', 'suspendida', 'pendiente'],
-      default: 'activa'
+      default: 'pendiente'
     }
   },
 
