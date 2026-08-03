@@ -116,16 +116,15 @@ export default function CitasAgendadas() {
                   </p>
 
                   <p className={styles.bannerMeta}>
-                    <span>
-                      📅 {formatearFechaLarga(turnoMasProximo.fecha)}
-                    </span>
+                    <span>📅 {formatearFechaLarga(turnoMasProximo.fecha)}</span>
+
+                    <span>🕒 {turnoMasProximo.hora || "Sin horario"} hs</span>
 
                     <span>
-                      🕒 {turnoMasProximo.hora || "Sin horario"} hs
-                    </span>
-
-                    <span>
-                      👤 {turnoMasProximo.usuarioId?.nombre || "Tutor"}
+                      👤{" "}
+                      {turnoMasProximo.usuarioId?.name ||
+                        turnoMasProximo.usuarioId?.nombre ||
+                        "Tutor"}
                     </span>
                   </p>
                 </div>
@@ -152,14 +151,12 @@ export default function CitasAgendadas() {
               <p className={styles.estadoVacio}>Cargando turnos...</p>
             )}
 
-            {!loading && error && (
-              <p className={styles.estadoVacio}>{error}</p>
-            )}
+            {!loading && error && <p className={styles.estadoVacio}>{error}</p>}
 
             {!loading && !error && listaVisible.length === 0 && (
               <p className={styles.estadoVacio}>
-                No hay turnos{" "}
-                {tab === "proximos" ? "próximos" : "pasados"} para mostrar.
+                No hay turnos {tab === "proximos" ? "próximos" : "pasados"} para
+                mostrar.
               </p>
             )}
 
@@ -170,10 +167,7 @@ export default function CitasAgendadas() {
                 const badge = ESTADO_BADGE[turno.estado];
 
                 return (
-                  <div
-                    key={turno._id || turno.id}
-                    className={styles.turnoRow}
-                  >
+                  <div key={turno._id || turno.id} className={styles.turnoRow}>
                     <div className={styles.fechaBox}>
                       <span className={styles.fechaDia}>{dia}</span>
 
@@ -199,12 +193,13 @@ export default function CitasAgendadas() {
                       </p>
 
                       <p className={styles.turnoMeta}>
-                        <span>
-                          🕒 {turno.hora || "Sin horario"} hs
-                        </span>
+                        <span>🕒 {turno.hora || "Sin horario"} hs</span>
 
                         <span>
-                          👤 {turno.usuarioId?.nombre || "Tutor"}
+                          👤{" "}
+                          {turno.usuarioId?.name ||
+                            turno.usuarioId?.nombre ||
+                            "Tutor"}
                         </span>
                       </p>
                     </div>
