@@ -17,11 +17,6 @@ import GestionVeterinarias from './pages/admin/GestionVeterinarias/GestionVeteri
 import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
-<<<<<<< HEAD
-import FichaPaciente from "./pages/veterinaria/HistorialClinico/FichaPaciente";
-
-
-=======
 import ModeracionForo from "./pages/admin/ModeracionForo/ModeracionForo";
 import GestionUsuarios from "./pages/admin/GestionUsuarios/GestionUsuarios";
 import PerfilUsuario from "./pages/perfilUsuario/PerfilUsuario";
@@ -30,7 +25,6 @@ import Registro from "./pages/public/Registro/Registro";
 import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
 import NotFound from "./pages/NotFound/NotFound";
 import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
->>>>>>> 0d7f5cc77114af08a8d2f145544f9a0d9c8abe9d
 
 function App() {
   return (
