@@ -1,0 +1,221 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-fondo-secciones);
+}
+
+.contenido {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cuerpo {
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.estadoCarga {
+  font-family: var(--fuente-texto);
+  color: var(--color-texto-secundario);
+}
+
+.tituloConAvatar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatarPanel {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--fuente-titulos);
+  font-weight: 800;
+  font-size: 24px;
+  color: var(--color-blanco);
+  flex-shrink: 0;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.badge {
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--color-blanco);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-form-size);
+  font-weight: 500;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  background: var(--color-blanco);
+  padding: 8px;
+  border-radius: 14px;
+  width: fit-content;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-texto-secundario);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-nav-size);
+  font-weight: var(--texto-nav-weight);
+  cursor: pointer;
+}
+
+.tabActiva {
+  background: var(--color-primario);
+  color: var(--color-blanco);
+}
+
+.card {
+  background: var(--color-blanco);
+  border-radius: 16px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.avatarSeccion {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-fondo-claro);
+}
+
+.avatarGrande {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  background: var(--color-primario);
+  color: var(--color-blanco);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--fuente-titulos);
+  font-weight: 800;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.nombreCard {
+  font-family: var(--fuente-titulos);
+  color: var(--color-texto-principal);
+  margin: 0 0 4px;
+}
+
+.rolCard {
+  font-family: var(--fuente-texto);
+  color: var(--color-texto-secundario);
+  margin: 0 0 8px;
+}
+
+.linkFoto {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--color-primario);
+  font-family: var(--fuente-texto);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.campo label {
+  font-family: var(--fuente-texto);
+  font-weight: 600;
+  color: var(--color-texto-principal);
+  font-size: 14px;
+}
+
+.campo input {
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--color-fondo-claro);
+  background: var(--color-fondo-claro);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-form-size);
+  color: var(--color-texto-principal);
+}
+
+.campo input:focus {
+  outline: 2px solid var(--color-primario);
+  background: var(--color-blanco);
+}
+
+.mensajeError {
+  color: #DC2626;
+  font-family: var(--fuente-texto);
+  font-size: 14px;
+}
+.mensajeExito {
+  color: var(--color-cta);
+  font-family: var(--fuente-texto);
+  font-size: 14px;
+}
+
+.notaFoto {
+  color: var(--color-texto-secundario);
+  font-family: var(--fuente-texto);
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.avatarPanelFoto {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatarGrandeFoto {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  object-fit: cover;
+  flex-shrink: 0;
+}

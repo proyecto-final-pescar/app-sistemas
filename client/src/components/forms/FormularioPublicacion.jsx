@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "./FormularioMascota.css";
-import "../ui/input/input.css";
+import "../ui/input/Input.css";
 
 import Input from "../ui/input/Input";
 import Select from "../ui/select/Select";

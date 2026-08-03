@@ -1,4 +1,4 @@
-import './input.css';
+import './Input.css';
 
 function Input({
   label,
@@ -7,7 +7,9 @@ function Input({
   error,
   value,
   onChange,
-  nombre
+  nombre,
+  readOnly,
+  disabled,
 }) {
 
   let mensajeError = null;
@@ -19,8 +21,6 @@ function Input({
       </p>
     );
   }
-
-  console.log(nombre)
 
   return (
     <div className="input-container">
@@ -35,7 +35,8 @@ function Input({
         type={type}
         value={value}
         onChange={onChange}
-        
+        readOnly={readOnly}
+        disabled={disabled}
       />
 
       {mensajeError}
@@ -45,13 +46,3 @@ function Input({
 }
 
 export default Input;
-
-
-
-/* 
-La funcion se va a llamar de la siguiente forma:
-
-<Input
-  label="Nombre"
-  placeholder="Ana Gómez"
-/> */
