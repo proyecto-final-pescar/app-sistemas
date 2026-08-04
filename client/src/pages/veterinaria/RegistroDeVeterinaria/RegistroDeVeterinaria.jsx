@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
@@ -130,6 +131,7 @@ const crearHandleContinuar = (validar, setError, avanzar) => () => {
 };
 
 export default function RegistroDeVeterinaria() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
 
   // Paso 1
@@ -420,7 +422,10 @@ export default function RegistroDeVeterinaria() {
           titulo="¡Registro completo!"
           mensaje="Tu clínica fue registrada correctamente y ya está visible para los usuarios."
           textoBoton="Aceptar"
-          onClose={() => setSuccessModal(false)}
+          onClose={() => {
+            setSuccessModal(false);
+            navigate("/home-veterinaria");
+          }}
         />
         <ErrorModal
           abierto={errorModal.abierto}
