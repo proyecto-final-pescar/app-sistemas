@@ -1,10 +1,9 @@
-// client/src/components/layout/Sidebar.jsx
-
+import { useState, useEffect } from "react";
 import TutorMenu from "./TutorMenu";
 import VeterinariaMenu from "./VeterinariaMenu";
-import AdminMenu from "./AdminMenu"; 
+import AdminMenu from "./AdminMenu";
 import { useAuth } from "../../hooks/useAuth.js";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const IconConfig = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -19,49 +18,76 @@ const IconCollapse = () => (
   </svg>
 );
 
+const IconHamburger = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
 
-// para la etiqueta de usuario
+const IconClose = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
 const ETIQUETAS_ROL = {
   dueno: "Tutor",
   veterinaria: "Veterinario",
   administrador: "Administrador",
 };
 
-const Sidebar = () => {
+const SidebarContenido = ({ onClose }) => {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
 
- 
   const rol = usuario?.rol;
-
   const nombreMostrado = usuario?.nombre || usuario?.email || "Usuario";
   const inicial = nombreMostrado.charAt(0).toUpperCase();
   const etiquetaRol = ETIQUETAS_ROL[rol] || "Usuario";
 
-  return (
-    <aside style={{
-      width: "260px", minWidth: "260px", height: "100vh",
-      backgroundColor: "#ffffff", borderRight: "1px solid #ede9fe",
-      display: "flex", flexDirection: "column", boxSizing: "border-box",
-      position: "sticky", top: 0, fontFamily: "'Inter', Arial, Helvetica, sans-serif",
-    }}>
+  const handleNavegar = (path) => {
+    navigate(path);
+    if (onClose) onClose();
+  };
 
+  return (
+    <>
       {/* Logo */}
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "20px 20px 16px", borderBottom: "1px solid #f5f3ff" }}>
-        <img src="/logo-mypett.svg" alt="Ícono MyPet" style={{ width: "40px", height: "40px" }} />
-        <img src="/mypet.svg" alt="MyPet" style={{ height: "32px", width: "auto" }} />
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        gap: "10px", padding: "20px 20px 16px", borderBottom: "1px solid #f5f3ff"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <img src="/logo-mypett.svg" alt="Ícono MyPet" style={{ width: "40px", height: "40px" }} />
+          <img src="/mypet.svg" alt="MyPet" style={{ height: "32px", width: "auto" }} />
+        </div>
+        {/* Botón cerrar en mobile */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: "32px", height: "32px", border: "none", borderRadius: "8px",
+              backgroundColor: "transparent", color: "#6b7280", cursor: "pointer",
+            }}
+          >
+            <IconClose />
+          </button>
+        )}
       </div>
 
       {/* Menú principal */}
       <div style={{ flex: 1, overflowY: "auto", padding: "12px 12px 0" }}>
-         {rol === "veterinaria" && <VeterinariaMenu />}
-         {rol === "dueno" && <TutorMenu />}
-           {rol === "administrador" && <AdminMenu />}  
+        {rol === "veterinaria" && <VeterinariaMenu onNavigate={onClose} />}
+        {rol === "dueno" && <TutorMenu onNavigate={onClose} />}
+        {rol === "administrador" && <AdminMenu onNavigate={onClose} />}
       </div>
 
       {/* Bloque inferior */}
       <div style={{ borderTop: "1px solid #f5f3ff", padding: "12px 12px 10px" }}>
-
         {/* Usuario + logout */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", marginBottom: "4px" }}>
           <div style={{
@@ -109,7 +135,113 @@ const Sidebar = () => {
           </button>
         </div>
       </div>
-    </aside>
+    </>
+  );
+};
+
+const Sidebar = () => {
+  const [mobileAbierto, setMobileAbierto] = useState(false);
+  const location = useLocation();
+
+  // Cerrar el drawer al cambiar de ruta
+  useEffect(() => {
+    setMobileAbierto(false);
+  }, [location.pathname]);
+
+  // Bloquear scroll del body cuando el drawer está abierto
+  useEffect(() => {
+    if (mobileAbierto) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileAbierto]);
+
+  return (
+    <>
+      {/* ── DESKTOP: sidebar fijo (igual que antes) ── */}
+      <aside style={{
+        width: "260px", minWidth: "260px", height: "100vh",
+        backgroundColor: "#ffffff", borderRight: "1px solid #ede9fe",
+        display: "flex", flexDirection: "column", boxSizing: "border-box",
+        position: "sticky", top: 0, fontFamily: "'Inter', Arial, Helvetica, sans-serif",
+      }}
+        className="sidebar-desktop"
+      >
+        <SidebarContenido />
+      </aside>
+
+      {/* ── MOBILE: barra superior con hamburguesa ── */}
+      <div className="sidebar-mobile-topbar" style={{
+        display: "none",
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        height: "60px", backgroundColor: "#ffffff",
+        borderBottom: "1px solid #ede9fe",
+        alignItems: "center", justifyContent: "space-between",
+        padding: "0 16px", boxSizing: "border-box",
+        fontFamily: "'Inter', Arial, Helvetica, sans-serif",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <img src="/logo-mypett.svg" alt="MyPet" style={{ width: "32px", height: "32px" }} />
+          <img src="/mypet.svg" alt="MyPet" style={{ height: "24px", width: "auto" }} />
+        </div>
+        <button
+          onClick={() => setMobileAbierto(true)}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            width: "40px", height: "40px", border: "none", borderRadius: "10px",
+            backgroundColor: "#f5f3ff", color: "#7c3aed", cursor: "pointer",
+          }}
+          aria-label="Abrir menú"
+        >
+          <IconHamburger />
+        </button>
+      </div>
+
+      {/* ── MOBILE: overlay oscuro ── */}
+      {mobileAbierto && (
+        <div
+          onClick={() => setMobileAbierto(false)}
+          style={{
+            display: "none",
+            position: "fixed", inset: 0, zIndex: 200,
+            backgroundColor: "rgba(0, 0, 0, 0.45)",
+          }}
+          className="sidebar-mobile-overlay"
+        />
+      )}
+
+      {/* ── MOBILE: drawer lateral ── */}
+      <div
+        className="sidebar-mobile-drawer"
+        style={{
+          position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 300,
+          width: "280px", backgroundColor: "#ffffff",
+          display: "flex", flexDirection: "column", boxSizing: "border-box",
+          fontFamily: "'Inter', Arial, Helvetica, sans-serif",
+          transform: mobileAbierto ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 0.25s ease",
+          boxShadow: mobileAbierto ? "4px 0 20px rgba(0,0,0,0.12)" : "none",
+        }}
+      >
+        <SidebarContenido onClose={() => setMobileAbierto(false)} />
+      </div>
+
+      {/* ── CSS para mostrar/ocultar según breakpoint ── */}
+      <style>{`
+        @media (max-width: 767px) {
+          .sidebar-desktop { display: none !important; }
+          .sidebar-mobile-topbar { display: flex !important; }
+          .sidebar-mobile-overlay { display: block !important; }
+        }
+        @media (min-width: 768px) {
+          .sidebar-mobile-topbar { display: none !important; }
+          .sidebar-mobile-drawer { display: none !important; }
+          .sidebar-mobile-overlay { display: none !important; }
+        }
+      `}</style>
+    </>
   );
 };
 
