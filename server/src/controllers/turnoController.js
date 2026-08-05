@@ -276,29 +276,56 @@ export const crearOfertaHoraria = async (req, res) => {
       });
     }
 
-    // Expandir días según recurrencia
     const expandirDias = (dias, recurrencia) => {
-      if (recurrencia === 'unica') return dias;
+      const hoy = new Date();
+      const resultado = new Set();
 
-      const diasExpandidos = new Set(dias.map(d => new Date(d).toISOString()));
+      // Obtener inicio y fin del período según recurrencia
+      const inicioSemana = new Date(hoy);
+      inicioSemana.setDate(hoy.getDate() - hoy.getDay() + 1); // Lunes de esta semana
+      inicioSemana.setHours(0, 0, 0, 0);
 
-      const intervaloDias = {
-        semanal: 7,
-        quincenal: 15,
-        mensual: 30
-      }[recurrencia] || 7;
+      let fechaFin;
+      if (recurrencia === 'unica') {
+        // Solo las fechas exactas que mandó el frontend
+        return dias.map(d => new Date(d));
+      } else if (recurrencia === 'semanal') {
+        // Solo esta semana (lunes a domingo)
+        fechaFin = new Date(inicioSemana);
+        fechaFin.setDate(inicioSemana.getDate() + 6);
+      } else if (recurrencia === 'quincenal') {
+        // Esta semana + la siguiente
+        fechaFin = new Date(inicioSemana);
+        fechaFin.setDate(inicioSemana.getDate() + 13);
+      } else if (recurrencia === 'mensual') {
+        // Todo el mes en curso
+        fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+      }
 
-      // Proyectar 4 semanas hacia adelante
+      // Para cada día seleccionado, buscar todas las fechas que caen en el período
+      const diasSemanaMap = {
+        'Lunes': 1, 'Martes': 2, 'Miércoles': 3,
+        'Jueves': 4, 'Viernes': 5, 'Sábado': 6, 'Domingo': 0
+      };
+
       dias.forEach(dia => {
-        const fecha = new Date(dia);
-        for (let i = 1; i <= 4; i++) {
-          const nuevaFecha = new Date(fecha);
-          nuevaFecha.setDate(nuevaFecha.getDate() + intervaloDias * i);
-          diasExpandidos.add(nuevaFecha.toISOString());
+        const diaSemana = diasSemanaMap[dia];
+        if (diaSemana === undefined) return;
+
+        const fecha = new Date(inicioSemana);
+        // Encontrar el primer día de esa semana que coincida
+        while (fecha.getDay() !== diaSemana) {
+          fecha.setDate(fecha.getDate() + 1);
+        }
+
+        // Agregar todas las fechas de ese día dentro del período
+        while (fecha <= fechaFin) {
+          resultado.add(fecha.toISOString().split('T')[0]);
+          fecha.setDate(fecha.getDate() + 7);
         }
       });
 
-      return Array.from(diasExpandidos).map(d => new Date(d));
+      return Array.from(resultado).map(d => new Date(d));
     };
 
     const diasExpandidos = expandirDias(dias, recurrencia);

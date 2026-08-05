@@ -6,7 +6,6 @@ import { crearOfertaHoraria } from "../../../services/turnosService";
 import styles from "./CargaTurnos.module.css";
 
 const RECURRENCIAS = [
-  { value: "unica", label: "Única vez" },
   { value: "semanal", label: "Semanal" },
   { value: "quincenal", label: "Quincenal" },
   { value: "mensual", label: "Mensual" },
@@ -82,7 +81,68 @@ export default function AjustesVet() {
   };
 
   const slotsPorDia = calcularCantidadSlots();
-  const totalSlots = slotsPorDia * diasSeleccionados.length * profesionales.length;
+
+
+  const calcularFechasExpandidas = () => {
+    if (!diasSeleccionados.length) return 0;
+
+    const hoy = new Date();
+    const inicioSemana = new Date(hoy);
+    inicioSemana.setDate(hoy.getDate() - hoy.getDay() + 1);
+    inicioSemana.setHours(0, 0, 0, 0);
+
+    let fechaFin;
+    if (recurrencia === 'unica') return diasSeleccionados.length;
+
+    if (recurrencia === 'semanal') {
+      fechaFin = new Date(inicioSemana);
+      fechaFin.setDate(inicioSemana.getDate() + 6);
+    } else if (recurrencia === 'quincenal') {
+      fechaFin = new Date(inicioSemana);
+      fechaFin.setDate(inicioSemana.getDate() + 13);
+    } else if (recurrencia === 'mensual') {
+      fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    }
+
+    const diasSemanaMap = {
+      'Lunes': 1, 'Martes': 2, 'Miércoles': 3,
+      'Jueves': 4, 'Viernes': 5, 'Sábado': 6, 'Domingo': 0
+    };
+
+    let totalFechas = 0;
+    diasSeleccionados.forEach(dia => {
+      const diaSemana = diasSemanaMap[dia];
+      const fecha = new Date(inicioSemana);
+      while (fecha.getDay() !== diaSemana) {
+        fecha.setDate(fecha.getDate() + 1);
+      }
+      while (fecha <= fechaFin) {
+        totalFechas++;
+        fecha.setDate(fecha.getDate() + 7);
+      }
+    });
+
+    return totalFechas;
+  };
+
+  const cantidadFechas = calcularFechasExpandidas();
+  const totalSlots = slotsPorDia * cantidadFechas * profesionales.length;
+
+  const descripcionRecurrencia = {
+    unica: "esta semana únicamente",
+    semanal: "durante esta semana",
+    quincenal: "durante las próximas 2 semanas",
+    mensual: `durante todo el mes de ${new Date().toLocaleDateString("es-AR", { month: "long" })}`
+  }[recurrencia];
+
+  // En el JSX del resumen
+  {
+    totalSlots > 0 && (
+      <div className={styles.resumen}>
+        Se crearán <strong>{totalSlots} turnos</strong> de <strong>{especialidad}</strong> los días <strong>{diasSeleccionados.join(", ")}</strong> de <strong>{horaInicio}</strong> a <strong>{horaFin}</strong> hs con <strong>{profesionales.length} profesional{profesionales.length !== 1 ? "es" : ""}</strong>, <strong>{descripcionRecurrencia}</strong>.
+      </div>
+    )
+  }
 
   const handleGuardar = async () => {
     setError("");
@@ -102,7 +162,7 @@ export default function AjustesVet() {
       const result = await crearOfertaHoraria({
         especialidad,
         profesionales,
-        dias,
+        dias: diasSeleccionados,
         horaInicio,
         horaFin,
         recurrencia,
@@ -139,7 +199,7 @@ export default function AjustesVet() {
               {/* Sección 1 — Configuración del turno */}
               <div className={styles.card}>
                 <div className={styles.cardTitulo}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                   Configuración del turno
                 </div>
 
@@ -207,7 +267,7 @@ export default function AjustesVet() {
               <div className={styles.card}>
                 <div className={styles.cardTituloFila}>
                   <div className={styles.cardTitulo}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                     Seleccioná días y horarios
                   </div>
                   {diasSeleccionados.length > 0 && slotsPorDia > 0 && (
@@ -293,7 +353,7 @@ export default function AjustesVet() {
                 {/* Resumen */}
                 {totalSlots > 0 && (
                   <div className={styles.resumen}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                     Se crearán <strong>{totalSlots} turnos</strong> de <strong>{especialidad}</strong> los días <strong>{diasSeleccionados.join(", ")}</strong> de <strong>{horaInicio}</strong> a <strong>{horaFin}</strong> hs con <strong>{profesionales.length} profesional{profesionales.length !== 1 ? "es" : ""}</strong>.
                   </div>
                 )}
@@ -321,7 +381,7 @@ export default function AjustesVet() {
                   onClick={handleGuardar}
                   disabled={guardando}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                   {guardando ? "Guardando..." : "Guardar turnos"}
                 </button>
               </div>
