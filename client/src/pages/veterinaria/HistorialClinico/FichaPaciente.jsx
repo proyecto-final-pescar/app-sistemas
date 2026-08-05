@@ -215,7 +215,7 @@ const FichaPaciente = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar />
+      <Sidebar title="Historial Clínico" />
 
       <div className={styles.main}>
         <TopBar title="Historial Clínico" />

@@ -152,7 +152,7 @@ const BuscarVeterinaria = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar />
+      <Sidebar title="Buscar Veterinaria" />
 
       <div className={styles.pageWrapper}>
         <TopBar title="Buscar Veterinaria" />

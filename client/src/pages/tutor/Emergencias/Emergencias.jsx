@@ -180,8 +180,8 @@ const Emergencias = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar role="tutor" activeItem="Emergencias" title="Urgencias 24h" />
-
+      <Sidebar role="tutor" activeItem="Emergencias" title="Urgencias 24h y Veterinarias Cercanas" />
+      
       <div className={styles.pageWrapper}>
         <TopBar title="Urgencias 24h y Veterinarias Cercanas" />
 

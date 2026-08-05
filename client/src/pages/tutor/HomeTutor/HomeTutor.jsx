@@ -37,7 +37,7 @@ const HomeTutor = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar role="tutor" activeItem="Home" title="Inicio" />
+      <Sidebar role="tutor" activeItem="Home" title="Home" />
 
       <div className={styles.pageWrapper}>
         <TopBar title="Home" />

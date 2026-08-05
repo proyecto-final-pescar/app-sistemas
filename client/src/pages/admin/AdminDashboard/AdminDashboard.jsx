@@ -5,7 +5,7 @@ import styles from "./AdminDashboard.module.css";
 function AdminDashboard() {
   return (
     <div className={styles.layout}>
-      <Sidebar />
+      <Sidebar title="Panel de Administración" />
 
       <div className={styles.pageWrapper}>
         <TopBar title="Panel de Administración" />
