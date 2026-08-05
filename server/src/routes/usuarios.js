@@ -6,10 +6,15 @@ import {
     listarUsuarios,
     crearUsuarioAdmin, 
     darDeBajaUsuario,
-    actualizarUsuarioAdmin
+    actualizarUsuarioAdmin,
+    actualizarPerfilPropio
 } from '../controllers/userController.js'
 
 const router = Router()
+
+// Auto-edición del propio perfil. SIEMPRE antes de '/:id',
+// si no Express interpreta "perfil" como si fuera un :id.
+router.put('/perfil', verifyToken, actualizarPerfilPropio)
 
 router.get('/:id', verifyToken, obtenerPerfilUsuario)
 

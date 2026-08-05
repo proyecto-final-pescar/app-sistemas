@@ -35,7 +35,7 @@ export const obtenerVeterinariasAdmin = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error en GET /api/admin/veterinarias:', error);
+        
 
         return res.status(500).json({
             message: 'Error interno del servidor'
@@ -69,7 +69,7 @@ export const obtenerVeterinariaAdminPorId = async (req, res) => {
             });
         }
 
-        console.error('Error en GET /api/admin/veterinarias/:id:', error);
+       
 
         return res.status(500).json({
             message: 'Error interno del servidor'
@@ -177,7 +177,7 @@ export const actualizarVeterinariaAdmin = async (req, res) => {
             }
         });
 
-        const veterinariaActualizada = await veterinaria.save();
+        const veterinariaActualizada = await veterinaria.save({ validateModifiedOnly: true });
 
         return res.status(200).json({
             success: true,
@@ -192,12 +192,17 @@ export const actualizarVeterinariaAdmin = async (req, res) => {
         }
 
         if (error.name === 'ValidationError') {
+            console.error('Detalle de validación:', error.errors);
             return res.status(400).json({
-                message: 'Datos inválidos'
+                message: 'Datos inválidos',
+                detalles: Object.keys(error.errors).map(campo => ({
+                    campo,
+                    mensaje: error.errors[campo].message
+                }))
             });
         }
 
-        console.error('Error en PUT /api/admin/veterinarias/:id:', error);
+      
 
         return res.status(500).json({
             message: 'Error interno del servidor'
@@ -259,7 +264,7 @@ export const eliminarVeterinariaAdmin = async (req, res) => {
             });
         }
 
-        console.error('Error en DELETE /api/admin/veterinarias/:id:', error);
+       
 
         return res.status(500).json({
             message: 'Error interno del servidor'
@@ -278,7 +283,7 @@ export const aprobarVeterinaria = async (req, res) => {
         }
 
         veterinaria.estado = 'activa';
-        await veterinaria.save();
+        await veterinaria.save({ validateModifiedOnly: true });
 
         return res.status(200).json({
             success: true,
@@ -289,7 +294,7 @@ export const aprobarVeterinaria = async (req, res) => {
         if (error.name === 'CastError') {
             return res.status(400).json({ message: 'El id de la veterinaria no es válido' });
         }
-        console.error('Error en PATCH /api/admin/veterinarias/:id/aprobar:', error);
+        
         return res.status(500).json({ message: 'Error interno del servidor' });
     }
 };
@@ -305,7 +310,7 @@ export const rechazarVeterinaria = async (req, res) => {
         }
 
         veterinaria.estado = 'suspendida';
-        await veterinaria.save();
+        await veterinaria.save({ validateModifiedOnly: true });
 
         return res.status(200).json({
             success: true,
@@ -316,7 +321,7 @@ export const rechazarVeterinaria = async (req, res) => {
         if (error.name === 'CastError') {
             return res.status(400).json({ message: 'El id de la veterinaria no es válido' });
         }
-        console.error('Error en PATCH /api/admin/veterinarias/:id/rechazar:', error);
+       
         return res.status(500).json({ message: 'Error interno del servidor' });
     }
 };

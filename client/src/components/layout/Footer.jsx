@@ -1,4 +1,24 @@
+import { useState, useEffect } from "react";
+
+const useIsMobile = (breakpoint = 480) => {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth <= breakpoint : false
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const handleChange = (e) => setIsMobile(e.matches);
+
+    handleChange(mediaQuery);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [breakpoint]);
+
+  return isMobile;
+};
+
 const Footer = () => {
+  const isMobile = useIsMobile(480);
   return (
     <footer
       style={{
@@ -7,6 +27,7 @@ const Footer = () => {
         borderTop: "1px solid #ede9fe",
         padding: "20px 40px",
         fontFamily: "'Inter', Arial, Helvetica, sans-serif",
+        boxSizing: "border-box",
       }}
     >
       <div
@@ -14,10 +35,13 @@ const Footer = () => {
           maxWidth: "1280px",
           margin: "0 auto",
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
           alignItems: "center",
           justifyContent: "space-between",
           gap: "24px",
           flexWrap: "wrap",
+          textAlign: isMobile ? "center" : "left",
+          boxSizing: "border-box",
         }}
       >
         <a

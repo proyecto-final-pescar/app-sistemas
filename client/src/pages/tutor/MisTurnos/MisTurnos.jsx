@@ -75,7 +75,7 @@ export default function MisTurnos() {
 
   return (
     <div className={styles.shell}>
-      <Sidebar role="tutor" activeItem="Turnos" />
+      <Sidebar role="tutor" activeItem="Turnos" title="Mis turnos" />
       <div className={styles.main}>
         <TopBar title="Mis turnos" notifications={0} />
 

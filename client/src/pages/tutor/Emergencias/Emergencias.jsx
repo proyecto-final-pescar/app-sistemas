@@ -159,6 +159,7 @@ const Emergencias = () => {
   const handleMarkerClick  = (vet) => { setVetSeleccionada(vet); setVetDestacada(vet._id); };
   const handleCardClick    = (vet) => { setVetDestacada(vet._id); setVetSeleccionada(vet); };
   const handleCerrarBubble = ()    => setVetSeleccionada(null);
+  const irAlPerfil = (vetId) => navigate(`/tutor/veterinarias/${vetId}`);
 
   const handleCercaMio = () => {
     const nuevoEstado = !cercaMioActivo;
@@ -179,7 +180,7 @@ const Emergencias = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar role="tutor" />
+      <Sidebar role="tutor" activeItem="Emergencias" title="Urgencias 24h" />
 
       <div className={styles.pageWrapper}>
         <TopBar title="Urgencias 24h y Veterinarias Cercanas" />
@@ -306,7 +307,7 @@ const Emergencias = () => {
                           )}
                           <button
                             className={styles.infoBubbleBtn}
-                            onClick={() => navigate(`/veterinarias/${vetSeleccionada._id}`)}
+                            onClick={() => irAlPerfil(vetSeleccionada._id)}
                           >
                             Ver veterinaria →
                           </button>
@@ -372,7 +373,7 @@ const Emergencias = () => {
                             abierta={estaAbierta(vet)}
                             distancia={calcularDistancia(miUbicacion.lat, miUbicacion.lng, pos.lat, pos.lng)}
                             onClick={() => handleCardClick(vet)}
-                            onVerDetalle={() => navigate(`/veterinarias/${vet._id}`)}
+                            onVerDetalle={() => irAlPerfil(vet._id)}
                           />
                         );
                       })}
