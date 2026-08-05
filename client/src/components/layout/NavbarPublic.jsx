@@ -6,16 +6,18 @@ const NavbarPublic = () => {
         backgroundColor: "#ffffff",
         borderBottom: "1px solid #ede9fe",
         fontFamily: "'Inter', Arial, Helvetica, sans-serif",
+        boxSizing: "border-box",
       }}
     >
       <nav
         style={{
           maxWidth: "1280px",
           margin: "0 auto",
-          padding: "14px 24px",
+          padding: "clamp(10px, 3vw, 14px) clamp(16px, 4vw, 24px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          boxSizing: "border-box",
         }}
       >
         <a
@@ -25,16 +27,18 @@ const NavbarPublic = () => {
             alignItems: "center",
             gap: "10px",
             textDecoration: "none",
+            minWidth: 0,
           }}
         >
           <img
             src="/logo-mypet.svg"
             alt="Logo de MyPet"
             style={{
-              width: "45px",
-              height: "45px",
+              width: "clamp(34px, 9vw, 45px)",
+              height: "clamp(34px, 9vw, 45px)",
               objectFit: "contain",
               display: "block",
+              flexShrink: 0,
             }}
           />
 
@@ -42,7 +46,7 @@ const NavbarPublic = () => {
             src="/mypet.svg"
             alt="MyPet"
             style={{
-              height: "40px",
+              height: "clamp(28px, 7vw, 40px)",
               width: "auto",
               objectFit: "contain",
               display: "block",
@@ -53,18 +57,24 @@ const NavbarPublic = () => {
         <a
           href="/login"
           style={{
-            padding: "8px 22px",
-            border: "2px solid #7c3aed",
-            borderRadius: "999px",
-            color: "#7c3aed",
-            fontSize: "14px",
-            lineHeight: "20px",
-            fontWeight: "500",
-            letterSpacing: "-0.15px",
-            fontFamily: "'Inter', Arial, Helvetica, sans-serif",
-            textDecoration: "none",
-            backgroundColor: "#ffffff",
-            transition: "all 0.2s ease",
+              padding: "clamp(8px, 2vw, 10px) clamp(16px, 4vw, 22px)",
+              border: "2px solid #7c3aed",
+              borderRadius: "999px",
+              color: "#7c3aed",
+              fontSize: "clamp(13px, 3vw, 14px)",
+              lineHeight: "20px",
+              fontWeight: "500",
+              letterSpacing: "-0.15px",
+              fontFamily: "'Inter', Arial, Helvetica, sans-serif",
+              textDecoration: "none",
+              backgroundColor: "#ffffff",
+              transition: "all 0.2s ease",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "44px",
+              boxSizing: "border-box",
+              whiteSpace: "nowrap",
           }}
           onMouseEnter={(e) => {
             e.target.style.backgroundColor = "#7c3aed";

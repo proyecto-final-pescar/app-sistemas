@@ -218,7 +218,8 @@ export const actualizarHistorialClinico = async (req, res) => {
     }
 
     const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id })
-    if (!veterinaria || consulta.veterinariaId.toString() !== veterinaria._id.toString()) {
+    
+    if (!veterinaria || historialClinico.veterinariaId.toString() !== veterinaria._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Solo podés editar consultas de tu veterinaria'

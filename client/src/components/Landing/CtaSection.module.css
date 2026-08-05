@@ -3,6 +3,7 @@
   background-color: var(--color-fondo-claro);
   padding: 64px 24px;
   font-family: "Inter", Arial, Helvetica, sans-serif;
+  box-sizing: border-box;
 }
 
 .container {
@@ -13,4 +14,24 @@
 .buttonRow {
   display: flex;
   justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 48px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .section {
+    padding: 40px 16px;
+  }
+  .buttonRow {
+    width: 100%;
+  }
+
+  .buttonRow > * {
+    width: 100%;
+    box-sizing: border-box;
+  }
 }

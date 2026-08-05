@@ -6,6 +6,7 @@ function Textarea({
   value,
   onChange,
   error,
+  maxLength,
 }) {
   let mensajeError = null;
 
@@ -28,6 +29,7 @@ function Textarea({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        maxLength={maxLength}
       />
 
       {mensajeError}
