@@ -1,0 +1,247 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f9f8ff;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.content {
+  margin: 24px 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Filtros */
+.filtros {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filtrosLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.select {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid #ede9fe;
+  background: white;
+  font-size: 13px;
+  color: #1f1739;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  cursor: pointer;
+}
+
+.select:focus {
+  border-color: #7c3aed;
+}
+
+.inputZona {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid #ede9fe;
+  background: white;
+  font-size: 13px;
+  color: #1f1739;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  width: 160px;
+}
+
+.inputZona:focus {
+  border-color: #7c3aed;
+}
+
+/* Tabla */
+.tablaWrapper {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #ede9fe;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tabla thead tr {
+  background: #7c3aed;
+}
+
+.tabla thead th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  white-space: nowrap;
+}
+
+.tabla tbody tr {
+  border-bottom: 1px solid #f5f3ff;
+  transition: background 0.1s;
+}
+
+.tabla tbody tr:last-child {
+  border-bottom: none;
+}
+
+.tabla tbody tr:hover {
+  background: #faf9ff;
+}
+
+.tabla tbody td {
+  padding: 12px 16px;
+  color: #1f1739;
+  vertical-align: middle;
+}
+
+.estadoVacio {
+  text-align: center;
+  color: #8276ab;
+  padding: 40px;
+  font-size: 14px;
+}
+
+.foto {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.fotoPlaceholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #f5f3ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.nombreCell {
+  font-weight: 600;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.creadorCell {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.creadorId {
+  font-size: 11px;
+  color: #8276ab;
+}
+
+.badgeReportes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Acciones */
+.acciones {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnIcono {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #ede9fe;
+  background: white;
+  color: #8276ab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btnIcono:hover {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border-color: #c4b5fd;
+}
+
+.btnIcono:hover {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border-color: #c4b5fd;
+}
+
+.btnIconoBaja:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  border-color: #fecaca;
+}
+
+/* Paginación */
+.paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding-top: 4px;
+}
+
+.btnPag {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #ede9fe;
+  background: white;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.15s;
+}
+
+.btnPag:hover {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+.btnPagActivo {
+  background: #7c3aed;
+  color: white;
+  border-color: #7c3aed;
+}
+
+.btnPagActivo:hover {
+  background: #6d28d9;
+}

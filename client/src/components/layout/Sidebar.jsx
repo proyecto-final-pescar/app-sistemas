@@ -4,7 +4,7 @@ import TutorMenu from "./TutorMenu";
 import VeterinariaMenu from "./VeterinariaMenu";
 import AdminMenu from "./AdminMenu"; 
 import { useAuth } from "../../hooks/useAuth.js";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const IconConfig = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -30,7 +30,8 @@ const ETIQUETAS_ROL = {
 const Sidebar = () => {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
-
+  const location = useLocation();
+  const enPerfil = location.pathname === "/perfil";
  
   const rol = usuario?.rol;
 
@@ -64,12 +65,23 @@ const Sidebar = () => {
 
         {/* Usuario + logout */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", marginBottom: "4px" }}>
-          <div style={{
-            width: "34px", height: "34px", borderRadius: "50%",
-            backgroundColor: "#7c3aed", color: "#ffffff",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "13px", fontWeight: 600, flexShrink: 0,
-          }}>{inicial}</div>
+          {usuario?.fotoUrl ? (
+            <img
+              src={usuario.fotoUrl}
+              alt={nombreMostrado}
+              style={{
+                width: "34px", height: "34px", borderRadius: "50%",
+                objectFit: "cover", flexShrink: 0,
+              }}
+            />
+          ) : (
+            <div style={{
+              width: "34px", height: "34px", borderRadius: "50%",
+              backgroundColor: "#7c3aed", color: "#ffffff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: "13px", fontWeight: 600, flexShrink: 0,
+            }}>{inicial}</div>
+          )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: "#1f1739", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nombreMostrado}</p>
             <p style={{ margin: 0, fontSize: "11px", color: "#8276ab" }}>{etiquetaRol}</p>
@@ -91,10 +103,17 @@ const Sidebar = () => {
 
         {/* Configuración + contraer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <button
-            style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, padding: "10px 12px", border: "none", borderRadius: "10px", backgroundColor: "transparent", color: "#6b7280", fontSize: "14px", fontWeight: "500", cursor: "pointer", textAlign: "left", boxSizing: "border-box" }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f5f3ff"; e.currentTarget.style.color = "#7c3aed"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#6b7280"; }}
+         <button
+            onClick={() => navigate("/perfil")}
+            style={{
+              display: "flex", alignItems: "center", gap: "12px", flex: 1, padding: "10px 12px",
+              border: "none", borderRadius: "10px",
+              backgroundColor: enPerfil ? "#f5f3ff" : "transparent",
+              color: enPerfil ? "#7c3aed" : "#6b7280",
+              fontSize: "14px", fontWeight: "500", cursor: "pointer", textAlign: "left", boxSizing: "border-box",
+            }}
+            onMouseEnter={(e) => { if (!enPerfil) { e.currentTarget.style.backgroundColor = "#f5f3ff"; e.currentTarget.style.color = "#7c3aed"; } }}
+            onMouseLeave={(e) => { if (!enPerfil) { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#6b7280"; } }}
           >
             <IconConfig />
             Configuración

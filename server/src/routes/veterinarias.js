@@ -10,6 +10,10 @@ import {
   actualizarVeterinaria,
   obtenerPacientesVeterinaria,
 } from "../controllers/veterinariaController.js";
+import {
+  calificarVeterinaria,
+  obtenerMiResena,
+} from "../controllers/reseniaController.js";
 
 const router = Router();
 
@@ -23,5 +27,9 @@ router.get("/mia/pacientes", verifyToken, verificarRol("veterinaria"), obtenerPa
 router.get("/:id", verifyToken, obtenerVeterinariaPorId);
 router.post("/", verifyToken, verificarRol("veterinaria"), crearVeterinaria);
 router.put("/:id", verifyToken, actualizarVeterinaria);
+
+// calificación
+router.post("/:id/resenas", verifyToken, calificarVeterinaria);
+router.get("/:id/mi-resena", verifyToken, obtenerMiResena);
 
 export default router;

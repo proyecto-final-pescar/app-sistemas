@@ -1,0 +1,243 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(43, 33, 66, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+}
+
+.modal {
+  position: relative;
+  background-color: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 820px;
+  box-shadow: 0 10px 30px rgba(43, 33, 66, 0.12);
+  font-family: "Inter", sans-serif;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 1.8rem;
+  right: 1.8rem;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background-color: #ede9fe;
+  color: #2b2142;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.closeBtn:hover {
+  background-color: #e5ddf8;
+}
+
+.header {
+  padding: 1.8rem 2.2rem 1.2rem 2.2rem;
+}
+
+.title {
+  margin: 0;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #2b2142;
+  letter-spacing: -0.01em;
+}
+
+.body {
+  display: flex;
+  padding: 0 2.2rem 2.5rem 2.2rem;
+  gap: 2rem;
+  align-items: stretch;
+}
+
+.columnaDatos {
+  flex: 1.2;
+}
+
+.columnaMascotas {
+  flex: 1;
+}
+
+.divider {
+  width: 1px;
+  background-color: #e5ddf8;
+  align-self: stretch;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5ddf8;
+}
+
+.iconUser {
+  width: 20px;
+  height: 20px;
+  color: #2b2142;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #2b2142;
+}
+
+.gridDatos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 1.4rem;
+  column-gap: 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fullWidth {
+  grid-column: span 2;
+}
+
+.label {
+  font-size: 0.82rem;
+  color: #7e6fa0;
+  font-weight: 500;
+}
+
+.value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2b2142;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+}
+
+.activa {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.suspendida {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.listaMascotas {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.emptyState {
+  font-size: 0.9rem;
+  color: #7e6fa0;
+  margin: 0;
+}
+
+.tarjetaMascota {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1.2rem;
+  border-radius: 16px;
+  color: #ffffff;
+  transition: transform 0.2s ease;
+}
+
+.tarjetaMascota:hover {
+  transform: translateY(-2px);
+}
+
+.verde {
+  background-color: #059669;
+}
+
+.violeta {
+  background-color: #7c3aed;
+}
+
+.avatarMascota {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.infoMascota {
+  display: flex;
+  flex-direction: column;
+}
+
+.nombreMascota {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.edadMascota {
+  font-size: 0.85rem;
+  opacity: 0.85;
+  font-weight: 400;
+}
+
+/* Responsive: colapsa a 1 columna en pantallas chicas */
+@media (max-width: 640px) {
+  .body {
+    flex-direction: column;
+    padding: 0 1.4rem 2rem 1.4rem;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+  }
+
+  .gridDatos {
+    grid-template-columns: 1fr;
+  }
+
+  .fullWidth {
+    grid-column: span 1;
+  }
+}
+
+.loadingState {
+  padding: 2.5rem;
+  text-align: center;
+  color: #7e6fa0;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.errorState {
+  padding: 2.5rem;
+  text-align: center;
+  color: #dc2626;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
