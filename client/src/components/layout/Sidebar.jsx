@@ -48,11 +48,6 @@ const SidebarContenido = ({ onClose }) => {
   const inicial = nombreMostrado.charAt(0).toUpperCase();
   const etiquetaRol = ETIQUETAS_ROL[rol] || "Usuario";
 
-  const handleNavegar = (path) => {
-    navigate(path);
-    if (onClose) onClose();
-  };
-
   return (
     <>
       {/* Logo */}
@@ -64,7 +59,6 @@ const SidebarContenido = ({ onClose }) => {
           <img src="/logo-mypett.svg" alt="Ícono MyPet" style={{ width: "40px", height: "40px" }} />
           <img src="/mypet.svg" alt="MyPet" style={{ height: "32px", width: "auto" }} />
         </div>
-        {/* Botón cerrar en mobile */}
         {onClose && (
           <button
             onClick={onClose}
@@ -88,7 +82,6 @@ const SidebarContenido = ({ onClose }) => {
 
       {/* Bloque inferior */}
       <div style={{ borderTop: "1px solid #f5f3ff", padding: "12px 12px 10px" }}>
-        {/* Usuario + logout */}
         <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", marginBottom: "4px" }}>
           <div style={{
             width: "34px", height: "34px", borderRadius: "50%",
@@ -115,7 +108,6 @@ const SidebarContenido = ({ onClose }) => {
           </button>
         </div>
 
-        {/* Configuración + contraer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <button
             style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, padding: "10px 12px", border: "none", borderRadius: "10px", backgroundColor: "transparent", color: "#6b7280", fontSize: "14px", fontWeight: "500", cursor: "pointer", textAlign: "left", boxSizing: "border-box" }}
@@ -139,16 +131,14 @@ const SidebarContenido = ({ onClose }) => {
   );
 };
 
-const Sidebar = () => {
+const Sidebar = ({ title = "" }) => {
   const [mobileAbierto, setMobileAbierto] = useState(false);
   const location = useLocation();
 
-  // Cerrar el drawer al cambiar de ruta
   useEffect(() => {
     setMobileAbierto(false);
   }, [location.pathname]);
 
-  // Bloquear scroll del body cuando el drawer está abierto
   useEffect(() => {
     if (mobileAbierto) {
       document.body.style.overflow = "hidden";
@@ -160,7 +150,7 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* ── DESKTOP: sidebar fijo (igual que antes) ── */}
+      {/* DESKTOP */}
       <aside style={{
         width: "260px", minWidth: "260px", height: "100vh",
         backgroundColor: "#ffffff", borderRight: "1px solid #ede9fe",
@@ -172,7 +162,7 @@ const Sidebar = () => {
         <SidebarContenido />
       </aside>
 
-      {/* ── MOBILE: barra superior con hamburguesa ── */}
+      {/* MOBILE: barra superior */}
       <div className="sidebar-mobile-topbar" style={{
         display: "none",
         position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
@@ -182,9 +172,19 @@ const Sidebar = () => {
         padding: "0 16px", boxSizing: "border-box",
         fontFamily: "'Inter', Arial, Helvetica, sans-serif",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <img src="/logo-mypett.svg" alt="MyPet" style={{ width: "32px", height: "32px" }} />
-          <img src="/mypet.svg" alt="MyPet" style={{ height: "24px", width: "auto" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <img src="/logo-mypett.svg" alt="MyPet" style={{ width: "28px", height: "28px" }} />
+          {/* Título dinámico de la sección actual */}
+          {title && (
+            <span style={{
+              fontSize: "14px", fontWeight: 600,
+              color: "#1c1033", whiteSpace: "nowrap",
+              overflow: "hidden", textOverflow: "ellipsis",
+              maxWidth: "180px",
+            }}>
+              {title}
+            </span>
+          )}
         </div>
         <button
           onClick={() => setMobileAbierto(true)}
@@ -199,20 +199,20 @@ const Sidebar = () => {
         </button>
       </div>
 
-      {/* ── MOBILE: overlay oscuro ── */}
+      {/* MOBILE: overlay */}
       {mobileAbierto && (
         <div
           onClick={() => setMobileAbierto(false)}
+          className="sidebar-mobile-overlay"
           style={{
             display: "none",
             position: "fixed", inset: 0, zIndex: 200,
             backgroundColor: "rgba(0, 0, 0, 0.45)",
           }}
-          className="sidebar-mobile-overlay"
         />
       )}
 
-      {/* ── MOBILE: drawer lateral ── */}
+      {/* MOBILE: drawer */}
       <div
         className="sidebar-mobile-drawer"
         style={{
@@ -228,7 +228,6 @@ const Sidebar = () => {
         <SidebarContenido onClose={() => setMobileAbierto(false)} />
       </div>
 
-      {/* ── CSS para mostrar/ocultar según breakpoint ── */}
       <style>{`
         @media (max-width: 767px) {
           .sidebar-desktop { display: none !important; }
