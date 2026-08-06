@@ -107,7 +107,7 @@ export const crearPreferenciaPago = async (req, res) => {
           mascotaId: turno.mascotaId._id.toString()
         },
 
-        auto_return: 'approved'
+        //auto_return: 'approved'
       }
     });
 
