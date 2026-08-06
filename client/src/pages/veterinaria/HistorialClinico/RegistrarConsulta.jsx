@@ -371,7 +371,7 @@ function RegistrarConsulta() {
   if (isLoadingTurno) {
     return (
       <div className="registrar-consulta-layout">
-        <Sidebar role="veterinaria" />
+        <Sidebar role="veterinaria" title="Historial Clínico" />
 
         <div className="registrar-consulta-content">
           <TopBar
