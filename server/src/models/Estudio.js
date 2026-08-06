@@ -14,29 +14,35 @@ const estudioSchema = new mongoose.Schema(
     },
     profesionalId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
       required: [true, 'El profesional es requerido']
+      //  es el _id del subdocumento dentro de Veterinaria.profesionales.
+      // Se resuelve manualmente con veterinaria.profesionales.id(profesionalId).
+    },
+    veterinariaId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Veterinaria',
+      required: [true, 'La veterinaria es requerida']
+      // Se usa para validar permisos de edición/eliminación.
     },
     historialClinicoId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'HistorialClinico',
-      default: null // Opcional, por si se adjunta desde una consulta puntual
+      default: null
     },
     nombre: {
       type: String,
       required: [true, 'El nombre del estudio es requerido'],
       trim: true
-      // Ej: "Hemograma Completo", "Radiografía", "Ecografía"
     },
     fecha: {
       type: Date,
       required: [true, 'La fecha es requerida']
     },
-      urlArchivo: {
+    urlArchivo: {
       type: String,
       trim: true,
       default: null
-    } 
+    }
   },
   {
     timestamps: true,
