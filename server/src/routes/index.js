@@ -36,7 +36,7 @@ router.use('/', historialCompletoRouter);
 router.use('/turnos', turnosRouter);
 router.use('/publicaciones', publicacionesRouter);
 router.use('/reportes', reportesRouter);
-router.use('/admin/dashboard', dashboardRouter);
+router.use('/admin/dashboard', dashboardRouter); 
 router.use('/pagos', pagosRouter);
 
 export default router;
