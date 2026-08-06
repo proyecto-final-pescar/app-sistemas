@@ -8,6 +8,7 @@ import { actualizarFichaMedica } from "../../../services/fichaMedicaService.js";
 import { crearVacuna, actualizarVacuna, eliminarVacuna } from "../../../services/vacunaService.js";
 import { crearEstudio, actualizarEstudio, eliminarEstudio } from "../../../services/estudioService.js";
 import { subirImagen } from "../../../services/uploadService.js";
+import { obtenerMiVeterinaria } from "../../../services/veterinariaService.js";
 import styles from "./FichaPaciente.module.css";
 
 // ── Componente principal ──
@@ -25,36 +26,38 @@ const FichaPaciente = () => {
   const [filtroFecha, setFiltroFecha] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+   const [profesionales, setProfesionales] = useState([]);
+ 
+useEffect(() => {
+  const cargarDatos = async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const [res, veterinaria] = await Promise.all([
+        api.get(`/historial-completo/${mascotaId}`),
+        obtenerMiVeterinaria(),
+      ]);
+      const data = res.data.data ?? {};
 
-  useEffect(() => {
-    const cargarDatos = async () => {
-      setIsLoading(true);
-      setError("");
-      try {
-        //  trae mascota + historial + ficha médica +
-        // vacunas + estudios 
-        const res = await api.get(`/historial-completo/${mascotaId}`);
-        const data = res.data.data ?? {};
-
-        setHistorial(Array.isArray(data.historialClinico) ? data.historialClinico : []);
-        setMascota(data.mascota ?? null);
-        setFichaMedica(data.fichaMedica ?? null);
-        setVacunas(Array.isArray(data.vacunas) ? data.vacunas : []);
-        setEstudios(Array.isArray(data.estudios) ? data.estudios : []);
-      } catch (err) {
-        if (err.response?.status === 403) {
-          setError("Todavía no tenés acceso al historial de esta mascota. El acceso se habilita cuando el turno esté confirmado.");
-        } else {
-          setError("No se pudo cargar el historial. Intentá de nuevo más tarde.");
-        }
-
-      } finally {
-        setIsLoading(false);
+      setHistorial(Array.isArray(data.historialClinico) ? data.historialClinico : []);
+      setMascota(data.mascota ?? null);
+      setFichaMedica(data.fichaMedica ?? null);
+      setVacunas(Array.isArray(data.vacunas) ? data.vacunas : []);
+      setEstudios(Array.isArray(data.estudios) ? data.estudios : []);
+      setProfesionales(Array.isArray(veterinaria?.profesionales) ? veterinaria.profesionales : []);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setError("Todavía no tenés acceso al historial de esta mascota. El acceso se habilita cuando el turno esté confirmado.");
+      } else {
+        setError("No se pudo cargar el historial. Intentá de nuevo más tarde.");
       }
-    };
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    cargarDatos();
-  }, [mascotaId]);
+  cargarDatos();
+}, [mascotaId])
 
   // Filtros en tiempo real
   const historialFiltrado = historial.filter((entrada) => {
@@ -118,6 +121,7 @@ const FichaPaciente = () => {
     await eliminarEstudio(estudioId);
     setEstudios((actuales) => actuales.filter((estudio) => estudio._id !== estudioId));
   };
+  
 
   const nombreMascota = mascota?.nombre ?? "Mascota";
   const nombreDueno = mascota?.dueñoId?.nombre ?? mascota?.dueñoId?.name ?? "—";
@@ -226,13 +230,13 @@ const FichaPaciente = () => {
                                 </svg>
                                 {new Date(entrada.fecha).toLocaleDateString("es-AR")}
                               </span>
-                              {entrada.profesionalId?.nombre && (
+                              {entrada.profesionalNombre && (
                                 <span>
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                                     <circle cx="12" cy="7" r="4" />
                                   </svg>
-                                  {entrada.profesionalId.nombre}
+                                  {entrada.profesionalNombre}
                                 </span>
                               )}
                             </div>
@@ -256,18 +260,19 @@ const FichaPaciente = () => {
             ) : error ? (
               <p className={`${styles.estadoMensaje} ${styles.estadoError}`}>{error}</p>
             ) : (
-              <FichaMedicaTab
-                mascota={mascota}
-                fichaMedica={fichaMedica}
-                historial={historial}
-                vacunas={vacunas}
-                estudios={estudios}
-                onGuardarFicha={handleGuardarFichaMedica}
-                onGuardarVacuna={handleGuardarVacuna}
-                onEliminarVacuna={handleEliminarVacuna}
-                onGuardarEstudio={handleGuardarEstudio}
-                onEliminarEstudio={handleEliminarEstudio}
-              />
+            <FichaMedicaTab
+              mascota={mascota}
+              fichaMedica={fichaMedica}
+              historial={historial}
+              vacunas={vacunas}
+              estudios={estudios}
+              profesionales={profesionales}
+              onGuardarFicha={handleGuardarFichaMedica}
+              onGuardarVacuna={handleGuardarVacuna}
+              onEliminarVacuna={handleEliminarVacuna}
+              onGuardarEstudio={handleGuardarEstudio}
+              onEliminarEstudio={handleEliminarEstudio}
+            />
             )
           )}
         </div>

@@ -330,6 +330,16 @@
 
 .removeFileOption input {
   accent-color: #7c3aed;
+
+}
+.selectField {
+  padding: 10px;
+  border: 1px solid #e5ddf8;
+  border-radius: 14px;
+  font: inherit;
+  font-weight: 400;
+  color: #2b2142;
+  background: #fff;
 }
 
 @media (min-width: 640px) {

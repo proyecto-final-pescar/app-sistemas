@@ -33,11 +33,7 @@ const calcularEdad = (fechaNacimiento) => {
   return edad >= 0 ? edad : null;
 };
 
-const nombreProfesional = (registro) => {
-  const profesional = registro?.profesionalId;
-  if (!profesional || typeof profesional === "string") return null;
-  return profesional.nombre || profesional.name || null;
-};
+const nombreProfesional = (registro) => registro?.profesionalNombre || null;
 
 const DatoPermanente = ({ etiqueta, valor }) => (
   <div className={styles.permanentItem}>
@@ -52,6 +48,7 @@ const FichaMedicaTab = ({
   historial,
   vacunas,
   estudios,
+  profesionales,
   onGuardarFicha,
   onGuardarVacuna,
   onEliminarVacuna,
@@ -229,10 +226,22 @@ const FichaMedicaTab = ({
         <EditarFichaMedicaModal abierto fichaMedica={fichaMedica} onClose={() => setModalFicha(false)} onGuardar={guardarFicha} />
       )}
       {vacunaSeleccionada !== undefined && (
-        <VacunaModal abierto vacuna={vacunaSeleccionada || null} onClose={() => setVacunaSeleccionada(undefined)} onGuardar={guardarVacuna} />
+        <VacunaModal
+          abierto
+          vacuna={vacunaSeleccionada || null}
+          profesionales={profesionales}
+          onClose={() => setVacunaSeleccionada(undefined)}
+          onGuardar={guardarVacuna}
+        />
       )}
       {estudioSeleccionado !== undefined && (
-        <EstudioModal abierto estudio={estudioSeleccionado || null} onClose={() => setEstudioSeleccionado(undefined)} onGuardar={guardarEstudio} />
+        <EstudioModal
+          abierto
+          estudio={estudioSeleccionado || null}
+          profesionales={profesionales}
+          onClose={() => setEstudioSeleccionado(undefined)}
+          onGuardar={guardarEstudio}
+        />
       )}
       <ConfirmModal
         abierto={Boolean(confirmacion)}
