@@ -161,7 +161,7 @@ export default function Dashboard() {
 
   return (
     <div className={styles.layout}>
-      <Sidebar />
+      <Sidebar title="Dashboard" />
 
       <div className={styles.main}>
         <TopBar title="Dashboard" />
