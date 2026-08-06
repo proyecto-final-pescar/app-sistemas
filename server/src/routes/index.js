@@ -16,6 +16,7 @@ import turnosRouter from './rutasTurnos.js';
 import publicacionesRouter from './publicaciones.js';
 import reportesRouter from './reportes.js';
 import dashboardRouter from './dashboard.js';
+import pagosRouter from './pagos.js';
 
 const router = Router()
 
@@ -35,6 +36,7 @@ router.use('/', historialCompletoRouter);
 router.use('/turnos', turnosRouter);
 router.use('/publicaciones', publicacionesRouter);
 router.use('/reportes', reportesRouter);
-router.use('/admin/dashboard', dashboardRouter); 
+router.use('/admin/dashboard', dashboardRouter);
+router.use('/pagos', pagosRouter);
 
 export default router;
