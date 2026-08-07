@@ -68,8 +68,10 @@ export const recibirWebhook = async (req, res) => {
     }
 
     // 6. Actualizamos el turno a 'confirmado'
-    turno.estado = 'confirmado';
-    await turno.save();
+    if (turno.estado !== 'confirmado') {
+      turno.estado = 'confirmado';
+      await turno.save();
+    }
 
     // 7. Creamos o actualizamos el documento en la colección Pagos
     const metodoPago = METODO_PAGO_MAP[pagoMP.payment_type_id] || null;
@@ -95,8 +97,6 @@ export const recibirWebhook = async (req, res) => {
     // 8. Vinculamos el pago al turno
     turno.pagoId = pagoGuardado._id;
     await turno.save();
-
-    console.log(`✅ Webhook procesado: turno ${turnoId} confirmado, pago ${idPago} aprobado`);
 
     return res.status(200).json({
       message: 'Pago procesado correctamente',
