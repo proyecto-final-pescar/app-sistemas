@@ -9,6 +9,7 @@ import Modal from "../../../components/layout/modal/Modal";
 import Select from "../../../components/ui/select/Select";
 import Button from "../../../components/ui/button/Button";
 import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
+import { crearPreferenciaPago } from "../../../services/pagoService";
 
 import styles from "../../../styles/AgendarTurno.module.css";
 const API_URL = import.meta.env.VITE_API_URL;  
@@ -84,6 +85,9 @@ const AgendarTurnos = () => {
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [turnoCreadoId, setTurnoCreadoId] = useState(null);
+  const [procesandoPago, setProcesandoPago] = useState(false);
+  const [errorPago, setErrorPago] = useState("");
   const [turnoSeleccionado, setTurnoSeleccionado] = useState(null);
   const [servicio, setServicio] = useState("");
   const [mascotaSeleccionadaId, setMascotaSeleccionadaId] = useState("");
@@ -258,55 +262,105 @@ const AgendarTurnos = () => {
   };
 
   // --- Persistencia: Guardar Turno en MongoDB ---
-  const handleConfirmarTurnoFinal = async (e) => {
-    e.preventDefault();
-    try {
-      const token = obtenerToken();
+const handleConfirmarTurnoFinal = async (e) => {
+  e.preventDefault();
 
-      const payload = {
-        fecha: turnoSeleccionado.dia.fechaStr,
-        hora: turnoSeleccionado.hora,
-        motivo: servicio,
-        mascotaId: mascotaSeleccionadaId,
-        veterinariaId: veterinariaId,
-      };
+  setErrorPago("");
 
-      const response = await fetch(`${API_URL}/turnos`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
+  try {
+    const token = obtenerToken();
 
-      const resultado = await response.json();
+    const payload = {
+      fecha: turnoSeleccionado.dia.fechaStr,
+      hora: turnoSeleccionado.hora,
+      motivo: servicioElegido?.nombre || "Consulta veterinaria",
+      mascotaId: mascotaSeleccionadaId,
+      veterinariaId: veterinariaId,
+      servicioId: servicio,
+    };
 
-      if (!response.ok || !resultado.success) {
-        throw new Error(resultado.message || "Error al reservar el turno");
-      }
+    // 1. Crear el turno
+    const response = await fetch(`${API_URL}/turnos`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
 
-      setMascotaConfirmadaNombre(mascotaElegida?.nombre || "tu mascota");
+    const resultado = await response.json();
 
-      // Actualizar el estado local para remover el turno recién reservado sin recargar todo
-      setDisponibilidadSemanal((prev) => ({
-        ...prev,
-        [turnoSeleccionado.dia.fechaStr]: (
-          prev[turnoSeleccionado.dia.fechaStr] || []
-        ).filter((h) => h !== turnoSeleccionado.hora),
-      }));
-
-      setServicio("");
-      setMascotaSeleccionadaId("");
-      setIsConfirmOpen(false);
-      setIsSuccessOpen(true);
-    } catch (err) {
-      alert(
-        err.message ||
-          "Hubo un problema al agendar el turno. Revisá los datos.",
+    if (!response.ok || !resultado.success) {
+      throw new Error(
+        resultado.message || "Error al reservar el turno"
       );
     }
-  };
+
+    const turnoId = resultado.data?.turno?._id;
+
+    if (!turnoId) {
+      throw new Error("No se pudo identificar el turno creado.");
+    }
+
+    // Guardamos el ID: aunque MercadoPago falle,
+    // el turno ya existe y no se pierde.
+    setTurnoCreadoId(turnoId);
+
+    setMascotaConfirmadaNombre(
+      mascotaElegida?.nombre || "tu mascota"
+    );
+
+    setDisponibilidadSemanal((prev) => ({
+      ...prev,
+      [turnoSeleccionado.dia.fechaStr]: (
+        prev[turnoSeleccionado.dia.fechaStr] || []
+      ).filter((h) => h !== turnoSeleccionado.hora),
+    }));
+
+    setIsConfirmOpen(false);
+
+    // 2. Empezar proceso de pago
+    setProcesandoPago(true);
+
+    try {
+      const respuestaPago = await crearPreferenciaPago(turnoId);
+
+      const initPoint = respuestaPago.data?.init_point;
+
+      if (!initPoint) {
+        throw new Error(
+          "No se recibió el enlace de MercadoPago."
+        );
+      }
+
+      // 3. Redirección al checkout externo
+      window.location.href = initPoint;
+    } catch (pagoError) {
+      console.error(
+        "Error al crear la preferencia de pago:",
+        pagoError
+      );
+
+      setProcesandoPago(false);
+
+      setErrorPago(
+        pagoError.response?.data?.message ||
+          pagoError.message ||
+          "El turno fue creado, pero no pudimos iniciar el pago. Intentá nuevamente."
+      );
+    }
+  } catch (err) {
+    console.error("Error al reservar turno:", err);
+
+    setProcesandoPago(false);
+
+    alert(
+      err.message ||
+        "Hubo un problema al agendar el turno. Revisá los datos."
+    );
+  }
+};
 
   const obtenerFechaFormateada = () => {
     if (!turnoSeleccionado) return "";
@@ -317,6 +371,7 @@ const AgendarTurnos = () => {
   };
 
   const mascotaElegida = mascotas.find((m) => m._id === mascotaSeleccionadaId);
+  const servicioElegido = veterinaria?.servicios?.find((s) => s._id === servicio);
 
   if (loading && !veterinaria) {
     return (
@@ -339,6 +394,23 @@ const AgendarTurnos = () => {
       </div>
     );
   }
+  if (procesandoPago) {
+  return (
+    <div className={styles.pagoLoadingOverlay}>
+      <div className={styles.pagoLoadingCard}>
+        <div className={styles.pagoSpinner}></div>
+
+        <h2>Preparando tu pago...</h2>
+
+        <p>
+          Estamos generando el checkout seguro de MercadoPago.
+        </p>
+
+        <span>Te vamos a redirigir automáticamente.</span>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className={styles.layout}>
@@ -493,21 +565,23 @@ const AgendarTurnos = () => {
                         Servicio / Motivo
                       </label>
                       <div className={styles.selectWrapper}>
-                        <select
-                          className={styles.modalSelect}
-                          value={servicio}
-                          onChange={(e) => setServicio(e.target.value)}
-                          required
+                       <select
+                        className={styles.modalSelect}
+                        value={servicio}
+                        onChange={(e) => setServicio(e.target.value)}
+                        required
                         >
-                          <option value="" disabled hidden>
-                            Seleccionar servicio
-                          </option>
-                          <option value="Control">Control General</option>
-                          <option value="Vacunación">Vacunación</option>
-                          <option value="Consulta Médica">
-                            Consulta Médica
-                          </option>
-                        </select>
+                        <option value="" disabled hidden>
+                        Seleccionar servicio
+                        </option>
+
+                        {veterinaria?.servicios?.map((servicioVet) => (
+                        <option key={servicioVet._id} value={servicioVet._id}>
+                        {servicioVet.nombre}
+                        {servicioVet.precio ? ` - $${servicioVet.precio}` : ""}
+                        </option>
+                        ))}
+                      </select>
                       </div>
                     </div>
 
@@ -535,17 +609,50 @@ const AgendarTurnos = () => {
                     </div>
 
                     <div className={styles.modalAcciones}>
-                      <button
-                        type="button"
-                        className={styles.btnCancelar}
-                        onClick={handleCloseConfirm}
-                      >
-                        Cancelar
-                      </button>
-                      <button type="submit" className={styles.btnConfirmar}>
-                        Confirmar turno
-                      </button>
-                    </div>
+                      {servicioElegido && mascotaElegida && (
+                      <div className={styles.resumenPago}>
+                        <h4>Resumen de la reserva</h4>
+
+                        <div className={styles.resumenFila}>
+                          <span>Veterinaria</span>
+                          <strong>{veterinaria?.nombre}</strong>
+                        </div>
+
+                        <div className={styles.resumenFila}>
+                          <span>Mascota</span>
+                          <strong>{mascotaElegida.nombre}</strong>
+                        </div>
+
+                        <div className={styles.resumenFila}>
+                          <span>Fecha y hora</span>
+                          <strong>{obtenerFechaFormateada()}</strong>
+                        </div>
+
+                        <div className={styles.resumenFila}>
+                          <span>Servicio</span>
+                          <strong>{servicioElegido.nombre}</strong>
+                        </div>
+
+                        <div className={`${styles.resumenFila} ${styles.resumenTotal}`}>
+                          <span>Total</span>
+                          <strong>
+                            ${Number(servicioElegido.precio || 0).toLocaleString("es-AR")}
+                          </strong>
+                        </div>
+
+                        <p className={styles.resumenAviso}>
+                          Al confirmar vas a ser redirigido a MercadoPago para completar el pago.
+                        </p>
+                      </div>
+                    )}
+                   <button type="button"className={styles.btnCancelar} onClick={handleCloseConfirm}>
+                    Cancelar
+                  </button>
+
+                  <button type="submit"className={styles.btnConfirmar}disabled={procesandoPago}>
+                  {procesandoPago ? "Procesando pago..." : "Confirmar reserva y pagar"}
+                  </button>
+                  </div>
                   </form>
                 </div>
               </div>

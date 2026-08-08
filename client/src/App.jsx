@@ -28,6 +28,9 @@ import Registro from "./pages/public/Registro/Registro";
 import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
 import NotFound from "./pages/NotFound/NotFound";
 import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
+import PagoExitoso from "./pages/pagos/PagoExitoso";
+import PagoPendiente from "./pages/pagos/PagoPendiente";
+import PagoFallido from "./pages/pagos/PagoFallido";
 
 function App() {
   return (
@@ -77,6 +80,12 @@ function App() {
         <Route path="/perfil" element={<PerfilUsuario />} />
         <Route path="/admin/veterinarias" element={<PrivateRoute allowedRoles={["administrador"]}><GestionVeterinarias /></PrivateRoute>} />
         <Route path="/" element={<Landing />} />
+        <Route path="/pago-exitoso" element={<PagoExitoso />} />
+
+        <Route path="/pago-pendiente" element={<PagoPendiente />} />
+
+        <Route path="/pago-fallido" element={<PagoFallido />} />
+        
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

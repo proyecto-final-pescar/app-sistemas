@@ -1,0 +1,67 @@
+.pago-resultado {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  padding: 24px;
+}
+
+.pago-resultado__card {
+  width: 100%;
+  max-width: 460px;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 40px 32px;
+  text-align: center;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+}
+
+.pago-resultado__icono {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+}
+
+.pago-resultado__icono--exitoso {
+  background: #dcfce7;
+}
+
+.pago-resultado__icono--pendiente {
+  background: #fef3c7;
+}
+
+.pago-resultado__icono--fallido {
+  background: #fee2e2;
+}
+
+.pago-resultado__titulo {
+  margin: 0 0 10px;
+  font-size: 26px;
+  color: #1f2937;
+}
+
+.pago-resultado__texto {
+  margin: 0 0 28px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+.pago-resultado__boton {
+  border: none;
+  border-radius: 10px;
+  background: #7c3aed;
+  color: #ffffff;
+  padding: 12px 22px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pago-resultado__boton:hover {
+  background: #6d28d9;
+}
