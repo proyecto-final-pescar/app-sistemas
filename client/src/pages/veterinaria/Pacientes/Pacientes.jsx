@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 
 import Sidebar from "../../../components/layout/Sidebar";
@@ -38,6 +39,8 @@ const calcularEdad = (fechaNacimiento) => {
 };
 
 function Pacientes() {
+  const navigate = useNavigate();
+  
   const [pacientes, setPacientes] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [cargando, setCargando] = useState(true);
@@ -156,15 +159,23 @@ function Pacientes() {
                       <span>{paciente.especie}</span>
                       <span>•</span>
                       <span>{paciente.raza}</span>
+                      <span>•</span>
+                      <span>{calcularEdad(paciente.fechaNacimiento)}</span>
                     </div>
-
-                    <p>{calcularEdad(paciente.fechaNacimiento)}</p>
 
                     <div className={styles.owner}>
                       <span>Dueño/a</span>
                       <strong>{paciente.dueño?.nombre}</strong>
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    className={styles.verFichaButton}
+                    onClick={() => navigate(`/pacientes/${paciente.id}`)}
+                  >
+                    Ver ficha
+                  </button>
                 </article>
               ))}
             </section>
