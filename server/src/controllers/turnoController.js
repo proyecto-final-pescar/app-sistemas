@@ -55,15 +55,23 @@ export const obtenerTurnos = async (req, res) => {
 // POST /turnos -> reservar (crear) un turno
 export const reservarTurno = async (req, res) => {
   try {
-    const { fecha, hora, motivo, mascotaId, veterinariaId, profesionalId, notas } = req.body;
+    const { fecha, hora, motivo, mascotaId, veterinariaId, servicioId, profesionalId, notas } = req.body;
 
-    if (!fecha || !hora || !motivo || !mascotaId || !veterinariaId) {
+    if (!fecha || !hora || !motivo || !mascotaId || !veterinariaId || !servicioId) {
       return res.status(400).json({ message: 'Faltan datos obligatorios para reservar el turno' });
     }
 
     const veterinaria = await Veterinaria.findById(veterinariaId);
     if (!veterinaria || veterinaria.estado !== 'activa') {
       return res.status(404).json({ message: 'Veterinaria no disponible' });
+    }
+
+    const servicio = veterinaria.servicios.id(servicioId);
+
+    if (!servicio) {
+      return res.status(400).json({
+        message: 'El servicio no pertenece a esta veterinaria'
+      });
     }
 
     // Si se especifica un profesional, validar que pertenezca a esa veterinaria
@@ -94,7 +102,9 @@ export const reservarTurno = async (req, res) => {
       usuarioId: req.user.id,
       profesionalId,
       notas,
-      estado: 'pendiente'
+      estado: 'pendiente',
+      servicioId,
+      montoServicio: servicio.precio,
     });
 
     res.status(201).json({

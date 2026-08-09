@@ -1,0 +1,425 @@
+
+
+/* Layout */
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f8f7ff;
+  font-family: var(--fuente-texto);
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.contenido {
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Botón volver */
+.btnVolver {
+  background: none;
+  border: none;
+  color: var(--color-primario);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btnVolver:hover {
+  text-decoration: underline;
+}
+
+/* Encabezado */
+.encabezado {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.titulo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-texto-principal);
+  margin: 0 0 6px 0;
+}
+
+.infodueno {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.875rem;
+  color: var(--color-texto-secundario);
+}
+
+.telefono {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+  color: var(--color-texto-principal);
+}
+
+.btnRegistrar {
+  padding: 10px 20px;
+  background-color: var(--color-primario);
+  color: var(--color-blanco);
+  border: none;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+.btnRegistrar:hover {
+  background-color: #6d28d9;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0;
+}
+
+.tab {
+  padding: 8px 20px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-texto-secundario);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--color-primario);
+}
+
+.tabActiva {
+  color: var(--color-primario);
+  border-bottom-color: var(--color-primario);
+  font-weight: 600;
+}
+
+/* Filtros */
+.filtros {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.buscador {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background-color: var(--color-blanco);
+  color: var(--color-texto-principal);
+  box-sizing: border-box;
+}
+
+.buscador:focus {
+  outline: none;
+  border-color: var(--color-primario);
+}
+
+.inputFecha {
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background-color: var(--color-blanco);
+  color: var(--color-texto-principal);
+  box-sizing: border-box;
+}
+
+.inputFecha:focus {
+  outline: none;
+  border-color: var(--color-primario);
+}
+
+/* Lista de consultas */
+.listaConsultas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardConsulta {
+  display: flex;
+  gap: 14px;
+  background-color: var(--color-blanco);
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  transition: box-shadow 0.15s ease;
+}
+
+.cardConsulta:hover {
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.1);
+}
+
+.cardIcono {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--color-fondo-claro);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cardCuerpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardMotivo {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-texto-principal);
+  margin: 0 0 6px 0;
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--color-texto-secundario);
+  margin-bottom: 6px;
+}
+
+.cardMeta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cardAnotaciones {
+  font-size: 0.82rem;
+  color: var(--color-texto-secundario);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Sin resultados */
+.sinResultados {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--color-texto-secundario);
+  font-size: 0.9rem;
+}
+
+/* Mensajes de estado */
+.estadoMensaje {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-texto-secundario);
+  font-size: 0.95rem;
+}
+
+/* Error real (fallas de red/servidor) */
+.estadoError {
+  color: #b91c1c;
+}
+
+/* Acceso restringido por reglas de negocio (ej: turno pendiente/cancelado).
+   No es una falla del sistema, por eso usa el mismo tono neutro que
+   .estadoMensaje en vez del rojo de .estadoError. */
+.estadoSinAcceso {
+  color: var(--color-texto-secundario);
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal {
+  background-color: var(--color-blanco);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modalTitulo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-texto-principal);
+  margin: 0;
+}
+
+.modalCerrar {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--color-texto-secundario);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.modalCuerpo {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-texto-secundario);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: var(--color-texto-principal);
+  background-color: var(--color-blanco);
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-primario);
+}
+
+.archivoWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btnArchivo {
+  padding: 8px 16px;
+  background-color: var(--color-fondo-claro);
+  color: var(--color-primario);
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.archivoNombre {
+  font-size: 0.82rem;
+  color: var(--color-texto-secundario);
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btnCancelar {
+  padding: 9px 20px;
+  background: none;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-texto-secundario);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btnCancelar:hover {
+  border-color: var(--color-texto-secundario);
+}
+
+.btnConfirmar {
+  padding: 9px 20px;
+  background-color: var(--color-primario);
+  color: var(--color-blanco);
+  border: none;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btnConfirmar:hover {
+  background-color: #6d28d9;
+}
+
+/* Desktop */
+@media (min-width: 768px) {
+  .contenido {
+    padding: 24px;
+  }
+
+  .encabezado {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .btnRegistrar {
+    align-self: auto;
+  }
+
+  .filtros {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .buscador {
+    flex: 1;
+  }
+
+  .inputFecha {
+    width: auto;
+  }
+}

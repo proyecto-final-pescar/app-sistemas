@@ -6,8 +6,10 @@ import cors from "cors";
 import fichaMedicaRoutes from './routes/fichaMedica.routes.js'
 import connectDB from "./config/db.js";
 import routes from "./routes/index.js";
+import "./config/mercadopago.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import { iniciarJobsTurnos } from "./jobs/turnoJobs.js";
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;

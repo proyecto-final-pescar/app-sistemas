@@ -133,7 +133,7 @@ const GestionVeterinarias = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar />
+      <Sidebar title="Gestión de Veterinarias" />
 
       <div className={styles.main}>
         <TopBar title="Gestión de Veterinarias" />

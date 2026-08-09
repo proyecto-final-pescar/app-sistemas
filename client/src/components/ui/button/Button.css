@@ -1,18 +1,24 @@
-.btn {
+.btn{
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 600;
-
   border-radius: 999px;
   border: none;
-
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn:active {
+  transform: scale(0.98);
 }
 
 /* VARIANTES */
@@ -52,7 +58,6 @@
   border: 1px solid #d1d5db;
 }
 
- /*boton usado en mis mascotas */
 .btn-ver-ficha {
   background-color: transparent;
   color: #7C3AED;
@@ -66,30 +71,45 @@
 /* TAMAÑOS */
 
 .btn-chico {
-  padding: 6px 12px;
+  padding: 8px 12px;
   font-size: 12px;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@media (min-width: 768px) {
+  .btn-chico {
+    padding: 6px 12px;
+    font-size: 12px;
+    min-height: 36px;
+  }
 }
 
 .btn-mediano {
   height: 48px;
-   min-width: 140px;
+  min-width: 140px;
   font-size: 14px;
+  padding: 0 20px;
 }
-
+ 
+@media (min-width: 768px) {
+  .btn-mediano {
+    height: 44px;
+    font-size: 14px;
+  }
+}
+ 
+@media (min-width: 1024px) {
+  .btn-mediano {
+    height: 48px;
+    font-size: 15px;
+  }
+}
+ 
 .btn-grande {
   height: 56px;
-  padding: 0 20px;
+  padding: 0 24px;
   font-size: 16px;
 }
 
-/* Boton violeta usado en ficha Medica*/
-.btn-violeta {
-  background-color: #7C3AED;
-  color: #FFFFFF;
-  border: none;
-  box-shadow: 0 6px 15px rgba(124, 58, 237, 0.25);
-}
 
-.btn-violeta:hover {
-  background-color: #6d28d9;
-}
