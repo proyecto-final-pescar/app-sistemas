@@ -1,13 +1,14 @@
 .layout {
   display: flex;
   min-height: 100vh;
-  background:#f8f6ff;
+  background: #f8f6ff;
 }
 
 .pageWrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0; /* Previene desbordamientos en flexbox */
 }
 
 .content {
@@ -52,6 +53,9 @@
   padding: 0 16px;
   font-size: 15px;
   outline: none;
+  background-color: #ffffff;
+  color: #1f1739;
+  box-sizing: border-box;
 }
 
 .btnBuscar {
@@ -62,7 +66,10 @@
   background: #22A96B;
   color: #fff;
   font-weight: 600;
+  font-size: 15px;
   cursor: pointer;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
 }
 
 .btnBuscar:hover {
@@ -84,6 +91,7 @@
   color: #fff;
   font-size: 14px;
   cursor: pointer;
+  transition: background-color 0.2s ease;
 }
 
 .chip:hover {
@@ -96,7 +104,7 @@
   font-weight: 600;
 }
 
-/*  foro de perdidos + resumen de salud */
+/* Foro de perdidos + resumen de salud */
 
 .foroPerdidos {
   display: flex;
@@ -106,6 +114,7 @@
   border-left: 4px solid #E0A100;
   border-radius: 12px;
   padding: 16px 20px;
+  gap: 16px;
 }
 
 .foroPerdidosInfo {
@@ -126,6 +135,18 @@
   color: #B45309;
 }
 
+.foroPerdidosInfo strong {
+  display: block;
+  font-size: 15px;
+  color: #451a03;
+}
+
+.foroPerdidosInfo p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #78350f;
+}
+
 .btnVerPublicaciones {
   background: #7A3E12;
   color: #fff;
@@ -133,13 +154,21 @@
   border-radius: 8px;
   padding: 10px 18px;
   font-weight: 600;
+  font-size: 14px;
   cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.btnVerPublicaciones:hover {
+  background: #5c2e0d;
 }
 
 .resumenSalud {
   background: #fff;
   border-radius: 12px;
   padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .resumenSalud header {
@@ -148,14 +177,24 @@
   align-items: center;
 }
 
+.resumenSalud header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #1e1b4b;
+}
+
 .resumenSalud header a {
   color: #6B4FBB;
   font-size: 14px;
+  font-weight: 600;
   text-decoration: none;
 }
 
-/* Resultados de busqueda */
+.resumenSalud header a:hover {
+  text-decoration: underline;
+}
 
+/* Skeleton & Estados */
 .resultados {
   display: flex;
   flex-direction: column;
@@ -192,4 +231,76 @@
 @keyframes shimmer {
   0% { background-position: 100% 50%; }
   100% { background-position: 0 50%; }
+}
+
+/* DISPOSITIVOS MÓVILES (< 768px) */
+@media (max-width: 767px) {
+  .content {
+    padding: 16px;
+    padding-top: 76px; /* Deja espacio suficiente para la barra fija superior en mobile */
+    gap: 16px;
+  }
+
+  .buscador {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .inputBuscar {
+    width: 100%;
+    height: 48px;
+    padding: 12px 16px;
+    line-height: 1.4;
+  }
+
+  .btnBuscar {
+    width: 100%;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chips {
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .chip {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .foroPerdidos {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .foroPerdidosInfo {
+    gap: 12px;
+  }
+
+  .btnVerPublicaciones {
+    width: 100%;
+    text-align: center;
+    padding: 12px;
+  }
+
+  .resumenSalud {
+    padding: 16px;
+  }
+}
+
+/* TABLETS (768px to 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .content {
+    padding: 20px 24px;
+    gap: 20px;
+  }
+
+  .buscador {
+    flex-direction: row;
+  }
 }
