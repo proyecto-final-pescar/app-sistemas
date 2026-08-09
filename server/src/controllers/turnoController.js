@@ -56,7 +56,7 @@ export const obtenerTurnos = async (req, res) => {
 
 export const reservarTurno = async (req, res) => {
   try {
-    const { fecha, hora, motivo, mascotaId, veterinariaId, profesionalId, notas } = req.body;
+    const { fecha, hora, motivo, mascotaId, veterinariaId, servicioId, profesionalId, notas } = req.body;
 
     if (!fecha || !hora || !motivo || !mascotaId || !veterinariaId || !profesionalId) {
       return res.status(400).json({ message: 'Faltan datos obligatorios para reservar el turno' });

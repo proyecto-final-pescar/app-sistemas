@@ -3,135 +3,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../../../services/api.js";
 import Sidebar from "../../../components/layout/Sidebar.jsx";
 import TopBar from "../../../components/layout/TopBar.jsx";
+import FichaMedicaTab from "../../../components/historial/FichaMedicaTab.jsx";
+import { actualizarFichaMedica } from "../../../services/fichaMedicaService.js";
+import { crearVacuna, actualizarVacuna, eliminarVacuna } from "../../../services/vacunaService.js";
+import { crearEstudio, actualizarEstudio, eliminarEstudio } from "../../../services/estudioService.js";
+import { subirImagen } from "../../../services/uploadService.js";
+import { obtenerMiVeterinaria } from "../../../services/veterinariaService.js";
 import styles from "./FichaPaciente.module.css";
-
-// ── Modal Agregar Vacuna ──
-const ModalVacuna = ({ onCerrar, onGuardar }) => {
-  const [form, setForm] = useState({ nombre: "", fecha: "", veterinario: "" });
-
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
-  const handleSubmit = () => {
-    if (!form.nombre || !form.fecha) return alert("Completá los campos obligatorios.");
-    onGuardar(form);
-    onCerrar();
-  };
-
-  return (
-    <div className={styles.modalOverlay} onClick={onCerrar}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitulo}>Agregar vacuna</h3>
-          <button className={styles.modalCerrar} onClick={onCerrar}>✕</button>
-        </div>
-
-        <div className={styles.modalCuerpo}>
-          <label className={styles.label}>NOMBRE DE LA VACUNA</label>
-          <input
-            name="nombre"
-            placeholder="Ej: Antirrábica"
-            value={form.nombre}
-            onChange={handleChange}
-            className={styles.input}
-          />
-
-          <label className={styles.label}>FECHA APLICADA</label>
-          <input
-            type="date"
-            name="fecha"
-            value={form.fecha}
-            onChange={handleChange}
-            className={styles.input}
-          />
-
-          <label className={styles.label}>VETERINARIO/A RESPONSABLE</label>
-          <input
-            name="veterinario"
-            placeholder="Ej: Dra. Martínez"
-            value={form.veterinario}
-            onChange={handleChange}
-            className={styles.input}
-          />
-        </div>
-
-        <div className={styles.modalFooter}>
-          <button className={styles.btnCancelar} onClick={onCerrar}>Cancelar</button>
-          <button className={styles.btnConfirmar} onClick={handleSubmit}>Agregar vacuna</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// ── Modal Agregar Estudio ──
-const ModalEstudio = ({ onCerrar, onGuardar }) => {
-  const [form, setForm] = useState({ nombre: "", fecha: "", veterinario: "", archivo: null });
-
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-  const handleArchivo = (e) => setForm({ ...form, archivo: e.target.files[0] });
-
-  const handleSubmit = () => {
-    if (!form.nombre || !form.fecha) return alert("Completá los campos obligatorios.");
-    onGuardar(form);
-    onCerrar();
-  };
-
-  return (
-    <div className={styles.modalOverlay} onClick={onCerrar}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.modalHeader}>
-          <h3 className={styles.modalTitulo}>Agregar estudio</h3>
-          <button className={styles.modalCerrar} onClick={onCerrar}>✕</button>
-        </div>
-
-        <div className={styles.modalCuerpo}>
-          <label className={styles.label}>NOMBRE DEL ESTUDIO</label>
-          <input
-            name="nombre"
-            placeholder="Ej: Radiografía de tórax"
-            value={form.nombre}
-            onChange={handleChange}
-            className={styles.input}
-          />
-
-          <label className={styles.label}>FECHA</label>
-          <input
-            type="date"
-            name="fecha"
-            value={form.fecha}
-            onChange={handleChange}
-            className={styles.input}
-          />
-
-          <label className={styles.label}>VETERINARIO/A RESPONSABLE</label>
-          <input
-            name="veterinario"
-            placeholder="Ej: Dra. Martínez"
-            value={form.veterinario}
-            onChange={handleChange}
-            className={styles.input}
-          />
-
-          <label className={styles.label}>ADJUNTAR RESULTADO (OPCIONAL)</label>
-          <div className={styles.archivoWrapper}>
-            <label className={styles.btnArchivo}>
-              Seleccionar archivo
-              <input type="file" onChange={handleArchivo} style={{ display: "none" }} />
-            </label>
-            <span className={styles.archivoNombre}>
-              {form.archivo ? form.archivo.name : "Sin archivos seleccionados"}
-            </span>
-          </div>
-        </div>
-
-        <div className={styles.modalFooter}>
-          <button className={styles.btnCancelar} onClick={onCerrar}>Cancelar</button>
-          <button className={styles.btnConfirmar} onClick={handleSubmit}>Agregar estudio</button>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ── Componente principal ──
 const FichaPaciente = () => {
@@ -141,7 +19,6 @@ const FichaPaciente = () => {
   const [tabActiva, setTabActiva] = useState("consultas");
   const [historial, setHistorial] = useState([]);
   const [mascota, setMascota] = useState(null);
-  // Reservado para cuando se conecte el tab "Ficha médica" con datos reales
   const [fichaMedica, setFichaMedica] = useState(null);
   const [vacunas, setVacunas] = useState([]);
   const [estudios, setEstudios] = useState([]);
@@ -149,38 +26,38 @@ const FichaPaciente = () => {
   const [filtroFecha, setFiltroFecha] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [modalVacuna, setModalVacuna] = useState(false);
-  const [modalEstudio, setModalEstudio] = useState(false);
+   const [profesionales, setProfesionales] = useState([]);
+ 
+useEffect(() => {
+  const cargarDatos = async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const [res, veterinaria] = await Promise.all([
+        api.get(`/historial-completo/${mascotaId}`),
+        obtenerMiVeterinaria(),
+      ]);
+      const data = res.data.data ?? {};
 
-  useEffect(() => {
-    const cargarDatos = async () => {
-      setIsLoading(true);
-      setError("");
-      try {
-        //  trae mascota + historial + ficha médica +
-        // vacunas + estudios 
-        const res = await api.get(`/historial-completo/${mascotaId}`);
-        const data = res.data.data ?? {};
-
-        setHistorial(Array.isArray(data.historialClinico) ? data.historialClinico : []);
-        setMascota(data.mascota ?? null);
-        setFichaMedica(data.fichaMedica ?? null);
-        setVacunas(Array.isArray(data.vacunas) ? data.vacunas : []);
-        setEstudios(Array.isArray(data.estudios) ? data.estudios : []);
-      } catch (err) {
-        if (err.response?.status === 403) {
-          setError("Todavía no tenés acceso al historial de esta mascota. El acceso se habilita cuando el turno esté confirmado.");
-        } else {
-          setError("No se pudo cargar el historial. Intentá de nuevo más tarde.");
-        }
-
-      } finally {
-        setIsLoading(false);
+      setHistorial(Array.isArray(data.historialClinico) ? data.historialClinico : []);
+      setMascota(data.mascota ?? null);
+      setFichaMedica(data.fichaMedica ?? null);
+      setVacunas(Array.isArray(data.vacunas) ? data.vacunas : []);
+      setEstudios(Array.isArray(data.estudios) ? data.estudios : []);
+      setProfesionales(Array.isArray(veterinaria?.profesionales) ? veterinaria.profesionales : []);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setError("Todavía no tenés acceso al historial de esta mascota. El acceso se habilita cuando el turno esté confirmado.");
+      } else {
+        setError("No se pudo cargar el historial. Intentá de nuevo más tarde.");
       }
-    };
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    cargarDatos();
-  }, [mascotaId]);
+  cargarDatos();
+}, [mascotaId])
 
   // Filtros en tiempo real
   const historialFiltrado = historial.filter((entrada) => {
@@ -199,15 +76,52 @@ const FichaPaciente = () => {
     return coincideTexto && coincideFecha;
   });
 
-  const handleGuardarVacuna = (data) => {
-    console.log("Vacuna agregada:", data);
-    // Acá se conectaría con el endpoint cuando esté disponible
+  const handleGuardarFichaMedica = async (datos) => {
+    const fichaActualizada = await actualizarFichaMedica(mascotaId, datos);
+    setFichaMedica(fichaActualizada);
   };
 
-  const handleGuardarEstudio = (data) => {
-    console.log("Estudio agregado:", data);
-    // Acá se conectaría con el endpoint cuando esté disponible
+  const handleGuardarVacuna = async (datos, vacunaId) => {
+    if (vacunaId) {
+      const vacunaActualizada = await actualizarVacuna(vacunaId, datos);
+      setVacunas((actuales) => actuales.map((vacuna) => (
+        vacuna._id === vacunaId ? { ...vacuna, ...vacunaActualizada } : vacuna
+      )));
+      return;
+    }
+
+    const nuevaVacuna = await crearVacuna({ ...datos, mascotaId });
+    setVacunas((actuales) => [nuevaVacuna, ...actuales]);
   };
+
+  const handleEliminarVacuna = async (vacunaId) => {
+    await eliminarVacuna(vacunaId);
+    setVacunas((actuales) => actuales.filter((vacuna) => vacuna._id !== vacunaId));
+  };
+
+  const handleGuardarEstudio = async (datos, estudioId, archivo) => {
+    const datosConArchivo = { ...datos };
+    if (archivo) {
+      datosConArchivo.urlArchivo = await subirImagen(archivo, "estudios");
+    }
+
+    if (estudioId) {
+      const estudioActualizado = await actualizarEstudio(estudioId, datosConArchivo);
+      setEstudios((actuales) => actuales.map((estudio) => (
+        estudio._id === estudioId ? { ...estudio, ...estudioActualizado } : estudio
+      )));
+      return;
+    }
+
+    const nuevoEstudio = await crearEstudio({ ...datosConArchivo, mascotaId });
+    setEstudios((actuales) => [nuevoEstudio, ...actuales]);
+  };
+
+  const handleEliminarEstudio = async (estudioId) => {
+    await eliminarEstudio(estudioId);
+    setEstudios((actuales) => actuales.filter((estudio) => estudio._id !== estudioId));
+  };
+  
 
   const nombreMascota = mascota?.nombre ?? "Mascota";
   const nombreDueno = mascota?.dueñoId?.nombre ?? mascota?.dueñoId?.name ?? "—";
@@ -215,7 +129,7 @@ const FichaPaciente = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar />
+      <Sidebar title="Historial Clínico" />
 
       <div className={styles.main}>
         <TopBar title="Historial Clínico" />
@@ -316,13 +230,13 @@ const FichaPaciente = () => {
                                 </svg>
                                 {new Date(entrada.fecha).toLocaleDateString("es-AR")}
                               </span>
-                              {entrada.profesionalId?.nombre && (
+                              {entrada.profesionalNombre && (
                                 <span>
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                                     <circle cx="12" cy="7" r="4" />
                                   </svg>
-                                  {entrada.profesionalId.nombre}
+                                  {entrada.profesionalNombre}
                                 </span>
                               )}
                             </div>
@@ -339,22 +253,30 @@ const FichaPaciente = () => {
             </>
           )}
 
-          {/* Tab Ficha médica - fuera del alcance de esta tarea */}
+          {/* Tab Ficha médica */}
           {tabActiva === "fichaMedica" && (
-            <div className={styles.sinResultados}>
-              <p>Esta sección está en desarrollo.</p>
-            </div>
+            isLoading ? (
+              <p className={styles.estadoMensaje}>Cargando ficha médica...</p>
+            ) : error ? (
+              <p className={`${styles.estadoMensaje} ${styles.estadoError}`}>{error}</p>
+            ) : (
+            <FichaMedicaTab
+              mascota={mascota}
+              fichaMedica={fichaMedica}
+              historial={historial}
+              vacunas={vacunas}
+              estudios={estudios}
+              profesionales={profesionales}
+              onGuardarFicha={handleGuardarFichaMedica}
+              onGuardarVacuna={handleGuardarVacuna}
+              onEliminarVacuna={handleEliminarVacuna}
+              onGuardarEstudio={handleGuardarEstudio}
+              onEliminarEstudio={handleEliminarEstudio}
+            />
+            )
           )}
         </div>
       </div>
-
-      {/* Modales */}
-      {modalVacuna && (
-        <ModalVacuna onCerrar={() => setModalVacuna(false)} onGuardar={handleGuardarVacuna} />
-      )}
-      {modalEstudio && (
-        <ModalEstudio onCerrar={() => setModalEstudio(false)} onGuardar={handleGuardarEstudio} />
-      )}
     </div>
   );
 };

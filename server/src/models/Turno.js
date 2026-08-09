@@ -29,6 +29,17 @@ const turnoSchema = new mongoose.Schema(
       required: [true, 'La veterinaria es requerida']
     },
 
+    servicioId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: [true, 'El servicio es requerido']
+    },
+
+    montoServicio: {
+      type: Number,
+      required: [true, 'El monto del servicio es requerido'],
+      min: [0, 'El monto del servicio no puede ser negativo']
+    },
+
     usuarioId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

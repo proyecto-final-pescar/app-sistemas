@@ -79,7 +79,7 @@ export default function CitasAgendadas() {
 
   return (
     <div className={styles.shell}>
-      <Sidebar role="veterinaria" activeItem="Turnos" />
+      <Sidebar role="veterinaria" activeItem="Turnos" title="Turnos veterinaria" />
 
       <div className={styles.main}>
         <TopBar title="Turnos veterinaria" notifications={2} />

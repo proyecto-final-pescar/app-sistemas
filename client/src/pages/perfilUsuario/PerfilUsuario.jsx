@@ -218,7 +218,7 @@ function PerfilUsuario() {
   if (cargando) {
     return (
       <div className={styles.layout}>
-        <Sidebar />
+        <Sidebar title="Mi Perfil y Configuración"/>
         <div className={styles.contenido}>
           <TopBar title="Mi Perfil y Configuración" />
           <div className={styles.cuerpo}>

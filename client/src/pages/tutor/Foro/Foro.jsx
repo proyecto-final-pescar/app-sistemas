@@ -481,7 +481,7 @@ function Foro() {
 
   return (
     <div className={styles.layout}>
-      {estaAutenticado && <Sidebar />}
+      {estaAutenticado && <Sidebar title="Foro de Perdidos" />}
 
       <div className={`${styles.pageWrapper} ${!estaAutenticado ? styles.publicPageWrapper : ""}`}>
         {estaAutenticado ? <TopBar title="Foro de Perdidos" /> : <NavbarPublic />}

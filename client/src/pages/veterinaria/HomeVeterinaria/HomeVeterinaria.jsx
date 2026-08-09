@@ -112,7 +112,7 @@ const HomeVeterinaria = () => {
   return (
     <div className={styles.shell}>
       {/* Sidebar lateral izquierdo */}
-      <Sidebar role="veterinaria" />
+      <Sidebar role="veterinaria" activeItem="Home" title="Inicio" />
 
       <div className={styles.main}>
         {/* Barra superior con el título y perfil */}
