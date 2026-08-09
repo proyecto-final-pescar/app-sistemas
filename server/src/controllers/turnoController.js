@@ -254,7 +254,7 @@ export const crearOfertaHoraria = async (req, res) => {
             duracion,
             veterinariaId: veterinaria._id,
             profesionalId: profId,
-            estado: 'pendiente'
+            estado: 'disponible'
           });
         }
       }

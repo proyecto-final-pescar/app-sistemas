@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import { obtenerMiVeterinaria } from "../../../services/veterinariaService";
@@ -22,12 +22,22 @@ const DURACIONES = [
 
 const DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
+
 const obtenerLunesDeSemana = (offset = 0) => {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
   const lunes = new Date(hoy);
   lunes.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7) + offset * 7);
   return lunes;
+};
+
+const generarFechasSemana = (offset) => {
+  const lunes = obtenerLunesDeSemana(offset);
+  return DIAS_SEMANA.map((_, i) => {
+    const f = new Date(lunes);
+    f.setDate(lunes.getDate() + i);
+    return f;
+  });
 };
 
 const formatearFecha = (fecha) =>
@@ -61,9 +71,25 @@ export default function CargaTurnos() {
   const [semanaOffset, setSemanaOffset] = useState(0);
   const [slotsSeleccionados, setSlotsSeleccionados] = useState({});
   const [slotsExistentes, setSlotsExistentes] = useState([]);
-
+  const semanaAjustadaRef = useRef(false);
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
+
+   const cargarExistentes = useCallback(async () => {
+    if (!veterinaria?._id) return;
+    try {
+      const turnos = await obtenerTurnosPorVeterinaria(veterinaria._id, { tipo: "disponible" });
+      setSlotsExistentes(turnos.map(t => ({
+        fecha: new Date(t.fecha).toISOString().split("T")[0],
+        hora: t.hora,
+        especialidad: t.especialidad,
+        profesionalId: t.profesionalId?.toString(),
+        duracion: t.duracion
+      })));
+    } catch {
+      // silencioso
+    }
+  }, [veterinaria]);
 
   useEffect(() => {
     const cargar = async () => {
@@ -81,30 +107,43 @@ export default function CargaTurnos() {
 
   // Cargar slots ya existentes cuando cambia la veterinaria o la semana
   useEffect(() => {
-    if (!veterinaria?._id) return;
-
-    const cargarExistentes = async () => {
-      try {
-        const turnos = await obtenerTurnosPorVeterinaria(veterinaria._id);
-        setSlotsExistentes(turnos.map(t => ({
-          fecha: new Date(t.fecha).toISOString().split("T")[0],
-          hora: t.hora,
-          especialidad: t.especialidad,
-          profesionalId: t.profesionalId?.toString(),
-          duracion: t.duracion
-        })));
-      } catch {
-        // silencioso
-      }
-    };
     cargarExistentes();
-  }, [veterinaria, especialidad, profesionales]);
+  }, [cargarExistentes, especialidad, profesionales]);
+
+
+
+  useEffect(() => {
+    if (!veterinaria || semanaAjustadaRef.current) return;
+
+    let offset = 0;
+    const maxIntentos = 8;
+    while (offset < maxIntentos && semanaSinDisponibilidad(offset)) {
+      offset++;
+    }
+
+    if (offset > 0) setSemanaOffset(offset);
+    semanaAjustadaRef.current = true;
+  }, [veterinaria]);
+
+  const normalizarDia = (dia) =>
+    dia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
   const diasDisponibles = veterinaria?.horarios
-    ? Object.keys(veterinaria.horarios).map(
-      d => d.charAt(0).toUpperCase() + d.slice(1)
-    )
+    ? Object.keys(veterinaria.horarios).filter(dia => {
+      const h = veterinaria.horarios[dia];
+      return h?.desde && h?.hasta;
+    }).map(normalizarDia)
     : [];
+
+  const semanaSinDisponibilidad = (offset) => {
+    const fechas = generarFechasSemana(offset);
+    return DIAS_SEMANA.every((dia, i) => {
+      const disponible = diasDisponibles.includes(normalizarDia(dia));
+      return !disponible || esFechaPasada(fechas[i]);
+    });
+  };
+
+ 
 
   // Horario global más amplio entre todos los días
   const obtenerRangoGlobal = () => {
@@ -132,9 +171,10 @@ export default function CargaTurnos() {
 
   const obtenerHorarioDia = (dia) => {
     if (!veterinaria?.horarios) return null;
-    const clave = dia.toLowerCase()
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    return veterinaria.horarios[clave] || null;
+    const clave = normalizarDia(dia);
+    const horario = veterinaria.horarios[clave];
+    if (!horario?.desde || !horario?.hasta) return null;
+    return horario;
   };
 
   const esCeldaBloqueada = (dia, hora) => {
@@ -288,6 +328,8 @@ export default function CargaTurnos() {
       });
       setExito(`Se crearon ${result.data.cantidad} turnos disponibles correctamente.`);
       setSlotsSeleccionados({});
+      await cargarExistentes();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       setError(err.response?.data?.message || "No se pudieron crear los turnos.");
     } finally {
@@ -377,7 +419,19 @@ export default function CargaTurnos() {
                     <span className={styles.leyendaItem}><span className={styles.leyendaDotBloqueado}></span>No disponible</span>
                   </div>
                 </div>
-
+                <div className={styles.navSemanaTop}>
+                  <button
+                    className={styles.btnNav}
+                    onClick={() => setSemanaOffset(o => Math.max(o - 1, 0))}
+                    disabled={semanaOffset === 0}
+                    type="button"
+                  >‹</button>
+                  <button
+                    className={styles.btnNav}
+                    onClick={() => setSemanaOffset(o => o + 1)}
+                    type="button"
+                  >›</button>
+                </div>
                 <div className={styles.filaRecurrencia}>
                   <div className={styles.campo}>
                     <label className={styles.label}>Recurrencia</label>
@@ -401,7 +455,7 @@ export default function CargaTurnos() {
                         <th className={styles.thHora}></th>
                         {DIAS_SEMANA.map((dia, i) => {
                           const fecha = fechasSemana[i];
-                          const disponible = diasDisponibles.includes(dia);
+                          const disponible = diasDisponibles.includes(normalizarDia(dia));
                           const pasado = esFechaPasada(fecha);
                           return (
                             <th key={dia} className={`${styles.thDia} ${!disponible || pasado ? styles.thDiaBloqueado : ""}`}>
@@ -419,21 +473,6 @@ export default function CargaTurnos() {
                                   </button>
                                 )}
                               </div>
-                              {i === 6 && (
-                                <div className={styles.navSemana}>
-                                  <button
-                                    className={styles.btnNav}
-                                    onClick={() => setSemanaOffset(o => Math.max(o - 1, 0))}
-                                    disabled={semanaOffset === 0}
-                                    type="button"
-                                  >‹</button>
-                                  <button
-                                    className={styles.btnNav}
-                                    onClick={() => setSemanaOffset(o => o + 1)}
-                                    type="button"
-                                  >›</button>
-                                </div>
-                              )}
                             </th>
                           );
                         })}

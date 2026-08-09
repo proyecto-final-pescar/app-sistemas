@@ -1,9 +1,10 @@
 // client/src/services/turnosService.js
 import api from "./api";
 
-export const obtenerTurnosPorVeterinaria = async (veterinariaId, estado) => {
-  const params = { veterinariaId, tipo: "disponible" };
+export const obtenerTurnosPorVeterinaria = async (veterinariaId, { estado, tipo } = {}) => {
+  const params = { veterinariaId };
   if (estado) params.estado = estado;
+  if (tipo) params.tipo = tipo;
 
   const { data } = await api.get("/turnos", { params });
   return data.data.turnos;

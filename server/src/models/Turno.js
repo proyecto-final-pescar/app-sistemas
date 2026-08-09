@@ -36,7 +36,7 @@ const turnoSchema = new mongoose.Schema(
 
     estado: {
       type: String,
-      enum: ['pendiente', 'confirmado', 'cancelado', 'atendido'],
+      enum: ['disponible','pendiente', 'confirmado', 'cancelado', 'atendido'],
       default: 'pendiente'
     },
 
