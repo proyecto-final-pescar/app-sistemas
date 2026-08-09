@@ -29,6 +29,10 @@ import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
 import NotFound from "./pages/NotFound/NotFound";
 import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
 
+import PagoExitoso from "./pages/tutor/Pagos/PagoExitoso";
+import PagoPendiente from "./pages/tutor/Pagos/PagoPendiente";
+import PagoFallido from "./pages/tutor/Pagos/PagoFallido";
+
 function App() {
   return (
     <BrowserRouter>
@@ -53,9 +57,9 @@ function App() {
         <Route path="/turnos" element={<PrivateRoute allowedRoles={["dueno"]}><Turnos /></PrivateRoute>} />
         <Route path="/mis-turnos" element={<PrivateRoute allowedRoles={["dueno"]}><MisTurnos /></PrivateRoute>} />
         <Route path="/turnos/agendar/:veterinariaId" element={<PrivateRoute allowedRoles={["dueno"]}><AgendarTurnos /></PrivateRoute>} />
-        <Route path="/admin-foro-mascotas-perdidas" element={<PrivateRoute allowedRoles={["administrador"]}><ModeracionForo /></PrivateRoute>}/>
+        <Route path="/admin-foro-mascotas-perdidas" element={<PrivateRoute allowedRoles={["administrador"]}><ModeracionForo /></PrivateRoute>} />
         <Route path="/tutor/veterinarias/:id" element={<PerfilVeterinaria />} />
-       <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><BuscarVeterinaria /></PrivateRoute>} />
+        <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><BuscarVeterinaria /></PrivateRoute>} />
         <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
         <Route path="/agenda" element={<PrivateRoute allowedRoles={["veterinaria"]}><CitasAgendadas /></PrivateRoute>} />
         <Route
@@ -71,13 +75,17 @@ function App() {
         <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/tutor/dashboard" element={<AdminDashboard />} />
         <Route path="/pacientes/:mascotaId" element={<PrivateRoute allowedRoles={["veterinaria"]}><FichaPaciente /></PrivateRoute>} />
-        <Route path="/admin-duenos" element={<PrivateRoute allowedRoles={["administrador"]}><GestionUsuarios /></PrivateRoute> }/>
-        
+        <Route path="/admin-duenos" element={<PrivateRoute allowedRoles={["administrador"]}><GestionUsuarios /></PrivateRoute>} />
+
 
         <Route path="/perfil" element={<PerfilUsuario />} />
         <Route path="/admin/veterinarias" element={<PrivateRoute allowedRoles={["administrador"]}><GestionVeterinarias /></PrivateRoute>} />
         <Route path="/" element={<Landing />} />
         <Route path="*" element={<NotFound />} />
+
+        <Route path="/pago-exitoso" element={<PrivateRoute allowedRoles={["dueno"]}><PagoExitoso /></PrivateRoute>} />
+        <Route path="/pago-pendiente" element={<PrivateRoute allowedRoles={["dueno"]}><PagoPendiente /></PrivateRoute>} />
+        <Route path="/pago-fallido" element={<PrivateRoute allowedRoles={["dueno"]}><PagoFallido /></PrivateRoute>} />
       </Routes>
     </BrowserRouter>
   );
