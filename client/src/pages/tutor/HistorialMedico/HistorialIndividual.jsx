@@ -1,87 +1,35 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import api from '../../../services/api'
-import { subirArchivo } from '../../../services/uploadService'
 import Sidebar from '../../../components/layout/Sidebar'
 import TopBar from '../../../components/layout/TopBar'
-import Button from '../../../components/ui/button/Button'
-import Card from '../../../components/ui/card/Card'
-import Modal from '../../../components/layout/modal/Modal'
-import FormularioFichaMedica from '../../../components/forms/FormularioFichaMedica'
+import Badge from '../../../components/ui/badge/Badge'
 import styles from './HistorialIndividual.module.css'
 
 export default function HistorialIndividual() {
   const { mascotaId } = useParams()
   const navigate = useNavigate()
-
+  
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const [modalAbierto, setModalAbierto] = useState(false)
-  const [mensajeExito, setMensajeExito] = useState(null)
-  
-  // Estados para carga de archivos
-  const fileInputRef = useRef(null)
-  const [cargandoArchivo, setCargandoArchivo] = useState(false)
-
-  const mostrarExito = (mensaje) => {
-    setMensajeExito(mensaje)
-    setTimeout(() => setMensajeExito(null), 3000)
-  }
-
-  const fetchHistorial = async () => {
-    try {
-      const response = await api.get(`/historial-completo/${mascotaId}`)
-      if (response.data.success) {
-        setData(response.data.data)
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error al cargar la ficha')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
+    const fetchHistorial = async () => {
+      try {
+        const response = await api.get(`/historial-completo/${mascotaId}`)
+        if (response.data.success) {
+          setData(response.data.data)
+        }
+      } catch (err) {
+        setError(err.response?.data?.message || 'Error al cargar la ficha')
+      } finally {
+        setLoading(false)
+      }
+    }
+
     fetchHistorial()
   }, [mascotaId])
-
-  // Función para agregar archivo/estudio
-  const handleAgregarArchivo = async (e) => {
-    const archivo = e.target.files[0]
-    if (!archivo) return
-
-    try {
-      setCargandoArchivo(true)
-      
-      // Subir a Cloudinary
-      const urlArchivo = await subirArchivo(archivo, 'estudios')
-      
-      // Guardar en BD
-      await api.post(`/estudios`, {
-        mascotaId,
-        nombre: archivo.name.split('.')[0], // sin extensión
-        fecha: new Date(),
-        urlArchivo,
-        profesionalId: null // el usuario actual es el dueño, no profesional
-      })
-
-      // Recargar datos
-      await fetchHistorial()
-      mostrarExito('Estudio adjuntado correctamente')
-      setError(null)
-    } catch (err) {
-      setError('Error al subir el archivo')
-      console.error(err)
-    } finally {
-      setCargandoArchivo(false)
-      // Limpiar input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
-    }
-  }
 
   if (loading) return <div className={styles.container}>Cargando...</div>
   if (error) return <div className={styles.container}><p>{error}</p></div>
@@ -95,7 +43,7 @@ export default function HistorialIndividual() {
     const nacimiento = new Date(mascota.fechaNacimiento)
     const años = hoy.getFullYear() - nacimiento.getFullYear()
     const meses = hoy.getMonth() - nacimiento.getMonth()
-
+    
     if (meses < 0) return `${años - 1} años`
     return `${años} años`
   }
@@ -109,218 +57,160 @@ export default function HistorialIndividual() {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#fff' }}>
       <Sidebar />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <TopBar />
         <div className={styles.container}>
-
-          {mensajeExito && <div className={styles.successBanner}>{mensajeExito}</div>}
-
           {/* Header */}
           <div className={styles.header}>
-            <div className={styles.titleSection}>
-              <h1 className={styles.titulo}>Historial Clínico - {mascota?.nombre}</h1>
-              <p className={styles.subtitulo}>Tutor: {mascota?.dueñoId?.nombre || 'No registrado'}</p>
-            </div>
-            <div className={styles.actions}>
-              <Button
-                texto="Editar"
-                variante="violeta"
-                tamaño="mediano"
-                onClick={() => setModalAbierto(true)}
-              />
-            </div>
+            <h1>Ficha Médica - {mascota?.nombre}</h1>
+            <p>Tutor: {mascota?.dueñoId?.nombre || 'No registrado'}</p>
           </div>
 
-          {/* Info Cards */}
-          <div className={styles.infoCards}>
-            <Card>
+          {/* Mascota Card */}
+<div className={styles.mascotaCard}>
+  <div className={styles.mascotaInfo}>
+    <div className={styles.mascotaAvatar}>{mascota?.nombre?.charAt(0)}</div>
+    <div className={styles.mascotaDetails}>
+      <h2>{mascota?.nombre} {mascota?.dueñoId?.apellido || ''}</h2>
+      <p>{mascota?.especie} · {mascota?.raza} · {mascota?.sexo}</p>
+      <div className={styles.badges}>
+        <Badge texto="Castrada" variante="secondary" />
+        <Badge texto={`Pelaje: ${fichaMedica?.colorPelaje || 'N/A'}`} variante="success" />
+      </div>
+    </div>
+  </div>
+  <div className={styles.responsable}>
+    <p className={styles.responsableLabel}>RESPONSABLE</p>
+    <p className={styles.responsableName}>{mascota?.dueñoId?.nombre} {mascota?.dueñoId?.apellido}</p>
+    <p className={styles.responsablePhone}>{mascota?.dueñoId?.telefono || 'N/A'}</p>
+  </div>
+</div>
+
+          {/* Info Cards Grid */}
+          <div className={styles.cardsGrid}>
+            <div className={styles.card}>
+              <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              <p className={styles.cardValue}>{mascota?.peso} kg</p>
               <p className={styles.cardLabel}>Peso Actual</p>
-              <p className={styles.cardValue}>{mascota?.peso || 'N/A'} kg</p>
-            </Card>
-            <Card>
-              <p className={styles.cardLabel}>Edad Actual</p>
+            </div>
+            <div className={styles.card}>
+              <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
               <p className={styles.cardValue}>{calcularEdad()}</p>
-            </Card>
-            <Card>
-              <p className={styles.cardLabel}>Consultas Totales</p>
+              <p className={styles.cardLabel}>Edad Actual</p>
+            </div>
+            <div className={styles.card}>
+              <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
               <p className={styles.cardValue}>{(vacunas?.length || 0) + (estudios?.length || 0)}</p>
-            </Card>
-            <Card>
-              <p className={styles.cardLabel}>Última Consulta</p>
+              <p className={styles.cardLabel}>Consultas Totales</p>
+            </div>
+            <div className={styles.card}>
+              <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
               <p className={styles.cardValue}>
-                {vacunas?.[0]?.fechaAplicada || estudios?.[0]?.fecha
+                {vacunas?.[0]?.fechaAplicada || estudios?.[0]?.fecha 
                   ? formatearFecha(vacunas?.[0]?.fechaAplicada || estudios?.[0]?.fecha)
                   : 'N/A'
                 }
               </p>
-            </Card>
+              <p className={styles.cardLabel}>Última Consulta</p>
+            </div>
           </div>
 
-          {/* Layout en 2 columnas: Ficha permanente (izq) | Vacunación + Estudios (der) */}
-          <div className={styles.gridLayout}>
-
-            {/* Columna izquierda */}
-            <div className={styles.colIzquierda}>
-              <section className={styles.section}>
-                <h2 className={styles.sectionTitulo}>Ficha permanente</h2>
-                <Card className={styles.fichaPermanente}>
-                  <div className={styles.row}>
-                    <div className={styles.field}>
-                      <label>Fecha de nacimiento</label>
-                      <p>{fichaMedica?.fechaNacimiento
-                        ? formatearFecha(fichaMedica.fechaNacimiento)
-                        : mascota?.fechaNacimiento
-                        ? formatearFecha(mascota.fechaNacimiento)
-                        : 'No registrada'
-                      }</p>
-                    </div>
-                  </div>
-
-                  <div className={styles.row}>
-                    <div className={styles.field}>
-                      <label>Especie / Raza</label>
-                      <p>{mascota?.especie} · {mascota?.raza}</p>
-                    </div>
-                  </div>
-
-                  <div className={styles.row}>
-                    <div className={styles.field}>
-                      <label>Color / Pelaje</label>
-                      <p>{fichaMedica?.colorPelaje || 'No registrado'}</p>
-                    </div>
-                  </div>
-
-                  <div className={styles.row}>
-                    <div className={styles.field}>
-                      <label>Microchip</label>
-                      <p>{fichaMedica?.microchip || 'No registrado'}</p>
-                    </div>
-                  </div>
-
-                  <div className={styles.row}>
-                    <div className={styles.field}>
-                      <label>Enfermedades crónicas</label>
-                      <p>{fichaMedica?.enfermedadesCronicas || 'Ninguna registrada'}</p>
-                    </div>
-                  </div>
-
-                  <div className={styles.row}>
-                    <div className={styles.field}>
-                      <label>Cirugías previas</label>
-                      <p>{fichaMedica?.cirugiasPrevias || 'Ninguna registrada'}</p>
-                    </div>
-                  </div>
-
-                  <div className={styles.row}>
-                    <div className={styles.field}>
-                      <label>Medicamentos habituales</label>
-                      <p>{fichaMedica?.medicamentosHabituales || 'Ninguno'}</p>
-                    </div>
-                  </div>
-                </Card>
-
-                <div className={styles.verConsultasWrapper}>
-                  <Button
-                    texto="Ver Consultas"
-                    variante="secundario"
-                    tamaño="mediano"
-                    onClick={() => navigate(-1)}
-                  />
+          <div className={styles.contentGrid}>
+            {/* Ficha Permanente */}
+            <section className={styles.section}>
+              <h2>Ficha permanente</h2>
+              <div className={styles.fichaPermanente}>
+                <div className={styles.row}>
+                  <label>Fecha de nacimiento</label>
+                  <p>{fichaMedica?.fechaNacimiento 
+                    ? formatearFecha(fichaMedica.fechaNacimiento)
+                    : mascota?.fechaNacimiento
+                      ? formatearFecha(mascota.fechaNacimiento)
+                      : 'No registrada'
+                  }</p>
                 </div>
-              </section>
-            </div>
 
-            {/* Columna derecha */}
-            <div className={styles.colDerecha}>
-              {/* Registro de Vacunación */}
-              <section className={styles.section}>
-                <h2 className={styles.sectionTitulo}>Registro Vacunación</h2>
-                {vacunas && vacunas.length > 0 ? (
-                  <Card className={styles.tableWrapper}>
-                    <table className={styles.table}>
-                      <thead>
-                        <tr>
-                          <th>Vacuna</th>
-                          <th>Aplicada</th>
-                          <th>Veterinario</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {vacunas.map((vacuna, idx) => (
-                          <tr key={idx}>
-                            <td>{vacuna.nombre}</td>
-                            <td>{formatearFecha(vacuna.fechaAplicada)}</td>
-                            <td>{vacuna.profesionalId?.nombre || 'N/A'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </Card>
-                ) : (
-                  <Card>
-                    <p className={styles.vacio}>Todavía no hay vacunas registradas.</p>
-                  </Card>
-                )}
-              </section>
-
-              {/* Estudios y Laboratorios */}
-              <section className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <h2 className={styles.sectionTitulo}>Estudios y Laboratorios</h2>
-                  {/* Input file oculto */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    onChange={handleAgregarArchivo}
-                    accept=".pdf,.jpg,.png,.jpeg,.gif,.doc,.docx"
-                    style={{ display: 'none' }}
-                  />
-                  <Button
-                    texto="Adjuntar nuevo estudio"
-                    variante="secundario"
-                    tamaño="chico"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={cargandoArchivo}
-                  />
+                <div className={styles.row}>
+                  <label>Especie / Raza</label>
+                  <p>{mascota?.especie} · {mascota?.raza}</p>
                 </div>
-                {estudios && estudios.length > 0 ? (
-                  <div className={styles.estudios}>
-                    {estudios.map((estudio, idx) => (
-                      <Card key={idx} className={styles.estudioCard}>
-                        <h3>{estudio.nombre}</h3>
-                        <p>{formatearFecha(estudio.fecha)} | {estudio.profesionalId?.nombre || 'N/A'}</p>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <Card>
-                    <p className={styles.vacio}>Todavía no hay estudios registrados.</p>
-                  </Card>
-                )}
-              </section>
-            </div>
 
+                <div className={styles.row}>
+                  <label>Color / Pelaje</label>
+                  <p>{fichaMedica?.colorPelaje || 'No registrado'}</p>
+                </div>
+
+                <div className={styles.row}>
+                  <label>Microchip</label>
+                  <p>{fichaMedica?.microchip || 'No registrado'}</p>
+                </div>
+
+                <div className={styles.row}>
+                  <label>Enfermedades crónicas</label>
+                  <p>{fichaMedica?.enfermedadesCronicas || 'Ninguna registrada'}</p>
+                </div>
+
+                <div className={styles.row}>
+                  <label>Cirugías previas</label>
+                  <p>{fichaMedica?.cirugiasPrevias || 'Ninguna registrada'}</p>
+                </div>
+
+                <div className={styles.row}>
+                  <label>Medicamentos habituales</label>
+                  <p>{fichaMedica?.medicamentosHabituales || 'Ninguno'}</p>
+                </div>
+              </div>
+            </section>
+
+            {/* Registro de Vacunación */}
+            <section className={styles.section}>
+              <h2>Registro de Vacunación</h2>
+              {vacunas && vacunas.length > 0 ? (
+                <div className={styles.vacunasTable}>
+                  {vacunas.map((vacuna, idx) => (
+                    <div key={idx} className={styles.vacunaRow}>
+                      <span className={styles.vacunaNombre}>{vacuna.nombre}</span>
+                      <span className={styles.vacunaFecha}>Aplicada: {formatearFecha(vacuna.fechaAplicada)}</span>
+                      <span className={styles.vacunaVet}>Dra. {vacuna.profesionalId?.nombre || 'N/A'}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.emptyState}>Todavía no hay vacunas registradas.</p>
+              )}
+            </section>
           </div>
 
+          {/* Estudios y Laboratorios */}
+          {estudios && estudios.length > 0 && (
+            <section className={styles.section}>
+              <h2>Estudios</h2>
+              <div className={styles.estudios}>
+                {estudios.map((estudio, idx) => (
+                  <div key={idx} className={styles.estudioCard}>
+                    <svg className={styles.estudioIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3>{estudio.nombre}</h3>
+                    <p>{formatearFecha(estudio.fecha)} | {estudio.profesionalId?.nombre || 'N/A'}</p>
+                    <a href="#" className={styles.verResultado}>Ver resultado</a>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </div>
-
-      {modalAbierto && (
-        <Modal isOpen={modalAbierto} onClose={() => setModalAbierto(false)}>
-          <FormularioFichaMedica
-            mascotaId={mascotaId}
-            fichaInicial={fichaMedica}
-            onCancelar={() => setModalAbierto(false)}
-            onGuardado={() => {
-              setModalAbierto(false)
-              fetchHistorial()
-              mostrarExito('¡Ficha médica actualizada correctamente!')
-            }}
-          />
-        </Modal>
-      )}
     </div>
   )
 }

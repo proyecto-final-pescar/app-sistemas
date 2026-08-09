@@ -1,186 +1,298 @@
 .container {
-  padding: 32px 40px;
-  font-family: 'Inter', sans-serif;
-  background-color: #F9FAFB;
-  min-height: 100vh;
+  padding: 2rem;
+  background: #fff;
+  color: #1f2937;
 }
 
-.successBanner {
-  background-color: #e6f7ec;
-  color: #1e8e3e;
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 14px;
+.header h1 {
+  font-size: 1.5rem;
   font-weight: 600;
-  margin-bottom: 20px;
+  margin-bottom: 0.25rem;
+  color: #1f2937;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
+.header p {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  margin-bottom: 1.5rem;
 }
 
-.titulo {
-  font-family: 'Outfit', sans-serif;
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0 0 4px;
-  color: #111827;
-}
-
-.subtitulo {
-  font-size: 14px;
-  color: #6b7280;
-  margin: 0;
-}
-
-.infoCards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 32px;
-}
-
-.cardLabel {
-  font-size: 13px;
-  color: #6b7280;
-  margin: 0 0 6px;
-}
-
-.cardValue {
-  font-size: 22px;
-  font-weight: 700;
-  color: #7C3AED;
-  margin: 0;
-}
-
-/* Layout de 2 columnas: ficha permanente | vacunación + estudios */
-.gridLayout {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 24px;
-  align-items: start;
-}
-
-.colIzquierda {
-  min-width: 0;
-}
-
-.colDerecha {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-.section {
-  margin-bottom: 0;
-}
-
-.sectionTitulo {
-  font-family: 'Outfit', sans-serif;
-  font-size: 18px;
-  font-weight: 700;
-  color: #7C3AED;
-  margin: 0 0 12px;
-}
-
-.sectionHeader {
+.mascotaCard {
+  background: #f5f5f5;
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e5e7eb;
 }
 
-.sectionHeader .sectionTitulo {
+.mascotaInfo {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex: 1;
+}
+
+.mascotaAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #9370db;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.mascotaDetails h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
   margin: 0;
+  margin-bottom: 0.25rem;
+}
+
+.mascotaDetails p {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin: 0;
+  margin-bottom: 0.5rem;
+}
+
+.badges {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.responsable {
+  text-align: right;
+  margin-left: auto;
+}
+
+.responsableLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.25rem 0;
+}
+
+.responsableName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
+}
+
+.responsablePhone {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background: #f3f0ff;
+  border-radius: 0.75rem;
+  padding: 1rem 0.875rem;
+  text-align: center;
+  border: 1px solid #e9d5ff;
+}
+
+.cardIcon {
+  width: 20px;
+  height: 20px;
+  color: #7c3aed;
+  margin: 0 auto 0.5rem;
+  stroke-width: 1.5;
+}
+
+.cardValue {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
+  line-height: 1.2;
+}
+
+.cardLabel {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.section h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: #7c3aed;
 }
 
 .fichaPermanente {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  background: #f9fafb;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
 }
 
 .row {
-  display: flex;
+  margin-bottom: 1rem;
 }
 
-.field label {
+.row:last-child {
+  margin-bottom: 0;
+}
+
+.row label {
   display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: #7C3AED;
-  margin-bottom: 4px;
+  font-size: 0.8125rem;
+  color: #7c3aed;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
 }
 
-.field p {
+.row p {
+  font-size: 0.9375rem;
+  color: #1f2937;
   margin: 0;
-  font-size: 14px;
-  color: #111827;
 }
 
-.verConsultasWrapper {
-  margin-top: 16px;
-}
-
-.tableWrapper {
-  padding: 0;
+.vacunasTable {
+  background: #f9fafb;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
   overflow: hidden;
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th {
-  text-align: left;
-  font-size: 13px;
-  color: #6b7280;
-  padding: 12px 20px;
-  background-color: #F9FAFB;
+.vacunaRow {
+  display: grid;
+  grid-template-columns: 1.5fr 1.5fr 1fr;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
   border-bottom: 1px solid #e5e7eb;
+  align-items: center;
 }
 
-.table td {
-  padding: 12px 20px;
-  font-size: 14px;
-  color: #111827;
-  border-bottom: 1px solid #f3f4f6;
+.vacunaRow:last-child {
+  border-bottom: none;
+}
+
+.vacunaNombre {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 0.9375rem;
+}
+
+.vacunaFecha {
+  color: #6b7280;
+  font-size: 0.8125rem;
+}
+
+.vacunaVet {
+  color: #6b7280;
+  font-size: 0.8125rem;
+  text-align: right;
+}
+
+.emptyState {
+  padding: 1.5rem;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.9375rem;
+  margin: 0;
 }
 
 .estudios {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 0.875rem;
+}
+
+.estudioCard {
+  background: #f3f0ff;
+  padding: 1rem 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e9d5ff;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.estudioIcon {
+  width: 20px;
+  height: 20px;
+  color: #7c3aed;
+  flex-shrink: 0;
+  stroke-width: 2;
 }
 
 .estudioCard h3 {
-  font-size: 15px;
-  margin: 0 0 4px;
-  color: #111827;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
 }
 
 .estudioCard p {
-  font-size: 13px;
-  color: #6b7280;
+  font-size: 0.8125rem;
+  color: #9ca3af;
   margin: 0;
 }
 
-.vacio {
-  font-size: 14px;
-  color: #6b7280;
-  margin: 0;
-  text-align: center;
-  padding: 8px 0;
+.verResultado {
+  font-size: 0.8125rem;
+  color: #7c3aed;
+  text-decoration: none;
+  font-weight: 500;
+  margin-left: auto;
 }
 
-/* En pantallas angostas, que se apilen en 1 sola columna */
-@media (max-width: 900px) {
-  .gridLayout {
+.verResultado:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 1024px) {
+  .contentGrid {
     grid-template-columns: 1fr;
+  }
+
+  .cardsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .cardsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mascotaCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .responsable {
+    text-align: left;
+    margin-left: 0;
+    margin-top: 1rem;
   }
 }
