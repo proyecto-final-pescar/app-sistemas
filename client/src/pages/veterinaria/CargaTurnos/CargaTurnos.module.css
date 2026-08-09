@@ -315,3 +315,274 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.diaCardBloqueado {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #f5f5f5;
+  border-color: #e5e7eb;
+}
+
+.diaCardBloqueado:hover {
+  border-color: #e5e7eb;
+  background: #f5f5f5;
+}
+
+.diaNoDisponible {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* Grilla */
+.grillaWrapper {
+  overflow-x: auto;
+  margin-top: 8px;
+}
+
+.grilla {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 700px;
+}
+
+/* Header días */
+.thHora {
+  width: 70px;
+  min-width: 70px;
+}
+
+.thDia {
+  padding: 12px 8px 10px;
+  text-align: center;
+  background: transparent;
+  min-width: 120px;
+}
+
+.thDiaBloqueado {
+  opacity: 0.5;
+}
+
+.thDiaContenido {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.thDiaNombre {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f1739;
+}
+
+.thDiaFecha {
+  font-size: 11px;
+  color: #8276ab;
+}
+
+.btnTodoDia {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #6b7280;
+  font-family: 'Inter', sans-serif;
+  padding: 3px 6px;
+  border-radius: 6px;
+  margin-top: 2px;
+}
+
+.btnTodoDia:hover {
+  color: #7c3aed;
+}
+
+.btnTodoDiaActivo {
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+.radioCircle {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid #c4b5fd;
+  display: inline-block;
+  flex-shrink: 0;
+  background: white;
+}
+
+.radioCircleActivo {
+  border-color: #7c3aed;
+  background: #7c3aed;
+}
+
+.navSemana {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.btnNav {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid #ede9fe;
+  background: white;
+  font-size: 15px;
+  color: #7c3aed;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.btnNav:hover {
+  background: #f3ecfd;
+}
+
+.btnNav:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Filas */
+.tdHora {
+  padding: 4px 12px 4px 0;
+  font-size: 12px;
+  color: #8276ab;
+  font-weight: 500;
+  text-align: right;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.tdBloqueado {
+  padding: 3px 4px;
+}
+
+.celdaBloqueada {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  background: #f5f3ff;
+  border-radius: 12px;
+  opacity: 0.6;
+}
+
+.tdExistente {
+  padding: 3px 4px;
+}
+
+.celdaExistente {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #7c3aed;
+  background: #ede9fe;
+  border-radius: 12px;
+  border: 1.5px solid #c4b5fd;
+}
+
+.tdCelda {
+  padding: 3px 4px;
+}
+
+.celda {
+  width: 100%;
+  height: 40px;
+  border-radius: 12px;
+  border: 1.5px solid #e5e7eb;
+  background: white;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.celda:hover {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border-color: #c4b5fd;
+}
+
+.celdaSeleccionada {
+  background: #07A35F !important;
+  color: white !important;
+  border-color: #059669 !important;
+  font-weight: 700 !important;
+}
+
+.celdaSeleccionada:hover {
+  background: #059669 !important;
+}
+
+/* Leyenda */
+.leyenda {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.leyendaItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.leyendaDotVerde {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: #07A35F;
+}
+
+.leyendaDotGris {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: white;
+  border: 1.5px solid #e5e7eb;
+}
+
+.leyendaDotVioleta {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: #ede9fe;
+  border: 1.5px solid #c4b5fd;
+}
+
+.leyendaDotBloqueado {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: #f5f3ff;
+  border: 1.5px solid #e5e7eb;
+}
+
+.filaRecurrencia {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 4px;
+}

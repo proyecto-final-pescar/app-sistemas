@@ -212,34 +212,19 @@ export const liberarTurnosPendientesVencidos = async () => {
 
 export const crearOfertaHoraria = async (req, res) => {
   try {
-    const { especialidad, profesionales, dias, horaInicio, horaFin, recurrencia } = req.body;
+    const { especialidad, profesionales, duracion, slots } = req.body;
 
-    // Validaciones
-    if (!especialidad || !profesionales?.length || !dias?.length || !horaInicio || !horaFin) {
+    if (!especialidad || !profesionales?.length || !slots?.length || !duracion) {
       return res.status(400).json({
-        message: 'Faltan datos obligatorios: especialidad, profesionales, dias, horaInicio y horaFin'
+        message: 'Faltan datos obligatorios: especialidad, profesionales, duracion y slots'
       });
     }
 
-    // Buscar la veterinaria del usuario logueado
     const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id });
     if (!veterinaria) {
       return res.status(404).json({ message: 'No se encontró una veterinaria asociada a este usuario' });
     }
 
-    // Buscar el servicio para obtener la duración
-    const servicio = veterinaria.servicios.find(
-      s => s.nombre.toLowerCase() === especialidad.toLowerCase() ||
-        s.categoria.toLowerCase() === especialidad.toLowerCase()
-    );
-
-    if (!servicio) {
-      return res.status(404).json({ message: 'No se encontró el servicio en tu veterinaria' });
-    }
-
-    const duracion = servicio.duracion;
-
-    // Validar que los profesionales pertenezcan a la veterinaria
     for (const profId of profesionales) {
       const profValido = veterinaria.profesionales.id(profId);
       if (!profValido) {
@@ -249,120 +234,35 @@ export const crearOfertaHoraria = async (req, res) => {
       }
     }
 
-    // Generar los slots de horario del día
-    const generarSlots = (horaInicio, horaFin, duracion) => {
-      const slots = [];
-      const [horaInicioH, horaInicioM] = horaInicio.split(':').map(Number);
-      const [horaFinH, horaFinM] = horaFin.split(':').map(Number);
-
-      let totalMinutos = horaInicioH * 60 + horaInicioM;
-      const finMinutos = horaFinH * 60 + horaFinM;
-
-      while (totalMinutos + duracion <= finMinutos) {
-        const horas = Math.floor(totalMinutos / 60).toString().padStart(2, '0');
-        const minutos = (totalMinutos % 60).toString().padStart(2, '0');
-        slots.push(`${horas}:${minutos}`);
-        totalMinutos += duracion;
-      }
-
-      return slots;
-    };
-
-    const slots = generarSlots(horaInicio, horaFin, duracion);
-
-    if (!slots.length) {
-      return res.status(400).json({
-        message: 'El rango horario no permite generar ningún turno con la duración definida'
-      });
-    }
-
-    const expandirDias = (dias, recurrencia) => {
-      const hoy = new Date();
-      const resultado = new Set();
-
-      // Obtener inicio y fin del período según recurrencia
-      const inicioSemana = new Date(hoy);
-      inicioSemana.setDate(hoy.getDate() - hoy.getDay() + 1); // Lunes de esta semana
-      inicioSemana.setHours(0, 0, 0, 0);
-
-      let fechaFin;
-      if (recurrencia === 'unica') {
-        // Solo las fechas exactas que mandó el frontend
-        return dias.map(d => new Date(d));
-      } else if (recurrencia === 'semanal') {
-        // Solo esta semana (lunes a domingo)
-        fechaFin = new Date(inicioSemana);
-        fechaFin.setDate(inicioSemana.getDate() + 6);
-      } else if (recurrencia === 'quincenal') {
-        // Esta semana + la siguiente
-        fechaFin = new Date(inicioSemana);
-        fechaFin.setDate(inicioSemana.getDate() + 13);
-      } else if (recurrencia === 'mensual') {
-        // Todo el mes en curso
-        fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-      }
-
-      // Para cada día seleccionado, buscar todas las fechas que caen en el período
-      const diasSemanaMap = {
-        'Lunes': 1, 'Martes': 2, 'Miércoles': 3,
-        'Jueves': 4, 'Viernes': 5, 'Sábado': 6, 'Domingo': 0
-      };
-
-      dias.forEach(dia => {
-        const diaSemana = diasSemanaMap[dia];
-        if (diaSemana === undefined) return;
-
-        const fecha = new Date(inicioSemana);
-        // Encontrar el primer día de esa semana que coincida
-        while (fecha.getDay() !== diaSemana) {
-          fecha.setDate(fecha.getDate() + 1);
-        }
-
-        // Agregar todas las fechas de ese día dentro del período
-        while (fecha <= fechaFin) {
-          resultado.add(fecha.toISOString().split('T')[0]);
-          fecha.setDate(fecha.getDate() + 7);
-        }
-      });
-
-      return Array.from(resultado).map(d => new Date(d));
-    };
-
-    const diasExpandidos = expandirDias(dias, recurrencia);
-
-    // Crear los turnos — uno por cada combinación de profesional, día y slot
     const turnosACrear = [];
 
-    for (const dia of diasExpandidos) {
+    for (const slot of slots) {
       for (const profId of profesionales) {
-        for (const slot of slots) {
-          // Verificar que no exista ya un turno para ese profesional en ese día y hora
-          const existe = await Turno.findOne({
+        const existe = await Turno.findOne({
+          veterinariaId: veterinaria._id,
+          profesionalId: profId,
+          fecha: new Date(slot.fecha),
+          hora: slot.hora
+        });
+
+        if (!existe) {
+          turnosACrear.push({
+            fecha: new Date(slot.fecha),
+            hora: slot.hora,
+            tipo: 'disponible',
+            especialidad,
+            duracion,
             veterinariaId: veterinaria._id,
             profesionalId: profId,
-            fecha: dia,
-            hora: slot
+            estado: 'pendiente'
           });
-
-          if (!existe) {
-            turnosACrear.push({
-              fecha: dia,
-              hora: slot,
-              tipo: 'disponible',
-              especialidad,
-              duracion,
-              veterinariaId: veterinaria._id,
-              profesionalId: profId,
-              estado: 'pendiente'
-            });
-          }
         }
       }
     }
 
     if (!turnosACrear.length) {
       return res.status(400).json({
-        message: 'Todos los slots ya existen para los profesionales y días seleccionados'
+        message: 'Todos los slots seleccionados ya existen'
       });
     }
 
@@ -371,7 +271,7 @@ export const crearOfertaHoraria = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: `Se crearon ${turnosCreados.length} turnos disponibles`,
-      data: { cantidad: turnosCreados.length, turnos: turnosCreados }
+      data: { cantidad: turnosCreados.length }
     });
 
   } catch (error) {

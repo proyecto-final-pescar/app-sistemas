@@ -2,7 +2,7 @@
 import api from "./api";
 
 export const obtenerTurnosPorVeterinaria = async (veterinariaId, estado) => {
-  const params = { veterinariaId };
+  const params = { veterinariaId, tipo: "disponible" };
   if (estado) params.estado = estado;
 
   const { data } = await api.get("/turnos", { params });
