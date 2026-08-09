@@ -1,0 +1,237 @@
+.admin-turnos {
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+}
+
+.admin-turnos__header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.admin-turnos__subtitulo {
+  color: #7c6aa6;
+  margin: 4px 0 20px;
+  font-size: 14px;
+}
+
+.admin-turnos__stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.admin-turnos__stat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px;
+  box-sizing: border-box;
+}
+
+.admin-turnos__stat-icono {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.admin-turnos__stat-icono--violeta {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.admin-turnos__stat-icono--verde {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.admin-turnos__stat-icono--naranja {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.admin-turnos__stat-icono--rojo {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.admin-turnos__stat-numero {
+  display: block;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.admin-turnos__stat-label {
+  display: block;
+  font-size: 13px;
+  color: #7c6aa6;
+}
+
+.admin-turnos__panel {
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.admin-turnos__panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-turnos__panel-titulo h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.admin-turnos__resultados {
+  font-size: 12px;
+  color: #7c6aa6;
+}
+
+.admin-turnos__filtros {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-turnos__input-fecha,
+.admin-turnos__input-busqueda {
+  border: 1px solid #e5e0f5;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 16px; 
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.admin-turnos__input-busqueda {
+  min-width: 160px;
+}
+
+.admin-turnos__tabs {
+  display: flex;
+  gap: 4px;
+  background: #f5f3fb;
+  padding: 4px;
+  border-radius: 999px;
+  width: fit-content;
+  margin-bottom: 16px;
+}
+
+.admin-turnos__tab {
+  border: none;
+  background: transparent;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #7c6aa6;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.admin-turnos__tab--activo {
+  background: #7c3aed;
+  color: #fff;
+}
+
+.admin-turnos__tabla-wrapper {
+  overflow-x: auto;
+}
+
+.admin-turnos__tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-turnos__tabla th {
+  text-align: left;
+  color: #7c6aa6;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  padding: 10px 12px;
+  border-bottom: 1px solid #ede9fe;
+}
+
+.admin-turnos__tabla td {
+  padding: 12px;
+  border-bottom: 1px solid #f5f3fb;
+}
+
+.admin-turnos__vacio {
+  text-align: center;
+  color: #7c6aa6;
+  padding: 24px !important;
+}
+
+.admin-turnos__ver {
+  border: none;
+  background: transparent;
+  color: #7c3aed;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.admin-turnos__paginacion {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-turnos__pagina-info {
+  font-size: 13px;
+  color: #7c6aa6;
+}
+
+.admin-turnos__paginacion-botones {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-turnos__paginacion-botones button {
+  border: 1px solid #e5e0f5;
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.admin-turnos__paginacion-botones button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .admin-turnos__stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-turnos__panel-header {
+    flex-direction: column;
+  }
+
+  .admin-turnos__filtros {
+    width: 100%;
+  }
+
+  .admin-turnos__input-busqueda {
+    flex: 1;
+  }
+}

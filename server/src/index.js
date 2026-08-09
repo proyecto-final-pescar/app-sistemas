@@ -8,6 +8,7 @@ import connectDB from "./config/db.js";
 import routes from "./routes/index.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import { iniciarJobsTurnos } from "./jobs/turnoJobs.js";
+import turnosAdminRoutes from './routes/turnosAdmin.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,9 +37,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+app.use('/api/turnos/admin', turnosAdminRoutes);
+
 app.use("/api", routes);
 app.use("/api/upload", uploadRoutes);
-app.use('/api/ficha-medica', fichaMedicaRoutes)
 
 
 connectDB();

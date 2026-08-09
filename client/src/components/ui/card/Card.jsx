@@ -9,7 +9,3 @@ function Card({ children, className = '', onClick }) {
 }
 
 export default Card;
-
-/*<Card>
-  Datos de Luna
-</Card>*/
