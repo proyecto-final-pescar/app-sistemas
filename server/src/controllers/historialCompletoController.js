@@ -12,7 +12,7 @@ export const obtenerHistorialCompleto = async (req, res) => {
     const [mascota, fichaMedica, historialClinico, vacunas, estudios] = await Promise.all([
       
       Mascota.findById(mascotaId)
-        .populate('dueñoId', 'nombre email'),
+      .populate('dueñoId', 'name email telefono'),
 
       FichaMedica.findOne({ mascotaId }),
 

@@ -7,31 +7,32 @@
 .header h1 {
   font-size: 1.5rem;
   font-weight: 600;
-  margin-bottom: 0.25rem;
+  margin: 0 0 0.25rem 0;
   color: #1f2937;
 }
 
 .header p {
   font-size: 0.875rem;
   color: #9ca3af;
-  margin-bottom: 1.5rem;
+  margin: 0 0 1.5rem 0;
 }
 
 .mascotaCard {
-  background: #f5f5f5;
-  border-radius: 0.75rem;
-  padding: 1.25rem 1.5rem;
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
   border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .mascotaInfo {
   display: flex;
   gap: 1rem;
-  align-items: center;
+  align-items: flex-start;
   flex: 1;
 }
 
@@ -39,29 +40,28 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #9370db;
-  color: white;
+  background: #e9d5ff;
+  color: #7c3aed;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.25rem;
   font-weight: 600;
   flex-shrink: 0;
+  margin-top: 0.25rem;
 }
 
 .mascotaDetails h2 {
   font-size: 1rem;
   font-weight: 600;
   color: #1f2937;
-  margin: 0;
-  margin-bottom: 0.25rem;
+  margin: 0 0 0.25rem 0;
 }
 
 .mascotaDetails p {
   font-size: 0.8125rem;
   color: #6b7280;
-  margin: 0;
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.5rem 0;
 }
 
 .badges {
@@ -69,62 +69,60 @@
   gap: 0.5rem;
 }
 
-.responsable {
-  text-align: right;
-  margin-left: auto;
+.mascotaAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e9d5ff;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
 }
 
-.responsableLabel {
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 0.25rem 0;
-}
-
-.responsableName {
-  font-size: 0.875rem;
+.mascotaDetails h2 {
+  font-size: 0.95rem;
   font-weight: 600;
   color: #1f2937;
-  margin: 0 0 0.25rem 0;
+  margin: 0 0 0.15rem 0;
 }
 
-.responsablePhone {
-  font-size: 0.75rem;
-  color: #9ca3af;
-  margin: 0;
+.mascotaDetails p {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin: 0 0 0.35rem 0;
 }
 
 .cardsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
 }
 
 .card {
   background: #f3f0ff;
   border-radius: 0.75rem;
-  padding: 1rem 0.875rem;
-  text-align: center;
+  padding: 0.875rem;
+  text-align: left;
   border: 1px solid #e9d5ff;
 }
 
 .cardIcon {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   color: #7c3aed;
-  margin: 0 auto 0.5rem;
+  margin: 0 0 0.4rem 0;
   stroke-width: 1.5;
 }
 
 .cardValue {
-  font-size: 1.375rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #1f2937;
   margin: 0 0 0.25rem 0;
-  line-height: 1.2;
 }
 
 .cardLabel {
@@ -136,26 +134,26 @@
 .contentGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: 2rem;
   margin-bottom: 2rem;
 }
 
 .section h2 {
   font-size: 1rem;
   font-weight: 600;
-  margin: 0 0 1rem 0;
+  margin: 0 0 1.25rem 0;
   color: #7c3aed;
 }
 
 .fichaPermanente {
-  background: #f9fafb;
-  padding: 1.25rem;
+  background: #f3f0ff;
+  padding: 1.5rem;
   border-radius: 0.75rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e9d5ff;
 }
 
 .row {
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
 }
 
 .row:last-child {
@@ -166,8 +164,8 @@
   display: block;
   font-size: 0.8125rem;
   color: #7c3aed;
-  margin-bottom: 0.25rem;
   font-weight: 500;
+  margin-bottom: 0.35rem;
 }
 
 .row p {
@@ -177,10 +175,10 @@
 }
 
 .vacunasTable {
-  background: #f9fafb;
+  background: #f3f0ff;
   border-radius: 0.75rem;
-  border: 1px solid #e5e7eb;
-  overflow: hidden;
+  border: 1px solid #e9d5ff;
+  padding: 1rem;
 }
 
 .vacunaRow {
@@ -188,111 +186,110 @@
   grid-template-columns: 1.5fr 1.5fr 1fr;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #ffffff;
   align-items: center;
+  margin-bottom: 0.75rem;
 }
 
 .vacunaRow:last-child {
-  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .vacunaNombre {
   font-weight: 600;
   color: #1f2937;
-  font-size: 0.9375rem;
 }
 
 .vacunaFecha {
   color: #6b7280;
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
 }
 
 .vacunaVet {
   color: #6b7280;
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   text-align: right;
 }
 
 .emptyState {
-  padding: 1.5rem;
+  padding: 2rem;
   text-align: center;
   color: #9ca3af;
-  font-size: 0.9375rem;
-  margin: 0;
+  background: #f9fafb;
+  border-radius: 0.75rem;
 }
 
 .estudios {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.875rem;
+  gap: 0.75rem;
+  background: #f3f0ff;
+  border-radius: 0.75rem;
+  border: 1px solid #e9d5ff;
+  padding: 1rem;
 }
 
 .estudioCard {
-  background: #f3f0ff;
+  background: #ffffff;
   padding: 1rem 1.25rem;
   border-radius: 0.75rem;
-  border: 1px solid #e9d5ff;
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 1rem;
-}
-
-.estudioIcon {
-  width: 20px;
-  height: 20px;
-  color: #7c3aed;
-  flex-shrink: 0;
-  stroke-width: 2;
+  align-items: center;
 }
 
 .estudioCard h3 {
-  font-size: 0.9375rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #1f2937;
   margin: 0;
 }
 
 .estudioCard p {
-  font-size: 0.8125rem;
+  font-size: 0.85rem;
   color: #9ca3af;
   margin: 0;
 }
 
 .verResultado {
-  font-size: 0.8125rem;
+  font-size: 0.85rem;
   color: #7c3aed;
   text-decoration: none;
   font-weight: 500;
+  white-space: nowrap;
   margin-left: auto;
 }
 
-.verResultado:hover {
-  text-decoration: underline;
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }
 
-@media (max-width: 1024px) {
-  .contentGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .cardsGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.responsable {
+  text-align: right;
 }
 
-@media (max-width: 640px) {
-  .cardsGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.responsableLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.15rem 0;
+}
 
-  .mascotaCard {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+.responsableName {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.1rem 0;
+}
 
-  .responsable {
-    text-align: left;
-    margin-left: 0;
-    margin-top: 1rem;
-  }
+.responsablePhone {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin: 0;
 }
