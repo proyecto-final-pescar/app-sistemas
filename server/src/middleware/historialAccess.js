@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import HistorialClinico from '../models/HistorialClinico.js';
 import Mascota from '../models/Mascota.js';
 import Veterinaria from '../models/Veterinaria.js';
+import Turno from '../models/Turno.js';
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -51,12 +52,25 @@ const autorizarHistorialMascota = async (req, res, next, mascotaId) => {
       return forbidden(res);
     }
 
-    const atendioMascota = await HistorialClinico.exists({
-      mascotaId: mascota._id,
-      veterinariaId: veterinaria._id
-    });
+    // Antes solo se permitía el acceso si ya existía un HistorialClinico previo,
+    // lo cual era circular: la ficha se crea recién después de la primera consulta,
+    // así que una mascota con turno pero sin consultas nunca podía acceder.
+    // Ahora también se permite si hay un turno agendado con esta veterinaria,
+    // excluyendo 'pendiente' (todavía no confirmado) y 'cancelado' (no hay
+    // relación real). 'confirmado' y 'atendido' sí otorgan acceso.
+    const [atendioMascota, tieneTurno] = await Promise.all([
+      HistorialClinico.exists({
+        mascotaId: mascota._id,
+        veterinariaId: veterinaria._id
+      }),
+      Turno.exists({
+        mascotaId: mascota._id,
+        veterinariaId: veterinaria._id,
+        estado: { $nin: ['pendiente', 'cancelado'] }
+      })
+    ]);
 
-    if (!atendioMascota) {
+    if (!atendioMascota && !tieneTurno) {
       return forbidden(res);
     }
 

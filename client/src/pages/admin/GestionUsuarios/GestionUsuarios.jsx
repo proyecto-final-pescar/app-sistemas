@@ -240,7 +240,7 @@ function GestionUsuarios() {
 
   return (
     <div className={styles.page}>
-      <Sidebar role="administrador" activeItem="Dueños" />
+      <Sidebar role="administrador" activeItem="Dueños" title="Gestión de Dueños" />
 
       <div className={styles.main}>
         <TopBar

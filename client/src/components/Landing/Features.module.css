@@ -3,6 +3,7 @@
   background-color: var(--color-blanco);
   padding: 80px 24px;
   font-family: "Inter", Arial, Helvetica, sans-serif;
+  box-sizing: border-box;
 }
 
 .container {
@@ -72,4 +73,38 @@
   color: #7c6aa6;
   font-size: 14px;
   line-height: 22px;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 56px 20px;
+  }
+
+  .title {
+    font-size: 27px;
+  }
+
+  .grid {
+    margin-top: 40px;
+    gap: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .section {
+    padding: 40px 16px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .subtitle {
+    font-size: 15px;
+  }
+
+  .cardWrapper {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
 }

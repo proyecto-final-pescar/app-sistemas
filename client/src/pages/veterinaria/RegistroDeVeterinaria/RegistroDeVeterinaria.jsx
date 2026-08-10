@@ -89,7 +89,7 @@ export default function RegistroDeVeterinaria() {
       if (form.direccion.length < 4) return;
       setLoadingAddress(true);
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/places/autocomplete?input=${encodeURIComponent(form.direccion)}`);
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/places/autocomplete?input=${encodeURIComponent(form.direccion)}`);
         const data = await res.json();
         setSuggestions(data.predictions || []);
       } catch { setSuggestions([]); }
@@ -100,7 +100,7 @@ export default function RegistroDeVeterinaria() {
 
   const handleSelectPlace = async (place) => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/places/details?place_id=${place.place_id}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/places/details?place_id=${place.place_id}`);
       const data = await res.json();
       const location = data.result?.geometry?.location;
       setForm((f) => ({
@@ -228,7 +228,7 @@ export default function RegistroDeVeterinaria() {
       urgencias24hs: urgencias,
     };
 
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/veterinarias`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/veterinarias`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

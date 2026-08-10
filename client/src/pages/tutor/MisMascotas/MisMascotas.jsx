@@ -103,7 +103,7 @@ const mostrarExito = (mensaje) => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar role="tutor" />
+      <Sidebar role="tutor" activeItem="Mis Mascotas" title="Mis Mascotas" />
 
       <div className={styles.pageWrapper}>
         <TopBar title="Mis Mascotas" />
