@@ -17,7 +17,6 @@ import HistorialIndividual from "./pages/tutor/HistorialMedico/HistorialIndividu
 import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
-import FichaPaciente from "./pages/veterinaria/HistorialClinico/FichaPaciente";
 import ModeracionForo from "./pages/admin/ModeracionForo/ModeracionForo";
 import GestionUsuarios from "./pages/admin/GestionUsuarios/GestionUsuarios";
 import PerfilUsuario from "./pages/perfilUsuario/PerfilUsuario";
