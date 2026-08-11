@@ -55,11 +55,6 @@ const veterinariaSchema = new mongoose.Schema(
       }
     },
 
-    especialidades: {
-      type: [String],
-      default: []
-    },
-
     servicios: [
       {
         categoria: {
