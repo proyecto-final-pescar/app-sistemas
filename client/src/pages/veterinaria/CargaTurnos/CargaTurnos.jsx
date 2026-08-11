@@ -77,7 +77,7 @@ export default function CargaTurnos() {
 
   // Solo los profesionales que brindan el servicio elegido
   const profesionalesDelServicio = veterinaria?.profesionales
-    ?.filter(p => p.servicioId === servicioId) || [];
+    ?.filter(p => p.serviciosIds?.includes(servicioId)) || [];
 
   useEffect(() => {
     const cargar = async () => {
@@ -112,6 +112,13 @@ export default function CargaTurnos() {
   useEffect(() => {
     cargarExistentes();
   }, [cargarExistentes, servicioId, profesionales]);
+
+  
+  useEffect(() => {
+    if (error || exito) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [error, exito]);
 
   const normalizarDia = (dia) =>
     dia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -324,7 +331,6 @@ export default function CargaTurnos() {
       setExito(`Se crearon ${result.data.cantidad} turnos disponibles correctamente.`);
       setSlotsSeleccionados({});
       await cargarExistentes();
-      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       setError(err.response?.data?.message || "No se pudieron crear los turnos.");
     } finally {
@@ -342,8 +348,32 @@ export default function CargaTurnos() {
 
           {!loading && (
             <>
-              {error && <div className={styles.alerta}>{error}</div>}
-              {exito && <div className={styles.alertaExito}>{exito}</div>}
+              {error && (
+                <div className={styles.alerta}>
+                  <span>{error}</span>
+                  <button
+                    type="button"
+                    className={styles.btnCerrarAlerta}
+                    onClick={() => setError("")}
+                    aria-label="Cerrar mensaje"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+              {exito && (
+                <div className={styles.alertaExito}>
+                  <span>{exito}</span>
+                  <button
+                    type="button"
+                    className={styles.btnCerrarAlerta}
+                    onClick={() => setExito("")}
+                    aria-label="Cerrar mensaje"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
 
               {/* Sección 1 — Configuración */}
               <div className={styles.card}>

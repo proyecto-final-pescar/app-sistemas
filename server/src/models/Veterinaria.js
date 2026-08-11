@@ -85,10 +85,14 @@ const veterinariaSchema = new mongoose.Schema(
           required: [true, 'La especialidad del profesional es requerida'],
           trim: true
         },
-        servicioId: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: [true, 'El servicio que brinda el profesional es requerido']
-        },
+        serviciosIds: {
+    type: [mongoose.Schema.Types.ObjectId],
+    required: [true, 'Debe brindar al menos un servicio'],
+    validate: {
+      validator: (arr) => Array.isArray(arr) && arr.length > 0,
+      message: 'El profesional debe tener al menos un servicio asignado'
+    }
+  },
         email: {
           type: String,
           trim: true

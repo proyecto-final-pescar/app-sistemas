@@ -229,8 +229,9 @@ export const crearOfertaHoraria = async (req, res) => {
           message: `El profesional ${profId} no pertenece a esta veterinaria`
         });
       }
-      // Verifica que el profesional efectivamente brinde este servicio
-      if (profValido.servicioId?.toString() !== servicioId) {
+      const brindaElServicio = profValido.serviciosIds
+        ?.some(id => id.toString() === servicioId);
+      if (!brindaElServicio) {
         return res.status(400).json({
           message: `El profesional ${profValido.nombre} no brinda el servicio seleccionado`
         });
@@ -238,43 +239,81 @@ export const crearOfertaHoraria = async (req, res) => {
     }
 
     const turnosACrear = [];
+    const conflictos = []; // registra por que se descarto cada slot
 
     for (const slot of slots) {
       for (const profId of profesionales) {
-        const existe = await Turno.findOne({
+        const existente = await Turno.findOne({
           veterinariaId: veterinaria._id,
           profesionalId: profId,
           fecha: new Date(slot.fecha),
-          hora: slot.hora
+          hora: slot.hora,
+          estado: { $ne: 'cancelado' } // un turno cancelado no ocupa la agenda
         });
 
-        if (!existe) {
-          turnosACrear.push({
-            fecha: new Date(slot.fecha),
+        if (existente) {
+          const prof = veterinaria.profesionales.id(profId);
+          const mismoServicio = existente.servicioId?.toString() === servicioId;
+
+          conflictos.push({
+            profesional: prof?.nombre || 'Profesional',
+            fecha: slot.fecha,
             hora: slot.hora,
-            servicioId: servicio._id,
-            especialidad: servicio.nombre,
-            montoServicio: servicio.precio,
-            duracion,
-            veterinariaId: veterinaria._id,
-            profesionalId: profId,
-            estado: 'disponible'
+            mismoServicio
           });
+          continue;
         }
+
+        turnosACrear.push({
+          fecha: new Date(slot.fecha),
+          hora: slot.hora,
+          servicioId: servicio._id,
+          especialidad: servicio.nombre,
+          montoServicio: servicio.precio,
+          duracion,
+          veterinariaId: veterinaria._id,
+          profesionalId: profId,
+          estado: 'disponible'
+        });
       }
     }
 
     if (!turnosACrear.length) {
       return res.status(400).json({
-        message: 'Todos los slots seleccionados ya existen'
+        message: construirMensajeConflictos(conflictos)
       });
     }
 
-    const turnosCreados = await Turno.insertMany(turnosACrear);
+    // ordered: false permite que Mongo siga insertando el resto del batch
+    // aunque algún slot choque por condición de carrera con otra oferta
+    // (requiere el índice único { veterinariaId, profesionalId, fecha, hora } en Turno.js)
+    let turnosCreados = [];
+    let chocadosEnBulk = 0;
+
+    try {
+      turnosCreados = await Turno.insertMany(turnosACrear, { ordered: false });
+    } catch (bulkError) {
+      if (bulkError.code === 11000 || bulkError.writeErrors) {
+        turnosCreados = bulkError.insertedDocs || [];
+        chocadosEnBulk = turnosACrear.length - turnosCreados.length;
+      } else {
+        throw bulkError;
+      }
+    }
+
+    if (!turnosCreados.length) {
+      return res.status(409).json({
+        message: 'Todos los horarios seleccionados fueron ocupados justo antes de guardar. Probá de nuevo.'
+      });
+    }
+
+    const totalOmitidos = conflictos.length + chocadosEnBulk;
 
     return res.status(201).json({
       success: true,
-      message: `Se crearon ${turnosCreados.length} turnos disponibles`,
+      message: totalOmitidos > 0
+        ? `Se crearon ${turnosCreados.length} turnos disponibles. ${totalOmitidos} horario(s) se omitieron por conflictos de agenda.`
+        : `Se crearon ${turnosCreados.length} turnos disponibles`,
       data: { cantidad: turnosCreados.length }
     });
 
@@ -285,4 +324,33 @@ export const crearOfertaHoraria = async (req, res) => {
     console.error('Error en crearOfertaHoraria:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
+};
+
+
+const construirMensajeConflictos = (conflictos) => {
+  if (!conflictos.length) {
+    return 'No se pudo crear ningún turno.';
+  }
+
+  const porOtroServicio = conflictos.filter(c => !c.mismoServicio);
+  const duplicadosMismoServicio = conflictos.filter(c => c.mismoServicio);
+
+  const partes = [];
+
+  if (porOtroServicio.length) {
+    const ejemplo = porOtroServicio[0];
+    const fechaFmt = new Date(ejemplo.fecha + 'T00:00:00').toLocaleDateString('es-AR');
+    partes.push(
+      `${porOtroServicio.length} horario(s) chocan porque el profesional ya tiene otro turno en ese momento ` +
+      `(ej: ${ejemplo.profesional} el ${fechaFmt} a las ${ejemplo.hora}hs)`
+    );
+  }
+
+  if (duplicadosMismoServicio.length) {
+    partes.push(
+      `${duplicadosMismoServicio.length} horario(s) ya estaban ofrecidos para este mismo servicio`
+    );
+  }
+
+  return `No se pudo crear ningún turno. ${partes.join('. ')}.`;
 };

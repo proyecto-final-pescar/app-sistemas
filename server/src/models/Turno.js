@@ -84,6 +84,21 @@ const turnoSchema = new mongoose.Schema(
   }
 );
 
+// Mongo rechaza a nivel de base cualquier intento de insertar dos turnos
+// para el mismo profesionalId + fecha + hora, sin importar el servicio.
+// Se excluyen los cancelados: un turno cancelado libera el slot para
+// que se pueda volver a ofrecer ese mismo horario más adelante.
+turnoSchema.index(
+  { veterinariaId: 1, profesionalId: 1, fecha: 1, hora: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      profesionalId: { $exists: true },
+      estado: { $ne: 'cancelado' }
+    }
+  }
+);
+
 const Turno = mongoose.model('Turno', turnoSchema);
 
 export default Turno;
