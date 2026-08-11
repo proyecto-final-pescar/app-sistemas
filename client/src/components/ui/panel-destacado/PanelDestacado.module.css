@@ -70,3 +70,25 @@
 .contenido {
     margin-top: 22px;
 }
+
+/* Responsividad del Panel */
+@media (max-width: 767px) {
+    .panel {
+        padding: 20px 18px;
+        border-radius: 16px;
+    }
+
+    .titulo {
+        font-size: 22px;
+        line-height: 28px;
+    }
+
+    .subtitulo {
+        font-size: 14px;
+        line-height: 20px;
+    }
+
+    .contenido {
+        margin-top: 16px;
+    }
+}
