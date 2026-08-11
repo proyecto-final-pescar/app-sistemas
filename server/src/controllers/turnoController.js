@@ -17,7 +17,7 @@ const horasHastaTurno = (turno) => {
 
 export const obtenerTurnos = async (req, res) => {
   try {
-    const { veterinariaId, usuarioId, estado, tipo } = req.query;
+    const { veterinariaId, usuarioId, estado, estadoDistinto } = req.query;
 
     if (!veterinariaId && !usuarioId) {
       return res.status(400).json({ message: 'Falta veterinariaId o usuarioId' });
@@ -30,9 +30,8 @@ export const obtenerTurnos = async (req, res) => {
     if (usuarioId === 'me') filtro.usuarioId = req.user.id;
     else if (usuarioId) filtro.usuarioId = usuarioId;
 
-    if (estado) filtro.estado = estado;
-
-    if (tipo) filtro.tipo = tipo;
+    if (estadoDistinto) filtro.estado = {$ne: estadoDistinto};
+    else if (estado) filtro.estado = estado
 
     const turnos = await Turno.find(filtro)
       .populate('mascotaId', 'nombre especie')
@@ -56,7 +55,7 @@ export const obtenerTurnos = async (req, res) => {
 
 export const reservarTurno = async (req, res) => {
   try {
-    const { fecha, hora, motivo, mascotaId, veterinariaId, servicioId, profesionalId, notas } = req.body;
+    const { fecha, hora, motivo, mascotaId, veterinariaId, profesionalId, notas } = req.body;
 
     if (!fecha || !hora || !motivo || !mascotaId || !veterinariaId || !profesionalId) {
       return res.status(400).json({ message: 'Faltan datos obligatorios para reservar el turno' });
@@ -67,25 +66,21 @@ export const reservarTurno = async (req, res) => {
       return res.status(404).json({ message: 'Veterinaria no disponible' });
     }
 
-    // Validar que el profesional pertenezca a la veterinaria
     const profesionalValido = veterinaria.profesionales.id(profesionalId);
     if (!profesionalValido) {
       return res.status(400).json({ message: 'El profesional no pertenece a esta veterinaria' });
     }
 
-    // Buscar el slot disponible de forma atómica para evitar condiciones de carrera
-    // findOneAndUpdate garantiza que solo un usuario puede reservar el mismo slot
     const turnoReservado = await Turno.findOneAndUpdate(
       {
         veterinariaId,
         profesionalId,
         fecha: new Date(fecha),
         hora,
-        tipo: 'disponible'
+        estado: 'disponible'
       },
       {
         $set: {
-          tipo: 'reservado',
           estado: 'pendiente',
           mascotaId,
           usuarioId: req.user.id,
@@ -94,12 +89,11 @@ export const reservarTurno = async (req, res) => {
         }
       },
       {
-        new: true,       // devuelve el documento ya actualizado
+        new: true,
         runValidators: true
       }
     );
 
-    // Si no encontró ningún slot disponible significa que ya fue reservado por otro usuario
     if (!turnoReservado) {
       return res.status(409).json({
         message: 'Este turno ya no está disponible. Por favor elegí otro horario.'
@@ -185,8 +179,6 @@ export const cancelarTurno = async (req, res) => {
   }
 };
 
-// Libera automáticamente los turnos "pendiente" no confirmados a tiempo.
-// No responde a cliente (uso interno del cron).
 export const liberarTurnosPendientesVencidos = async () => {
   try {
     const ahora = new Date();
@@ -212,11 +204,11 @@ export const liberarTurnosPendientesVencidos = async () => {
 
 export const crearOfertaHoraria = async (req, res) => {
   try {
-    const { especialidad, profesionales, duracion, slots } = req.body;
+    const { servicioId, profesionales, slots, duracion } = req.body;
 
-    if (!especialidad || !profesionales?.length || !slots?.length || !duracion) {
+    if (!servicioId || !profesionales?.length || !slots?.length || !duracion) {
       return res.status(400).json({
-        message: 'Faltan datos obligatorios: especialidad, profesionales, duracion y slots'
+        message: 'Faltan datos obligatorios: servicioId, profesionales, duracion y slots'
       });
     }
 
@@ -225,11 +217,22 @@ export const crearOfertaHoraria = async (req, res) => {
       return res.status(404).json({ message: 'No se encontró una veterinaria asociada a este usuario' });
     }
 
+    const servicio = veterinaria.servicios.id(servicioId);
+    if (!servicio) {
+      return res.status(400).json({ message: 'El servicio no pertenece a esta veterinaria' });
+    }
+
     for (const profId of profesionales) {
       const profValido = veterinaria.profesionales.id(profId);
       if (!profValido) {
         return res.status(400).json({
           message: `El profesional ${profId} no pertenece a esta veterinaria`
+        });
+      }
+      // Verifica que el profesional efectivamente brinde este servicio
+      if (profValido.servicioId?.toString() !== servicioId) {
+        return res.status(400).json({
+          message: `El profesional ${profValido.nombre} no brinda el servicio seleccionado`
         });
       }
     }
@@ -249,8 +252,9 @@ export const crearOfertaHoraria = async (req, res) => {
           turnosACrear.push({
             fecha: new Date(slot.fecha),
             hora: slot.hora,
-            tipo: 'disponible',
-            especialidad,
+            servicioId: servicio._id,
+            especialidad: servicio.nombre,
+            montoServicio: servicio.precio,
             duracion,
             veterinariaId: veterinaria._id,
             profesionalId: profId,

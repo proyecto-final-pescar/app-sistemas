@@ -66,12 +66,6 @@ const turnoSchema = new mongoose.Schema(
       trim: true
     },
 
-    tipo: {
-      type: String,
-      enum: ['disponible', 'reservado'],
-      default: 'disponible'
-    },
-
     especialidad: {
       type: String,
       trim: true

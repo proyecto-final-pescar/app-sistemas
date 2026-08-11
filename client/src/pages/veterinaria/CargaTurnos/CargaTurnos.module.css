@@ -592,3 +592,8 @@
   gap: 8px;
   margin-top: 8px;
 }
+.helperTextSuave {
+  font-size: 12px;
+  color: #9ca3af;
+  padding: 4px;
+}

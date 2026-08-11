@@ -50,13 +50,13 @@ const veterinariaSchema = new mongoose.Schema(
         required: true
       },
       coordinates: {
-        type: [Number], // [longitud, latitud]
+        type: [Number],
         required: [true, 'Las coordenadas son requeridas']
       }
     },
 
     especialidades: {
-      type: [String], //  ['clínica general', 'cirugía', 'dermatología']
+      type: [String],
       default: []
     },
 
@@ -74,12 +74,6 @@ const veterinariaSchema = new mongoose.Schema(
         precio: {
           type: Number,
           required: [true, 'El precio del servicio es requerido']
-        },
-        duracion: {
-          type: Number,
-          required: [true, 'La duración del servicio es requerida'],
-          min: [15, 'La duración mínima es de 15 minutos'],
-          default: 30
         }
       }
     ],
@@ -96,6 +90,10 @@ const veterinariaSchema = new mongoose.Schema(
           required: [true, 'La especialidad del profesional es requerida'],
           trim: true
         },
+        servicioId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: [true, 'El servicio que brinda el profesional es requerido']
+        },
         email: {
           type: String,
           trim: true
@@ -104,82 +102,13 @@ const veterinariaSchema = new mongoose.Schema(
     ],
 
     horarios: {
-      lunes: {
-        desde: {
-          type: String,
-          trim: true
-        },
-        hasta: {
-          type: String,
-          trim: true
-        }
-      },
-
-      martes: {
-        desde: {
-          type: String,
-          trim: true
-        },
-        hasta: {
-          type: String,
-          trim: true
-        }
-      },
-
-      miercoles: {
-        desde: {
-          type: String,
-          trim: true
-        },
-        hasta: {
-          type: String,
-          trim: true
-        }
-      },
-
-      jueves: {
-        desde: {
-          type: String,
-          trim: true
-        },
-        hasta: {
-          type: String,
-          trim: true
-        }
-      },
-
-      viernes: {
-        desde: {
-          type: String,
-          trim: true
-        },
-        hasta: {
-          type: String,
-          trim: true
-        }
-      },
-
-      sabado: {
-        desde: {
-          type: String,
-          trim: true
-        },
-        hasta: {
-          type: String,
-          trim: true
-        }
-      },
-
-      domingo: {
-        desde: {
-          type: String,
-          trim: true
-        },
-        hasta: {
-          type: String,
-          trim: true
-        }
-      }
+      lunes: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } },
+      martes: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } },
+      miercoles: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } },
+      jueves: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } },
+      viernes: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } },
+      sabado: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } },
+      domingo: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } }
     },
 
     urgencias24hs: {
@@ -187,17 +116,12 @@ const veterinariaSchema = new mongoose.Schema(
       default: false
     },
 
-
-    // como promedio de los documentos de la colección Resenia para la vet
-
     rating: {
       type: Number,
       min: 0,
       max: 5,
       default: null
     },
-
-    // Cantidad de reseñas que componen el promedio de rating
 
     cantidadResenias: {
       type: Number,
@@ -222,7 +146,7 @@ const veterinariaSchema = new mongoose.Schema(
   }
 );
 
-veterinariaSchema.index({ coordenadas: '2dsphere' }); // El "2dsphere" permite búsquedas geoespaciales con coordenadas.
+veterinariaSchema.index({ coordenadas: '2dsphere' });
 
 const Veterinaria = mongoose.model('Veterinaria', veterinariaSchema);
 

@@ -40,7 +40,7 @@ export default function CitasAgendadas() {
           throw new Error("No se encontró la veterinaria del usuario.");
         }
 
-        const data = await obtenerTurnosPorVeterinaria(veterinaria._id, { tipo: "reservado" });
+        const data = await obtenerTurnosPorVeterinaria(veterinaria._id, { estadoDistinto: "disponible" });
 
         setTurnos(Array.isArray(data) ? data : []);
       } catch (err) {
