@@ -40,37 +40,35 @@ export const chatBot = async (req, res) => {
     const ultimosMensajes = messages.slice(-10);
 
     const historialGemini = ultimosMensajes.map((message) => ({
-    role: message.role === 'assistant' ? 'model' : 'user',
-    parts: [
+      role: message.role === 'assistant' ? 'model' : 'user',
+      parts: [
         {
-        text: message.content
+          text: message.content
         }
-    ]
+      ]
     }));
 
     const model = genAI.getGenerativeModel({
-    model: 'gemini-3.5-flash',
-    systemInstruction: BOT_SYSTEM_PROMPT
+      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      systemInstruction: BOT_SYSTEM_PROMPT
     });
 
     const result = await model.generateContent({
-    contents: historialGemini
+      contents: historialGemini
     });
 
     const response = result.response;
     const textoRespuesta = response.text();
 
-    // La llamada a Gemini viene en el siguiente paso.
-
     return res.status(200).json({
-    reply: textoRespuesta
+      reply: textoRespuesta
     });
 
   } catch (error) {
     console.error('Error en chatBot:', error);
 
     return res.status(500).json({
-    message: 'Pety no pudo responder en este momento. Intentá nuevamente en unos minutos.'
+      reply: 'Pety no pudo responder en este momento. Intentá nuevamente en unos minutos.'
     });
-    }
+  }
 };
