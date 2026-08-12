@@ -4,7 +4,7 @@ import api from "../../../services/api.js";
 import Sidebar from "../../../components/layout/Sidebar.jsx";
 import TopBar from "../../../components/layout/TopBar.jsx";
 import FichaMedicaTab from "../../../components/historial/FichaMedicaTab.jsx";
-import { actualizarFichaMedica } from "../../../services/fichaMedicaService.js";
+//import { actualizarFichaMedica } from "../../../services/fichaMedicaService.js";
 import { crearVacuna, actualizarVacuna, eliminarVacuna } from "../../../services/vacunaService.js";
 import { crearEstudio, actualizarEstudio, eliminarEstudio } from "../../../services/estudioService.js";
 import { subirImagen } from "../../../services/uploadService.js";
