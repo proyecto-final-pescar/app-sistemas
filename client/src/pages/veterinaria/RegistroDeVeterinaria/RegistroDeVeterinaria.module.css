@@ -419,15 +419,6 @@
     padding: 24px;
   }
 
-  .grid2 {
-    grid-template-columns: 1fr 1fr;
-    gap: 16px 20px;
-  }
-
-  .subCard {
-    padding: 20px;
-  }
-
   .precioWrap {
     max-width: 240px;
   }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
 import { obtenerMiVeterinaria } from "../../../services/veterinariaService";
 import { obtenerTurnosPorVeterinaria } from "../../../services/turnosService";
@@ -10,11 +10,21 @@ import TopBar from "../../../components/layout/TopBar";
 import Card from "../../../components/ui/card/Card";
 import Button from "../../../components/ui/button/Button";
 import Input from "../../../components/ui/input/Input";
+import PanelDestacado from "../../../components/ui/panel-destacado/PanelDestacado";
 
 import styles from "./HomeVeterinaria.module.css";
 
+
+const IconSearch = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2" />
+    <path d="m16.5 16.5 4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
 const HomeVeterinaria = () => {
   const { usuario } = useAuth();
+  const navigate = useNavigate();
   const [nombreVet, setNombreVet] = useState(usuario?.nombre || "Cargando...");
   const [proximoTurno, setProximoTurno] = useState(null);
   const [consultasHoy, setConsultasHoy] = useState(0);
@@ -40,6 +50,10 @@ const HomeVeterinaria = () => {
 
     return `${anio}-${mes}-${dia}`;
   };
+
+
+  const capitalizar = (texto) =>
+    texto ? texto.charAt(0).toUpperCase() + texto.slice(1) : texto;
 
   useEffect(() => {
     async function cargarDatosHome() {
@@ -125,41 +139,52 @@ const HomeVeterinaria = () => {
         {/* Contenido de Home */}
         <div className={styles.contentWrap}>
           {/* Panel de Bienvenida */}
-          <div className={styles.welcomePanel}>
-            <h1 className={styles.welcomeTitle}>Hola, {nombreVet}</h1>
-            <p className={styles.welcomeDate}>
-              {new Date().toLocaleDateString("es-AR", {
+          <PanelDestacado
+            titulo={`Hola, ${nombreVet}`}
+            subtitulo={capitalizar(
+              new Date().toLocaleDateString("es-AR", {
                 weekday: "long",
                 day: "numeric",
                 month: "long",
                 year: "numeric",
-              })}
-            </p>
-
+              }),
+            )}
+          >
             <div className={styles.searchBarRow}>
               <div className={styles.inputSearchContainer}>
                 <Input placeholder="Buscar por nombre del dueño..." />
               </div>
-              <Button texto="Buscar" variante="primario" tamaño="mediano" />
+
+              
+              <div className={styles.btnBuscarTexto}>
+                <Button texto="Buscar" variante="primario" tamaño="mediano" />
+              </div>
+
+              
+              <button
+                type="button"
+                className={styles.btnBuscarIcono}
+                aria-label="Buscar"
+              >
+                <IconSearch />
+              </button>
             </div>
 
             <div className={styles.actionButtonsRow}>
-              <Link to="./">
-                <Button
-                  texto="Cargar turnos"
-                  variante="secundario"
-                  tamaño="mediano"
-                />
-              </Link>
-              <Link to="/agenda">
-                <Button
-                  texto="Ver agenda"
-                  variante="primario"
-                  tamaño="mediano"
-                />
-              </Link>
+              <Button
+                texto="Cargar turnos"
+                variante="secundario"
+                tamaño="mediano"
+                onClick={() => navigate("./")}
+              />
+              <Button
+                texto="Ver agenda"
+                variante="primario"
+                tamaño="mediano"
+                onClick={() => navigate("/agenda")}
+              />
             </div>
-          </div>
+          </PanelDestacado>
 
           {/* Grilla de Tarjetas */}
           <div className={styles.cardsGrid}>
