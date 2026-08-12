@@ -1,7 +1,7 @@
 .shell {
   display: flex;
   min-height: 100vh;
-  background-color: #fff;
+  background-color: var(--color-blanco);
 }
 
 .main {
@@ -12,7 +12,7 @@
 
 .container {
   padding: 2rem;
-  background: #fff;
+  background: var(--color-blanco);
   color: #1f2937;
 }
 
@@ -30,7 +30,7 @@
 }
 
 .mascotaCard {
-  background: #ffffff;
+  background: var(--color-blanco);
   border-radius: 1rem;
   padding: 1.5rem;
   display: flex;
@@ -53,7 +53,7 @@
   height: 40px;
   border-radius: 50%;
   background: #e9d5ff;
-  color: #7c3aed;
+  color: var(--color-primario);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -106,7 +106,7 @@
 .cardIcon {
   width: 18px;
   height: 18px;
-  color: #7c3aed;
+  color: var(--color-primario);
   margin: 0 0 0.4rem 0;
   stroke-width: 1.5;
 }
@@ -142,7 +142,7 @@
   font-size: 1rem;
   font-weight: 600;
   margin: 0 0 1.25rem 0;
-  color: #7c3aed;
+  color: var(--color-primario);
 }
 
 .row {
@@ -156,7 +156,7 @@
 .row label {
   display: block;
   font-size: 0.8125rem;
-  color: #7c3aed;
+  color: var(--color-primario);
   font-weight: 500;
   margin-bottom: 0.35rem;
 }
@@ -167,22 +167,14 @@
   margin: 0;
 }
 
-.volverWrap {
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  justify-content: center;
-}
-
 
 .vacunaRow {
   display: grid;
   grid-template-columns: 1.5fr 1.5fr 1fr;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  border-radius: 0.75rem;
-  background: #ffffff;
+  border-radius: 1.25rem;
+  background: var(--color-blanco);
   align-items: center;
   margin-bottom: 0.75rem;
 }
@@ -223,9 +215,9 @@
 }
 
 .estudioCard {
-  background: #ffffff;
+  background: var(--color-blanco);
   padding: 1rem 1.25rem;
-  border-radius: 0.75rem;
+  border-radius: 1.25rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -247,8 +239,8 @@
 
 .verResultado {
   font-size: 0.78rem;
-  color: #7c3aed;
-  background: #ede9fe;
+  color: var(--color-primario);
+  background: var(--color-fondo-claro);
   text-decoration: none;
   font-weight: 600;
   white-space: nowrap;

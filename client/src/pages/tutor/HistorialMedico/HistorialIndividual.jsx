@@ -121,29 +121,53 @@ export default function HistorialIndividual() {
           {/*tarjetitas informacion */}
           <div className={styles.cardsGrid}>
             <div className={styles.card}>
-              <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+                <path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" />
+                <path d="M7 21h10" />
+                <path d="M12 3v18" />
+                <path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" />
               </svg>
               <p className={styles.cardValue}>{mascota?.peso} kg</p>
               <p className={styles.cardLabel}>Peso Actual</p>
             </div>
+
             <div className={styles.card}>
-              <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" />
+                <path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1" />
+                <path d="M2 21h20" />
+                <path d="M7 8v3" />
+                <path d="M12 8v3" />
+                <path d="M17 8v3" />
+                <path d="M7 4h.01" />
+                <path d="M12 4h.01" />
+                <path d="M17 4h.01" />
               </svg>
               <p className={styles.cardValue}>{calcularEdad()}</p>
               <p className={styles.cardLabel}>Edad Actual</p>
             </div>
+
             <div className={styles.card}>
-              <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                <rect width="8" height="4" x="8" y="2" rx="1" />
+                <path d="M12 11h4" />
+                <path d="M12 16h4" />
+                <path d="M8 11h.01" />
+                <path d="M8 16h.01" />
               </svg>
               <p className={styles.cardValue}>{(vacunas?.length || 0) + (estudios?.length || 0)}</p>
               <p className={styles.cardLabel}>Consultas Totales</p>
             </div>
+
             <div className={styles.card}>
-              <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 2v4" />
+                <path d="M16 2v4" />
+                <rect width="18" height="18" x="3" y="4" rx="2" />
+                <path d="M3 10h18" />
+                <path d="m9 16 2 2 4-4" />
               </svg>
               <p className={styles.cardValue}>{vacunas?.[0]?.fechaAplicada || estudios?.[0]?.fecha ? formatearFecha(vacunas?.[0]?.fechaAplicada || estudios?.[0]?.fecha) : 'N/A'}</p>
               <p className={styles.cardLabel}>Última Consulta</p>
