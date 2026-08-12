@@ -11,6 +11,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -47,12 +48,14 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 24px;
+  gap: 16px;
 }
 
 .countLabel {
   font-size: 15px;
   color: #4a4660;
   margin: 0;
+  font-weight: 500;
 }
 
 /* Grid */
@@ -86,6 +89,18 @@
   display: block;
 }
 
+.cardImagePlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
 .cardImageOverlay {
   position: absolute;
   left: 0;
@@ -94,7 +109,7 @@
   padding: 16px 20px;
   background: linear-gradient(
     to top,
-    rgba(0, 0, 0, 0.65) 0%,
+    rgba(0, 0, 0, 0.72) 0%,
     rgba(0, 0, 0, 0.05) 100%
   );
   display: flex;
@@ -142,9 +157,6 @@
   border-radius: 999px;
 }
 
-
-
-
 .actionsRow {
   display: flex;
   flex-direction: column;
@@ -171,6 +183,7 @@
   cursor: pointer;
   color: #6d28d9;
   transition: background 0.15s ease, border-color 0.15s ease;
+  width: 100%;
 }
 
 .addCard:hover {
@@ -217,7 +230,16 @@
   font-size: 14px;
 }
 
-/* Skeleton loading */
+.successBanner {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
 .skeletonCard {
   height: 360px;
   border-radius: 20px;
@@ -235,45 +257,73 @@
   }
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* MOBILE (375px to 767px) */
+@media (max-width: 767px) {
   .content {
-    padding: 20px;
+    padding: 16px;
+    padding-top: 76px;
   }
 
   .toolbar {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: column-reverse;
+    align-items: stretch;
     gap: 12px;
+    margin-bottom: 20px;
   }
 
-  .toolbar > *:last-child {
+  .toolbar > button,
+  .toolbar > div {
     width: 100%;
   }
 
-  .toolbar > *:last-child button {
-    width: 100%;
+  .countLabel {
+    font-size: 14px;
+    text-align: center;
+  }
+
+  /* Reorganización de cards a UNA sola columna */
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .cardImageWrapper {
+    height: 190px; /* Altura optimizada para pantallas pequeñas */
+  }
+
+  .cardBody {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .petName {
+    font-size: 18px;
+  }
+
+  .tag {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .addCard {
+    min-height: 200px;
+    padding: 20px 16px;
   }
 }
 
-.cardImagePlaceholder {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: absolute;
-  top: 0;
-  left: 0;
-}
+/* TABLET (768px to 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .content {
+    padding: 24px;
+  }
 
-.successBanner {
-  background: #d1fae5;
-  color: #065f46;
-  border: 1px solid #6ee7b7;
-  padding: 12px 16px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  font-size: 14px;
+  .toolbar {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
 }
