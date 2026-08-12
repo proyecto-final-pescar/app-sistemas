@@ -28,6 +28,7 @@ import Registro from "./pages/public/Registro/Registro";
 import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
 import NotFound from "./pages/NotFound/NotFound";
 import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
+import CargaTurnos from "./pages/veterinaria/CargaTurnos/CargaTurnos";
 import GestionTurnos from "./pages/admin/GestionTurnos/GestionTurnos";
 
 function App() {
@@ -54,7 +55,7 @@ function App() {
         <Route path="/turnos" element={<PrivateRoute allowedRoles={["dueno"]}><Turnos /></PrivateRoute>} />
         <Route path="/mis-turnos" element={<PrivateRoute allowedRoles={["dueno"]}><MisTurnos /></PrivateRoute>} />
         <Route path="/turnos/agendar/:veterinariaId" element={<PrivateRoute allowedRoles={["dueno"]}><AgendarTurnos /></PrivateRoute>} />
-        <Route path="/admin-foro-mascotas-perdidas" element={<PrivateRoute allowedRoles={["administrador"]}><ModeracionForo /></PrivateRoute>}/>
+        <Route path="/admin-foro-mascotas-perdidas" element={<PrivateRoute allowedRoles={["administrador"]}><ModeracionForo /></PrivateRoute>} />
         <Route path="/tutor/veterinarias/:id" element={<PerfilVeterinaria />} />
        <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><BuscarVeterinaria /></PrivateRoute>} />
         <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
@@ -81,6 +82,7 @@ function App() {
         
         <Route path="/" element={<Landing />} />
         <Route path="*" element={<NotFound />} />
+        <Route path="/cargar-turnos" element={<PrivateRoute allowedRoles={["veterinaria"]}><CargaTurnos/></PrivateRoute>}/>
       </Routes>
     </BrowserRouter>
   );
