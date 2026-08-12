@@ -25,3 +25,13 @@
   background-color: #fee2e2;
   color: #ef4444;
 }
+
+.badge-secondary {
+  background-color: #ede9fe;
+  color: #7c3aed;
+}
+
+.badge-success {
+  background-color: #d1fae5;
+  color: #059669;
+}

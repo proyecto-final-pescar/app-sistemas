@@ -110,6 +110,22 @@
   height: 56px;
   padding: 0 24px;
   font-size: 16px;
+  min-width: 160px;
 }
-
-
+ 
+@media (min-width: 768px) {
+  .btn-grande {
+    height: 48px;
+    padding: 0 20px;
+    font-size: 15px;
+  }
+}
+ 
+@media (min-width: 1024px) {
+  .btn-grande {
+    height: 56px;
+    padding: 0 28px;
+    font-size: 16px;
+  }
+}
+ 

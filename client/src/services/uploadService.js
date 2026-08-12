@@ -30,19 +30,3 @@ export const subirImagen = async (archivo, carpeta = "mascotas") => {
 
   return data.url;
 };
-
-// Nueva función para subir cualquier tipo de archivo (PDF, imágenes, docs, etc)
-export const subirArchivo = async (archivo, carpeta = "estudios") => {
-  const formData = new FormData();
-
-  formData.append("archivo", archivo);
-  formData.append("carpeta", carpeta);
-
-  const { data } = await api.post("/upload", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-
-  return data.url;
-};

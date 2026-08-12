@@ -1,3 +1,15 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background-color: #fff;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .container {
   padding: 2rem;
   background: #fff;
@@ -37,39 +49,6 @@
 }
 
 .mascotaAvatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #e9d5ff;
-  color: #7c3aed;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  font-weight: 600;
-  flex-shrink: 0;
-  margin-top: 0.25rem;
-}
-
-.mascotaDetails h2 {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 0.25rem 0;
-}
-
-.mascotaDetails p {
-  font-size: 0.8125rem;
-  color: #6b7280;
-  margin: 0 0 0.5rem 0;
-}
-
-.badges {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.mascotaAvatar {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -79,6 +58,15 @@
   align-items: center;
   justify-content: center;
   font-size: 1.25rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.mascotaAvatarFoto {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
   flex-shrink: 0;
 }
 
@@ -93,6 +81,11 @@
   font-size: 0.8125rem;
   color: #6b7280;
   margin: 0 0 0.35rem 0;
+}
+
+.badges {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .cardsGrid {
@@ -138,18 +131,18 @@
   margin-bottom: 2rem;
 }
 
+.section {
+  background: #f3f0ff;
+  border-radius: 0.75rem;
+  border: 1px solid #e9d5ff;
+  padding: 1.5rem;
+}
+
 .section h2 {
   font-size: 1rem;
   font-weight: 600;
   margin: 0 0 1.25rem 0;
   color: #7c3aed;
-}
-
-.fichaPermanente {
-  background: #f3f0ff;
-  padding: 1.5rem;
-  border-radius: 0.75rem;
-  border: 1px solid #e9d5ff;
 }
 
 .row {
@@ -174,12 +167,14 @@
   margin: 0;
 }
 
-.vacunasTable {
-  background: #f3f0ff;
-  border-radius: 0.75rem;
-  border: 1px solid #e9d5ff;
-  padding: 1rem;
+.volverWrap {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: center;
 }
+
 
 .vacunaRow {
   display: grid;
@@ -224,20 +219,17 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.75rem;
-  background: #f3f0ff;
-  border-radius: 0.75rem;
-  border: 1px solid #e9d5ff;
-  padding: 1rem;
+  /* el fondo/borde ahora vive en .section */
 }
 
 .estudioCard {
   background: #ffffff;
   padding: 1rem 1.25rem;
   border-radius: 0.75rem;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 1rem;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  gap: 1rem;
 }
 
 .estudioCard h3 {
@@ -254,12 +246,19 @@
 }
 
 .verResultado {
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   color: #7c3aed;
+  background: #ede9fe;
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
-  margin-left: auto;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  transition: background 0.15s;
+}
+
+.verResultado:hover {
+  background: #ddd6fe;
 }
 
 .rightColumn {
