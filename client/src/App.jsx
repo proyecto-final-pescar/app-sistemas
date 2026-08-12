@@ -14,6 +14,7 @@ import Foro from "./pages/tutor/Foro/Foro";
 import Emergencias from "./pages/tutor/Emergencias/Emergencias";
 import HomeTutor from "./pages/tutor/HomeTutor/HomeTutor";
 import GestionVeterinarias from './pages/admin/GestionVeterinarias/GestionVeterinarias';
+import HistorialIndividual from "./pages/tutor/HistorialMedico/HistorialIndividual";
 import ForgotPassword from "./pages/public/ForgotPassword/ForgotPassword";
 import ResetPassword from "./pages/public/ResetPassword/ResetPassword";
 import Landing from "./pages/public/LandingPage/Landing";
@@ -47,6 +48,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/register" element={<Registro />} />
+        <Route path="/tutor/historial-medico/:mascotaId" element={<PrivateRoute allowedRoles={["dueno"]}><HistorialIndividual /></PrivateRoute>} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/home" element={<PrivateRoute allowedRoles={["dueno"]}><HomeTutor /></PrivateRoute>} />
