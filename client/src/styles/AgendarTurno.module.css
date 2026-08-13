@@ -1,4 +1,4 @@
-/* ============== INICIO: CONTENEDOR PRINCIPAL (LAYOUT) — Sidebar + página ============== */
+/* ============== LAYOUT GENERAL ============== */
 .layout {
   display: flex;
   min-height: 100vh;
@@ -20,9 +20,8 @@
   margin: 0 auto;
   width: 100%;
 }
-/* ============== FIN: CONTENEDOR PRINCIPAL (LAYOUT) ============== */
 
-/* ============== INICIO: CABECERA CON NOMBRE Y DATOS DE LA VETERINARIA ============== */
+/* ============== CABECERA VETERINARIA ============== */
 .headerVeterinaria {
   display: flex;
   align-items: center;
@@ -50,7 +49,7 @@
 
 .nombreVeterinaria {
   font-family: "Outfit", sans-serif;
-  font-weight: 800; /* ExtraBold */
+  font-weight: 800;
   color: #1c1033;
   font-size: 1.5rem;
   margin: 0;
@@ -58,35 +57,51 @@
 
 .direccionVeterinaria {
   font-family: "Inter", sans-serif;
-  font-weight: 400; /* Regular */
+  font-weight: 400;
   color: #7e6fa0;
   font-size: 0.9rem;
   margin: 0.25rem 0 0 0;
 }
-/* ============== FIN: CABECERA CON NOMBRE Y DATOS DE LA VETERINARIA ============== */
 
-/* ============== INICIO: ÁREA DEL CALENDARIO / GRILLA ============== */
+/* ============== CARD Y ESTRUCTURA FIJA DE HEADER ============== */
 .cardCalendario {
   background-color: #ffffff;
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(28, 16, 51, 0.06); /* placeholder de sombra suave */
+  box-shadow: 0 2px 8px rgba(28, 16, 51, 0.06);
   position: relative;
+}
+
+.cardHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Fila 1: Título y Flechas */
+.filaTituloNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .tituloCalendario {
   font-family: "Outfit", sans-serif;
   font-weight: 700;
   color: #1c1033;
-  font-size: 1.1rem;
-  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  margin: 0;
 }
 
-/* --- Controles de Navegación Temporal (Flechas superiores) --- */
+.navControlesPlaceholder {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
 .navControles {
-  position: absolute;
-  top: 1.5rem;
-  right: 1.5rem;
   display: flex;
   gap: 0.5rem;
 }
@@ -102,12 +117,11 @@
   background-color: #ffffff;
   color: #1c1033;
   cursor: pointer;
-  /* Estilos para el texto < y > */
   font-family: "Inter", sans-serif;
   font-weight: 500;
   font-size: 1.1rem;
   line-height: 1;
-  padding-bottom: 2px; /* Ajuste milimétrico para el centrado vertical del carácter */
+  padding-bottom: 2px;
   transition: background-color 0.2s ease;
 }
 
@@ -115,18 +129,183 @@
   background-color: #ede9fe;
 }
 
-.btnNav:active {
-  transform: scale(0.95);
+/* Fila 2: Buscador Fijo */
+.filaBuscador {
+  display: flex;
+  width: 100%;
 }
 
-/* --- Contenedor Principal de la estructura del Calendario --- */
+.searchBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 320px;
+  width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  color: #7e6fa0;
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.55rem 0.8rem 0.55rem 2.2rem;
+  border: 1px solid #ede9fe;
+  border-radius: 20px;
+  font-family: "Inter", sans-serif;
+  font-size: 0.85rem;
+  color: #1c1033;
+  background-color: #faf9ff;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.searchInput:focus {
+  border-color: #7c3aed;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+/* ============== CATEGORÍAS ============== */
+.categoriasScroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  scrollbar-width: none;
+}
+
+.categoriasScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.tabCategoria {
+  background: none;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  font-family: "Inter", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #7e6fa0;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.tabCategoria:hover {
+  color: #7c3aed;
+}
+
+.tabCategoriaActiva {
+  color: #7c3aed;
+  font-weight: 600;
+  border-bottom-color: #7c3aed;
+}
+
+/* ============== CHIPS DE SERVICIOS ============== */
+.chipsScrollContainer {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0.25rem 0.25rem 0.75rem 0.25rem;
+  margin-bottom: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: #ede9fe transparent;
+}
+
+.chipsScrollContainer::-webkit-scrollbar {
+  height: 4px;
+}
+
+.chipsScrollContainer::-webkit-scrollbar-thumb {
+  background-color: #ede9fe;
+  border-radius: 10px;
+}
+
+.chipServicio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 20px;
+  border: 1px solid #ede9fe;
+  background-color: #faf9ff;
+  color: #1c1033;
+  font-family: "Inter", sans-serif;
+  font-size: 0.88rem;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.chipServicio:hover {
+  border-color: #7c3aed;
+  background-color: #f5f3ff;
+  transform: translateY(-1px);
+}
+
+.chipActivo {
+  background-color: #7c3aed;
+  color: #ffffff;
+  border-color: #7c3aed;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.22);
+}
+
+.chipActivo .chipPrecio {
+  color: #ede9fe;
+}
+
+.chipNombre {
+  font-weight: 600;
+}
+
+.chipPrecio {
+  font-weight: 400;
+  color: #7e6fa0;
+  font-size: 0.82rem;
+}
+
+.sinServiciosText {
+  color: #7e6fa0;
+  font-size: 0.85rem;
+  padding: 0.5rem 0;
+}
+
+/* ============== ESTADOS VACÍOS & CARGA ============== */
+.estadoVacio,
+.estadoCargando {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #7e6fa0;
+  font-family: "Inter", sans-serif;
+  font-size: 0.92rem;
+  background-color: #faf9ff;
+  border-radius: 12px;
+  border: 1px dashed #ede9fe;
+  margin-top: 0.5rem;
+}
+
+.sinTurnosText {
+  padding: 2rem;
+  text-align: center;
+  color: #7e6fa0;
+  font-family: "Inter", sans-serif;
+  font-size: 0.9rem;
+}
+
+/* ============== GRILLA DEL CALENDARIO ============== */
 .calendarioContainer {
   display: flex;
   flex-direction: column;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
 }
 
-/* --- INICIO: CABECERA DE DÍAS --- */
 .diasHeader {
   display: grid;
   grid-template-columns: 65px repeat(7, 1fr);
@@ -149,7 +328,6 @@
   transition: background-color 0.2s ease;
 }
 
-/* Estado del día seleccionado (Ej: Martes 7) */
 .diaColumnaActivo {
   background-color: #ede9fe;
 }
@@ -187,16 +365,13 @@
 .diaColumnaActivo .diaMes {
   color: #7c3aed;
 }
-/* --- FIN: CABECERA DE DÍAS --- */
 
-/* --- INICIO: FILAS DE HORARIOS (SLOTS) --- */
 .gridHorariosScroll {
   max-height: 330px;
   overflow-y: auto;
   padding-right: 8px;
 }
 
-/* Scrollbar personalizado idéntico al wireframe */
 .gridHorariosScroll::-webkit-scrollbar {
   width: 6px;
 }
@@ -210,7 +385,6 @@
   border-radius: 10px;
 }
 
-/* Fila Horaria Estilo Grid */
 .filaHorario {
   display: grid;
   grid-template-columns: 65px repeat(7, 1fr);
@@ -227,7 +401,6 @@
   text-align: left;
 }
 
-/* Celdas de Turno (Slots) */
 .slotTurno {
   display: flex;
   align-items: center;
@@ -240,7 +413,6 @@
   transition: all 0.2s ease;
 }
 
-/* Variación: Disponible (Verde MyPet de acción suavizado para fondos) */
 .slotDisponible {
   background-color: #e6f4ea;
   color: #059669;
@@ -253,15 +425,12 @@
   box-shadow: 0 2px 4px rgba(5, 150, 105, 0.15);
 }
 
-/* Variación: No disponible (Fondo claro e inactivo) */
 .slotNoDisponible {
-  background-color: #f5f3ff; /* Matiz sutil del violeta de fondo claro */
+  background-color: #f5f3ff;
   color: #7e6fa0;
   cursor: not-allowed;
 }
-/* --- FIN: FILAS DE HORARIOS (SLOTS) --- */
 
-/* --- Leyenda Inferior (Disponible / No disponible) --- */
 .leyendaCalendario {
   display: flex;
   gap: 1.5rem;
@@ -287,32 +456,24 @@
   height: 24px;
   border-radius: 6px;
   font-size: 0.75rem;
-  pointer-events: none; /* Desactiva animaciones de hover en la leyenda */
+  pointer-events: none;
 }
-/* ============== FIN: ÁREA DEL CALENDARIO / GRILLA ============== */
 
-/* ============== INICIO: MODAL DE CONFIRMACIÓN DEL FORMULARIO ============== */
-/* Overlay con desenfoque de fondo (Backdrop Blur) */
+/* ============== MODAL ============== */
 .modalOverlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(
-    28,
-    16,
-    51,
-    0.3
-  ); /* Base de texto principal con transparencia */
-  backdrop-filter: blur(6px); /* Genera el difuminado sedoso de la imagen */
+  background-color: rgba(28, 16, 51, 0.3);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
 }
 
-/* Contenedor del Modal */
 .modalContainer {
   background-color: #ffffff;
   border-radius: 16px;
@@ -324,7 +485,6 @@
   box-sizing: border-box;
 }
 
-/* Botón Cerrar (X) */
 .modalCerrar {
   position: absolute;
   top: 1.5rem;
@@ -340,7 +500,6 @@
   color: #1c1033;
 }
 
-/* Tipografías y Textos Principales */
 .modalTitulo {
   font-family: "Outfit", sans-serif;
   font-weight: 800;
@@ -358,7 +517,6 @@
   margin: 0 0 1.5rem 0;
 }
 
-/* Badge Informativo de Turno (fecha y hora elegidas) */
 .modalBadgeFecha {
   display: flex;
   align-items: center;
@@ -373,7 +531,6 @@
   margin-bottom: 1.5rem;
 }
 
-/* Elementos de Formulario (selects de servicio y mascota) */
 .modalForm {
   display: flex;
   flex-direction: column;
@@ -391,12 +548,6 @@
   font-weight: 700;
   font-size: 0.9rem;
   color: #1c1033;
-}
-
-/* Contenedor del select para posicionar la flecha custom */
-.selectWrapper {
-  position: relative;
-  width: 100%;
 }
 
 .modalSelect {
@@ -419,16 +570,6 @@
   border-color: #7c3aed;
 }
 
-.selectIcon {
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #1c1033;
-  pointer-events: none;
-}
-
-/* Botonera Inferior (Cancelar / Confirmar) */
 .modalAcciones {
   display: flex;
   justify-content: flex-end;
@@ -476,4 +617,3 @@
 .btnConfirmar:active {
   transform: scale(0.98);
 }
-/* ============== FIN: MODAL DE CONFIRMACIÓN DEL FORMULARIO ============== */
