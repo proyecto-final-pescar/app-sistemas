@@ -12,7 +12,7 @@ import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
 import { crearPreferenciaPago } from "../../../services/pagoService";
 
 import styles from "../../../styles/AgendarTurno.module.css";
-const API_URL = import.meta.env.VITE_API_URL;  
+const API_URL = import.meta.env.VITE_API_URL;
 
 // Helper para formatear fechas a YYYY-MM-DD sin desfasajes de zona horaria
 const formatearFechaId = (date) => {
@@ -164,7 +164,7 @@ const AgendarTurnos = () => {
           if (!resVet.success) {
             setError(
               resVet.message ||
-                "No pudimos cargar los datos de esta veterinaria. Intentá de nuevo más tarde.",
+              "No pudimos cargar los datos de esta veterinaria. Intentá de nuevo más tarde.",
             );
             setLoading(false);
             return;
@@ -261,106 +261,109 @@ const AgendarTurnos = () => {
     setMascotaSeleccionadaId("");
   };
 
+  const mascotaElegida = mascotas.find((m) => m._id === mascotaSeleccionadaId);
+  const servicioElegido = veterinaria?.servicios?.find((s) => s._id === servicio);
+
   // --- Persistencia: Guardar Turno en MongoDB ---
-const handleConfirmarTurnoFinal = async (e) => {
-  e.preventDefault();
+  const handleConfirmarTurnoFinal = async (e) => {
+    e.preventDefault();
 
-  setErrorPago("");
-
-  try {
-    const token = obtenerToken();
-
-    const payload = {
-      fecha: turnoSeleccionado.dia.fechaStr,
-      hora: turnoSeleccionado.hora,
-      motivo: servicioElegido?.nombre || "Consulta veterinaria",
-      mascotaId: mascotaSeleccionadaId,
-      veterinariaId: veterinariaId,
-      servicioId: servicio,
-    };
-
-    // 1. Crear el turno
-    const response = await fetch(`${API_URL}/turnos`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const resultado = await response.json();
-
-    if (!response.ok || !resultado.success) {
-      throw new Error(
-        resultado.message || "Error al reservar el turno"
-      );
-    }
-
-    const turnoId = resultado.data?.turno?._id;
-
-    if (!turnoId) {
-      throw new Error("No se pudo identificar el turno creado.");
-    }
-
-    // Guardamos el ID: aunque MercadoPago falle,
-    // el turno ya existe y no se pierde.
-    setTurnoCreadoId(turnoId);
-
-    setMascotaConfirmadaNombre(
-      mascotaElegida?.nombre || "tu mascota"
-    );
-
-    setDisponibilidadSemanal((prev) => ({
-      ...prev,
-      [turnoSeleccionado.dia.fechaStr]: (
-        prev[turnoSeleccionado.dia.fechaStr] || []
-      ).filter((h) => h !== turnoSeleccionado.hora),
-    }));
-
-    setIsConfirmOpen(false);
-
-    // 2. Empezar proceso de pago
-    setProcesandoPago(true);
+    setErrorPago("");
 
     try {
-      const respuestaPago = await crearPreferenciaPago(turnoId);
+      const token = obtenerToken();
 
-      const initPoint = respuestaPago.data?.init_point;
+      const payload = {
+        fecha: turnoSeleccionado.dia.fechaStr,
+        hora: turnoSeleccionado.hora,
+        motivo: servicioElegido?.nombre || "Consulta veterinaria",
+        mascotaId: mascotaSeleccionadaId,
+        veterinariaId: veterinariaId,
+        servicioId: servicio,
+      };
 
-      if (!initPoint) {
+      // 1. Crear el turno
+      const response = await fetch(`${API_URL}/turnos`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const resultado = await response.json();
+
+      if (!response.ok || !resultado.success) {
         throw new Error(
-          "No se recibió el enlace de MercadoPago."
+          resultado.message || "Error al reservar el turno"
         );
       }
 
-      // 3. Redirección al checkout externo
-      window.location.href = initPoint;
-    } catch (pagoError) {
-      console.error(
-        "Error al crear la preferencia de pago:",
-        pagoError
+      const turnoId = resultado.data?.turno?._id;
+
+      if (!turnoId) {
+        throw new Error("No se pudo identificar el turno creado.");
+      }
+
+      // Guardamos el ID: aunque MercadoPago falle,
+      // el turno ya existe y no se pierde.
+      setTurnoCreadoId(turnoId);
+
+      setMascotaConfirmadaNombre(
+        mascotaElegida?.nombre || "tu mascota"
       );
+
+      setDisponibilidadSemanal((prev) => ({
+        ...prev,
+        [turnoSeleccionado.dia.fechaStr]: (
+          prev[turnoSeleccionado.dia.fechaStr] || []
+        ).filter((h) => h !== turnoSeleccionado.hora),
+      }));
+
+      setIsConfirmOpen(false);
+
+      // 2. Empezar proceso de pago
+      setProcesandoPago(true);
+
+      try {
+        const respuestaPago = await crearPreferenciaPago(turnoId);
+
+        const initPoint = respuestaPago.data?.init_point;
+
+        if (!initPoint) {
+          throw new Error(
+            "No se recibió el enlace de MercadoPago."
+          );
+        }
+
+        // 3. Redirección al checkout externo
+        window.location.href = initPoint;
+      } catch (pagoError) {
+        console.error(
+          "Error al crear la preferencia de pago:",
+          pagoError
+        );
+
+        setProcesandoPago(false);
+
+        setErrorPago(
+          pagoError.response?.data?.message ||
+          pagoError.message ||
+          "El turno fue creado, pero no pudimos iniciar el pago. Intentá nuevamente."
+        );
+      }
+    } catch (err) {
+      console.error("Error al reservar turno:", err);
 
       setProcesandoPago(false);
 
-      setErrorPago(
-        pagoError.response?.data?.message ||
-          pagoError.message ||
-          "El turno fue creado, pero no pudimos iniciar el pago. Intentá nuevamente."
+      alert(
+        err.message ||
+        "Hubo un problema al agendar el turno. Revisá los datos."
       );
     }
-  } catch (err) {
-    console.error("Error al reservar turno:", err);
-
-    setProcesandoPago(false);
-
-    alert(
-      err.message ||
-        "Hubo un problema al agendar el turno. Revisá los datos."
-    );
-  }
-};
+  };
 
   const obtenerFechaFormateada = () => {
     if (!turnoSeleccionado) return "";
@@ -369,9 +372,6 @@ const handleConfirmarTurnoFinal = async (e) => {
       turnoSeleccionado.dia.nom;
     return `${diaCompleto}, ${turnoSeleccionado.dia.num} de ${turnoSeleccionado.dia.mes} a las ${turnoSeleccionado.hora}hs`;
   };
-
-  const mascotaElegida = mascotas.find((m) => m._id === mascotaSeleccionadaId);
-  const servicioElegido = veterinaria?.servicios?.find((s) => s._id === servicio);
 
   if (loading && !veterinaria) {
     return (
@@ -395,22 +395,22 @@ const handleConfirmarTurnoFinal = async (e) => {
     );
   }
   if (procesandoPago) {
-  return (
-    <div className={styles.pagoLoadingOverlay}>
-      <div className={styles.pagoLoadingCard}>
-        <div className={styles.pagoSpinner}></div>
+    return (
+      <div className={styles.pagoLoadingOverlay}>
+        <div className={styles.pagoLoadingCard}>
+          <div className={styles.pagoSpinner}></div>
 
-        <h2>Preparando tu pago...</h2>
+          <h2>Preparando tu pago...</h2>
 
-        <p>
-          Estamos generando el checkout seguro de MercadoPago.
-        </p>
+          <p>
+            Estamos generando el checkout seguro de MercadoPago.
+          </p>
 
-        <span>Te vamos a redirigir automáticamente.</span>
+          <span>Te vamos a redirigir automáticamente.</span>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   return (
     <div className={styles.layout}>
@@ -565,23 +565,23 @@ const handleConfirmarTurnoFinal = async (e) => {
                         Servicio / Motivo
                       </label>
                       <div className={styles.selectWrapper}>
-                       <select
-                        className={styles.modalSelect}
-                        value={servicio}
-                        onChange={(e) => setServicio(e.target.value)}
-                        required
+                        <select
+                          className={styles.modalSelect}
+                          value={servicio}
+                          onChange={(e) => setServicio(e.target.value)}
+                          required
                         >
-                        <option value="" disabled hidden>
-                        Seleccionar servicio
-                        </option>
+                          <option value="" disabled hidden>
+                            Seleccionar servicio
+                          </option>
 
-                        {veterinaria?.servicios?.map((servicioVet) => (
-                        <option key={servicioVet._id} value={servicioVet._id}>
-                        {servicioVet.nombre}
-                        {servicioVet.precio ? ` - $${servicioVet.precio}` : ""}
-                        </option>
-                        ))}
-                      </select>
+                          {veterinaria?.servicios?.map((servicioVet) => (
+                            <option key={servicioVet._id} value={servicioVet._id}>
+                              {servicioVet.nombre}
+                              {servicioVet.precio ? ` - $${servicioVet.precio}` : ""}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
 
@@ -610,54 +610,64 @@ const handleConfirmarTurnoFinal = async (e) => {
 
                     <div className={styles.modalAcciones}>
                       {servicioElegido && mascotaElegida && (
-                      <div className={styles.resumenPago}>
-                        <h4>Resumen de la reserva</h4>
+                        <div className={styles.resumenPago}>
+                          <h4>Resumen de la reserva</h4>
 
-                        <div className={styles.resumenFila}>
-                          <span>Veterinaria</span>
-                          <strong>{veterinaria?.nombre}</strong>
+                          <div className={styles.resumenFila}>
+                            <span>Veterinaria</span>
+                            <strong>{veterinaria?.nombre}</strong>
+                          </div>
+
+                          <div className={styles.resumenFila}>
+                            <span>Mascota</span>
+                            <strong>{mascotaElegida.nombre}</strong>
+                          </div>
+
+                          <div className={styles.resumenFila}>
+                            <span>Fecha y hora</span>
+                            <strong>{obtenerFechaFormateada()}</strong>
+                          </div>
+
+                          <div className={styles.resumenFila}>
+                            <span>Servicio</span>
+                            <strong>{servicioElegido.nombre}</strong>
+                          </div>
+
+                          <div className={`${styles.resumenFila} ${styles.resumenTotal}`}>
+                            <span>Total</span>
+                            <strong>
+                              ${Number(servicioElegido.precio || 0).toLocaleString("es-AR")}
+                            </strong>
+                          </div>
+
+                          <p className={styles.resumenAviso}>
+                            Al confirmar vas a ser redirigido a MercadoPago para completar el pago.
+                          </p>
                         </div>
+                      )}
+                      <button type="button" className={styles.btnCancelar} onClick={handleCloseConfirm}>
+                        Cancelar
+                      </button>
 
-                        <div className={styles.resumenFila}>
-                          <span>Mascota</span>
-                          <strong>{mascotaElegida.nombre}</strong>
-                        </div>
-
-                        <div className={styles.resumenFila}>
-                          <span>Fecha y hora</span>
-                          <strong>{obtenerFechaFormateada()}</strong>
-                        </div>
-
-                        <div className={styles.resumenFila}>
-                          <span>Servicio</span>
-                          <strong>{servicioElegido.nombre}</strong>
-                        </div>
-
-                        <div className={`${styles.resumenFila} ${styles.resumenTotal}`}>
-                          <span>Total</span>
-                          <strong>
-                            ${Number(servicioElegido.precio || 0).toLocaleString("es-AR")}
-                          </strong>
-                        </div>
-
-                        <p className={styles.resumenAviso}>
-                          Al confirmar vas a ser redirigido a MercadoPago para completar el pago.
-                        </p>
-                      </div>
-                    )}
-                   <button type="button"className={styles.btnCancelar} onClick={handleCloseConfirm}>
-                    Cancelar
-                  </button>
-
-                  <button type="submit"className={styles.btnConfirmar}disabled={procesandoPago}>
-                  {procesandoPago ? "Procesando pago..." : "Confirmar reserva y pagar"}
-                  </button>
-                  </div>
+                      <button type="submit" className={styles.btnConfirmar} disabled={procesandoPago}>
+                        {procesandoPago ? "Procesando pago..." : "Confirmar reserva y pagar"}
+                      </button>
+                    </div>
                   </form>
                 </div>
               </div>
             )}
-
+            {/* MODAL DE ERROR DE PAGO */}
+            {errorPago && (
+              <div className={styles.modalOverlay}>
+                <div className={styles.modalContainer}>
+                  <p style={{ color: "#ef4444", fontWeight: 600 }}>{errorPago}</p>
+                  <button className={styles.btnConfirmar} onClick={() => setErrorPago("")}>
+                    Entendido
+                  </button>
+                </div>
+              </div>
+            )}
             {/* MODAL DE ÉXITO (usa el nombre guardado aparte, ver mascotaConfirmadaNombre) */}
             <SuccessModal
               abierto={isSuccessOpen}
