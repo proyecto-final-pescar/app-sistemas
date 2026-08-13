@@ -31,7 +31,7 @@ export default function PagoFallido() {
 
     return (
         <div className={styles.shell}>
-            <span className={styles.step}>4 · ERROR</span>
+            <span className={styles.step}>· ERROR</span>
             <div className={styles.card}>
                 <div className={styles.iconoError}>
                     <X size={28} strokeWidth={3} />

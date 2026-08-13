@@ -77,7 +77,7 @@ export default function PagoExitoso() {
     if (estado === "timeout") {
         return (
             <div className={styles.shell}>
-                <span className={styles.step}>1 · VERIFICANDO</span>
+                <span className={styles.step}>· VERIFICANDO</span>
                 <div className={styles.card}>
                     <p className={styles.mensaje}>
                         Esto está tardando más de lo esperado. Podés revisar el estado de tu turno desde "Mis turnos".
@@ -90,12 +90,12 @@ export default function PagoExitoso() {
 
     return (
         <div className={styles.shell}>
-            <span className={styles.step}>2 · ÉXITO</span>
+            <span className={styles.step}>· ÉXITO</span>
             <div className={styles.card}>
                 <div className={styles.iconoExito}>
                     <Check size={32} strokeWidth={3} />
                 </div>
-                <h1 className={styles.titulo}>¡Tu turno está confirmado!</h1>
+                <h1 className={styles.titulo}>¡Pago confirmado!</h1>
                 <p className={styles.subtitulo}>Tu turno quedó reservado y pagado.</p>
                 <Button texto="Ver mi turno" variante="primario" tamaño="mediano" onClick={() => navigate("/mis-turnos")} />
             </div>
