@@ -66,7 +66,7 @@ const mostrarExito = (mensaje) => {
 };
 
 
-  const handleViewPet = (id) => navigate(`/mascotas/${id}`);
+  const handleViewPet = (id) => navigate(`/tutor/historial-medico/${id}`);
  const handleEdit = (id) => {
   const mascota = mascotas.find((m) => m._id === id);
 
