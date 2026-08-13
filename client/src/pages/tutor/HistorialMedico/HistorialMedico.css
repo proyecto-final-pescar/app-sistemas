@@ -1,0 +1,530 @@
+/* =========================================
+   VARIABLES LOCALES (Se nutren de tu :root)
+========================================= */
+.historial-medico {
+  --hm-bg-page: var(--bg-body, #f8f7fc);
+  --hm-primary: var(--color-primario, #7c3aed);
+  --hm-primary-light: var(--color-primario-claro, #f5f3ff);
+  --hm-text-dark: var(--texto-oscuro, #1e293b);
+  --hm-text-muted: var(--texto-gris, #64748b);
+  --hm-border: var(--borde-claro, #f1f5f9);
+  --hm-white: #ffffff;
+}
+
+/* =========================================
+   CONTENEDORES PRINCIPALES
+========================================= */
+.hm-main {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .hm-main {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hm-main {
+    padding: 2rem;
+  }
+}
+
+/* =========================================
+   HEADER Y FILTROS
+========================================= */
+.hm-header__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--hm-text-dark);
+  margin: 0 0 0.25rem 0;
+}
+
+.hm-header__subtitle {
+  font-size: 0.75rem;
+  color: var(--hm-text-muted);
+  margin: 0;
+}
+
+@media (min-width: 640px) {
+  .hm-header__title { font-size: 1.25rem; }
+  .hm-header__subtitle { font-size: 0.875rem; }
+}
+
+.hm-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background-color: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid var(--hm-border);
+}
+
+@media (min-width: 768px) {
+  .hm-filters {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* Buscador */
+.hm-search {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  max-width: 28rem;
+}
+
+.hm-search__icon {
+  position: absolute;
+  top: 50%;
+  left: 0.875rem;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  display: flex;
+}
+
+.hm-search__input {
+  width: 100%;
+  padding: 0.625rem 1rem 0.625rem 2.5rem;
+  border-radius: 9999px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.875rem;
+  color: var(--hm-text-dark);
+  outline: none;
+  transition: all 0.2s;
+}
+
+.hm-search__input:focus {
+  border-color: var(--hm-primary);
+  box-shadow: 0 0 0 2px var(--hm-primary-light);
+}
+
+/* Chips de Mascotas */
+.hm-pet-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+  scrollbar-width: none; /* Firefox */
+}
+.hm-pet-filters::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.hm-pet-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  background-color: var(--hm-white);
+  color: var(--hm-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.hm-pet-chip:hover {
+  color: var(--hm-primary);
+  background-color: var(--hm-primary-light);
+}
+
+.hm-pet-chip--active {
+  background-color: var(--hm-primary);
+  color: var(--hm-white);
+  border-color: var(--hm-primary);
+  box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.2);
+}
+
+.hm-pet-chip__avatar {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  object-fit: cover;
+  background-color: #f1f5f9;
+}
+
+/* =========================================
+   TARJETAS DEL LISTADO
+========================================= */
+.hm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hm-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background-color: var(--hm-white);
+  padding: 1rem;
+  border-radius: 1.5rem;
+  border: 1px solid var(--hm-border);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+@media (min-width: 640px) {
+  .hm-card { padding: 1.25rem; }
+}
+
+.hm-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-color: #ddd6fe;
+}
+
+.hm-card__left {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .hm-card__left { align-items: center; }
+}
+
+.hm-card__icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background-color: var(--hm-primary-light);
+  color: var(--hm-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.hm-card:hover .hm-card__icon {
+  transform: scale(1.05);
+}
+
+.hm-card__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.hm-card__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.375rem;
+}
+
+@media (min-width: 640px) {
+  .hm-card__header {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+.hm-card__title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--hm-text-dark);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 640px) {
+  .hm-card__title { font-size: 1rem; }
+}
+
+.hm-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  font-size: 0.6875rem;
+  color: var(--hm-text-muted);
+}
+
+@media (min-width: 640px) {
+  .hm-card__meta { font-size: 0.75rem; }
+}
+
+.hm-card__meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.hm-card__arrow {
+  display: none;
+  color: #cbd5e1;
+  transition: color 0.2s;
+}
+
+@media (min-width: 640px) {
+  .hm-card__arrow { display: block; }
+}
+
+.hm-card:hover .hm-card__arrow {
+  color: var(--hm-primary);
+}
+
+/* =========================================
+   BADGES (Etiquetas de Categoría)
+========================================= */
+.hm-badge {
+  width: max-content;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+@media (min-width: 640px) {
+  .hm-badge { font-size: 0.6875rem; }
+}
+
+.hm-badge--vacunacion { background-color: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.hm-badge--consulta { background-color: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+.hm-badge--control { background-color: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.hm-badge--cirugia { background-color: #fff1f2; color: #be123c; border-color: #fecdd3; }
+
+/* =========================================
+   MODAL DE DETALLES
+========================================= */
+.hm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .hm-modal-overlay {
+    align-items: center;
+    padding: 1rem;
+  }
+}
+
+.hm-modal {
+  background-color: var(--hm-white);
+  width: 100%;
+  max-width: 32rem;
+  max-height: 90vh;
+  border-radius: 2rem 2rem 0 0;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.2s ease-out;
+}
+
+@media (min-width: 640px) {
+  .hm-modal {
+    border-radius: 2rem;
+    animation: zoomIn 0.2s ease-out;
+  }
+}
+
+.hm-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid var(--hm-border);
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.hm-modal__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--hm-text-dark);
+  margin: 0;
+}
+
+.hm-modal__date {
+  font-size: 0.875rem;
+  color: var(--hm-text-muted);
+  margin: 0.25rem 0 0 0;
+}
+
+.hm-modal__close {
+  background-color: #f1f5f9;
+  color: var(--hm-text-muted);
+  border: none;
+  border-radius: 50%;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.hm-modal__body {
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hm-modal__notes {
+  background-color: rgba(245, 243, 255, 0.5);
+  border: 1px solid rgba(221, 214, 254, 0.5);
+  padding: 1rem;
+  border-radius: 1rem;
+}
+
+.hm-modal__notes-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #581c87;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.hm-modal__notes-text {
+  font-size: 0.875rem;
+  color: #334155;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.hm-modal__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.hm-modal__info-box {
+  background-color: #f8fafc;
+  border: 1px solid var(--hm-border);
+  padding: 0.75rem;
+  border-radius: 1rem;
+}
+
+.hm-modal__info-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  margin: 0 0 0.25rem 0;
+}
+
+.hm-modal__info-value {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--hm-text-dark);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hm-modal__footer {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--hm-border);
+  margin-top: auto;
+}
+
+@media (min-width: 640px) {
+  .hm-modal__footer {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+.hm-modal__btn-link {
+  text-decoration: none;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .hm-modal__btn-link { width: auto; }
+}
+
+/* =========================================
+   ESTADOS VACÍOS / CARGA
+========================================= */
+.hm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background-color: var(--hm-white);
+  border-radius: 1.5rem;
+  border: 1px solid var(--hm-border);
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .hm-empty { padding: 3rem; }
+}
+
+.hm-empty__icon {
+  width: 4rem;
+  height: 4rem;
+  background-color: var(--hm-primary-light);
+  color: var(--hm-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.875rem;
+  margin-bottom: 1rem;
+}
+
+.hm-empty__title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--hm-text-dark);
+  margin: 0 0 0.5rem 0;
+}
+
+.hm-empty__text {
+  font-size: 0.875rem;
+  color: var(--hm-text-muted);
+  max-width: 28rem;
+  margin: 0 0 1.5rem 0;
+}
+
+/* Animaciones */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}

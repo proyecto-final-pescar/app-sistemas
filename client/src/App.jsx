@@ -28,6 +28,7 @@ import Registro from "./pages/public/Registro/Registro";
 import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
 import NotFound from "./pages/NotFound/NotFound";
 import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
+import HistorialMedico   from "./pages/tutor/HistorialMedico/HistorialMedico";
 
 function App() {
   return (
@@ -76,7 +77,8 @@ function App() {
 
         <Route path="/perfil" element={<PerfilUsuario />} />
         <Route path="/admin/veterinarias" element={<PrivateRoute allowedRoles={["administrador"]}><GestionVeterinarias /></PrivateRoute>} />
-        <Route path="/" element={<Landing />} />
+        <Route path="/historial-medico" element={
+          <PrivateRoute allowedRoles={["dueno"]}><HistorialMedico /></PrivateRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
