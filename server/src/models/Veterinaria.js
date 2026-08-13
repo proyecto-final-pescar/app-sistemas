@@ -50,14 +50,9 @@ const veterinariaSchema = new mongoose.Schema(
         required: true
       },
       coordinates: {
-        type: [Number], // [longitud, latitud]
+        type: [Number],
         required: [true, 'Las coordenadas son requeridas']
       }
-    },
-
-    especialidades: {
-      type: [String], //  ['clínica general', 'cirugía', 'dermatología']
-      default: []
     },
 
     servicios: [
@@ -66,7 +61,6 @@ const veterinariaSchema = new mongoose.Schema(
           type: String,
           trim: true
         },
-
         nombre: {
           type: String,
           required: [true, 'El nombre del servicio es requerido'],
@@ -91,6 +85,14 @@ const veterinariaSchema = new mongoose.Schema(
           required: [true, 'La especialidad del profesional es requerida'],
           trim: true
         },
+        serviciosIds: {
+    type: [mongoose.Schema.Types.ObjectId],
+    required: [true, 'Debe brindar al menos un servicio'],
+    validate: {
+      validator: (arr) => Array.isArray(arr) && arr.length > 0,
+      message: 'El profesional debe tener al menos un servicio asignado'
+    }
+  },
         email: {
           type: String,
           trim: true
@@ -99,92 +101,20 @@ const veterinariaSchema = new mongoose.Schema(
     ],
 
     horarios: {
-        lunes: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
-        },
-
-        martes: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
-        },
-
-        miercoles: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
-        },
-
-        jueves: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
-        },
-
-        viernes: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
-        },
-
-        sabado: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
-        },
-
-        domingo: {
-            desde: {
-            type: String,
-            trim: true
-            },
-            hasta: {
-            type: String,
-            trim: true
-            }
-        }
-},
-
-    urgencias24hs: {
-         type: Boolean,
-         default: false
+      lunes: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } },
+      martes: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } },
+      miercoles: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } },
+      jueves: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } },
+      viernes: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } },
+      sabado: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } },
+      domingo: { desde: { type: String, trim: true }, hasta: { type: String, trim: true } }
     },
 
-  
-    // como promedio de los documentos de la colección Resenia para la vet
-   
+    urgencias24hs: {
+      type: Boolean,
+      default: false
+    },
+
     rating: {
       type: Number,
       min: 0,
@@ -192,8 +122,6 @@ const veterinariaSchema = new mongoose.Schema(
       default: null
     },
 
-    // Cantidad de reseñas que componen el promedio de rating
-   
     cantidadResenias: {
       type: Number,
       default: 0
@@ -217,7 +145,7 @@ const veterinariaSchema = new mongoose.Schema(
   }
 );
 
-veterinariaSchema.index({ coordenadas: '2dsphere' }); // El "2dsphere" permite búsquedas geoespaciales con coordenadas.
+veterinariaSchema.index({ coordenadas: '2dsphere' });
 
 const Veterinaria = mongoose.model('Veterinaria', veterinariaSchema);
 
