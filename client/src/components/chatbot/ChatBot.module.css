@@ -1,0 +1,80 @@
+.burbuja {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1000;
+
+
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+
+  background: transparent;
+  box-shadow: none;
+
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transition: transform 0.15s ease;
+}
+
+.burbuja:hover {
+  transform: translateY(-3px);
+}
+
+.burbuja:focus-visible {
+  outline: 3px solid var(--color-cta);
+  outline-offset: 3px;
+}
+
+.burbujaArrastrando {
+  cursor: grabbing;
+  transition: none;
+}
+
+
+.burbuja img {
+  filter: drop-shadow(0 8px 12px rgba(124, 58, 237, 0.35));
+}
+
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  border: 2px solid var(--color-blanco);
+
+  background-color: #DC2626;
+  color: var(--color-blanco);
+
+  font-family: var(--fuente-texto);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  pointer-events: none;
+}
+
+
+@media (max-width: 480px) {
+  .burbuja {
+    right: 16px;
+    bottom: 16px;
+  }
+}

@@ -15,9 +15,6 @@ const API_URL = import.meta.env.VITE_API_URL;
 const ANTICIPACION_MINIMA_HORAS = 10;
 const PLAZO_PAGO_HORAS = 3;
 
-const [procesandoPago, setProcesandoPago] = useState(false);
-const [errorPago, setErrorPago] = useState("");
-
 const formatearFechaId = (date) => {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, "0");
@@ -84,6 +81,9 @@ const AgendarTurnos = () => {
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [turnoCreadoId, setTurnoCreadoId] = useState(null);
+  const [procesandoPago, setProcesandoPago] = useState(false);
+  const [errorPago, setErrorPago] = useState("");
   const [turnoSeleccionado, setTurnoSeleccionado] = useState(null);
   const [profesionalSeleccionadoId, setProfesionalSeleccionadoId] = useState("");
   const [mascotaSeleccionadaId, setMascotaSeleccionadaId] = useState("");
@@ -436,14 +436,18 @@ const AgendarTurnos = () => {
       </div>
     );
   }
-
   if (procesandoPago) {
     return (
       <div className={styles.pagoLoadingOverlay}>
         <div className={styles.pagoLoadingCard}>
           <div className={styles.pagoSpinner}></div>
+
           <h2>Preparando tu pago...</h2>
-          <p>Estamos generando el checkout seguro de MercadoPago.</p>
+
+          <p>
+            Estamos generando el checkout seguro de MercadoPago.
+          </p>
+
           <span>Te vamos a redirigir automáticamente.</span>
         </div>
       </div>
@@ -744,11 +748,7 @@ const AgendarTurnos = () => {
                     </p>
 
                     <div className={styles.modalAcciones}>
-                      <button
-                        type="button"
-                        className={styles.btnCancelar}
-                        onClick={handleCloseConfirm}
-                      >
+                      <button type="button" className={styles.btnCancelar} onClick={handleCloseConfirm}>
                         Cancelar
                       </button>
                       <button
@@ -767,7 +767,6 @@ const AgendarTurnos = () => {
                 </div>
               </div>
             )}
-
             {errorPago && (
               <div className={styles.modalOverlay}>
                 <div className={styles.modalContainer}>
