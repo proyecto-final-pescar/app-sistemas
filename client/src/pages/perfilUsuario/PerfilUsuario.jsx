@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { User as UserIcon, Bell, Shield, Camera } from "lucide-react";
+import { User as UserIcon, Bell, Bot, Camera } from "lucide-react";
 import Sidebar from "../../components/layout/Sidebar";
 import TopBar from "../../components/layout/TopBar";
 import PanelDestacado from "../../components/ui/panel-destacado/PanelDestacado";
 import Button from "../../components/ui/button/Button";
+import PersonajeBot from "../../components/chatbot/PersonajeBot";
+import InterfazChat from "../../components/chatbot/InterfazChat";
 import { useAuth } from "../../hooks/useAuth";
 import api from "../../services/api";
 import { subirImagen } from "../../services/uploadService";
@@ -21,10 +23,24 @@ const EMOJI_ESPECIE = {
 };
 const TAMANIO_MAXIMO_FOTO = 5 * 1024 * 1024; // 5MB
 
-const TABS = [
+const TABS_BASE = [
   { id: "personales", label: "Datos Personales", icon: UserIcon },
   { id: "notificaciones", label: "Notificaciones", icon: Bell },
-  { id: "seguridad", label: "Seguridad", icon: Shield },
+  { id: "asistente", label: "Asistente Virtual", icon: Bot },
+];
+
+
+const OPCIONES_ASISTENTE = [
+  {
+    tipo: "perro",
+    nombre: "Max",
+    descripcion: "Un perrito amigable y leal, siempre listo para ayudarte.",
+  },
+  {
+    tipo: "gato",
+    nombre: "Mimi",
+    descripcion: "Una gatita dulce e inteligente, tu guía experta en bienestar felino.",
+  },
 ];
 
 function PerfilUsuario() {
@@ -48,6 +64,12 @@ function PerfilUsuario() {
   const [error, setError] = useState(null);
   const [mensajeExito, setMensajeExito] = useState(null);
 
+  // --- Estado de la pestaña "Asistente Virtual" ---
+  const [asistenteSeleccionado, setAsistenteSeleccionado] = useState("perro");
+  const [guardandoAsistente, setGuardandoAsistente] = useState(false);
+  const [errorAsistente, setErrorAsistente] = useState(null);
+  const [exitoAsistente, setExitoAsistente] = useState(null);
+
   useEffect(() => {
     if (!usuarioId) return;
 
@@ -66,6 +88,8 @@ function PerfilUsuario() {
           zona: perfilData.zona || "",
           fotoUrl: perfilData.fotoUrl || "",
         });
+       
+        setAsistenteSeleccionado(perfilData.asistenteVirtual || "perro");
       } catch (err) {
         setError("No pudimos cargar tu perfil. Probá de nuevo en un momento.");
       } finally {
@@ -90,6 +114,14 @@ function PerfilUsuario() {
     const timer = setTimeout(() => setMensajeExito(null), 4000);
     return () => clearTimeout(timer);
   }, [mensajeExito]);
+
+  // Auto-oculta el mensaje de éxito del asistente a los 4 segundos.
+  useEffect(() => {
+    if (!exitoAsistente) return;
+
+    const timer = setTimeout(() => setExitoAsistente(null), 4000);
+    return () => clearTimeout(timer);
+  }, [exitoAsistente]);
 
 
   const handleChange = (campo) => (e) => {
@@ -170,6 +202,31 @@ function PerfilUsuario() {
     }
   };
 
+  const handleGuardarAsistente = async () => {
+    try {
+      setGuardandoAsistente(true);
+      setErrorAsistente(null);
+      setExitoAsistente(null);
+
+      
+      await api.put("/usuarios/perfil", { asistenteVirtual: asistenteSeleccionado });
+
+      const usuarioActualizado = {
+        ...usuario,
+        asistenteVirtual: asistenteSeleccionado,
+      };
+      localStorage.setItem("user", JSON.stringify(usuarioActualizado));
+      setUsuario(usuarioActualizado);
+      setPerfil((prev) => (prev ? { ...prev, asistenteVirtual: asistenteSeleccionado } : prev));
+
+      setExitoAsistente("Asistente actualizado correctamente.");
+    } catch (err) {
+      setErrorAsistente("No pudimos guardar el asistente elegido. Probá de nuevo.");
+    } finally {
+      setGuardandoAsistente(false);
+    }
+  };
+
   const renderBadges = () => {
     if (!perfil) return null;
 
@@ -215,6 +272,12 @@ function PerfilUsuario() {
 
   const fotoMostrar = fotoPreview || formData.fotoUrl;
 
+  // El chatbot (y por lo tanto la elección de asistente) solo está
+  // habilitado para el rol 'dueno' por ahora (ver PrivateRoute.jsx).
+  const tabsVisibles = TABS_BASE.filter(
+    (tab) => tab.id !== "asistente" || perfil?.rol === "dueno"
+  );
+
   if (cargando) {
     return (
       <div className={styles.layout}>
@@ -255,7 +318,7 @@ function PerfilUsuario() {
           </PanelDestacado>
 
           <div className={styles.tabs}>
-            {TABS.map(({ id, label, icon: Icon }) => (
+            {tabsVisibles.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
@@ -336,8 +399,98 @@ function PerfilUsuario() {
             <div className={styles.card}><p>Próximamente.</p></div>
           )}
 
-          {tabActiva === "seguridad" && (
-            <div className={styles.card}><p>Próximamente.</p></div>
+          {tabActiva === "asistente" && perfil?.rol === "dueno" && (
+            <div className={styles.card}>
+              <h2 className={styles.tituloAsistente}>Personalizá tu asistente virtual</h2>
+              <p className={styles.textoAyudaAsistente}>
+                Elegí el compañero virtual que te va a ayudar en MyPet. Vas a poder cambiarlo cuando quieras.
+              </p>
+
+              {errorAsistente && <p className={styles.mensajeError}>{errorAsistente}</p>}
+              {exitoAsistente && <p className={styles.mensajeExito}>{exitoAsistente}</p>}
+
+              <div className={styles.contenidoAsistente}>
+                <div className={styles.opcionesAsistente}>
+                  {OPCIONES_ASISTENTE.map((opcion) => {
+                    const seleccionada = asistenteSeleccionado === opcion.tipo;
+                    return (
+                      <button
+                        key={opcion.tipo}
+                        type="button"
+                        className={`${styles.tarjetaAsistente} ${
+                          seleccionada ? styles.tarjetaAsistenteSeleccionada : ""
+                        }`}
+                        onClick={() => setAsistenteSeleccionado(opcion.tipo)}
+                        aria-pressed={seleccionada}
+                      >
+                        {seleccionada ? (
+                          <span className={styles.checkAsistente}>✓</span>
+                        ) : (
+                          <span className={styles.circuloVacio} aria-hidden="true" />
+                        )}
+                        <div className={styles.fondoAvatarAsistente}>
+                          <PersonajeBot
+                            tipo={opcion.tipo}
+                            pose="idle"
+                            size={100}
+                            variante="icono"
+                          />
+                        </div>
+                        <p className={styles.nombreAsistente}>{opcion.nombre}</p>
+                        <p className={styles.descripcionAsistente}>{opcion.descripcion}</p>
+                        {seleccionada && (
+                          <span className={styles.pillSeleccionado}>Seleccionado</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className={styles.previewAsistente}>
+                  <p className={styles.labelPreview}>Vista previa</p>
+                  <InterfazChat
+                    inline
+                    soloVistaPrevia
+                    tipoBot={asistenteSeleccionado}
+                    pose="idle"
+                    estaEscribiendo={false}
+                    nombreBot={
+                      OPCIONES_ASISTENTE.find((o) => o.tipo === asistenteSeleccionado)?.nombre
+                    }
+                    mensajes={[
+                      {
+                        id: "preview",
+                        role: "assistant",
+                        content: `¡Hola! Soy ${
+                          OPCIONES_ASISTENTE.find((o) => o.tipo === asistenteSeleccionado)?.nombre
+                        }, tu asistente de MyPet. ¿En qué puedo ayudarte hoy?`,
+                      },
+                    ]}
+                    onEnviarMensaje={() => {}}
+                    onCerrar={() => {}}
+                  />
+                </div>
+              </div>
+
+              <div className={styles.filaInferiorAsistente}>
+                <div className={styles.tipAsistente}>
+                  <span className={styles.tipIcono} aria-hidden="true">💡</span>
+                  <p>
+                    <strong>¿Sabías que?</strong> Tu asistente virtual puede ayudarte a sacar
+                    turnos, resolver dudas, recordarte vacunas y mucho más.
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  texto={guardandoAsistente ? "Guardando..." : "Guardar Cambios"}
+                  variante="primario"
+                  tamaño="mediano"
+                  disabled={guardandoAsistente}
+                  onClick={handleGuardarAsistente}
+                />
+              </div>
+            </div>
           )}
         </div>
       </div>

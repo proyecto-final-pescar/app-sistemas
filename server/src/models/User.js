@@ -41,6 +41,15 @@ const userSchema = new mongoose.Schema(
       enum: ['dueno', 'veterinaria', 'administrador'],
       default: 'dueno'
     },
+    asistenteVirtual: {
+      type: String,
+      enum: ['perro', 'gato'],
+      default: 'perro'
+      // Personaje elegido para el chatbot (Max/perro o Mimi/gato).
+      // Solo tiene sentido para usuarios con role 'dueno', que es el
+      // único rol que tiene el chatbot habilitado por ahora — se deja
+      // disponible en el schema para todos los roles por simplicidad.
+    },
     active: {
       type: Boolean,
       default: true
