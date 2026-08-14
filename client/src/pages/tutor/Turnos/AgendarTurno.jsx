@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Search } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-
+import { crearPreferenciaPago } from "../../../services/pagoService";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 
@@ -14,6 +14,9 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 const ANTICIPACION_MINIMA_HORAS = 10;
 const PLAZO_PAGO_HORAS = 3;
+
+const [procesandoPago, setProcesandoPago] = useState(false);
+const [errorPago, setErrorPago] = useState("");
 
 const formatearFechaId = (date) => {
   const yyyy = date.getFullYear();
@@ -310,50 +313,101 @@ const AgendarTurnos = () => {
     );
   }, [turnoSeleccionado, profesionalSeleccionadoId]);
 
+  const reservarTurno = async () => {
+    const token = obtenerToken();
+
+    const payload = {
+      fecha: turnoSeleccionado.dia.fechaStr,
+      hora: turnoSeleccionado.hora,
+      motivo: servicioElegido?.nombre || "",
+      mascotaId: mascotaSeleccionadaId,
+      veterinariaId: veterinariaId,
+      profesionalId: profesionalSeleccionadoId,
+      notas: notas || undefined,
+    };
+
+    const response = await fetch(`${API_URL}/turnos`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const resultado = await response.json();
+
+    if (!response.ok || !resultado.success) {
+      throw new Error(resultado.message || "Error al reservar el turno");
+    }
+
+    const mascotaElegida = mascotas.find((m) => m._id === mascotaSeleccionadaId);
+    setMascotaConfirmadaNombre(mascotaElegida?.nombre || "tu mascota");
+
+    setTurnosDisponibles((prev) =>
+      prev.filter((t) => t._id !== turnoConcretoElegido._id)
+    );
+
+    return resultado.data.turno;
+  };
+
   const handleConfirmarTurnoFinal = async (e) => {
     e.preventDefault();
     if (!turnoConcretoElegido) {
       alert("Elegí un profesional para continuar.");
       return;
     }
+    if (!mascotaSeleccionadaId) {
+      alert("Elegí una mascota para continuar.");
+      return;
+    }
 
     try {
-      const token = obtenerToken();
-
-      const payload = {
-        fecha: turnoSeleccionado.dia.fechaStr,
-        hora: turnoSeleccionado.hora,
-        motivo: servicioElegido?.nombre || "",
-        mascotaId: mascotaSeleccionadaId,
-        veterinariaId: veterinariaId,
-        profesionalId: profesionalSeleccionadoId,
-        notas: notas || undefined,
-      };
-
-      const response = await fetch(`${API_URL}/turnos`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const resultado = await response.json();
-
-      if (!response.ok || !resultado.success) {
-        throw new Error(resultado.message || "Error al reservar el turno");
-      }
-
-      const mascotaElegida = mascotas.find((m) => m._id === mascotaSeleccionadaId);
-      setMascotaConfirmadaNombre(mascotaElegida?.nombre || "tu mascota");
-
-      setTurnosDisponibles((prev) =>
-        prev.filter((t) => t._id !== turnoConcretoElegido._id)
-      );
-
+      await reservarTurno();
       handleCloseConfirm();
       setIsSuccessOpen(true);
+    } catch (err) {
+      alert(err.message || "Hubo un problema al agendar el turno.");
+    }
+  };
+
+  const handlePagarAhora = async () => {
+    if (!turnoConcretoElegido) {
+      alert("Elegí un profesional para continuar.");
+      return;
+    }
+    if (!mascotaSeleccionadaId) {
+      alert("Elegí una mascota para continuar.");
+      return;
+    }
+
+    setErrorPago("");
+
+    try {
+      const turnoCreado = await reservarTurno();
+      handleCloseConfirm();
+
+      // El turno ya existe: aunque MercadoPago falle, no se pierde.
+      setProcesandoPago(true);
+
+      try {
+        const respuestaPago = await crearPreferenciaPago(turnoCreado._id);
+        const initPoint = respuestaPago.data?.init_point;
+
+        if (!initPoint) {
+          throw new Error("No se recibió el enlace de MercadoPago.");
+        }
+
+        window.location.href = initPoint;
+      } catch (pagoError) {
+        console.error("Error al crear la preferencia de pago:", pagoError);
+        setProcesandoPago(false);
+        setErrorPago(
+          pagoError.response?.data?.message ||
+          pagoError.message ||
+          "El turno fue creado, pero no pudimos iniciar el pago. Podés pagarlo más tarde desde 'Mis Turnos'."
+        );
+      }
     } catch (err) {
       alert(err.message || "Hubo un problema al agendar el turno.");
     }
@@ -379,6 +433,19 @@ const AgendarTurnos = () => {
     return (
       <div className={styles.layout} style={{ justifyContent: "center", alignItems: "center" }}>
         <p>{error}</p>
+      </div>
+    );
+  }
+
+  if (procesandoPago) {
+    return (
+      <div className={styles.pagoLoadingOverlay}>
+        <div className={styles.pagoLoadingCard}>
+          <div className={styles.pagoSpinner}></div>
+          <h2>Preparando tu pago...</h2>
+          <p>Estamos generando el checkout seguro de MercadoPago.</p>
+          <span>Te vamos a redirigir automáticamente.</span>
+        </div>
       </div>
     );
   }
@@ -466,9 +533,8 @@ const AgendarTurnos = () => {
                   <button
                     key={cat}
                     type="button"
-                    className={`${styles.tabCategoria} ${
-                      categoriaSeleccionada === cat ? styles.tabCategoriaActiva : ""
-                    }`}
+                    className={`${styles.tabCategoria} ${categoriaSeleccionada === cat ? styles.tabCategoriaActiva : ""
+                      }`}
                     onClick={() => setCategoriaSeleccionada(cat)}
                   >
                     {cat}
@@ -490,9 +556,8 @@ const AgendarTurnos = () => {
                     <button
                       key={s._id}
                       type="button"
-                      className={`${styles.chipServicio} ${
-                        seleccionado ? styles.chipActivo : ""
-                      }`}
+                      className={`${styles.chipServicio} ${seleccionado ? styles.chipActivo : ""
+                        }`}
                       onClick={() => setServicioSeleccionadoId(s._id)}
                     >
                       <span className={styles.chipNombre}>{s.nombre}</span>
@@ -521,9 +586,8 @@ const AgendarTurnos = () => {
                       {diasSemana.map((dia) => (
                         <div
                           key={dia.fechaStr}
-                          className={`${styles.diaColumna} ${
-                            dia.activo ? styles.diaColumnaActivo : ""
-                          }`}
+                          className={`${styles.diaColumna} ${dia.activo ? styles.diaColumnaActivo : ""
+                            }`}
                         >
                           <span className={styles.diaNombre}>{dia.nom}</span>
                           <span className={styles.diaNumero}>{dia.num}</span>
@@ -550,11 +614,10 @@ const AgendarTurnos = () => {
                                 <button
                                   key={`${dia.fechaStr}-${hora}`}
                                   type="button"
-                                  className={`${styles.slotTurno} ${
-                                    disponible
-                                      ? styles.slotDisponible
-                                      : styles.slotNoDisponible
-                                  }`}
+                                  className={`${styles.slotTurno} ${disponible
+                                    ? styles.slotDisponible
+                                    : styles.slotNoDisponible
+                                    }`}
                                   disabled={!disponible}
                                   onClick={() => handleSlotClick(dia, hora)}
                                   title={
@@ -691,16 +754,27 @@ const AgendarTurnos = () => {
                       <button
                         type="button"
                         className={styles.btnCancelar}
-                        disabled
-                        title="Próximamente"
+                        onClick={handlePagarAhora}
+                        disabled={procesandoPago}
                       >
-                        Pagar ahora
+                        {procesandoPago ? "Procesando..." : "Pagar ahora"}
                       </button>
                       <button type="submit" className={styles.btnConfirmar}>
                         Confirmar turno
                       </button>
                     </div>
                   </form>
+                </div>
+              </div>
+            )}
+
+            {errorPago && (
+              <div className={styles.modalOverlay}>
+                <div className={styles.modalContainer}>
+                  <p style={{ color: "#ef4444", fontWeight: 600 }}>{errorPago}</p>
+                  <button className={styles.btnConfirmar} onClick={() => setErrorPago("")}>
+                    Entendido
+                  </button>
                 </div>
               </div>
             )}

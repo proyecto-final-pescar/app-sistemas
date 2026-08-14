@@ -617,3 +617,68 @@
 .btnConfirmar:active {
   transform: scale(0.98);
 }
+
+/* ============== OVERLAY DE PROCESAMIENTO DE PAGO ============== */
+.pagoLoadingOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(28, 16, 51, 0.3);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.pagoLoadingCard {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(28, 16, 51, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagoLoadingCard h2 {
+  font-family: "Outfit", sans-serif;
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: #1c1033;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.pagoLoadingCard p {
+  font-family: "Inter", sans-serif;
+  font-size: 0.85rem;
+  color: #7e6fa0;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.pagoLoadingCard span {
+  font-family: "Inter", sans-serif;
+  font-size: 0.78rem;
+  color: #7e6fa0;
+  margin-top: 0.5rem;
+}
+
+.pagoSpinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #ede9fe;
+  border-top-color: #7c3aed;
+  border-radius: 50%;
+  animation: girarPago 0.8s linear infinite;
+}
+
+@keyframes girarPago {
+  to { transform: rotate(360deg); }
+}
