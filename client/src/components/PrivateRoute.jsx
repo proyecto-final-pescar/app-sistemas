@@ -1,5 +1,5 @@
 import { Navigate, useLocation } from 'react-router-dom';
-
+import ChatBot from './chatbot/ChatBot';
 
 function decodeToken(token) {
   try {
@@ -41,7 +41,15 @@ const PrivateRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  return children;
+  return (
+    <>
+      {children}
+      {/* El chatbot está scopeado al JWT del tutor (rol "dueno") por
+          ahora. Si se habilita para veterinaria/administrador más
+          adelante, sacar esta condición y dejar solo <ChatBot />. */}
+      {role === 'dueno' && <ChatBot />}
+    </>
+  );
 };
 
 export default PrivateRoute;
