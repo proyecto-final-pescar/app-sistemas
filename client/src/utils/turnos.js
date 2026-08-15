@@ -7,10 +7,12 @@ const MESES_ABREV = [
 ];
 
 export const obtenerFechaHoraCompleta = (turno) => {
-  const fecha = new Date(turno.fecha);
+ //se arreglo el desfase por el formato que devuelve back y el parseo 
+  const fechaStr = turno.fecha.slice(0, 10); // "YYYY-MM-DD"
+  const [anio, mes, dia] = fechaStr.split("-").map(Number);
   const [horas, minutos] = turno.hora.split(":").map(Number);
-  fecha.setHours(horas, minutos, 0, 0);
-  return fecha;
+
+  return new Date(anio, mes - 1, dia, horas, minutos, 0, 0);
 };
 
 export const filtrarProximos = (turnos) => {
