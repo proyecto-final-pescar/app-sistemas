@@ -2,13 +2,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import InterfazChat from './InterfazChat';
 import PersonajeBot from './PersonajeBot';
 import { useAuth } from '../../hooks/useAuth';
+import { enviarMensajeAlBot } from '../../services/botService';
 import estilos from './ChatBot.module.css';
 
 
 const MS_DURACION_POSE_TRANSITORIA = 2200;
-
-
-const URL_CHAT = `${import.meta.env.VITE_API_URL}/bot/chat`;
 
 // Tiempo a partir del cual, si todavía no hubo respuesta, se muestra
 // un mensaje adicional junto al indicador de escritura.
@@ -21,39 +19,10 @@ const TAMANIO_PERSONAJE_BURBUJA = 88;
 const UMBRAL_ARRASTRE_PX = 6;
 const MARGEN_VENTANA_PX = 8;
 
-function obtenerToken() {
-  return localStorage.getItem('token');
-}
-
 let idMensaje = 0;
 function nuevoId() {
   idMensaje += 1;
   return idMensaje;
-}
-
-/**
- * Llama a POST /bot/chat con el historial completo de la conversación.
- * @param {{role: 'user'|'assistant', content: string}[]} historial
- * @param {AbortSignal} signal
- */
-async function enviarHistorialAlBackend(historial, signal) {
-  const respuesta = await fetch(URL_CHAT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${obtenerToken()}`,
-    },
-    body: JSON.stringify({ mensajes: historial }),
-    signal,
-  });
-
-  if (!respuesta.ok) {
-    throw new Error(`Error del servidor (status ${respuesta.status})`);
-  }
-
-  const datos = await respuesta.json();
- 
-  return datos.respuesta;
 }
 
 /**
@@ -256,7 +225,7 @@ export default function ChatBot({ notificacionesNuevas = 0 }) {
       }, MS_TIMEOUT_MAXIMO);
 
       try {
-        const contenidoRespuesta = await enviarHistorialAlBackend(
+        const contenidoRespuesta = await enviarMensajeAlBot(
           historialParaBackend,
           controller.signal
         );
@@ -266,7 +235,9 @@ export default function ChatBot({ notificacionesNuevas = 0 }) {
         ]);
         setPose('feliz');
       } catch (error) {
-        const esCancelacion = error.name === 'AbortError';
+        // axios no usa error.name === 'AbortError' (eso es de fetch);
+        // cuando se cancela via AbortController expone error.code === 'ERR_CANCELED'.
+        const esCancelacion = error.code === 'ERR_CANCELED';
         setMensajes((previos) => [
           ...previos,
           {
