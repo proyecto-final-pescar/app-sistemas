@@ -112,7 +112,7 @@ export const crearPreferenciaPago = async (req, res) => {
           mascotaId: turno.mascotaId._id.toString()
         },
         // Comentar para probar en local y descomentar antes de mergear
-        auto_return: 'approved'
+        //auto_return: 'approved'
       }
     });
 
