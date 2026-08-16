@@ -34,7 +34,8 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/registro-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><RegistroDeVeterinaria /></PrivateRoute}/>
+        <Route
+          path="/registro-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><RegistroDeVeterinaria /></PrivateRoute>  }/>
 
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
@@ -54,7 +55,7 @@ function App() {
        <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><BuscarVeterinaria /></PrivateRoute>} />
         <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
         <Route path="/agenda" element={<PrivateRoute allowedRoles={["veterinaria"]}><CitasAgendadas /></PrivateRoute>} />
-<Route path="/pacientes" element={<PrivateRoute allowedRoles={["veterinaria"]}><Pacientes /></PrivateRoute>/>
+        <Route path="/pacientes" element={<PrivateRoute allowedRoles={["veterinaria"]}><Pacientes /></PrivateRoute>}/>
 
 <Route path="/historial/registrar/:turnoId"element={<PrivateRoute allowedRoles={["veterinaria"]}><RegistrarConsulta /></PrivateRoute>}/>
         <Route path="/urgencias" element={<PrivateRoute allowedRoles={["dueno"]}><Emergencias /></PrivateRoute>} />
