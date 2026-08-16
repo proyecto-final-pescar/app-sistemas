@@ -39,9 +39,14 @@ export const crearPreferenciaPago = async (req, res) => {
     }
 
     if (turno.pagoId) {
-      return res.status(400).json({
-        message: 'Este turno ya tiene un pago asociado'
-      });
+      const pagoExistente = await Pago.findById(turno.pagoId);
+      const bloqueaNuevoPago = pagoExistente && !['rechazado', 'cancelado'].includes(pagoExistente.estado);
+
+      if (bloqueaNuevoPago) {
+        return res.status(400).json({
+          message: 'Este turno ya tiene un pago asociado'
+        });
+      }
     }
 
     const veterinaria = turno.veterinariaId;
@@ -91,9 +96,9 @@ export const crearPreferenciaPago = async (req, res) => {
         ],
 
         back_urls: {
-          success: `${process.env.CLIENT_URL}/pago-exitoso`,
-          failure: `${process.env.CLIENT_URL}/pago-fallido`,
-          pending: `${process.env.CLIENT_URL}/pago-pendiente`
+          success: `${process.env.CLIENT_URL}/pago-exitoso?turnoId=${turno._id}`,
+          failure: `${process.env.CLIENT_URL}/pago-fallido?turnoId=${turno._id}`,
+          pending: `${process.env.CLIENT_URL}/pago-pendiente?turnoId=${turno._id}`
         },
 
         notification_url:
@@ -142,5 +147,37 @@ export const crearPreferenciaPago = async (req, res) => {
     return res.status(500).json({
       message: 'No se pudo crear la preferencia de pago'
     });
+  }
+};
+
+export const obtenerEstadoPago = async (req, res) => {
+  try {
+    const { turnoId } = req.params;
+
+    const pago = await Pago.findOne({ turnoId }).sort({ createdAt: -1 });
+
+    if (!pago) {
+      return res.status(404).json({ message: 'No se encontró un pago para este turno' });
+    }
+
+    if (pago.userId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'No tenés permisos para ver este pago' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        estado: pago.estado,
+        monto: pago.monto,
+        fechaAprobacion: pago.fechaAprobacion
+      }
+    });
+
+  } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'El turnoId no es válido' });
+    }
+    console.error('Error en obtenerEstadoPago:', error);
+    return res.status(500).json({ message: 'Error interno del servidor' });
   }
 };

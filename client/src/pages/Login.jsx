@@ -63,6 +63,7 @@ function Login() {
         nombre: user.nombre || user.name || data.nombre || data.name,
         rol: user.rol || user.role || data.rol || data.role,
         fotoUrl: user.fotoUrl || data.fotoUrl || "",
+        asistenteVirtual: user.asistenteVirtual || data.asistenteVirtual || "perro",
       };
 
       localStorage.setItem("token", token);

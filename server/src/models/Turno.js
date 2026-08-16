@@ -47,8 +47,20 @@ const turnoSchema = new mongoose.Schema(
 
     estado: {
       type: String,
-      enum: ['disponible','pendiente', 'confirmado', 'cancelado', 'atendido'],
-      default: 'pendiente'
+      enum: ['disponible', 'pendiente', 'confirmado', 'cancelado', 'atendido'],
+      default: 'disponible'
+      // El default solo aplica cuando se crea el documento,
+      // y ahí siempre arranca 'disponible'. reservarTurno mueve a 'pendiente'
+    
+    },
+
+    // Momento en el que este turno, si sigue en 'pendiente', se libera
+    // automáticamente y vuelve a 'disponible' (plazo para pagar online).
+    // Se setea en reservarTurno = ahora + PLAZO_PAGO_HORAS.
+    // Se limpia (null) cuando el turno pasa a 'confirmado' o 'cancelado'
+    venceEn: {
+      type: Date,
+      default: null
     },
 
     profesionalId: {
@@ -98,6 +110,10 @@ turnoSchema.index(
     }
   }
 );
+
+// liberarTurnosVencidos busca
+// { estado: 'pendiente', venceEn: { $lte: ahora } } cada 15 minutos y libera los turnos nuevamente 
+turnoSchema.index({ estado: 1, venceEn: 1 });
 
 const Turno = mongoose.model('Turno', turnoSchema);
 

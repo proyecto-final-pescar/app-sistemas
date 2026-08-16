@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { obtenerMascotas } from "../../../services/MascotaService";
 import { obtenerHistorialesTutor } from "../../../services/historialService";
-
-// IMPORTANTE: Asegurate de que la ruta de este botón sea la correcta en tu proyecto
 import Button from "../../../components/ui/button/Button.jsx"; 
 
 import Sidebar from "../../../components/layout/Sidebar";
@@ -62,25 +60,18 @@ export default function HistorialMedico() {
     setCurrentPage(1);
   }, [searchTerm, selectedPet]);
 
-
-  // Fetch de datos reales (Manteniendo tu lógica actual / mock)
-  // Fetch de datos reales para producción
   useEffect(() => {
     const fetchDatos = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Llamamos al backend para traer la info real
         const [mascotasData, historialesData] = await Promise.all([
           obtenerMascotas(),
           obtenerHistorialesTutor()
         ]);
 
-        // Guardamos las mascotas
         setMascotas(mascotasData.data || mascotasData || []);
-        
-        // Guardamos los historiales reales directamente (sin mocks)
         setHistoriales(historialesData.historiales || []);
 
       } catch (err) {
@@ -105,7 +96,6 @@ export default function HistorialMedico() {
     return matchesSearch && matchesPet;
   });
 
-  // LÓGICA DE PAGINACIÓN: Calculamos qué tarjetas mostrar en esta página
   const totalPages = Math.ceil(filteredRecords.length / ITEMS_PER_PAGE);
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
@@ -220,11 +210,8 @@ return (
               {currentItems.map(record => {
                 const mascotaNombre = record.mascotaId?.nombre || 'Mascota';
                 const mascotaFoto = mascotas.find(m => m._id === record.mascotaId?._id)?.foto;
-                
-                // Extraemos el nombre de la veterinaria
                 const vetNombre = record.veterinariaId?.nombre || 'Veterinaria';
                 
-                // Buscamos el nombre del profesional cruzando el ID
                 let profNombre = 'Profesional';
                 if (record.veterinariaId?.profesionales && record.profesionalId) {
                   const profesionalEncontrado = record.veterinariaId.profesionales.find(
@@ -359,7 +346,6 @@ return (
               </div>
             </div>
           )}
-
         </main>
       </div>
     </div>

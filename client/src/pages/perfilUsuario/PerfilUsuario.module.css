@@ -219,3 +219,198 @@
   object-fit: cover;
   flex-shrink: 0;
 }
+
+/* ===== asistente  ===== */
+
+.tituloAsistente {
+  margin: 0;
+  font-family: var(--fuente-titulos);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-primario);
+}
+
+.textoAyudaAsistente {
+  margin: 0;
+  font-family: var(--fuente-texto);
+  font-size: 14px;
+  color: var(--color-texto-secundario);
+}
+
+.contenidoAsistente {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+.opcionesAsistente {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.tarjetaAsistente {
+  position: relative;
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+
+  padding: 20px 16px;
+  border: 2px solid var(--color-fondo-secciones);
+  border-radius: 16px;
+  background-color: var(--color-blanco);
+
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.tarjetaAsistente:hover {
+  transform: translateY(-2px);
+}
+
+.tarjetaAsistenteSeleccionada {
+  border-color: var(--color-primario);
+  background-color: var(--color-fondo-claro);
+}
+
+.checkAsistente {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--color-cta);
+  color: var(--color-blanco);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.circuloVacio {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--color-fondo-secciones);
+  background-color: var(--color-blanco);
+}
+
+.fondoAvatarAsistente {
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background-color: var(--color-fondo-claro);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.nombreAsistente {
+  margin: 0;
+  font-family: var(--fuente-titulos);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-primario);
+}
+
+.descripcionAsistente {
+  margin: 0;
+  font-family: var(--fuente-texto);
+  font-size: 13px;
+  color: var(--color-texto-secundario);
+  line-height: 1.4;
+}
+
+.pillSeleccionado {
+  margin-top: 8px;
+  padding: 6px 20px;
+  border-radius: 999px;
+
+  background-color: var(--color-cta);
+  color: var(--color-blanco);
+
+  font-family: var(--fuente-texto);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.filaInferiorAsistente {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.tipAsistente {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+
+  padding: 14px 16px;
+  border-radius: 12px;
+  background-color: var(--color-fondo-claro);
+}
+
+.tipAsistente p {
+  margin: 0;
+  font-family: var(--fuente-texto);
+  font-size: 13px;
+  color: var(--color-texto-principal);
+  line-height: 1.4;
+}
+
+.tipIcono {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.previewAsistente {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.labelPreview {
+  margin: 0;
+  align-self: flex-start;
+  font-family: var(--fuente-titulos);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-texto-principal);
+}
+
+@media (max-width: 720px) {
+  .contenidoAsistente {
+    grid-template-columns: 1fr;
+  }
+
+  .previewAsistente {
+    align-items: stretch;
+  }
+
+  .filaInferiorAsistente {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
