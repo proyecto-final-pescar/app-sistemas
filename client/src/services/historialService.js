@@ -19,23 +19,16 @@ api.interceptors.request.use((config) => {
  * Obtiene el historial clínico de las mascotas del tutor autenticado.
  * GET /historial-clinico/tutor
  */
-export const obtenerHistorialesTutor = async () => {
+export const obtenerHistorialesTutor = async (pagina = 1) => {
   try {
-    const { data } = await api.get("/historial-clinico/tutor");
+    // Le sacamos el /historial-clinico del principio
+    const { data } = await api.get(`/historial/tutor?pagina=${pagina}`);
     return data.data || data; 
   } catch (error) {
-    // Si el backend responde con 404 (No encontrado), asumimos que no hay historiales
-    // y devolvemos un array vacío en lugar de romper la aplicación.
     if (error.response && error.response.status === 404) {
       console.warn("No se encontraron historiales. Devolviendo array vacío.");
       return [];
     }
-    
-    // Si es otro tipo de error (500 del servidor, 401 de sesión, etc.), sí lo lanzamos
     throw error;
   }
-};
-
-export default {
-  obtenerHistorialesTutor,
 };

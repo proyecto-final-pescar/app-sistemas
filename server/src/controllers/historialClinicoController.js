@@ -360,3 +360,42 @@ export const actualizarHistorialClinico = async (req, res) => {
     })
   }
 }
+
+export const obtenerHistorialesPorTutor = async (req, res) => {
+  try {
+    // Tomamos la página de la query (por defecto 1)
+    const pagina = parseInt(req.query.pagina) || 1;
+    const limite = 10;
+    const skip = (pagina - 1) * limite;
+
+    // Acá asumimos que el modelo tiene alguna referencia al usuario/tutor
+    // O que buscás las mascotas de ese tutor y luego sus historiales.
+    // Ejemplo directo si el historial guarda el usuarioId:
+    const filtro = { usuarioId: req.user.id };
+
+// En tu backend: historialClinicoController.js
+// En tu backend: historialClinicoController.js
+const historiales = await HistorialClinico.find(filtro)
+  .sort({ createdAt: -1 })
+  .skip(skip)
+  .limit(limite)
+  .populate('mascotaId', 'nombre especie')
+  // Traemos el documento de la veterinaria COMPLETO (o los campos que necesitemos)
+  .populate('veterinariaId', 'nombre profesionales');
+    // Contamos el total para que el frontend sepa cuántas páginas hay
+    const totalResultados = await HistorialClinico.countDocuments(filtro);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        historiales,
+        totalPaginas: Math.ceil(totalResultados / limite),
+        paginaActual: pagina
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en obtenerHistorialesPorTutor:', error);
+    res.status(500).json({ message: 'Error al obtener los historiales' });
+  }
+};
