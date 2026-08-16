@@ -635,10 +635,7 @@
   }
 }
 
-@media (max-width: 900px) {
-  .layout {
-    display: block;
-  }
+@media (max-width: 1023px) {
 
   .content {
     padding: 26px 22px 42px;
@@ -652,11 +649,33 @@
   .primaryButton {
     width: 100%;
   }
+
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filters {
+    align-items: stretch;
+  }
+
+  .selectWrap {
+    min-width: 0;
+    flex: 1 1 200px;
+  }
+
+  .tabGroup {
+    flex-wrap: wrap;
+  }
+
+  .tabButton {
+    flex: 1 1 auto;
+  }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .content {
-    padding: 22px 16px 36px;
+    padding: 26px 16px 36px;
+    padding-top: 76px;
   }
 
   .title {
@@ -704,29 +723,45 @@
   .formActions > button {
     width: 100%;
   }
+
+  .selectWrap {
+    flex: 0 0 auto;
+  }
 }
 
-.reportButton {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: none;
-  background-color: rgba(0, 0, 0, 0.45);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
+@media (max-width: 400px) {
+  .title {
+    font-size: 24px;
+  }
 
-.reportButton:hover {
-  background-color: rgba(239, 68, 68, 0.85);
-}
+  .subtitle {
+    font-size: 14px;
+  }
 
-.reportButton:disabled {
-  cursor: not-allowed;
-  background-color: rgba(0, 0, 0, 0.25);
+  .cardBody {
+    padding: 13px 14px 14px;
+  }
+
+  .petName {
+    font-size: 16px;
+  }
+
+  .contactButtons {
+    flex-direction: column;
+  }
+
+  .ownerActions {
+    flex-wrap: wrap;
+  }
+
+  .ownerActions > .successButton,
+  .ownerActions > .outlineSuccessButton {
+    flex: 1 1 100%;
+  }
+
+  .modalHeader,
+  .form {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }
