@@ -11,9 +11,10 @@
   white-space: nowrap;
 }
 
-.badge-confirmado {
+.badge-confirmado,
+.badge-success {
   background-color: #d1fae5;
-  color: #059669;
+  color: var(--color-cta);
 }
 
 .badge-pendiente {
@@ -24,4 +25,9 @@
 .badge-cancelado {
   background-color: #fee2e2;
   color: #ef4444;
+}
+
+.badge-secondary {
+  background-color: var(--color-fondo-claro);
+  color: var(--color-primario);
 }

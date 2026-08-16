@@ -1,19 +1,20 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-
+import { crearPreferenciaPago } from "../../../services/pagoService";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 
-import Modal from "../../../components/layout/modal/Modal";
 import Select from "../../../components/ui/select/Select";
-import Button from "../../../components/ui/button/Button";
 import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
 
 import styles from "../../../styles/AgendarTurno.module.css";
-const API_URL = import.meta.env.VITE_API_URL;  
 
-// Helper para formatear fechas a YYYY-MM-DD sin desfasajes de zona horaria
+const API_URL = import.meta.env.VITE_API_URL;
+
+const ANTICIPACION_MINIMA_HORAS = 10;
+const PLAZO_PAGO_HORAS = 3;
+
 const formatearFechaId = (date) => {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, "0");
@@ -21,21 +22,22 @@ const formatearFechaId = (date) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-// Verifica si un turno (fecha + hora) respeta la antelación mínima de 24hs desde ahora
+const fechaIdDesdeISO = (fechaISO) => fechaISO.slice(0, 10);
+
 const cumpleAntelacionMinima = (fechaStr, hora) => {
   const [anio, mes, dia] = fechaStr.split("-").map(Number);
   const [hh, mm] = hora.split(":").map(Number);
-  const fechaHoraTurno = new Date(anio, mes - 1, dia, hh, mm); // hora local
+  const fechaHoraTurno = new Date(anio, mes - 1, dia, hh, mm);
 
-  const limiteMinimo = new Date(Date.now() + 24 * 60 * 60 * 1000); // ahora + 24hs
+  const limiteMinimo = new Date(
+    Date.now() + ANTICIPACION_MINIMA_HORAS * 60 * 60 * 1000
+  );
 
   return fechaHoraTurno >= limiteMinimo;
 };
 
-// Helper centralizado para leer el JWT (evita repetir localStorage.getItem en cada fetch)
 const obtenerToken = () => localStorage.getItem("token");
 
-// Tablas de nombres usadas en toda la vista (fuera del componente: no se recrean en cada render)
 const NOMBRES_DIAS = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SAB"];
 const NOMBRES_DIAS_COMPLETO = {
   DOM: "domingo",
@@ -47,36 +49,31 @@ const NOMBRES_DIAS_COMPLETO = {
   SAB: "sábado",
 };
 const NOMBRES_MESES = [
-  "ene",
-  "feb",
-  "mar",
-  "abr",
-  "may",
-  "jun",
-  "jul",
-  "ago",
-  "sep",
-  "oct",
-  "nov",
-  "dic",
+  "ene", "feb", "mar", "abr", "may", "jun",
+  "jul", "ago", "sep", "oct", "nov", "dic",
 ];
 
 const AgendarTurnos = () => {
   const navigate = useNavigate();
-  const { veterinariaId } = useParams(); // Obtenemos el ID dinámico de la URL
+  const { veterinariaId } = useParams();
 
-  // --- Estados del Negocio (Base de Datos) ---
+  // --- Estados del Negocio ---
   const [veterinaria, setVeterinaria] = useState(null);
   const [mascotas, setMascotas] = useState([]);
-  const [disponibilidadSemanal, setDisponibilidadSemanal] = useState({});
+  const [turnosDisponibles, setTurnosDisponibles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingTurnos, setLoadingTurnos] = useState(false);
   const [error, setError] = useState(null);
 
-  // --- Estados de la Interfaz y Formulario ---
+  // --- Estados de Selección y Filtro ---
+  const [servicioSeleccionadoId, setServicioSeleccionadoId] = useState("");
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todas");
+  const [busquedaServicio, setBusquedaServicio] = useState("");
+
   const [fechaInicioSemana, setFechaInicioSemana] = useState(() => {
     const hoy = new Date();
     const diaSemana = hoy.getDay();
-    const offset = (diaSemana + 6) % 7; // días transcurridos desde el lunes de esta semana
+    const offset = (diaSemana + 6) % 7;
     const lunes = new Date(hoy);
     lunes.setDate(hoy.getDate() - offset);
     return lunes;
@@ -84,12 +81,87 @@ const AgendarTurnos = () => {
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [turnoCreadoId, setTurnoCreadoId] = useState(null);
+  const [procesandoPago, setProcesandoPago] = useState(false);
+  const [errorPago, setErrorPago] = useState("");
   const [turnoSeleccionado, setTurnoSeleccionado] = useState(null);
-  const [servicio, setServicio] = useState("");
+  const [profesionalSeleccionadoId, setProfesionalSeleccionadoId] = useState("");
   const [mascotaSeleccionadaId, setMascotaSeleccionadaId] = useState("");
+  const [notas, setNotas] = useState("");
   const [mascotaConfirmadaNombre, setMascotaConfirmadaNombre] = useState("");
 
-  // --- Generación dinámica de la estructura de los 7 días visibles ---
+  // Carga inicial
+  useEffect(() => {
+    let cancelado = false;
+
+    const cargarDatosBase = async () => {
+      try {
+        setLoading(true);
+        const token = obtenerToken();
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const [resVetRaw, resMascotasRaw] = await Promise.all([
+          fetch(`${API_URL}/veterinarias/${veterinariaId}`, { headers }),
+          fetch(`${API_URL}/mascotas`, { headers }),
+        ]);
+
+        if (!resVetRaw.ok || !resMascotasRaw.ok) {
+          throw new Error("Error al obtener los datos iniciales.");
+        }
+
+        const [resVet, resMascotas] = await Promise.all([
+          resVetRaw.json(),
+          resMascotasRaw.json(),
+        ]);
+
+        if (cancelado) return;
+
+        if (!resVet.success) {
+          setError(resVet.message || "No pudimos cargar la veterinaria.");
+          setLoading(false);
+          return;
+        }
+
+        setVeterinaria(resVet.data);
+        setMascotas(Array.isArray(resMascotas) ? resMascotas : []);
+        setError(null);
+      } catch (err) {
+        if (cancelado) return;
+        console.error("Error cargando datos base:", err);
+        setError("No se pudo cargar la clínica. Intentá de nuevo más tarde.");
+      } finally {
+        if (!cancelado) setLoading(false);
+      }
+    };
+
+    if (veterinariaId) cargarDatosBase();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [veterinariaId]);
+
+  // Lista de categorías únicas extraídas de los servicios
+  const categoriasUnicas = useMemo(() => {
+    const cats = new Set(["Todas"]);
+    (veterinaria?.servicios || []).forEach((s) => {
+      if (s.categoria) cats.add(s.categoria);
+    });
+    return Array.from(cats);
+  }, [veterinaria]);
+
+  // Filtrado dinámico por categoría y por búsqueda
+  const serviciosFiltrados = useMemo(() => {
+    return (veterinaria?.servicios || []).filter((s) => {
+      const coincideCategoria =
+        categoriaSeleccionada === "Todas" || s.categoria === categoriaSeleccionada;
+      const coincideBusqueda = s.nombre
+        .toLowerCase()
+        .includes(busquedaServicio.toLowerCase());
+      return coincideCategoria && coincideBusqueda;
+    });
+  }, [veterinaria, categoriaSeleccionada, busquedaServicio]);
+
   const diasSemana = useMemo(() => {
     const hoyStr = formatearFechaId(new Date());
 
@@ -103,131 +175,101 @@ const AgendarTurnos = () => {
         num: fechaDia.getDate(),
         mes: NOMBRES_MESES[fechaDia.getMonth()],
         fechaStr,
-        activo: fechaStr === hoyStr, // Resalta el día de hoy si cae en la semana visible
+        activo: fechaStr === hoyStr,
       };
     });
   }, [fechaInicioSemana]);
 
-  // Extrae dinámicamente las horas que el backend ya calculó y envió
+  const servicioElegido = useMemo(
+    () => veterinaria?.servicios?.find((s) => s._id === servicioSeleccionadoId) || null,
+    [veterinaria, servicioSeleccionadoId]
+  );
+
+  const mapaProfesionales = useMemo(() => {
+    const mapa = {};
+    (veterinaria?.profesionales || []).forEach((p) => {
+      mapa[p._id] = p;
+    });
+    return mapa;
+  }, [veterinaria]);
+
+  const turnosPorDiaYHora = useMemo(() => {
+    const mapa = {};
+
+    turnosDisponibles.forEach((turno) => {
+      const fechaStr = fechaIdDesdeISO(turno.fecha);
+      if (!cumpleAntelacionMinima(fechaStr, turno.hora)) return;
+
+      if (!mapa[fechaStr]) mapa[fechaStr] = {};
+      if (!mapa[fechaStr][turno.hora]) mapa[fechaStr][turno.hora] = [];
+      mapa[fechaStr][turno.hora].push(turno);
+    });
+
+    return mapa;
+  }, [turnosDisponibles]);
+
   const horasVisibles = useMemo(() => {
     const todasLasHoras = new Set();
 
-    // Recorremos los días de la semana y extraemos las horas que devolvió el backend
-    Object.values(disponibilidadSemanal).forEach((listaHoras) => {
-      if (Array.isArray(listaHoras)) {
-        listaHoras.forEach((hora) => todasLasHoras.add(hora));
-      }
+    Object.values(turnosPorDiaYHora).forEach((horas) => {
+      Object.keys(horas).forEach((hora) => todasLasHoras.add(hora));
     });
 
     return Array.from(todasLasHoras).sort();
-  }, [disponibilidadSemanal]);
+  }, [turnosPorDiaYHora]);
 
-  // --- Obtención de datos del Servidor (Carga Inicial y paginación) ---
+  // Carga de turnos disponibles según servicio y semana
   useEffect(() => {
     let cancelado = false;
 
-    const cargarDatosYDisponibilidad = async () => {
+    const cargarTurnosDisponibles = async () => {
+      if (!servicioSeleccionadoId) {
+        setTurnosDisponibles([]);
+        return;
+      }
+
       try {
-        setLoading(true);
+        setLoadingTurnos(true);
         const token = obtenerToken();
         const headers = { Authorization: `Bearer ${token}` };
 
-        // 1. Obtener datos de la veterinaria y mascotas en paralelo (solo la primera vez)
-        if (!veterinaria) {
-          const [resVetRaw, resMascotasRaw] = await Promise.all([
-            fetch(`${API_URL}/veterinarias/${veterinariaId}`, { headers }),
-            fetch(`${API_URL}/mascotas`, { headers }),
-          ]);
+        const fechaDesde = diasSemana[0].fechaStr;
+        const fechaHasta = diasSemana[6].fechaStr;
 
-          if (!resVetRaw.ok) {
-            const texto = await resVetRaw.text();
-            console.error("Fallo GET veterinarias:", resVetRaw.status, texto);
-            throw new Error(`Error ${resVetRaw.status} al buscar la veterinaria`);
-          }
-          if (!resMascotasRaw.ok) {
-            const texto = await resMascotasRaw.text();
-            console.error("Fallo GET mascotas:", resMascotasRaw.status, texto);
-            throw new Error(`Error ${resMascotasRaw.status} al buscar mascotas`);
-          }
-
-          const [resVet, resMascotas] = await Promise.all([
-            resVetRaw.json(),
-            resMascotasRaw.json(),
-          ]);
-
-          if (cancelado) return;
-
-          if (!resVet.success) {
-            setError(
-              resVet.message ||
-                "No pudimos cargar los datos de esta veterinaria. Intentá de nuevo más tarde.",
-            );
-            setLoading(false);
-            return;
-          }
-          setVeterinaria(resVet.data);
-          setMascotas(Array.isArray(resMascotas) ? resMascotas : []);
-        }
-
-        // 2. Resolver concurrencia de turnos para los 7 días mapeados en pantalla
-        const hoyStr = formatearFechaId(new Date()); // Obtenemos el string de hoy ("2026-07-06")
-
-        const promesasDisponibilidad = diasSemana.map((dia) => {
-          // IF DE SEGURIDAD: Si el día ya pasó o es el día de hoy, evitamos pegarle a la API
-          if (dia.fechaStr <= hoyStr) {
-            return Promise.resolve({
-              fechaStr: dia.fechaStr,
-              horarios: [], // Devolvemos vacío localmente sin generar errores 400
-            });
-          }
-
-          // Si es un día futuro, hacemos la consulta normal al backend
-          return fetch(
-            `${API_URL}/disponibilidad/${veterinariaId}?fecha=${dia.fechaStr}`,
-            { headers },
-          )
-            .then((r) => r.json())
-            .then((res) => ({
-              fechaStr: dia.fechaStr,
-              horarios: (res.data?.horariosDisponibles || []).filter((hora) =>
-                cumpleAntelacionMinima(dia.fechaStr, hora),
-              ),
-            }));
+        const params = new URLSearchParams({
+          veterinariaId,
+          servicioId: servicioSeleccionadoId,
+          estado: "disponible",
+          fechaDesde,
+          fechaHasta,
         });
 
-        const resultados = await Promise.all(promesasDisponibilidad);
+        const res = await fetch(`${API_URL}/turnos?${params.toString()}`, { headers });
+        const resultado = await res.json();
 
         if (cancelado) return;
 
-        // Transformar el array de respuestas en un mapa llave-valor { "2026-07-06": ["09:00", "10:30"] }
-        const mapaDisponibilidad = resultados.reduce((acc, curr) => {
-          acc[curr.fechaStr] = curr.horarios;
-          return acc;
-        }, {});
+        if (!res.ok || !resultado.success) {
+          throw new Error(resultado.message || "No se pudieron cargar los turnos");
+        }
 
-        setDisponibilidadSemanal(mapaDisponibilidad);
-        setError(null);
+        setTurnosDisponibles(resultado.data.turnos || []);
       } catch (err) {
         if (cancelado) return;
-        console.error("Error cargando datos del dashboard de turnos:", err);
-        setError(
-          "No se pudo cargar la grilla de turnos. Intentá de nuevo más tarde.",
-        );
+        console.error("Error cargando turnos disponibles:", err);
+        setError("No se pudo cargar la grilla de turnos.");
       } finally {
-        if (!cancelado) setLoading(false);
+        if (!cancelado) setLoadingTurnos(false);
       }
     };
 
-    if (veterinariaId) {
-      cargarDatosYDisponibilidad();
-    }
+    cargarTurnosDisponibles();
 
     return () => {
       cancelado = true;
     };
-  }, [veterinariaId, fechaInicioSemana]);
+  }, [veterinariaId, servicioSeleccionadoId, fechaInicioSemana]);
 
-  // --- Navegación de semanas ---
   const handleSemanaAnterior = () => {
     setFechaInicioSemana((prev) => {
       const nueva = new Date(prev);
@@ -247,64 +289,127 @@ const AgendarTurnos = () => {
   const handleVolver = () => navigate(-1);
 
   const handleSlotClick = (dia, hora) => {
-    setTurnoSeleccionado({ dia, hora });
+    const opciones = turnosPorDiaYHora[dia.fechaStr]?.[hora] || [];
+    if (!opciones.length) return;
+
+    setTurnoSeleccionado({ dia, hora, opciones });
+    setProfesionalSeleccionadoId(opciones.length === 1 ? opciones[0].profesionalId : "");
     setIsConfirmOpen(true);
   };
 
   const handleCloseConfirm = () => {
     setIsConfirmOpen(false);
-    setServicio("");
+    setProfesionalSeleccionadoId("");
     setMascotaSeleccionadaId("");
+    setNotas("");
   };
 
-  // --- Persistencia: Guardar Turno en MongoDB ---
+  const turnoConcretoElegido = useMemo(() => {
+    if (!turnoSeleccionado || !profesionalSeleccionadoId) return null;
+    return (
+      turnoSeleccionado.opciones.find(
+        (t) => t.profesionalId === profesionalSeleccionadoId
+      ) || null
+    );
+  }, [turnoSeleccionado, profesionalSeleccionadoId]);
+
+  const reservarTurno = async () => {
+    const token = obtenerToken();
+
+    const payload = {
+      fecha: turnoSeleccionado.dia.fechaStr,
+      hora: turnoSeleccionado.hora,
+      motivo: servicioElegido?.nombre || "",
+      mascotaId: mascotaSeleccionadaId,
+      veterinariaId: veterinariaId,
+      profesionalId: profesionalSeleccionadoId,
+      notas: notas || undefined,
+    };
+
+    const response = await fetch(`${API_URL}/turnos`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const resultado = await response.json();
+
+    if (!response.ok || !resultado.success) {
+      throw new Error(resultado.message || "Error al reservar el turno");
+    }
+
+    const mascotaElegida = mascotas.find((m) => m._id === mascotaSeleccionadaId);
+    setMascotaConfirmadaNombre(mascotaElegida?.nombre || "tu mascota");
+
+    setTurnosDisponibles((prev) =>
+      prev.filter((t) => t._id !== turnoConcretoElegido._id)
+    );
+
+    return resultado.data.turno;
+  };
+
   const handleConfirmarTurnoFinal = async (e) => {
     e.preventDefault();
+    if (!turnoConcretoElegido) {
+      alert("Elegí un profesional para continuar.");
+      return;
+    }
+    if (!mascotaSeleccionadaId) {
+      alert("Elegí una mascota para continuar.");
+      return;
+    }
+
     try {
-      const token = obtenerToken();
-
-      const payload = {
-        fecha: turnoSeleccionado.dia.fechaStr,
-        hora: turnoSeleccionado.hora,
-        motivo: servicio,
-        mascotaId: mascotaSeleccionadaId,
-        veterinariaId: veterinariaId,
-      };
-
-      const response = await fetch(`${API_URL}/turnos`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const resultado = await response.json();
-
-      if (!response.ok || !resultado.success) {
-        throw new Error(resultado.message || "Error al reservar el turno");
-      }
-
-      setMascotaConfirmadaNombre(mascotaElegida?.nombre || "tu mascota");
-
-      // Actualizar el estado local para remover el turno recién reservado sin recargar todo
-      setDisponibilidadSemanal((prev) => ({
-        ...prev,
-        [turnoSeleccionado.dia.fechaStr]: (
-          prev[turnoSeleccionado.dia.fechaStr] || []
-        ).filter((h) => h !== turnoSeleccionado.hora),
-      }));
-
-      setServicio("");
-      setMascotaSeleccionadaId("");
-      setIsConfirmOpen(false);
+      await reservarTurno();
+      handleCloseConfirm();
       setIsSuccessOpen(true);
     } catch (err) {
-      alert(
-        err.message ||
-          "Hubo un problema al agendar el turno. Revisá los datos.",
-      );
+      alert(err.message || "Hubo un problema al agendar el turno.");
+    }
+  };
+
+  const handlePagarAhora = async () => {
+    if (!turnoConcretoElegido) {
+      alert("Elegí un profesional para continuar.");
+      return;
+    }
+    if (!mascotaSeleccionadaId) {
+      alert("Elegí una mascota para continuar.");
+      return;
+    }
+
+    setErrorPago("");
+
+    try {
+      const turnoCreado = await reservarTurno();
+      handleCloseConfirm();
+
+      // El turno ya existe: aunque MercadoPago falle, no se pierde.
+      setProcesandoPago(true);
+
+      try {
+        const respuestaPago = await crearPreferenciaPago(turnoCreado._id);
+        const initPoint = respuestaPago.data?.init_point;
+
+        if (!initPoint) {
+          throw new Error("No se recibió el enlace de MercadoPago.");
+        }
+
+        window.location.href = initPoint;
+      } catch (pagoError) {
+        console.error("Error al crear la preferencia de pago:", pagoError);
+        setProcesandoPago(false);
+        setErrorPago(
+          pagoError.response?.data?.message ||
+          pagoError.message ||
+          "El turno fue creado, pero no pudimos iniciar el pago. Podés pagarlo más tarde desde 'Mis Turnos'."
+        );
+      }
+    } catch (err) {
+      alert(err.message || "Hubo un problema al agendar el turno.");
     }
   };
 
@@ -316,14 +421,9 @@ const AgendarTurnos = () => {
     return `${diaCompleto}, ${turnoSeleccionado.dia.num} de ${turnoSeleccionado.dia.mes} a las ${turnoSeleccionado.hora}hs`;
   };
 
-  const mascotaElegida = mascotas.find((m) => m._id === mascotaSeleccionadaId);
-
   if (loading && !veterinaria) {
     return (
-      <div
-        className={styles.layout}
-        style={{ justifyContent: "center", alignItems: "center" }}
-      >
+      <div className={styles.layout} style={{ justifyContent: "center", alignItems: "center" }}>
         <p>Cargando clínica y agenda...</p>
       </div>
     );
@@ -331,24 +431,38 @@ const AgendarTurnos = () => {
 
   if (error) {
     return (
-      <div
-        className={styles.layout}
-        style={{ justifyContent: "center", alignItems: "center" }}
-      >
+      <div className={styles.layout} style={{ justifyContent: "center", alignItems: "center" }}>
         <p>{error}</p>
+      </div>
+    );
+  }
+  if (procesandoPago) {
+    return (
+      <div className={styles.pagoLoadingOverlay}>
+        <div className={styles.pagoLoadingCard}>
+          <div className={styles.pagoSpinner}></div>
+
+          <h2>Preparando tu pago...</h2>
+
+          <p>
+            Estamos generando el checkout seguro de MercadoPago.
+          </p>
+
+          <span>Te vamos a redirigir automáticamente.</span>
+        </div>
       </div>
     );
   }
 
   return (
     <div className={styles.layout}>
-      <Sidebar role="tutor" />
+      <Sidebar role="tutor" title="Turnos" />
 
       <div className={styles.pageWrapper}>
         <TopBar title="Turnos" />
 
         <main className={styles.content}>
-          {/* ------ INICIO: CABECERA CON NOMBRE Y DATOS DE LA VETERINARIA ------ */}
+          {/* HEADER DE LA VETERINARIA */}
           <section className={styles.headerVeterinaria}>
             <button
               type="button"
@@ -369,99 +483,192 @@ const AgendarTurnos = () => {
             </div>
           </section>
 
-          {/* ------ INICIO: ÁREA DEL CALENDARIO / GRILLA DE TURNOS ------ */}
+          {/* CARD PRINCIPAL DE AGENDA */}
           <section className={styles.cardCalendario}>
-            <h2 className={styles.tituloCalendario}>Turnos disponibles</h2>
+            {/* Header de la Card con posición fija */}
+            <div className={styles.cardHeader}>
+              <div className={styles.filaTituloNav}>
+                <h2 className={styles.tituloCalendario}>¿Qué necesitás?</h2>
 
-            <div className={styles.navControles}>
-              <button
-                type="button"
-                className={styles.btnNav}
-                onClick={handleSemanaAnterior}
-                aria-label="Semana anterior"
-              >
-                ‹
-              </button>
-              <button
-                type="button"
-                className={styles.btnNav}
-                onClick={handleSemanaSiguiente}
-                aria-label="Semana siguiente"
-              >
-                ›
-              </button>
-            </div>
-
-            <div className={styles.calendarioContainer}>
-              {/* ------ INICIO: CABECERA DE LOS DÍAS DE LA SEMANA (DOM a SAB) ------ */}
-              <div className={styles.diasHeader}>
-                <div className={styles.espacioHora}></div>
-                {diasSemana.map((dia) => (
-                  <div
-                    key={dia.fechaStr}
-                    className={`${styles.diaColumna} ${dia.activo ? styles.diaColumnaActivo : ""}`}
-                  >
-                    <span className={styles.diaNombre}>{dia.nom}</span>
-                    <span className={styles.diaNumero}>{dia.num}</span>
-                    <span className={styles.diaMes}>{dia.mes}</span>
-                  </div>
-                ))}
+                {/* Las flechas siempre están reservadas en la esquina derecha si hay servicio activo */}
+                <div className={styles.navControlesPlaceholder}>
+                  {servicioSeleccionadoId && (
+                    <div className={styles.navControles}>
+                      <button
+                        type="button"
+                        className={styles.btnNav}
+                        onClick={handleSemanaAnterior}
+                        aria-label="Semana anterior"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.btnNav}
+                        onClick={handleSemanaSiguiente}
+                        aria-label="Semana siguiente"
+                      >
+                        ›
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* ------ INICIO: FILAS DE HORARIOS (SLOTS) ------ */}
-              <div className={styles.gridHorariosScroll}>
-                {horasVisibles.map((hora) => (
-                  <div key={hora} className={styles.filaHorario}>
-                    <span className={styles.horaLabel}>{hora}</span>
-                    {diasSemana.map((dia) => {
-                      const horasDisponiblesDelDia =
-                        disponibilidadSemanal[dia.fechaStr] || [];
-                      // Verificamos si la hora de la fila actual está en los disponibles devueltos por el backend
-                      const disponible = horasDisponiblesDelDia.includes(hora);
+              {/* Fila separada fija para la Búsqueda */}
+              <div className={styles.filaBuscador}>
+                <div className={styles.searchBox}>
+                  <Search size={16} className={styles.searchIcon} />
+                  <input
+                    type="text"
+                    placeholder="Buscar servicio..."
+                    value={busquedaServicio}
+                    onChange={(e) => setBusquedaServicio(e.target.value)}
+                    className={styles.searchInput}
+                  />
+                </div>
+              </div>
+            </div>
 
-                      return (
-                        <button
-                          key={`${dia.fechaStr}-${hora}`}
-                          type="button"
-                          className={`${styles.slotTurno} ${disponible ? styles.slotDisponible : styles.slotNoDisponible}`}
-                          disabled={!disponible}
-                          onClick={() => handleSlotClick(dia, hora)}
+            {/* BARRA DE CATEGORÍAS */}
+            {categoriasUnicas.length > 2 && (
+              <div className={styles.categoriasScroll}>
+                {categoriasUnicas.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={`${styles.tabCategoria} ${categoriaSeleccionada === cat ? styles.tabCategoriaActiva : ""
+                      }`}
+                    onClick={() => setCategoriaSeleccionada(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* CHIPS DE SERVICIOS */}
+            <div className={styles.chipsScrollContainer}>
+              {serviciosFiltrados.length === 0 ? (
+                <p className={styles.sinServiciosText}>
+                  No encontramos servicios que coincidan con la búsqueda.
+                </p>
+              ) : (
+                serviciosFiltrados.map((s) => {
+                  const seleccionado = s._id === servicioSeleccionadoId;
+                  return (
+                    <button
+                      key={s._id}
+                      type="button"
+                      className={`${styles.chipServicio} ${seleccionado ? styles.chipActivo : ""
+                        }`}
+                      onClick={() => setServicioSeleccionadoId(s._id)}
+                    >
+                      <span className={styles.chipNombre}>{s.nombre}</span>
+                      <span className={styles.chipPrecio}>${s.precio}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* GRILLA DE HORARIOS */}
+            {!servicioSeleccionadoId ? (
+              <div className={styles.estadoVacio}>
+                <p>Seleccioná un servicio arriba para ver los horarios disponibles esta semana.</p>
+              </div>
+            ) : (
+              <>
+                {loadingTurnos ? (
+                  <div className={styles.estadoCargando}>
+                    <p>Cargando turnos disponibles...</p>
+                  </div>
+                ) : (
+                  <div className={styles.calendarioContainer}>
+                    <div className={styles.diasHeader}>
+                      <div className={styles.espacioHora}></div>
+                      {diasSemana.map((dia) => (
+                        <div
+                          key={dia.fechaStr}
+                          className={`${styles.diaColumna} ${dia.activo ? styles.diaColumnaActivo : ""
+                            }`}
                         >
-                          {disponible ? (
-                            <span style={{ fontWeight: "bold" }}>✓</span>
-                          ) : (
-                            <span>-</span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
+                          <span className={styles.diaNombre}>{dia.nom}</span>
+                          <span className={styles.diaNumero}>{dia.num}</span>
+                          <span className={styles.diaMes}>{dia.mes}</span>
+                        </div>
+                      ))}
+                    </div>
 
-              <div className={styles.leyendaCalendario}>
-                <div className={styles.leyendaItem}>
-                  <div
-                    className={`${styles.leyendaCuadro} ${styles.slotDisponible}`}
-                  >
-                    <span style={{ fontWeight: "bold", fontSize: "0.8rem" }}>
-                      ✓
-                    </span>
-                  </div>
-                  <span>Disponible</span>
-                </div>
-                <div className={styles.leyendaItem}>
-                  <div
-                    className={`${styles.leyendaCuadro} ${styles.slotNoDisponible}`}
-                  >
-                    -
-                  </div>
-                  <span>No disponible</span>
-                </div>
-              </div>
-            </div>
+                    <div className={styles.gridHorariosScroll}>
+                      {horasVisibles.length === 0 ? (
+                        <p className={styles.sinTurnosText}>
+                          No hay turnos disponibles para este servicio en esta semana.
+                        </p>
+                      ) : (
+                        horasVisibles.map((hora) => (
+                          <div key={hora} className={styles.filaHorario}>
+                            <span className={styles.horaLabel}>{hora}</span>
+                            {diasSemana.map((dia) => {
+                              const opciones =
+                                turnosPorDiaYHora[dia.fechaStr]?.[hora] || [];
+                              const disponible = opciones.length > 0;
 
-            {/* ------ INICIO: MODAL DE CONFIRMACIÓN DEL FORMULARIO ------ */}
+                              return (
+                                <button
+                                  key={`${dia.fechaStr}-${hora}`}
+                                  type="button"
+                                  className={`${styles.slotTurno} ${disponible
+                                    ? styles.slotDisponible
+                                    : styles.slotNoDisponible
+                                    }`}
+                                  disabled={!disponible}
+                                  onClick={() => handleSlotClick(dia, hora)}
+                                  title={
+                                    disponible
+                                      ? `${opciones.length} profesional(es) disponible(s)`
+                                      : undefined
+                                  }
+                                >
+                                  {disponible ? (
+                                    <span style={{ fontWeight: "bold" }}>✓</span>
+                                  ) : (
+                                    <span>-</span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className={styles.leyendaCalendario}>
+                      <div className={styles.leyendaItem}>
+                        <div
+                          className={`${styles.leyendaCuadro} ${styles.slotDisponible}`}
+                        >
+                          <span style={{ fontWeight: "bold", fontSize: "0.8rem" }}>
+                            ✓
+                          </span>
+                        </div>
+                        <span>Disponible</span>
+                      </div>
+                      <div className={styles.leyendaItem}>
+                        <div
+                          className={`${styles.leyendaCuadro} ${styles.slotNoDisponible}`}
+                        >
+                          -
+                        </div>
+                        <span>No disponible</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* MODAL CONFIRMACIÓN */}
             {isConfirmOpen && (
               <div className={styles.modalOverlay}>
                 <div className={styles.modalContainer}>
@@ -476,8 +683,7 @@ const AgendarTurnos = () => {
 
                   <h3 className={styles.modalTitulo}>Confirmar turno</h3>
                   <p className={styles.modalDescripcion}>
-                    Completá los datos para confirmar tu turno en{" "}
-                    {veterinaria?.nombre}
+                    {servicioElegido?.nombre} en {veterinaria?.nombre}
                   </p>
 
                   <div className={styles.modalBadgeFecha}>
@@ -489,58 +695,69 @@ const AgendarTurnos = () => {
                     onSubmit={handleConfirmarTurnoFinal}
                   >
                     <div className={styles.formGroup}>
-                      <label className={styles.formLabel}>
-                        Servicio / Motivo
-                      </label>
-                      <div className={styles.selectWrapper}>
-                        <select
-                          className={styles.modalSelect}
-                          value={servicio}
-                          onChange={(e) => setServicio(e.target.value)}
-                          required
-                        >
-                          <option value="" disabled hidden>
-                            Seleccionar servicio
-                          </option>
-                          <option value="Control">Control General</option>
-                          <option value="Vacunación">Vacunación</option>
-                          <option value="Consulta Médica">
-                            Consulta Médica
-                          </option>
-                        </select>
-                      </div>
+                      <Select
+                        label="Profesional"
+                        placeholder="Seleccioná un profesional"
+                        value={profesionalSeleccionadoId}
+                        onChange={(e) => setProfesionalSeleccionadoId(e.target.value)}
+                        opciones={(turnoSeleccionado?.opciones || []).map((turno) => {
+                          const prof = mapaProfesionales[turno.profesionalId];
+                          return {
+                            value: turno.profesionalId,
+                            label: prof?.especialidad
+                              ? `${prof?.nombre || "Profesional"} · ${prof.especialidad}`
+                              : prof?.nombre || "Profesional",
+                          };
+                        })}
+                      />
                     </div>
 
                     <div className={styles.formGroup}>
-                      <label className={styles.formLabel}>Mascota</label>
-                      <div className={styles.selectWrapper}>
-                        <select
-                          className={styles.modalSelect}
-                          value={mascotaSeleccionadaId}
-                          onChange={(e) =>
-                            setMascotaSeleccionadaId(e.target.value)
-                          }
-                          required
-                        >
-                          <option value="" disabled hidden>
-                            Seleccionar mascota
-                          </option>
-                          {mascotas.map((m) => (
-                            <option key={m._id} value={m._id}>
-                              {m.nombre} ({m.especie})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      <Select
+                        label="Mascota"
+                        placeholder="Seleccioná una mascota"
+                        value={mascotaSeleccionadaId}
+                        onChange={(e) => setMascotaSeleccionadaId(e.target.value)}
+                        opciones={mascotas.map((m) => ({
+                          value: m._id,
+                          label: `${m.nombre} · ${m.especie}`,
+                        }))}
+                      />
                     </div>
 
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Notas (opcional)</label>
+                      <textarea
+                        className={styles.modalSelect}
+                        rows={2}
+                        value={notas}
+                        onChange={(e) => setNotas(e.target.value)}
+                        placeholder="Algo que quieras contarle a la veterinaria..."
+                      />
+                    </div>
+
+                    {turnoConcretoElegido && (
+                      <p className={styles.modalDescripcion}>
+                        Precio del servicio: ${turnoConcretoElegido.montoServicio}
+                      </p>
+                    )}
+
+                    <p className={styles.modalDescripcion}>
+                      Vas a tener {PLAZO_PAGO_HORAS}hs para pagar este turno antes de
+                      que se libere automáticamente.
+                    </p>
+
                     <div className={styles.modalAcciones}>
+                      <button type="button" className={styles.btnCancelar} onClick={handleCloseConfirm}>
+                        Cancelar
+                      </button>
                       <button
                         type="button"
                         className={styles.btnCancelar}
-                        onClick={handleCloseConfirm}
+                        onClick={handlePagarAhora}
+                        disabled={procesandoPago}
                       >
-                        Cancelar
+                        {procesandoPago ? "Procesando..." : "Pagar ahora"}
                       </button>
                       <button type="submit" className={styles.btnConfirmar}>
                         Confirmar turno
@@ -550,12 +767,22 @@ const AgendarTurnos = () => {
                 </div>
               </div>
             )}
+            {errorPago && (
+              <div className={styles.modalOverlay}>
+                <div className={styles.modalContainer}>
+                  <p style={{ color: "#ef4444", fontWeight: 600 }}>{errorPago}</p>
+                  <button className={styles.btnConfirmar} onClick={() => setErrorPago("")}>
+                    Entendido
+                  </button>
+                </div>
+              </div>
+            )}
 
-            {/* MODAL DE ÉXITO (usa el nombre guardado aparte, ver mascotaConfirmadaNombre) */}
+            {/* MODAL ÉXITO */}
             <SuccessModal
               abierto={isSuccessOpen}
-              titulo="¡Turno Agendado!"
-              mensaje={`Tu turno para ${mascotaConfirmadaNombre || "tu mascota"} ha sido registrado con éxito.`}
+              titulo="¡Turno reservado!"
+              mensaje={`Tu turno para ${mascotaConfirmadaNombre || "tu mascota"} quedó reservado. Tenés ${PLAZO_PAGO_HORAS}hs para pagarlo desde "Mis Turnos" o se libera automáticamente.`}
               textoBoton="Entendido"
               onClose={() => setIsSuccessOpen(false)}
             />

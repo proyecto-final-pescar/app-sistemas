@@ -61,7 +61,8 @@ export default function ModeracionForo() {
 
     return (
         <div className={styles.shell}>
-            <Sidebar />
+            <Sidebar title="Moderación de Foro" />
+            
             <div className={styles.main}>
                 <TopBar title="Moderación de Foro" />
 

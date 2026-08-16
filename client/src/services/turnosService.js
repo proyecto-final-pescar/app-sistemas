@@ -1,9 +1,9 @@
-// client/src/services/turnosService.js
 import api from "./api";
 
-export const obtenerTurnosPorVeterinaria = async (veterinariaId, estado) => {
+export const obtenerTurnosPorVeterinaria = async (veterinariaId, { estado, estadoDistinto } = {}) => {
   const params = { veterinariaId };
   if (estado) params.estado = estado;
+  if (estadoDistinto) params.estadoDistinto = estadoDistinto;
 
   const { data } = await api.get("/turnos", { params });
   return data.data.turnos;
@@ -20,4 +20,9 @@ export const obtenerTurnosPorUsuario = async () => {
 export const cancelarTurno = async (turnoId) => {
   const { data } = await api.patch(`/turnos/${turnoId}/cancelar`);
   return data.data.turno;
+};
+
+export const crearOfertaHoraria = async (oferta) => {
+  const { data } = await api.post("/turnos/oferta", oferta);
+  return data;
 };

@@ -14,19 +14,23 @@ const vacunaSchema = new mongoose.Schema(
     },
     profesionalId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
       required: [true, 'El profesional es requerido']
+      //es el _id del subdocumento dentro de Veterinaria.profesionales.
+    },
+    veterinariaId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Veterinaria',
+      required: [true, 'La veterinaria es requerida']
     },
     historialClinicoId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'HistorialClinico',
-      default: null // Opcional, por si se vincula a una consulta puntual
+      default: null
     },
     nombre: {
       type: String,
       required: [true, 'El nombre de la vacuna es requerido'],
       trim: true
-      // Ej: "Séxtuple", "Antirrábica", "Bordetella"
     },
     fechaAplicada: {
       type: Date,
