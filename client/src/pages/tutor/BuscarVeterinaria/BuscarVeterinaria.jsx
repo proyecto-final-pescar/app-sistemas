@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
-import PanelDestacado from "../../../components/ui/panel-destacado/PanelDestacado";
 import VetCard from "../../../components/veterinarias/VetCard";
 import {
   getAllVeterinarias,
@@ -39,12 +38,13 @@ const BuscarVeterinaria = () => {
   const filtro = searchParams.get("filtro") || "";
 
   const [inputValue, setInputValue] = useState(query);
-
   const [veterinarias, setVeterinarias] = useState([]);
   const [cercanas, setCercanas] = useState(null);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // NUEVO ESTADO: Controla si el panel inferior está "peek" (1.5 cards), "expanded" (todo) o "minimized" (solo buscador)
+  const [sheetState, setSheetState] = useState("peek");
 
   useEffect(() => {
     setInputValue(query);
@@ -55,7 +55,6 @@ const BuscarVeterinaria = () => {
       setLoading(true);
       setError(null);
       const res = await getAllVeterinarias();
-      // getAllVeterinarias devuelve el body completo ({success, data}),
       const lista = Array.isArray(res) ? res : res?.data ?? [];
       setVeterinarias(lista);
     } catch (err) {
@@ -150,81 +149,146 @@ const BuscarVeterinaria = () => {
 
   const handleVerClinica = (id) => navigate(`/tutor/veterinarias/${id}`);
 
+  // Manejador del input de búsqueda (expande el panel al teclear)
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value);
+    if (e.target.value.length > 0) {
+      setSheetState("expanded");
+    } else {
+      setSheetState("peek");
+    }
+  };
+
+  // Manejador para cuando el usuario interactúa con el mapa (minimiza el panel)
+  const handleMapInteraction = () => {
+    if (sheetState !== "minimized") {
+      setSheetState("minimized");
+    }
+  };
+
+  // Restaura el panel si estaba minimizado y el usuario toca el panel
+  const handleSheetInteraction = () => {
+    if (sheetState === "minimized") {
+      setSheetState("peek");
+    }
+  };
+
   return (
     <div className={styles.layout}>
-      <Sidebar title="Buscar Veterinaria" />
+      {/* Sidebar envuelto en la clase que lo oculta globalmente como pediste */}
+      <div className={styles.sidebarContainer}>
+        <Sidebar title="Buscar Veterinaria" />
+      </div>
 
       <div className={styles.pageWrapper}>
-        <TopBar title="Buscar Veterinaria" />
+        <TopBar title="Urgencias 24h y Veterinarias Cercanas" />
 
         <main className={styles.content}>
-          <button type="button" className={styles.volverInicio} onClick={() => navigate("/home")}>
-            ← Volver al inicio
-          </button>
-          <PanelDestacado
-            titulo="Encontrá la veterinaria ideal"
-            subtitulo="Encontrá la mejor atención para tu mejor amigo."
+          
+          {/* ========================================== */}
+          {/* CONTENEDOR DEL MAPA (Ocupa el fondo de la pantalla) */}
+          {/* ========================================== */}
+          <div 
+            onClick={handleMapInteraction}
+            onTouchStart={handleMapInteraction}
+            style={{ 
+              position: 'absolute', 
+              top: 0, left: 0, width: '100%', height: '100%', 
+              backgroundColor: '#e5e3df', zIndex: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}
           >
-            <form className={styles.buscador} onSubmit={handleSubmit}>
-              <input
-                type="text"
-                className={styles.inputBuscar}
-                placeholder="Buscar clínica veterinaria ..."
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-              />
-              <button type="submit" className={styles.btnBuscar}>
-                Buscar
-              </button>
-            </form>
+            {/* AQUÍ VA EL COMPONENTE DEL MAPA */}
+            <p style={{ color: '#666', fontWeight: 'bold' }}>[ El Mapa va a cargar aquí ]</p>
+          </div>
 
-            <div className={styles.chips}>
-              {FILTROS.map((f) => (
-                <button
-                  key={f}
-                  type="button"
-                  className={`${styles.chip} ${filtro === f ? styles.chipActivo : ""}`}
-                  onClick={() => handleFiltro(f)}
-                >
-                  {f}
+          {/* ========================================== */}
+          {/* BOTTOM SHEET (Panel deslizable de resultados) */}
+          {/* ========================================== */}
+          <div 
+            className={`${styles.bottomSheet} ${
+              sheetState === "expanded" ? styles.sheetExpanded : 
+              sheetState === "minimized" ? styles.sheetMinimized : 
+              styles.sheetPeek
+            }`}
+            onClick={handleSheetInteraction}
+          >
+            {/* Manija de arrastre visual para que el usuario sepa que puede deslizar */}
+            <div 
+              className={styles.dragHandle} 
+              onClick={(e) => {
+                e.stopPropagation();
+                setSheetState(sheetState === "expanded" ? "peek" : "expanded");
+              }}
+            />
+
+            <div style={{ padding: "0 16px" }}>
+              <form className={styles.buscador} onSubmit={handleSubmit}>
+                <input
+                  type="text"
+                  className={styles.inputBuscar}
+                  placeholder="Buscar clínica o barrio..."
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onFocus={() => setSheetState("expanded")}
+                />
+                <button type="submit" className={styles.btnBuscar}>
+                  Buscar
                 </button>
-              ))}
-            </div>
-          </PanelDestacado>
+              </form>
 
-          <section className={styles.resultados}>
-            {error && <div className={styles.errorBanner}>{error}</div>}
-
-            {loading ? (
-              <div className={styles.listaResultados}>
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className={styles.skeletonCard} />
+              <div className={styles.chips}>
+                {FILTROS.map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    className={`${styles.chip} ${filtro === f ? styles.chipActivo : ""}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFiltro(f);
+                    }}
+                  >
+                    {f}
+                  </button>
                 ))}
               </div>
-            ) : resultados.length === 0 ? (
-              <p className={styles.emptyHint}>
-                {query || filtro
-                  ? "No encontramos veterinarias para esa búsqueda."
-                  : "No hay veterinarias para mostrar."}
-              </p>
-            ) : (
-              <div className={styles.listaResultados}>
-                {resultados.map((vet) => {
-                
-                  const { abierta, horaCierre } = calcularEstadoApertura(vet);
-                  return (
-                    <VetCard
-                      key={vet._id}
-                      vet={{ ...vet, horaCierre }}
-                      variante="fila"
-                      abierta={abierta}
-                      onVerDetalle={() => handleVerClinica(vet._id)}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </section>
+            </div>
+
+            {/* Área que permite hacer scroll dentro del panel inferior */}
+            <section className={styles.sheetContent}>
+              {error && <div className={styles.errorBanner}>{error}</div>}
+
+              {loading ? (
+                <div className={styles.listaResultados} style={{ marginTop: '16px' }}>
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className={styles.skeletonCard} />
+                  ))}
+                </div>
+              ) : resultados.length === 0 ? (
+                <p className={styles.emptyHint}>
+                  {query || filtro
+                    ? "No encontramos veterinarias para esa búsqueda."
+                    : "No hay veterinarias para mostrar."}
+                </p>
+              ) : (
+                <div className={styles.listaResultados} style={{ marginTop: '16px' }}>
+                  {resultados.map((vet) => {
+                    const { abierta, horaCierre } = calcularEstadoApertura(vet);
+                    return (
+                      <VetCard
+                        key={vet._id}
+                        vet={{ ...vet, horaCierre }}
+                        variante="fila"
+                        abierta={abierta}
+                        onVerDetalle={() => handleVerClinica(vet._id)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </div>
+
         </main>
       </div>
     </div>
