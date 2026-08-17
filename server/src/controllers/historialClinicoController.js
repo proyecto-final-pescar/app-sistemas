@@ -15,16 +15,28 @@ export const obtenerHistorialClinico = async (req, res) => {
 
     const historial = await HistorialClinico.find(filtro)
       .populate('veterinariaId', 'nombre')
-      .populate('profesionalId', 'name')
       .sort({ fecha: -1, hora: -1 });
 
-    return res.status(200).json({ success: true, data: historial })
+    const veterinariaIds = [...new Set(historial.map((h) => h.veterinariaId?._id?.toString() || h.veterinariaId?.toString()))];
+    const veterinarias = await Veterinaria.find({ _id: { $in: veterinariaIds } }).select('profesionales');
+    const mapaVeterinarias = new Map(veterinarias.map((v) => [v._id.toString(), v]));
+
+    const data = historial.map((entrada) => {
+      const idVet = entrada.veterinariaId?._id?.toString() || entrada.veterinariaId?.toString();
+      const vet = mapaVeterinarias.get(idVet);
+      const profesional = vet?.profesionales.id(entrada.profesionalId);
+      return {
+        ...entrada.toObject(),
+        profesionalNombre: profesional?.nombre || null
+      };
+    });
+
+    return res.status(200).json({ success: true, data })
   } catch (error) {
     console.error('Error en GET /historial/:mascotaId:', error);
     return res.status(500).json({ message: 'Error al obtener el historial clínico' });
   }
 };
-
 export const obtenerEntradaHistorialClinico = async (req, res) => {
   try {
     return res.status(200).json({ success: true, data: req.entradaHistorial })
@@ -218,7 +230,8 @@ export const actualizarHistorialClinico = async (req, res) => {
     }
 
     const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id })
-    if (!veterinaria || consulta.veterinariaId.toString() !== veterinaria._id.toString()) {
+    
+    if (!veterinaria || historialClinico.veterinariaId.toString() !== veterinaria._id.toString()) {
       return res.status(403).json({
         success: false,
         message: 'Solo podés editar consultas de tu veterinaria'

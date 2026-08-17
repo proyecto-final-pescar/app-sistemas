@@ -66,7 +66,7 @@ const mostrarExito = (mensaje) => {
 };
 
 
-  const handleViewPet = (id) => navigate(`/mascotas/${id}`);
+  const handleViewPet = (id) => navigate(`/tutor/historial-medico/${id}`);
  const handleEdit = (id) => {
   const mascota = mascotas.find((m) => m._id === id);
 
@@ -103,7 +103,7 @@ const mostrarExito = (mensaje) => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar role="tutor" />
+      <Sidebar role="tutor" activeItem="Mis Mascotas" title="Mis Mascotas" />
 
       <div className={styles.pageWrapper}>
         <TopBar title="Mis Mascotas" />

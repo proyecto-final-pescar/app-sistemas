@@ -7,6 +7,7 @@ import {
   obtenerReportePorId,
   crearReporte,
   cambiarEstadoReporte,
+  descartarReportesDePublicacion,
   eliminarReporte
 } from '../controllers/ReporteController.js';
 
@@ -14,6 +15,9 @@ const router = Router();
 
 // GET /reportes/resumen 
 router.get('/resumen', verifyToken, esAdmin, obtenerResumenReportes);
+
+// PATCH /reportes/publicacion/:publicacionId/descartar — descarta reportes pendientes sin tocar la publicación — solo admin
+router.patch('/publicacion/:publicacionId/descartar', verifyToken, esAdmin, descartarReportesDePublicacion);
 
 // GET /reportes — lista de reportes. — solo admin
 router.get('/', verifyToken, esAdmin, obtenerReportes);

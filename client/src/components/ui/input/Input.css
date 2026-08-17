@@ -2,7 +2,6 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
- 
 }
 
 .input-label {
@@ -18,7 +17,7 @@
   border: 1px solid #e5ddf8;
   border-radius: 14px;
   background-color: #ffffff;
-  font-size: 14px;
+  font-size: 16px;
   font-family: "Inter", sans-serif;
   outline: none;
   min-height: 56px;

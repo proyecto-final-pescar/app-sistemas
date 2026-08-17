@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
+import ModeracionDeForoModal from "../../../components/administrador/moderacionDeForoModal/moderacionDeForoModal";
 import {
     obtenerPublicacionesConReportes
 } from "../../../services/publicacionesService";
@@ -13,21 +14,23 @@ export default function ModeracionForo() {
     const [filtroZona, setFiltroZona] = useState("");
     const [filtroReportes, setFiltroReportes] = useState("");
     const [paginaActual, setPaginaActual] = useState(1);
+    const [publicacionSeleccionada, setPublicacionSeleccionada] = useState(null);
     const ITEMS_POR_PAGINA = 10;
 
+    const cargar = async () => {
+        setLoading(true);
+        setError("");
+        try {
+            const data = await obtenerPublicacionesConReportes();
+            setPublicaciones(data);
+        } catch (err) {
+            setError("No se pudieron cargar las publicaciones. Intentá de nuevo.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const cargar = async () => {
-            setLoading(true);
-            setError("");
-            try {
-                const data = await obtenerPublicacionesConReportes();
-                setPublicaciones(data);
-            } catch (err) {
-                setError("No se pudieron cargar las publicaciones. Intentá de nuevo.");
-            } finally {
-                setLoading(false);
-            }
-        };
         cargar();
     }, []);
 
@@ -59,9 +62,25 @@ export default function ModeracionForo() {
         paginaActual * ITEMS_POR_PAGINA
     );
 
+    const handleVerDetalle = (item) => {
+        setPublicacionSeleccionada({
+            ...item.publicacion,
+            cantidadReportes: item.cantidadReportes,
+        });
+    };
+
+    const handleCerrarModal = () => {
+        setPublicacionSeleccionada(null);
+    };
+
+    const handleSuccessModeracion = () => {
+        cargar();
+    };
+
     return (
         <div className={styles.shell}>
-            <Sidebar />
+            <Sidebar title="Moderación de Foro" />
+            
             <div className={styles.main}>
                 <TopBar title="Moderación de Foro" />
 
@@ -164,8 +183,11 @@ export default function ModeracionForo() {
                                             <td>{fecha}</td>
                                             <td>
                                                 <div className={styles.acciones}>
-                                                    {/* Placeholder — lo implementa el otro integrante */}
-                                                    <button className={styles.btnIcono} title="Ver detalle">
+                                                    <button
+                                                        className={styles.btnIcono}
+                                                        title="Ver detalle"
+                                                        onClick={() => handleVerDetalle(item)}
+                                                    >
                                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                                                     </button>
                                                 </div>
@@ -208,6 +230,14 @@ export default function ModeracionForo() {
 
                 </div>
             </div>
+
+            {publicacionSeleccionada && (
+                <ModeracionDeForoModal
+                    publicacion={publicacionSeleccionada}
+                    onClose={handleCerrarModal}
+                    onSuccess={handleSuccessModeracion}
+                />
+            )}
         </div>
     );
 }

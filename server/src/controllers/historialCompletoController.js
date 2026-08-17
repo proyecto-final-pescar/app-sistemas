@@ -3,30 +3,49 @@ import FichaMedica from '../models/FichaMedica.js'
 import HistorialClinico from '../models/HistorialClinico.js'
 import Vacuna from '../models/Vacuna.js'
 import Estudio from '../models/Estudio.js'
+import Veterinaria from '../models/Veterinaria.js'
+
+// Reemplaza cada profesionalId (ObjectId de un subdocumento embebido en
+// Veterinaria.profesionales) por un objeto con el nombre real, ya que
+// .populate() no puede resolver subdocumentos embebidos automáticamente.
+// Recibe un Map<veterinariaId, veterinaria> para resolver cada item contra
+// SU PROPIA veterinaria, sin asumir que todos vienen de la misma.
+const resolverNombresProfesionales = (items, veterinariasPorId) => {
+  return items.map((item) => {
+    const obj = item.toObject ? item.toObject() : item
+    const veterinaria = veterinariasPorId.get(obj.veterinariaId?.toString())
+    const profesional = veterinaria && obj.profesionalId
+      ? veterinaria.profesionales.id(obj.profesionalId)
+      : null
+
+    return {
+      ...obj,
+      profesionalId: profesional
+        ? { _id: profesional._id, nombre: profesional.nombre }
+        : null
+    }
+  })
+}
 
 export const obtenerHistorialCompleto = async (req, res) => {
   try {
     const { mascotaId } = req.params
 
-    // Todas las consultas en paralelo para mayor velocidad
-    const [mascota, fichaMedica, historialClinico, vacunas, estudios] = await Promise.all([
-      
+    const [mascota, fichaMedica, historialClinico, vacunasRaw, estudiosRaw] = await Promise.all([
+
       Mascota.findById(mascotaId)
-        .populate('dueñoId', 'nombre email'),
+        .populate('dueñoId', 'name email telefono'),
 
       FichaMedica.findOne({ mascotaId }),
 
       HistorialClinico.find({ mascotaId })
-        .populate('profesionalId', 'nombre')
         .populate('veterinariaId', 'nombre direccion')
         .sort({ fecha: -1 }),
 
       Vacuna.find({ mascotaId })
-        .populate('profesionalId', 'nombre')
         .sort({ fechaAplicada: -1 }),
 
       Estudio.find({ mascotaId })
-        .populate('profesionalId', 'nombre')
         .sort({ fecha: -1 })
     ])
 
@@ -36,6 +55,26 @@ export const obtenerHistorialCompleto = async (req, res) => {
         message: 'Mascota no encontrada'
       })
     }
+
+    // Juntamos todos los veterinariaId distintos que aparecen en vacunas y
+    // estudios (pueden ser de más de una veterinaria), y las traemos todas
+    // en una sola consulta, no una por cada vacuna/estudio.
+    const idsVeterinarias = [
+      ...new Set([
+        ...vacunasRaw.map(v => v.veterinariaId?.toString()).filter(Boolean),
+        ...estudiosRaw.map(e => e.veterinariaId?.toString()).filter(Boolean)
+      ])
+    ]
+
+    const veterinarias = await Veterinaria.find({ _id: { $in: idsVeterinarias } })
+      .select('profesionales')
+
+    const veterinariasPorId = new Map(
+      veterinarias.map(v => [v._id.toString(), v])
+    )
+
+    const vacunas = resolverNombresProfesionales(vacunasRaw, veterinariasPorId)
+    const estudios = resolverNombresProfesionales(estudiosRaw, veterinariasPorId)
 
     return res.status(200).json({
       success: true,

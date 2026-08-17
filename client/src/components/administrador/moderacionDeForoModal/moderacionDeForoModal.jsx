@@ -5,6 +5,8 @@ import {
   eliminarPublicacion,
   banearUsuario,
   obtenerUsuarioPorId,
+  obtenerReportesPorPublicacion,
+  descartarReportesPublicacion,
 } from "../../../services/adminService";
 import styles from "./moderacionDeForoModal.module.css";
 
@@ -12,10 +14,14 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
   const [banearDueno, setBanearDueno] = useState(false);
   const [loading, setLoading] = useState(false);
   const [datosUsuario, setDatosUsuario] = useState(null);
+  const [reportes, setReportes] = useState([]);
+  const [loadingReportes, setLoadingReportes] = useState(true);
+  const [imagenAmpliada, setImagenAmpliada] = useState(false);
 
   const id = publicacion?._id || publicacion?.id;
-  const titulo = publicacion?.nombreMascota
-    ? `Buscando a ${publicacion.nombreMascota} (${publicacion.especie || "Mascota"})`
+  const nombreMascota = publicacion?.nombre || publicacion?.nombreMascota;
+  const titulo = nombreMascota
+    ? `Buscando a ${nombreMascota}${publicacion?.especie ? ` (${publicacion.especie})` : ""}`
     : publicacion?.titulo || "Publicación de mascota";
 
   const fechaPublicacion = publicacion?.createdAt
@@ -71,15 +77,41 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
     cargarDatosUsuario();
   }, [usuarioIdRaw, publicacion]);
 
+
+  useEffect(() => {
+    const cargarReportes = async () => {
+      if (!id) {
+        setLoadingReportes(false);
+        return;
+      }
+      setLoadingReportes(true);
+      try {
+        const data = await obtenerReportesPorPublicacion(id);
+        setReportes(data);
+      } catch (error) {
+        console.error("Error al cargar los reportes de la publicación:", error);
+        setReportes([]);
+      } finally {
+        setLoadingReportes(false);
+      }
+    };
+
+    cargarReportes();
+  }, [id]);
+
   const descripcion = publicacion?.descripcion || "";
   const ubicacion =
     publicacion?.zona || publicacion?.ubicacion || "Ubicación no especificada";
-  const imagen = publicacion?.imagen || "/placeholder-pet.png";
-  const reportes = publicacion?.reportes || [];
+  const imagen = publicacion?.imagen || publicacion?.foto || "/placeholder-pet.png";
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "Escape") onClose?.();
+      if (e.key !== "Escape") return;
+      if (imagenAmpliada) {
+        setImagenAmpliada(false);
+      } else {
+        onClose?.();
+      }
     };
 
     document.addEventListener("keydown", handleKeyDown);
@@ -89,7 +121,7 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [onClose]);
+  }, [onClose, imagenAmpliada]);
 
   if (!publicacion) return null;
 
@@ -98,6 +130,7 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
       setLoading(true);
 
       // Dar de baja (eliminar) la publicación
+      // El backend marca los reportes pendientes como "revisado"
       await eliminarPublicacion(id);
 
       // Si se marcó la casilla de banear al usuario
@@ -109,6 +142,26 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
       onClose?.();
     } catch (error) {
       console.error("Error al dar de baja la publicación:", error);
+      alert(
+        error.response?.data?.mensaje ||
+          "Hubo un error al procesar la solicitud.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDescartar = async () => {
+    try {
+      setLoading(true);
+
+      // Descarta los reportes pendientes; la publicación queda intacta
+      await descartarReportesPublicacion(id);
+
+      onSuccess?.(); // Notifica al componente padre para recargar la lista
+      onClose?.();
+    } catch (error) {
+      console.error("Error al descartar los reportes:", error);
       alert(
         error.response?.data?.mensaje ||
           "Hubo un error al procesar la solicitud.",
@@ -140,7 +193,16 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
         <div className={styles.body}>
           {/* Columna Izquierda */}
           <div className={styles.columnaPrevisualizacion}>
-            <div className={styles.contenedorImagen}>
+            <div
+              className={styles.contenedorImagen}
+              onClick={() => setImagenAmpliada(true)}
+              role="button"
+              tabIndex={0}
+              aria-label="Ver imagen completa"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") setImagenAmpliada(true);
+              }}
+            >
               <img src={imagen} alt={titulo} className={styles.imagenPost} />
             </div>
 
@@ -222,7 +284,9 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
               />
             </div>
 
-            {reportes.length === 0 ? (
+            {loadingReportes ? (
+              <p className={styles.emptyState}>Cargando reportes...</p>
+            ) : reportes.length === 0 ? (
               <p className={styles.emptyState}>
                 No hay reportes activos para esta publicación.
               </p>
@@ -276,6 +340,13 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
             disabled={loading}
           />
           <Button
+            texto={loading ? "Procesando..." : "Descartar reportes"}
+            variante="secundario"
+            tamaño="mediano"
+            onClick={handleDescartar}
+            disabled={loading}
+          />
+          <Button
             texto={loading ? "Procesando..." : "Baja"}
             variante="peligro"
             tamaño="mediano"
@@ -284,6 +355,44 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
           />
         </footer>
       </div>
+
+      {imagenAmpliada && (
+        <div
+          className={styles.lightboxOverlay}
+          onClick={(e) => {
+            e.stopPropagation();
+            setImagenAmpliada(false);
+          }}
+        >
+          <button
+            type="button"
+            className={styles.lightboxCerrar}
+            onClick={(e) => {
+              e.stopPropagation();
+              setImagenAmpliada(false);
+            }}
+            aria-label="Cerrar imagen"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+          <img
+            src={imagen}
+            alt={titulo}
+            className={styles.lightboxImagen}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -21,6 +21,7 @@ import TopBar from "../../../components/layout/TopBar";
 import Modal from "../../../components/layout/modal/Modal";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
 import FormularioPublicacion from "../../../components/forms/FormularioPublicacion";
+import FormularioReporte from "../../../components/forms/FormularioReporte/FormularioReporte";
 import { useAuth } from "../../../hooks/useAuth";
 import {
   cambiarEstadoPublicacion,
@@ -58,14 +59,6 @@ const CONFIG_CONFIRMACION = {
       `¿Querés eliminar la publicación de "${p.nombre || "esta mascota"}"? Esta acción no se puede deshacer.`,
     textoConfirmar: "Eliminar",
     textoConfirmando: "Eliminando…",
-    variante: "peligro",
-  },
-  reportar: {
-    titulo: "Reportar publicación",
-    mensaje: (p) =>
-      `¿Querés reportar la publicación de "${p.nombre || "esta mascota"}"? Un administrador la va a revisar para ver si infringe las normas de la comunidad.`,
-    textoConfirmar: "Reportar",
-    textoConfirmando: "Reportando…",
     variante: "peligro",
   },
   marcarEncontrada: {
@@ -168,8 +161,10 @@ function Foro() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [accionId, setAccionId] = useState("");
   const [reportadas, setReportadas] = useState(new Set());
+  const [publicacionAReportar, setPublicacionAReportar] = useState(null);
+  const [avisoYaReportado, setAvisoYaReportado] = useState(null);
 
-  // { tipo: 'eliminar' | 'reportar' | 'marcarEncontrada', publicacion }
+  // { tipo: 'eliminar' | 'marcarEncontrada', publicacion }
   const [confirmacion, setConfirmacion] = useState(null);
   const [confirmando, setConfirmando] = useState(false);
 
@@ -247,6 +242,14 @@ function Foro() {
     setModalAbierto(false);
   };
 
+  const cerrarModalReporte = () => {
+    setPublicacionAReportar(null);
+  };
+
+  const cerrarAvisoYaReportado = () => {
+    setAvisoYaReportado(null);
+  };
+
   const handlePublicacionGuardada = async () => {
     setModalAbierto(false);
     setFiltroEstado("activa");
@@ -254,7 +257,21 @@ function Foro() {
     await cargarPublicaciones();
   };
 
-  // --- Confirmación unificada para eliminar / reportar / marcar encontrada ---
+  const handleReporteExitoso = (publicacionId) => {
+    setReportadas((current) => new Set(current).add(publicacionId));
+    setSuccess("Publicación reportada. Un administrador la va a revisar.");
+    setPublicacionAReportar(null);
+  };
+
+  // El backend rechazó el reporte porque ya existía uno de este usuario
+  
+  const handleYaReportado = (publicacion) => {
+    setReportadas((current) => new Set(current).add(publicacion._id));
+    setPublicacionAReportar(null);
+    setAvisoYaReportado(publicacion);
+  };
+
+  // --- Confirmación unificada para eliminar / marcar encontrada ---
 
   const pedirConfirmacion = (tipo, publicacion) => {
     setConfirmacion({ tipo, publicacion });
@@ -309,21 +326,14 @@ function Foro() {
     }
   };
 
-  const ejecutarReportar = (publicacion) => {
-    // TODO: conectar con el endpoint real, ej. reportarPublicacion(publicacion._id)
-    setReportadas((current) => new Set(current).add(publicacion._id));
-    setSuccess("Publicación reportada. Un administrador la va a revisar.");
-    setConfirmacion(null);
-  };
-
   const handleConfirmar = () => {
     if (!confirmacion) return;
     const { tipo, publicacion } = confirmacion;
 
     if (tipo === "eliminar") ejecutarEliminar(publicacion);
     else if (tipo === "marcarEncontrada") ejecutarMarcarEncontrada(publicacion);
-    else if (tipo === "reportar") ejecutarReportar(publicacion);
   };
+
 
   const handleContactar = async (event, contacto) => {
     if (getContactHref(contacto)) {
@@ -342,7 +352,18 @@ function Foro() {
 
   const handleReportarClick = (publicacion) => {
     if (esPropia(publicacion)) return;
-    pedirConfirmacion("reportar", publicacion);
+
+    if (!estaAutenticado) {
+      setError("Necesitás iniciar sesión para reportar una publicación.");
+      return;
+    }
+
+    if (reportadas.has(publicacion._id)) {
+      setAvisoYaReportado(publicacion);
+      return;
+    }
+
+    setPublicacionAReportar(publicacion);
   };
 
   const renderAcciones = (publicacion) => {
@@ -460,7 +481,7 @@ function Foro() {
 
   return (
     <div className={styles.layout}>
-      {estaAutenticado && <Sidebar />}
+      {estaAutenticado && <Sidebar title="Foro de Perdidos" />}
 
       <div className={`${styles.pageWrapper} ${!estaAutenticado ? styles.publicPageWrapper : ""}`}>
         {estaAutenticado ? <TopBar title="Foro de Perdidos" /> : <NavbarPublic />}
@@ -585,13 +606,13 @@ function Foro() {
 
                       {!propia && (
                         <button
-                          className={styles.reportButton}
+                          className={`${styles.reportButton} ${yaReportada ? styles.reportButtonReportado : ""}`}
                           type="button"
                           title={yaReportada ? "Ya reportaste esta publicación" : "Reportar publicación"}
+                          aria-label={yaReportada ? "Ya reportaste esta publicación" : "Reportar publicación"}
                           onClick={() => handleReportarClick(publicacion)}
-                          disabled={yaReportada}
                         >
-                          <Flag size={14} />
+                          {yaReportada ? <CheckCircle2 size={14} /> : <Flag size={14} />}
                         </button>
                       )}
                     </div>
@@ -630,6 +651,41 @@ function Foro() {
           onGuardado={handlePublicacionGuardada}
         />
       </Modal>
+
+      <Modal
+        isOpen={Boolean(publicacionAReportar)}
+        onClose={cerrarModalReporte}
+      >
+        <FormularioReporte
+          publicacion={publicacionAReportar}
+          onCancelar={cerrarModalReporte}
+          onReportado={handleReporteExitoso}
+          onYaReportado={handleYaReportado}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={Boolean(avisoYaReportado)}
+        onClose={cerrarAvisoYaReportado}
+      >
+        <div className={styles.avisoYaReportado}>
+          <CheckCircle2 size={32} className={styles.avisoYaReportadoIcono} />
+          <h2 className={styles.avisoYaReportadoTitulo}>Ya reportaste esta publicación</h2>
+          <p className={styles.avisoYaReportadoTexto}>
+            Ya enviaste un reporte sobre{" "}
+            <strong>“{avisoYaReportado?.nombre || "esta publicación"}”</strong>. Un
+            administrador la está revisando, no hace falta reportarla de nuevo.
+          </p>
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={cerrarAvisoYaReportado}
+          >
+            Entendido
+          </button>
+        </div>
+      </Modal>
+
 
       {configModal && (
         <ConfirmModal

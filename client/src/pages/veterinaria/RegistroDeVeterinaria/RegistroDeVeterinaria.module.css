@@ -378,3 +378,157 @@
   flex-direction: column;
   gap: 20px;
 }
+/* TABLET CHICA */
+@media (min-width: 481px) and (max-width: 767px) {
+  .panelWrap {
+    margin: 72px 12px 0;
+  }
+
+  .formCard {
+    margin: 12px;
+    padding: 22px 18px;
+  }
+
+  .grid2 {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .subCard {
+    padding: 18px;
+  }
+
+  .precioWrap {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .botonesRow {
+    gap: 10px;
+  }
+}
+
+/* TABLET GRANDE */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .panelWrap {
+    margin: 24px 24px 0;
+  }
+
+  .formCard {
+    margin: 16px 24px 32px;
+    padding: 24px;
+  }
+
+  .precioWrap {
+    max-width: 240px;
+  }
+}
+/* MOBILE */
+@media (max-width: 480px) {
+  .main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .panelWrap {
+    margin: 72px 12px 0;
+  }
+
+  .formCard {
+    margin: 12px;
+    padding: 20px 16px;
+    border-radius: 14px;
+  }
+
+  .cardTitle {
+    font-size: 16px;
+  }
+
+  .cardSub {
+    font-size: 12px;
+    line-height: 17px;
+    margin-bottom: 18px;
+  }
+
+  .grid2 {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .inputWrap,
+  .precioWrap {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .inputInner,
+  .precioInput {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .subCard {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .btnEliminar {
+    top: 10px;
+    right: 10px;
+  }
+
+  .botonesRow {
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 22px;
+  }
+
+  .botonesRow > button {
+    width: 100%;
+  }
+
+  .diasWrap {
+    gap: 8px;
+  }
+
+  .diaBtn {
+    flex: 1 1 calc(50% - 8px);
+    text-align: center;
+    padding: 9px 10px;
+  }
+
+  .horarioDiaRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 0;
+  }
+
+  .horarioDiaNombre {
+    min-width: 0;
+  }
+
+  .horarioGroup {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .selectHorario {
+    flex: 1;
+    max-width: 160px;
+  }
+
+  .toggleWrap {
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .continuarWrap {
+    margin-top: 18px;
+  }
+
+  .continuarWrap > button {
+    width: 100%;
+  }
+}
