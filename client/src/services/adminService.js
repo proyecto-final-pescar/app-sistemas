@@ -55,9 +55,29 @@ export const eliminarPublicacion = async (id) => {
 };
 
 /**
- * Banea un usuario (si cuentas con la ruta en el controlador de usuarios/admin)
+ * Descarta los reportes pendientes de una publicación sin eliminarla.
+ */
+export const descartarReportesPublicacion = async (publicacionId) => {
+  const { data } = await api.patch(`/reportes/publicacion/${publicacionId}/descartar`);
+  return data;
+};
+
+/**
+ * Da de baja (soft delete) a un usuario — pone active: false
  */
 export const banearUsuario = async (usuarioId) => {
-  const { data } = await api.patch(`/admin/usuarios/${usuarioId}/banear`);
+  const { data } = await api.delete(`/usuarios/${usuarioId}`);
   return data;
+};
+
+/**
+ * Obtiene los reportes individuales de una publicación (motivo, descripción, autor).
+ * Por defecto el backend filtra estado "pendiente" cuando se pasa publicacionId sin estado.
+ */
+export const obtenerReportesPorPublicacion = async (publicacionId, estado) => {
+  const params = { publicacionId };
+  if (estado) params.estado = estado;
+
+  const { data } = await api.get("/reportes", { params });
+  return data.data || [];
 };

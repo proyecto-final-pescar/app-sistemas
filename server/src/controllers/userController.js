@@ -157,8 +157,7 @@ export const obtenerPerfilUsuario = async (req, res) => {
                 zona: usuario.zona || null,
                 fotoUrl: usuario.fotoUrl || null,
                 rol: usuario.role,
-               
-                asistenteVirtual: usuario.asistenteVirtual,
+                active: usuario.active, //agregado 
                 fechaRegistro: usuario.createdAt,
                 mascotas: mascotas,
                 veterinaria: veterinaria

@@ -1,4 +1,5 @@
 import Publicacion from '../models/Publicacion.js';
+import Reporte from '../models/Reporte.js';
 
 // GET /publicaciones: devuelve todas las publicaciones (con filtros opcionales)
 export const obtenerPublicaciones = async (req, res) => {
@@ -169,6 +170,12 @@ export const eliminarPublicacion = async (req, res) => {
     if (publicacion.usuarioId.toString() !== usuarioId && !esAdmin) {
       return res.status(403).json({ message: 'No tenés permiso para eliminar esta publicación' });
     }
+
+    // Marcamos como "revisado" los reportes pendientes antes de borrar la publicación
+    await Reporte.updateMany(
+      { publicacionId: id, estado: 'pendiente' },
+      { estado: 'revisado' }
+    );
 
     await publicacion.deleteOne();
 
