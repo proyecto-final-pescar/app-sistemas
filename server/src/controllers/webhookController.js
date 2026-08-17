@@ -76,23 +76,42 @@ export const recibirWebhook = async (req, res) => {
     // 7. Creamos o actualizamos el documento en la colección Pagos
     const metodoPago = METODO_PAGO_MAP[pagoMP.payment_type_id] || null;
 
-    const pagoGuardado = await Pago.findOneAndUpdate(
-      { turnoId: turno._id, estado: { $ne: 'aprobado' } },
-      {
-        turnoId: turno._id,
-        userId: turno.usuarioId,
-        monto: pagoMP.transaction_amount,
-        moneda: pagoMP.currency_id || 'ARS',
-        idPago: String(idPago),
-        proveedor: 'mercadopago',
-        metodoPago,
-        estado: 'aprobado',
-        motivoRechazo: null,
-        fechaAprobacion: pagoMP.date_approved ? new Date(pagoMP.date_approved) : new Date(),
-        metadata: pagoMP,
-      },
-      { upsert: true, new: true }
+    // Si esta notificación ya fue procesada antes (MercadoPago puede reenviar
+    // el mismo webhook más de una vez), no hacemos nada más.
+    const pagoExistentePorIdPago = await Pago.findOne({ idPago: String(idPago) });
+    if (pagoExistentePorIdPago) {
+      return res.status(200).json({
+        message: 'Notificación ya procesada anteriormente',
+        turnoId,
+        pagoId: pagoExistentePorIdPago._id,
+      });
+    }
+
+    const datosPago = {
+      turnoId: turno._id,
+      userId: turno.usuarioId,
+      monto: pagoMP.transaction_amount,
+      moneda: pagoMP.currency_id || 'ARS',
+      idPago: String(idPago),
+      proveedor: 'mercadopago',
+      metodoPago,
+      estado: 'aprobado',
+      motivoRechazo: null,
+      fechaAprobacion: pagoMP.date_approved ? new Date(pagoMP.date_approved) : new Date(),
+      metadata: pagoMP,
+    };
+
+    // Buscamos el registro pendiente que se creó al iniciar el checkout
+    // (crearPreferenciaPago). Si no existe (caso raro), lo creamos ahora.
+    let pagoGuardado = await Pago.findOneAndUpdate(
+      { turnoId: turno._id, estado: 'pendiente' },
+      datosPago,
+      { new: true }
     );
+
+    if (!pagoGuardado) {
+      pagoGuardado = await Pago.create(datosPago);
+    }
 
     // 8. Vinculamos el pago al turno
     turno.pagoId = pagoGuardado._id;

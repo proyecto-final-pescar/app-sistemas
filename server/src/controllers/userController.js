@@ -462,7 +462,7 @@ export const actualizarUsuarioAdmin = async (req, res) => {
 export const actualizarPerfilPropio = async (req, res) => {
     try {
         const usuarioId = req.user.id;
-        const { name, email, telefono, zona,fotoUrl } = req.body;
+        const { name, email, telefono, zona, fotoUrl, asistenteVirtual } = req.body;
 
         const usuario = await User.findById(usuarioId);
         if (!usuario) {
@@ -520,6 +520,16 @@ export const actualizarPerfilPropio = async (req, res) => {
         if (fotoUrl !== undefined) {
             
             usuario.fotoUrl = (fotoUrl === null || fotoUrl === '') ? undefined : fotoUrl.trim();
+        }
+
+        if (asistenteVirtual !== undefined) {
+         
+            const tiposPermitidos = ['perro', 'gato'];
+            if (!tiposPermitidos.includes(asistenteVirtual)) {
+                validaciones.push(`El asistente debe ser uno de los siguientes: ${tiposPermitidos.join(', ')}.`);
+            } else {
+                usuario.asistenteVirtual = asistenteVirtual;
+            }
         }
 
         if (validaciones.length > 0) {

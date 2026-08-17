@@ -15,14 +15,12 @@ const turnoSchema = new mongoose.Schema(
 
     motivo: {
       type: String,
-      required: [true, 'El motivo del turno es requerido'],
       trim: true
     },
 
     mascotaId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Mascota',
-      required: [true, 'La mascota es requerida']
     },
 
     veterinariaId: {
@@ -45,13 +43,24 @@ const turnoSchema = new mongoose.Schema(
     usuarioId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'El usuario es requerido']
     },
 
     estado: {
       type: String,
-      enum: ['pendiente', 'confirmado', 'cancelado', 'atendido'],
-      default: 'pendiente'
+      enum: ['disponible', 'pendiente', 'confirmado', 'cancelado', 'atendido'],
+      default: 'disponible'
+      // El default solo aplica cuando se crea el documento,
+      // y ahí siempre arranca 'disponible'. reservarTurno mueve a 'pendiente'
+    
+    },
+
+    // Momento en el que este turno, si sigue en 'pendiente', se libera
+    // automáticamente y vuelve a 'disponible' (plazo para pagar online).
+    // Se setea en reservarTurno = ahora + PLAZO_PAGO_HORAS.
+    // Se limpia (null) cuando el turno pasa a 'confirmado' o 'cancelado'
+    venceEn: {
+      type: Date,
+      default: null
     },
 
     profesionalId: {
@@ -67,6 +76,17 @@ const turnoSchema = new mongoose.Schema(
     notas: {
       type: String,
       trim: true
+    },
+
+    especialidad: {
+      type: String,
+      trim: true
+    },
+
+    duracion: {
+      type: Number,
+      min: [15, 'La duración mínima es de 15 minutos'],
+      default: 30
     }
   },
 
@@ -75,6 +95,25 @@ const turnoSchema = new mongoose.Schema(
     collection: 'turnos'
   }
 );
+
+// Mongo rechaza a nivel de base cualquier intento de insertar dos turnos
+// para el mismo profesionalId + fecha + hora, sin importar el servicio.
+// Se excluyen los cancelados: un turno cancelado libera el slot para
+// que se pueda volver a ofrecer ese mismo horario más adelante.
+turnoSchema.index(
+  { veterinariaId: 1, profesionalId: 1, fecha: 1, hora: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      profesionalId: { $exists: true },
+      estado: { $ne: 'cancelado' }
+    }
+  }
+);
+
+// liberarTurnosVencidos busca
+// { estado: 'pendiente', venceEn: { $lte: ahora } } cada 15 minutos y libera los turnos nuevamente 
+turnoSchema.index({ estado: 1, venceEn: 1 });
 
 const Turno = mongoose.model('Turno', turnoSchema);
 
