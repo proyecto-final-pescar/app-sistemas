@@ -23,12 +23,11 @@ const notificacionSchema = new mongoose.Schema(
     link: {
       type: String,
     },
-    fechaCreacion: {
-      type: Date,
-      default: Date.now,
-    },
   },
   { timestamps: true }
 );
+
+notificacionSchema.index({ usuarioId: 1, leida: 1 });
+notificacionSchema.index({ usuarioId: 1, createdAt: -1 });
 
 export default mongoose.model('Notificacion', notificacionSchema);
