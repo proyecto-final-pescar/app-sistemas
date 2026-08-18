@@ -3,7 +3,8 @@ import {
   actualizarHistorialClinico,
   crearHistorialClinico,
   obtenerEntradaHistorialClinico,
-  obtenerHistorialClinico
+  obtenerHistorialClinico,
+  obtenerTurnosPendientesRegistro
 } from '../controllers/historialClinicoController.js';
 import verifyToken, { authorize } from '../middleware/auth.js';
 import historialAccess from '../middleware/historialAccess.js';
@@ -24,6 +25,13 @@ router.get(
   obtenerEntradaHistorialClinico
 );
 
+router.get(
+  '/historial-clinico/turnos-pendientes/:mascotaId',
+  verifyToken,
+  authorize('veterinaria'),
+  obtenerTurnosPendientesRegistro
+);
+
 router.post(
   '/historial-clinico',
   verifyToken,
@@ -34,7 +42,7 @@ router.post(
 router.put(
   '/historial-clinico/:id',
   verifyToken,
-  authorize('veterianria'),
+  authorize('veterinaria'), 
   actualizarHistorialClinico
 )
 

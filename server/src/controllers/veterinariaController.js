@@ -1,6 +1,21 @@
 import Veterinaria from '../models/Veterinaria.js';
 import Turno from "../models/Turno.js";
 import Mascota from "../models/Mascota.js";
+import User from "../models/User.js";
+
+// Estados de Turno que habilitan a considerar a una mascota "paciente" de la veterinaria.
+// Se excluye 'pendiente' (todavía no confirmado, no hay relación real) y
+// 'cancelado' (la relación no se concretó).
+const ESTADOS_TURNO_PACIENTE = ["confirmado", "atendido"];
+
+// Paginación de /mia/pacientes
+const PACIENTES_LIMITE_DEFAULT = 12;
+const PACIENTES_LIMITE_MAXIMO = 50;
+
+// Escapa caracteres especiales de regex para poder usar el texto de búsqueda
+// del usuario de forma segura en un $regex (evita romper la query o abrir
+// una puerta a ReDoS con patrones maliciosos).
+const escaparRegex = (texto) => texto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // GET /veterinarias/buscar: búsqueda geoespacial (requiere autenticación)
 export const buscarVeterinarias = async (req, res) => {
@@ -279,13 +294,42 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
 
     const mascotaIds = await Turno.distinct("mascotaId", {
       veterinariaId: veterinaria._id,
+      estado: { $in: ESTADOS_TURNO_PACIENTE },
     });
 
-    const pacientes = await Mascota.find({
-      _id: { $in: mascotaIds },
-    })
-      .populate("dueñoId", "name")
-      .sort({ nombre: 1 });
+    // Paginación: page/limit vienen como query params, con defaults y tope máximo
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || PACIENTES_LIMITE_DEFAULT, 1),
+      PACIENTES_LIMITE_MAXIMO
+    );
+    const skip = (page - 1) * limit;
+
+    const busqueda = (req.query.busqueda || "").trim();
+
+    let filtro = { _id: { $in: mascotaIds } };
+
+    if (busqueda) {
+      const regex = new RegExp(escaparRegex(busqueda), "i");
+
+     
+      const dueñoIds = await User.find({ name: regex }).distinct("_id");
+
+      filtro = {
+        ...filtro,
+        $or: [{ nombre: regex }, { dueñoId: { $in: dueñoIds } }],
+      };
+    }
+
+    const [pacientes, total] = await Promise.all([
+      Mascota.find(filtro)
+        .select("nombre especie raza fechaNacimiento foto dueñoId")
+        .populate("dueñoId", "name")
+        .sort({ nombre: 1 })
+        .skip(skip)
+        .limit(limit),
+      Mascota.countDocuments(filtro),
+    ]);
 
     const data = pacientes.map((mascota) => ({
       id: mascota._id,
@@ -302,8 +346,13 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      total: data.length,
       data,
+      paginacion: {
+        total,
+        page,
+        limit,
+        totalPaginas: Math.max(Math.ceil(total / limit), 1),
+      },
     });
   } catch (error) {
     console.error("Error al obtener pacientes:", error);
