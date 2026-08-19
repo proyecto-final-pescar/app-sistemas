@@ -129,7 +129,14 @@
   font: inherit;
   font-size: 14px;
   outline: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   appearance: none;
+}
+
+
+.zoneSelect::-ms-expand {
+  display: none;
 }
 
 .selectIcon {
@@ -259,6 +266,42 @@
 
 .badgeFound {
   background: #10b981;
+}
+
+/* Boton de reportar publicacion (sobre la imagen, esquina superior derecha) */
+.reportButton {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  color: #ffffff;
+  background-color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.reportButton:hover {
+  background-color: rgba(239, 68, 68, 0.85);
+}
+
+.reportButton:disabled {
+  cursor: not-allowed;
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.reportButtonReportado {
+  background-color: rgba(16, 185, 129, 0.85);
+}
+
+.reportButtonReportado:hover {
+  background-color: rgba(16, 185, 129, 0.85);
 }
 
 .cardBody {
@@ -626,6 +669,36 @@
   padding-top: 6px;
 }
 
+/* Modal de aviso "ya reportaste esta publicación" */
+.avisoYaReportado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 34px 30px;
+  text-align: center;
+}
+
+.avisoYaReportadoIcono {
+  color: #10b981;
+}
+
+.avisoYaReportadoTitulo {
+  margin: 0;
+  color: #111827;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.avisoYaReportadoTexto {
+  margin: 0;
+  max-width: 420px;
+  color: #5a536f;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
 @keyframes shimmer {
   0% {
     background-position: 100% 50%;
@@ -692,6 +765,7 @@
   .selectWrap,
   .tabButton {
     width: 100%;
+    flex: 0 1 auto;
   }
 
   .grid,
@@ -722,10 +796,6 @@
 
   .formActions > button {
     width: 100%;
-  }
-
-  .selectWrap {
-    flex: 0 0 auto;
   }
 }
 
