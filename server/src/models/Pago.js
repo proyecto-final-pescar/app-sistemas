@@ -38,11 +38,10 @@ const pagoSchema = new Schema(
     // Id del pago que asigna Mercado Pago. No existe todavía cuando se crea
     // el registro (estado "pendiente") — lo completa el webhook.
     idPago: {
-      type: String,
-      unique: true,
-      sparse: true, // permite múltiples documentos con idPago: null
-      trim: true,
-      default: null
+     type: String,
+    unique: true,
+    sparse: true,
+    trim: true
     },
 
     proveedor: {

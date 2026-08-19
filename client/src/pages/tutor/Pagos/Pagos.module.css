@@ -1,0 +1,104 @@
+.shell {
+  min-height: 100vh;
+  background-color: #f9f8ff;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  padding: 24px 32px;
+}
+
+.step {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8276ab;
+  letter-spacing: 0.05em;
+}
+
+.card {
+  max-width: 448px;
+  margin: 80px auto 0;
+  background: var(--color-blanco);
+  border-radius: 20px;
+  border: 1px solid var(--color-fondo-claro);
+  padding: 40px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
+}
+
+.titulo {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f1739;
+  margin: 4px 0 0;
+}
+
+.subtitulo {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.mensaje {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 12px 0;
+}
+
+.errorTexto {
+  font-size: 13px;
+  color: #ef4444;
+  margin: -4px 0 4px;
+}
+
+.iconoExito {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #e6f9f2;
+  color: #07A35F;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconoPendiente {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconoError {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #ef4444;
+  font-size: 26px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--color-fondo-claro);
+  border-top-color: var(--color-primario);
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}

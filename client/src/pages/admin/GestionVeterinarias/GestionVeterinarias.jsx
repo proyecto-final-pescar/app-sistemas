@@ -2,9 +2,22 @@ import { useState, useEffect } from "react";
 import api from "../../../services/api.js";
 import Sidebar from "../../../components/layout/Sidebar.jsx";
 import TopBar from "../../../components/layout/TopBar.jsx";
+import RechazarVetModal from "../../../components/administrador/rechazarVetModal/rechazarVetModal.jsx";
+import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal.jsx";
 import styles from "./GestionVeterinarias.module.css";
 
 const ITEMS_POR_PAGINA = 10;
+const MAX_SERVICIOS_VISIBLES = 2;
+
+const formatServicios = (servicios = []) => {
+  if (!servicios.length) return "—";
+  const nombres = servicios.map((s) => s.nombre);
+  const visibles = nombres.slice(0, MAX_SERVICIOS_VISIBLES);
+  const restantes = nombres.length - visibles.length;
+  return restantes > 0
+    ? `${visibles.join(", ")} +${restantes} más`
+    : visibles.join(", ");
+};
 
 const GestionVeterinarias = () => {
   const [tabActiva, setTabActiva] = useState("listado");
@@ -15,6 +28,9 @@ const GestionVeterinarias = () => {
   const [paginaPendientes, setPaginaPendientes] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [vetARechazar, setVetARechazar] = useState(null); // { id, nombre } | null
+  const [vetAAprobar, setVetAAprobar] = useState(null); // { id, nombre } | null
+  const [isAprobando, setIsAprobando] = useState(false);
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -36,7 +52,6 @@ const GestionVeterinarias = () => {
     cargarDatos();
   }, []);
 
-  // Filtro según la pestaña activa
   const listaFiltrada = veterinarias.filter((v) =>
     v.nombre.toLowerCase().includes(busqueda.toLowerCase())
   );
@@ -45,7 +60,6 @@ const GestionVeterinarias = () => {
     v.nombre.toLowerCase().includes(busqueda.toLowerCase())
   );
 
-  // Paginación
   const paginar = (lista, pagina) => {
     const inicio = (pagina - 1) * ITEMS_POR_PAGINA;
     return lista.slice(inicio, inicio + ITEMS_POR_PAGINA);
@@ -62,27 +76,45 @@ const GestionVeterinarias = () => {
     setPaginaPendientes(1);
   };
 
-  const handleAprobar = async (id) => {
+  // Abre el modal de confirmación de aprobación
+  const abrirModalAprobacion = (vet) => {
+    setVetAAprobar({ id: vet._id, nombre: vet.nombre });
+  };
+
+  const cerrarModalAprobacion = () => {
+    if (isAprobando) return; // evita cerrar mientras hay una request en curso
+    setVetAAprobar(null);
+  };
+
+  const confirmarAprobacion = async () => {
+    if (!vetAAprobar) return;
     try {
-      await api.patch(`/admin/veterinarias/${id}/aprobar`);
-      const aprobada = pendientes.find((v) => v._id === id);
-      setPendientes((prev) => prev.filter((v) => v._id !== id));
+      setIsAprobando(true);
+      await api.patch(`/admin/veterinarias/${vetAAprobar.id}/aprobar`);
+
+      const aprobada = pendientes.find((v) => v._id === vetAAprobar.id);
+      setPendientes((prev) => prev.filter((v) => v._id !== vetAAprobar.id));
       if (aprobada) setVeterinarias((prev) => [...prev, { ...aprobada, estado: "activa" }]);
+
+      setVetAAprobar(null);
     } catch (err) {
       console.error("Error al aprobar:", err.response?.data || err.message);
       alert("Error al aprobar la veterinaria.");
+    } finally {
+      setIsAprobando(false);
     }
   };
 
-  const handleRechazar = async (id) => {
-    if (!confirm("¿Estás seguro de que querés rechazar esta veterinaria?")) return;
-    try {
-      await api.patch(`/admin/veterinarias/${id}/rechazar`);
-      setPendientes((prev) => prev.filter((v) => v._id !== id));
-    } catch (err) {
-      console.error("Error al rechazar:", err.response?.data || err.message);
-      alert("Error al rechazar la veterinaria.");
-    }
+  // Abre el modal de rechazo
+  const abrirModalRechazo = (vet) => {
+    setVetARechazar({ id: vet._id, nombre: vet.nombre });
+  };
+
+  const cerrarModalRechazo = () => setVetARechazar(null);
+
+  const handleRechazoExitoso = () => {
+    if (!vetARechazar) return;
+    setPendientes((prev) => prev.filter((v) => v._id !== vetARechazar.id));
   };
 
   const handleToggleEstado = async (vet) => {
@@ -133,13 +165,12 @@ const GestionVeterinarias = () => {
 
   return (
     <div className={styles.layout}>
-      <Sidebar />
+      <Sidebar title="Gestión de Veterinarias" />
 
       <div className={styles.main}>
         <TopBar title="Gestión de Veterinarias" />
 
         <div className={styles.contenido}>
-          {/* Buscador */}
           <div className={styles.toolbar}>
             <input
               type="text"
@@ -150,7 +181,6 @@ const GestionVeterinarias = () => {
             />
           </div>
 
-          {/* Tabs */}
           <div className={styles.tabs}>
             <button
               className={`${styles.tab} ${tabActiva === "porVerificar" ? styles.tabActiva : ""}`}
@@ -169,7 +199,6 @@ const GestionVeterinarias = () => {
           {isLoading && <p className={styles.estadoMensaje}>Cargando veterinarias...</p>}
           {error && <p className={`${styles.estadoMensaje} ${styles.estadoError}`}>{error}</p>}
 
-          {/* Listado General */}
           {!isLoading && !error && tabActiva === "listado" && (
             <>
               <div className={styles.tablaWrapper}>
@@ -178,7 +207,7 @@ const GestionVeterinarias = () => {
                     <tr>
                       <th>Nombre</th>
                       <th>Contacto</th>
-                      <th>Especialidades</th>
+                      <th>Servicios</th>
                       <th>CUIT</th>
                       <th>Calificación</th>
                       <th>Estado</th>
@@ -187,7 +216,7 @@ const GestionVeterinarias = () => {
                   </thead>
                   <tbody>
                     {listaVisible.length === 0 ? (
-                      <tr><td colSpan={8} className={styles.sinResultados}>No se encontraron veterinarias.</td></tr>
+                      <tr><td colSpan={7} className={styles.sinResultados}>No se encontraron veterinarias.</td></tr>
                     ) : (
                       listaVisible.map((vet) => (
                         <tr key={vet._id}>
@@ -196,7 +225,7 @@ const GestionVeterinarias = () => {
                             <span>{vet.email}</span><br />
                             <span className={styles.telefono}>{vet.telefono}</span>
                           </td>
-                          <td>{vet.especialidades?.join(", ") || "—"}</td>
+                          <td>{formatServicios(vet.servicios)}</td>
                           <td>{vet.cuit}</td>
                           <td>{vet.rating ? `${vet.rating} ⭐` : "Sin notas"}</td>
                           <td>
@@ -218,7 +247,6 @@ const GestionVeterinarias = () => {
                 </table>
               </div>
 
-              {/* Mobile cards */}
               <div className={styles.cards}>
                 {listaVisible.length === 0 ? (
                   <p className={styles.sinResultados}>No se encontraron veterinarias.</p>
@@ -235,11 +263,16 @@ const GestionVeterinarias = () => {
                       <p className={styles.cardInfo}>{vet.email}</p>
                       <p className={styles.cardInfo}>{vet.telefono}</p>
                       <p className={styles.cardInfo}>CUIT: {vet.cuit}</p>
-                      {vet.especialidades?.length > 0 && (
+                      {vet.servicios?.length > 0 && (
                         <div className={styles.tags}>
-                          {vet.especialidades.map((e) => (
-                            <span key={e} className={styles.tag}>{e}</span>
+                          {vet.servicios.slice(0, MAX_SERVICIOS_VISIBLES).map((s) => (
+                            <span key={s._id ?? s.nombre} className={styles.tag}>{s.nombre}</span>
                           ))}
+                          {vet.servicios.length > MAX_SERVICIOS_VISIBLES && (
+                            <span className={styles.tag}>
+                              +{vet.servicios.length - MAX_SERVICIOS_VISIBLES} más
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -251,7 +284,6 @@ const GestionVeterinarias = () => {
             </>
           )}
 
-          {/* Por Verificar */}
           {!isLoading && !error && tabActiva === "porVerificar" && (
             <>
               <div className={styles.tablaWrapper}>
@@ -268,7 +300,7 @@ const GestionVeterinarias = () => {
                   </thead>
                   <tbody>
                     {pendientesVisibles.length === 0 ? (
-                      <tr><td colSpan={7} className={styles.sinResultados}>No hay veterinarias pendientes de verificación.</td></tr>
+                      <tr><td colSpan={6} className={styles.sinResultados}>No hay veterinarias pendientes de verificación.</td></tr>
                     ) : (
                       pendientesVisibles.map((vet) => (
                         <tr key={vet._id}>
@@ -285,10 +317,10 @@ const GestionVeterinarias = () => {
                               <button className={styles.btnIcono} title="Ver datos del registro">
                                 <IconoDocumento />
                               </button>
-                              <button className={styles.btnAprobar} onClick={() => handleAprobar(vet._id)}>
+                              <button className={styles.btnAprobar} onClick={() => abrirModalAprobacion(vet)}>
                                 Aprobar
                               </button>
-                              <button className={styles.btnRechazar} onClick={() => handleRechazar(vet._id)}>
+                              <button className={styles.btnRechazar} onClick={() => abrirModalRechazo(vet)}>
                                 Rechazar
                               </button>
                             </div>
@@ -300,7 +332,6 @@ const GestionVeterinarias = () => {
                 </table>
               </div>
 
-              {/* Mobile cards */}
               <div className={styles.cards}>
                 {pendientesVisibles.length === 0 ? (
                   <p className={styles.sinResultados}>No hay veterinarias pendientes.</p>
@@ -316,8 +347,8 @@ const GestionVeterinarias = () => {
                       <p className={styles.cardInfo}>{vet.direccion}</p>
                       <p className={styles.cardInfo}>CUIT: {vet.cuit}</p>
                       <div className={styles.cardAcciones}>
-                        <button className={styles.btnAprobar} onClick={() => handleAprobar(vet._id)}>Aprobar</button>
-                        <button className={styles.btnRechazar} onClick={() => handleRechazar(vet._id)}>Rechazar</button>
+                        <button className={styles.btnAprobar} onClick={() => abrirModalAprobacion(vet)}>Aprobar</button>
+                        <button className={styles.btnRechazar} onClick={() => abrirModalRechazo(vet)}>Rechazar</button>
                       </div>
                     </div>
                   ))
@@ -329,6 +360,26 @@ const GestionVeterinarias = () => {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        abierto={!!vetAAprobar}
+        titulo="Aprobar veterinaria"
+        mensaje={`¿Confirmás que querés aprobar el registro de "${vetAAprobar?.nombre}"? Esta acción la activará en la plataforma.`}
+        textoConfirmar="Aprobar"
+        varianteConfirmar="primario"
+        onConfirm={confirmarAprobacion}
+        onCancel={cerrarModalAprobacion}
+        confirmando={isAprobando}
+      />
+
+      {vetARechazar && (
+        <RechazarVetModal
+          veterinariaId={vetARechazar.id}
+          nombreVeterinaria={vetARechazar.nombre}
+          onClose={cerrarModalRechazo}
+          onSuccess={handleRechazoExitoso}
+        />
+      )}
     </div>
   );
 };

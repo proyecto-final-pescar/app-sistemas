@@ -43,7 +43,8 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        fotoUrl: user.fotoUrl || ''
+        fotoUrl: user.fotoUrl || '',
+         asistenteVirtual: user.asistenteVirtual
       }
     })
   } catch (error) {

@@ -73,12 +73,63 @@
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 1rem;
+  background-color: var(--color-surface-muted);
+  cursor: zoom-in;
 }
 
 .imagenPost {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.contenedorImagen:hover .imagenPost {
+  transform: scale(1.03);
+  filter: brightness(0.92);
+}
+
+.lightboxOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(20, 14, 33, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 2rem;
+  cursor: zoom-out;
+}
+
+.lightboxImagen {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  cursor: default;
+}
+
+.lightboxCerrar {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.lightboxCerrar:hover {
+  background-color: rgba(255, 255, 255, 0.22);
 }
 
 .postHeader {
@@ -210,7 +261,6 @@
   margin: 0 0 auto 0;
 }
 
-/* Reportes: alerta informativa (tono ámbar, menor intensidad que "banear") */
 .tarjetaReporte {
   background-color: var(--color-alert-bg);
   border: 1px solid var(--color-alert-border);
@@ -236,7 +286,7 @@
   line-height: 1.3;
 }
 
-/* Tarjeta Banear: acción crítica, reservamos el rojo más intenso solo para esto */
+
 .tarjetaBanear {
   display: flex;
   align-items: flex-start;
@@ -308,5 +358,14 @@
 
   .footer > * {
     flex: 1;
+  }
+
+  .lightboxOverlay {
+    padding: 1rem;
+  }
+
+  .lightboxCerrar {
+    top: 1rem;
+    right: 1rem;
   }
 }

@@ -2,7 +2,7 @@ import { Router } from 'express'; // Uso la función Router para crear un enruta
 import authMiddleware from '../middleware/auth.js'; // Importo el middleware de autenticación para proteger las rutas de mascotas
 import historialAccess from '../middleware/historialAccess.js';
 import { obtenerHistorialClinico } from '../controllers/historialClinicoController.js';
-// Importo las funciones del controlador de mascotas
+
 import {
     obtenerMascotas,
     crearMascota,

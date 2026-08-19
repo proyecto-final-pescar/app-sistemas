@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Eye, X } from "lucide-react";
+import { Eye } from "lucide-react";
 
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
+import DetallesDeDuenoModal from "../../../components/administrador/detallesDeDuenoModal/detallesDeDuenoModal";
 
 import {
   actualizarEstadoUsuario,
@@ -47,7 +48,9 @@ function GestionUsuarios() {
   const [error, setError] = useState("");
   const [usuarioActualizando, setUsuarioActualizando] = useState(null);
 
-  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState(null);
+  
+ 
+  const [duenoSeleccionadoId, setDuenoSeleccionadoId] = useState(null);
 
   // NOTA 
   // Si hay contenido en los filtros avanzados de Nombre o Email, el buscador
@@ -150,13 +153,6 @@ function GestionUsuarios() {
             : usuarioActual
         )
       );
-
-      if (usuarioSeleccionado?.id === usuario.id) {
-        setUsuarioSeleccionado((usuarioActual) => ({
-          ...usuarioActual,
-          active: nuevoEstado,
-        }));
-      }
     } catch (errorPeticion) {
       console.error("Error al actualizar usuario:", errorPeticion);
 
@@ -177,70 +173,9 @@ function GestionUsuarios() {
     setPaginaActual((pagina) => Math.min(pagina + 1, totalPaginas));
   };
 
-
-  const modalRef = useRef(null);
-  const elementoConFocoPrevioRef = useRef(null);
-
-  useEffect(() => {
-    if (!usuarioSeleccionado) {
-      return;
-    }
-
-   
-    elementoConFocoPrevioRef.current = document.activeElement;
-
-    const nodoModal = modalRef.current;
-    const seleccionables =
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
-    const obtenerFocosables = () =>
-      nodoModal
-        ? Array.from(nodoModal.querySelectorAll(seleccionables))
-        : [];
-
-    // Foco inicial dentro del modal.
-    const focosables = obtenerFocosables();
-    focosables[0]?.focus();
-
-    const manejarTeclado = (evento) => {
-      if (evento.key === "Escape") {
-        setUsuarioSeleccionado(null);
-        return;
-      }
-
-      if (evento.key !== "Tab") {
-        return;
-      }
-
-      const nodosFocosables = obtenerFocosables();
-      if (nodosFocosables.length === 0) {
-        return;
-      }
-
-      const primero = nodosFocosables[0];
-      const ultimo = nodosFocosables[nodosFocosables.length - 1];
-
-      if (evento.shiftKey && document.activeElement === primero) {
-        evento.preventDefault();
-        ultimo.focus();
-      } else if (!evento.shiftKey && document.activeElement === ultimo) {
-        evento.preventDefault();
-        primero.focus();
-      }
-    };
-
-    document.addEventListener("keydown", manejarTeclado);
-
-    return () => {
-      document.removeEventListener("keydown", manejarTeclado);
-      
-      elementoConFocoPrevioRef.current?.focus?.();
-    };
-  }, [usuarioSeleccionado]);
-
   return (
     <div className={styles.page}>
-      <Sidebar role="administrador" activeItem="Dueños" />
+      <Sidebar role="administrador" activeItem="Dueños" title="Gestión de Dueños" />
 
       <div className={styles.main}>
         <TopBar
@@ -410,7 +345,7 @@ function GestionUsuarios() {
                               <button
                                 type="button"
                                 onClick={() =>
-                                  setUsuarioSeleccionado(usuario)
+                                  setDuenoSeleccionadoId(usuario.id)
                                 }
                                 aria-label={`Ver información de ${usuario.nombre}`}
                                 title="Ver información"
@@ -475,76 +410,10 @@ function GestionUsuarios() {
         </main>
       </div>
 
-      {usuarioSeleccionado && (
-        <div
-          className={styles.modalOverlay}
-          onClick={() => setUsuarioSeleccionado(null)}
-        >
-          <div
-            ref={modalRef}
-            className={styles.modal}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="titulo-modal-usuario"
-            onClick={(evento) => evento.stopPropagation()}
-          >
-            <div className={styles.modalHeader}>
-              <div>
-                <h2 id="titulo-modal-usuario">
-                  Información del dueño
-                </h2>
-
-                <p>{usuarioSeleccionado.nombre}</p>
-              </div>
-
-              <button
-                type="button"
-                className={styles.closeButton}
-                onClick={() => setUsuarioSeleccionado(null)}
-                aria-label="Cerrar modal"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className={styles.modalContent}>
-              <p>
-                <strong>Email:</strong> {usuarioSeleccionado.email}
-              </p>
-
-              <p>
-                <strong>Teléfono:</strong>{" "}
-                {usuarioSeleccionado.telefono || "Sin teléfono"}
-              </p>
-
-              <p>
-                <strong>Mascotas:</strong>{" "}
-                {usuarioSeleccionado.mascotas}
-              </p>
-
-              <p>
-                <strong>Fecha de registro:</strong>{" "}
-                {formatearFecha(usuarioSeleccionado.registro)}
-              </p>
-
-              <p>
-                <strong>Turnos próximos:</strong>{" "}
-                {usuarioSeleccionado.turnos?.proximos ?? 0}
-              </p>
-
-              <p>
-                <strong>Turnos pasados:</strong>{" "}
-                {usuarioSeleccionado.turnos?.pasados ?? 0}
-              </p>
-
-              <p>
-                <strong>Estado:</strong>{" "}
-                {usuarioSeleccionado.active ? "Activo" : "Inactivo"}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <DetallesDeDuenoModal
+        duenoId={duenoSeleccionadoId}
+        onClose={() => setDuenoSeleccionadoId(null)}
+      />
     </div>
   );
 }

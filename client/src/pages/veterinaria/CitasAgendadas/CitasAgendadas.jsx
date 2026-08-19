@@ -40,7 +40,7 @@ export default function CitasAgendadas() {
           throw new Error("No se encontró la veterinaria del usuario.");
         }
 
-        const data = await obtenerTurnosPorVeterinaria(veterinaria._id);
+        const data = await obtenerTurnosPorVeterinaria(veterinaria._id, { estadoDistinto: "disponible" });
 
         setTurnos(Array.isArray(data) ? data : []);
       } catch (err) {
@@ -74,11 +74,12 @@ export default function CitasAgendadas() {
   const pasados = filtrarPasados(turnos);
   const turnoMasProximo = obtenerTurnoMasProximo(turnos);
 
+
   const listaVisible = tab === "proximos" ? proximos : pasados;
 
   return (
     <div className={styles.shell}>
-      <Sidebar role="veterinaria" activeItem="Turnos" />
+      <Sidebar role="veterinaria" activeItem="Turnos" title="Turnos veterinaria" />
 
       <div className={styles.main}>
         <TopBar title="Turnos veterinaria" notifications={2} />
