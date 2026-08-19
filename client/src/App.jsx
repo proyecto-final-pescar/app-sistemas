@@ -65,14 +65,11 @@ function App() {
         <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><BuscarVeterinaria /></PrivateRoute>} />
         <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
         <Route path="/agenda" element={<PrivateRoute allowedRoles={["veterinaria"]}><CitasAgendadas /></PrivateRoute>} />
-        <Route
-          path="/historial/registrar/:turnoId"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <RegistrarConsulta />
-            </PrivateRoute>
-          }
-        />
+        <Route path="/historial/registrar/:turnoId" element={<PrivateRoute allowedRoles={["veterinaria"]}><RegistrarConsulta /></PrivateRoute>}/>
+
+        <Route path="/pacientes" element={<PrivateRoute allowedRoles={["veterinaria"]}><Pacientes /></PrivateRoute>}/>
+
+        <Route path="/historial/registrar/:turnoId"element={<PrivateRoute allowedRoles={["veterinaria"]}><RegistrarConsulta /></PrivateRoute>}/>
         <Route path="/urgencias" element={<PrivateRoute allowedRoles={["dueno"]}><Emergencias /></PrivateRoute>} />
         <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />

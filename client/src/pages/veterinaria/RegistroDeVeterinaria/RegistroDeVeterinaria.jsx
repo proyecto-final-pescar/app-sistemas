@@ -14,6 +14,7 @@ import {
   validarEmail, validarCUIT, validarTelefono,
   validarPrecio, validarCoordenadas, validarHorarios,
 } from "../../../utils/RegistroVeterinarias";
+import { useCategoriasServicio } from "../../../hooks/useCategoriasServicio";
 
 const IconSearch = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -51,6 +52,9 @@ const crearHandleContinuar = (validar, setError, avanzar) => () => {
 
 export default function RegistroDeVeterinaria() {
   const [step, setStep] = useState(1);
+
+  // Categorías de servicio — vienen del backend
+  const { categorias, loading: loadingCategorias, error: errorCategorias } = useCategoriasServicio();
 
   // Paso 1
   const [form, setForm] = useState({
@@ -403,6 +407,11 @@ export default function RegistroDeVeterinaria() {
             <div className={styles.formCard}>
               <h3 className={styles.cardTitle}>Servicios y precios</h3>
               <p className={styles.cardSub}>Ingresá la información para crear el perfil de tu centro veterinario.</p>
+
+              {errorCategorias && (
+                <p className={styles.errorMsg}>{errorCategorias}</p>
+              )}
+
               <div className={styles.listaItems}>
           
                   {servicios.map((servicio, index) => (
@@ -410,12 +419,29 @@ export default function RegistroDeVeterinaria() {
                     {servicios.length > 1 && (
                       <button onClick={() => eliminarServicio(index)} className={styles.btnEliminar} title="Eliminar"></button>
                     )}
-                    <Input
-                      label="Categoría del Servicio *"
-                      value={servicio.categoria}
-                      onChange={(e) => handleChangeServicio(index, "categoria", e.target.value)}
-                      placeholder="Ej: Vacunación, Cirugía..."
-                    />
+                    {/* se saco la lista duplicada de  categorias ahora las opciones vienen del backend
+                         la misma fuente que valida el enum en Veterinaria
+                        */}
+                    <div className={styles.field}>
+                      <label className={styles.label}>
+                        Categoría del Servicio<span className={styles.req}>*</span>
+                      </label>
+                      <select
+                        value={servicio.categoria}
+                        onChange={(e) => handleChangeServicio(index, "categoria", e.target.value)}
+                        className={styles.selectHorario}
+                        disabled={loadingCategorias}
+                      >
+                        <option value="">
+                          {loadingCategorias ? "Cargando categorías..." : "Seleccioná una categoría"}
+                        </option>
+                        {categorias.map((categoria) => (
+                          <option key={categoria} value={categoria}>
+                            {categoria}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     <Input
                       label="Nombre del Servicio o Prestación *"
                       value={servicio.nombre}

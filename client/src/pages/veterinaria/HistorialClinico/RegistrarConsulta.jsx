@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 
+import api from "../../../services/api.js";
 import Input from "../../../components/ui/input/Input";
 import Button from "../../../components/ui/button/Button";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 
 import "./RegistrarConsulta.css";
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 const estadoInicialFormulario = {
   nombreDueno: "",
@@ -74,6 +74,12 @@ function obtenerNombrePersona(persona) {
 function RegistrarConsulta() {
   const { turnoId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+ 
+  const origenFicha = location.state?.origen === "ficha" && location.state?.mascotaId;
+  const rutaVolver = origenFicha ? `/pacientes/${location.state.mascotaId}` : "/agenda";
+  const textoVolver = origenFicha ? "← Volver al historial clínico" : "← Volver a la agenda";
 
   const [pasoActual, setPasoActual] = useState(1);
 
@@ -88,24 +94,10 @@ function RegistrarConsulta() {
   const [form, setForm] = useState(estadoInicialFormulario);
   const [errores, setErrores] = useState({});
 
-  
-
   useEffect(() => {
     const obtenerTurno = async () => {
       if (!turnoId) {
-        setErrorApi(
-          "No se recibió el identificador del turno."
-        );
-        setIsLoadingTurno(false);
-        return;
-      }
-
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setErrorApi(
-          "No se encontró el token de sesión. Iniciá sesión nuevamente."
-        );
+        setErrorApi("No se recibió el identificador del turno.");
         setIsLoadingTurno(false);
         return;
       }
@@ -115,33 +107,20 @@ function RegistrarConsulta() {
         setErrorApi("");
         setSuccessMessage("");
 
-        const respuesta = await fetch(
-          `${API_URL}/turnos/${turnoId}`,
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const respuesta = await api.get(`/turnos/${turnoId}`);
+        const turno = respuesta.data?.data;
 
-        const datos = await respuesta.json().catch(() => ({}));
-
-        if (!respuesta.ok) {
-          throw new Error(
-            datos.message ||
-            "No se pudo cargar la información del turno."
-          );
+        if (!turno) {
+          setErrorApi("No se pudo cargar la información del turno.");
+          return;
         }
-
-        const turno = datos.data;
 
         const mascota = turno.mascotaId;
         const dueno = turno.usuarioId;
         const veterinaria = turno.veterinariaId;
 
         const profesional = veterinaria?.profesionales?.find(
-          (p) => p._id.toString() === turno.profesionalId?.toString()
+          (p) => p._id?.toString() === turno.profesionalId?.toString()
         );
 
         setNombreProfesional(profesional?.nombre || "Profesional asignado");
@@ -174,16 +153,12 @@ function RegistrarConsulta() {
         if (!turno.profesionalId) {
           setErrorApi("El turno no tiene un profesional asociado.");
         }
-
       } catch (error) {
-        console.error(
-          "Error al obtener el turno:",
-          error
-        );
+        console.error("Error al obtener el turno:", error);
 
         setErrorApi(
-          error.message ||
-          "Ocurrió un error al cargar la información del turno."
+          error.response?.data?.message ||
+            "Ocurrió un error al cargar la información del turno."
         );
       } finally {
         setIsLoadingTurno(false);
@@ -303,21 +278,12 @@ function RegistrarConsulta() {
       return;
     }
 
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      setErrorApi(
-        "No se encontró el token de sesión. Iniciá sesión nuevamente."
-      );
-      return;
-    }
-
     const body = {
       mascotaId: form.mascotaId,
       profesionalId: form.profesionalId,
+      turnoId, // viene de useParams(); faltaba mandarlo y el backend ahora lo exige
       fecha: form.fecha,
       hora: form.hora,
-      categoriaServicio: form.categoriaServicio,
       motivoConsulta: form.motivoConsulta.trim(),
       anotaciones: form.anotaciones.trim(),
       monto: Number(form.monto),
@@ -326,42 +292,22 @@ function RegistrarConsulta() {
     setIsLoading(true);
 
     try {
-      const respuesta = await fetch(
-        `${API_URL}/historial-clinico`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(body),
-        }
-      );
+      await api.post("/historial-clinico", body);
 
-      const datos = await respuesta.json().catch(() => ({}));
-
-      if (!respuesta.ok) {
-        throw new Error(
-          datos.message ||
-          "Error al registrar la consulta."
-        );
-      }
-
-      setSuccessMessage(
-        "Consulta registrada correctamente."
-      );
-
+      setSuccessMessage("Consulta registrada correctamente.");
       setErrores({});
+
+      // Redirige solo cuando el registro fue exitoso (antes esto estaba
+      // en el catch por error y mandaba al usuario a /agenda incluso
+      // cuando la consulta NO se había podido registrar).
+      // El destino depende de donde vino el usuario 
+      setTimeout(() => navigate(rutaVolver), 1500);
     } catch (error) {
-      console.error(
-        "Error al registrar la consulta:",
-        error
-      );
-      setTimeout(() => navigate("/agenda"), 1500);
+      console.error("Error al registrar la consulta:", error);
 
       setErrorApi(
-        error.message ||
-        "Error de conexión. Intentá nuevamente."
+        error.response?.data?.message ||
+          "Error de conexión. Intentá nuevamente."
       );
     } finally {
       setIsLoading(false);
@@ -405,6 +351,17 @@ function RegistrarConsulta() {
 
         <main className="registrar-consulta-main">
           <div className="registrar-consulta-container">
+            <div className="registrar-consulta-volver-wrap">
+              <Button
+                type="button"
+                texto={textoVolver}
+                variante="secundario"
+                tamaño="mediano"
+                disabled={isLoading}
+                onClick={() => navigate(rutaVolver)}
+              />
+            </div>
+
             <div className="registrar-consulta-banner">
               <p className="registrar-consulta-step">
                 Paso {pasoActual} de 2
@@ -423,13 +380,13 @@ function RegistrarConsulta() {
 
             {errorApi && (
               <div className="registrar-consulta-alert registrar-consulta-alert-error">
-                ❌ {errorApi}
+                {errorApi}
               </div>
             )}
 
             {successMessage && (
               <div className="registrar-consulta-alert registrar-consulta-alert-success">
-                ✅ {successMessage}
+                {successMessage}
               </div>
             )}
 
@@ -620,7 +577,7 @@ function RegistrarConsulta() {
                   !successMessage && (
                     <Button
                       type="button"
-                      texto="← Volver"
+                      texto="← Paso anterior"
                       variante="secundario"
                       tamaño="mediano"
                       disabled={isLoading}
