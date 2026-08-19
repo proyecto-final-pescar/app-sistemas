@@ -1,29 +1,12 @@
-import nodemailer from 'nodemailer'
-import { emailVerificacionCuenta } from '../templates/emailVerificacionCuenta.js'
-// nota: mailer.js vive en src/utils/, y la plantilla en src/templates/
-// (carpeta nueva, al mismo nivel que controllers/models/routes/utils)
-
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASSWORD
-  }
-})
-
 /**
- * Envía el email de recuperación de contraseña con el link que incluye el token.
- * @param {string} to - Email del destinatario
- * @param {string} token - Token temporal generado
+ * Plantilla de email para la verificación de cuenta (SX-06).
+ * @param {Object} params
+ * @param {string} params.nombre - Nombre del usuario destinatario
+ * @param {string} params.verificationUrl - URL con el token de verificación
+ * @returns {string} HTML del email
  */
-export async function sendResetPasswordEmail(to, token) {
-  const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`
-
-  const mailOptions = {
-    from: `"My Pet" <${process.env.GMAIL_USER}>`,
-    to,
-    subject: 'Recuperación de contraseña · My Pet',
-    html: `
+export function emailVerificacionCuenta({ nombre, verificationUrl }) {
+  return `
     <!DOCTYPE html>
     <html>
     <body style="margin:0; padding:0; background-color:#F5F3FB; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
@@ -45,12 +28,12 @@ export async function sendResetPasswordEmail(to, token) {
               <tr>
                 <td style="padding: 36px 32px 8px 32px;">
                   <h1 style="margin: 0 0 12px 0; font-family: 'Outfit', sans-serif; font-size: 22px; color: #1C1033; font-weight: 800; letter-spacing: -0.3px;">
-                    Recuperá tu contraseña
+                    ¡Hola${nombre ? `, ${nombre}` : ''}! Confirmá tu cuenta
                   </h1>
                   <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #7E6FA0;">
-                    Recibimos una solicitud para restablecer la contraseña de tu cuenta.
-                    Hacé clic en el botón de abajo para elegir una nueva. Este enlace es
-                    válido por <strong style="color:#1C1033;">1 hora</strong>.
+                    Gracias por registrarte en My Pet. Para activar tu cuenta y empezar a
+                    usarla, confirmá que este es tu email haciendo clic en el botón de abajo.
+                    Este enlace es válido por <strong style="color:#1C1033;">24 horas</strong>.
                   </p>
                 </td>
               </tr>
@@ -58,12 +41,12 @@ export async function sendResetPasswordEmail(to, token) {
               <!-- Button -->
               <tr>
                 <td align="center" style="padding: 8px 32px 32px 32px;">
-                  <a href="${resetUrl}"
+                  <a href="${verificationUrl}"
                      style="display: inline-block; background-color: #059669; color: #FFFFFF;
                             font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700;
                             text-decoration: none; padding: 14px 32px; border-radius: 12px;
                             box-shadow: 0 4px 12px rgba(5,150,105,0.30);">
-                    Restablecer contraseña
+                    Verificar mi cuenta
                   </a>
                 </td>
               </tr>
@@ -75,7 +58,7 @@ export async function sendResetPasswordEmail(to, token) {
                     Si el botón no funciona, copiá y pegá este enlace en tu navegador:
                   </p>
                   <p style="margin: 6px 0 0 0; font-size: 13px; color: #7C3AED; word-break: break-all;">
-                    ${resetUrl}
+                    ${verificationUrl}
                   </p>
                 </td>
               </tr>
@@ -91,8 +74,7 @@ export async function sendResetPasswordEmail(to, token) {
               <tr>
                 <td style="padding: 24px 32px 32px 32px;">
                   <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #ABA1C7;">
-                    Si no solicitaste este cambio, podés ignorar este email de forma segura —
-                    tu contraseña actual seguirá funcionando.
+                    Si no creaste esta cuenta, podés ignorar este email de forma segura.
                   </p>
                 </td>
               </tr>
@@ -115,27 +97,5 @@ export async function sendResetPasswordEmail(to, token) {
       </table>
     </body>
     </html>
-    `
-  }
-
-  await transporter.sendMail(mailOptions)
-}
-
-/**
- * Envía el email de verificación de cuenta con el link que incluye el token (SX-06).
- * @param {string} to - Email del destinatario
- * @param {string} token - Token de verificación generado
- * @param {string} nombre - Nombre del usuario, para personalizar el saludo
- */
-export async function sendVerificationEmail(to, token, nombre) {
-  const verificationUrl = `${process.env.CLIENT_URL}/verificar-cuenta?token=${token}`
-
-  const mailOptions = {
-    from: `"My Pet" <${process.env.GMAIL_USER}>`,
-    to,
-    subject: 'Verificá tu cuenta · My Pet',
-    html: emailVerificacionCuenta({ nombre, verificationUrl })
-  }
-
-  await transporter.sendMail(mailOptions)
+  `
 }

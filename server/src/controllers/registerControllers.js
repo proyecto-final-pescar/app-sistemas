@@ -1,6 +1,10 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import User from '../models/User.js';
+import { sendVerificationEmail } from '../utils/mailer.js';
+
+const TOKEN_VERIFICACION_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24hs
 
 export const register = async (req, res) => {
   try {
@@ -24,13 +28,19 @@ export const register = async (req, res) => {
 
     // Encriptar contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
+    // Generar token de verificación de cuenta
+    const tokenVerificacion = crypto.randomBytes(32).toString('hex');
+
     // Guardar usuario
     const user = new User({
       name,
       email,
       password: hashedPassword,
-      role
+      role,
+      verificado: false,
+      tokenVerificacion,
+      tokenVerificacionExpires: Date.now() + TOKEN_VERIFICACION_EXPIRATION_MS
     });
 
     // Generar token
@@ -41,6 +51,13 @@ export const register = async (req, res) => {
     );
 
     await user.save();
+
+    // El envío del mail no debe romper el registro si falla
+    try {
+      await sendVerificationEmail(user.email, tokenVerificacion, user.name);
+    } catch (mailError) {
+      console.error('Error al enviar el email de verificación:', mailError);
+    }
 
     res.status(201).json({
       success: true,
