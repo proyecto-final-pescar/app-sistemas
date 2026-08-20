@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import estilos from './PersonajeBot.module.css';
 
-// TODO: reemplazar estos paths por los archivos reales una vez que
-// estén en src/assets/bot/. Nombres sugeridos, ajustar si usan otros.
+
 import perroIcono from '../../assets/bot/perro-icono.png';
-import perroCuerpo from '../../assets/bot/perro-cuerpo.png';
+import perroCuerpo from '../../assets/bot/perro-cuerpo.gif';
 import gatoIcono from '../../assets/bot/gato-icono.png';
-import gatoCuerpo from '../../assets/bot/gato-cuerpo.png';
+import gatoCuerpo from '../../assets/bot/gato-cuerpo.gif';
 
 const ASSETS = {
   perro: { icono: perroIcono, cuerpoCompleto: perroCuerpo },
