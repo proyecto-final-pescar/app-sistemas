@@ -503,13 +503,32 @@ function RegistrarConsulta() {
                       error={errores.hora}
                     />
 
-                    <Input
-                      label="Categoría del servicio"
-                      value={form.categoriaServicio}
-                      readOnly
-                      disabled
-                      error={errores.categoriaServicio}
-                    />
+                    <div className="registrar-consulta-select-wrapper">
+                      <label className="registrar-consulta-label">
+                        Categoría del servicio
+                      </label>
+
+                      <select
+                        className={`registrar-consulta-select ${errores.categoriaServicio ? "registrar-consulta-select-error" : ""
+                          }`}
+                        value={form.categoriaServicio}
+                        onChange={(event) =>
+                          actualizarCampo("categoriaServicio", event.target.value)
+                        }
+                      >
+                        <option value="">Seleccioná una categoría</option>
+                        <option value="Consulta">Consulta</option>
+                        <option value="Control">Control</option>
+                        <option value="Vacunación">Vacunación</option>
+                        <option value="Cirugía">Cirugía</option>
+                      </select>
+
+                      {errores.categoriaServicio && (
+                        <p className="registrar-consulta-error-text">
+                          {errores.categoriaServicio}
+                        </p>
+                      )}
+                    </div>
 
                     <Input
                       label="Profesional a cargo"
@@ -550,8 +569,8 @@ function RegistrarConsulta() {
 
                     <textarea
                       className={`registrar-consulta-textarea ${errores.anotaciones
-                          ? "registrar-consulta-textarea-error"
-                          : ""
+                        ? "registrar-consulta-textarea-error"
+                        : ""
                         }`}
                       placeholder="Escribí las anotaciones de la consulta..."
                       value={form.anotaciones}

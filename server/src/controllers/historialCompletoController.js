@@ -8,7 +8,7 @@ import Veterinaria from '../models/Veterinaria.js'
 const resolverNombresProfesionales = (items, veterinariasPorId) => {
   return items.map((item) => {
     const obj = item.toObject ? item.toObject() : item
-    const veterinaria = veterinariasPorId.get(obj.veterinariaId?.toString())
+    const veterinaria = veterinariasPorId.get((obj.veterinariaId?._id || obj.veterinariaId)?.toString())
     const profesional = veterinaria && obj.profesionalId
       ? veterinaria.profesionales.id(obj.profesionalId)
       : null
@@ -70,7 +70,7 @@ export const obtenerHistorialCompleto = async (req, res) => {
   
     const idsVeterinarias = [
       ...new Set([
-        ...historialClinicoRaw.map(h => h.veterinariaId?._id?.toString() || h.veterinariaId?.toString()).filter(Boolean),
+        ...historialClinicoRaw.map(h => (h.veterinariaId?._id || h.veterinariaId)?.toString()).filter(Boolean),
         ...vacunasRaw.map(v => v.veterinariaId?.toString()).filter(Boolean),
         ...estudiosRaw.map(e => e.veterinariaId?.toString()).filter(Boolean)
       ])

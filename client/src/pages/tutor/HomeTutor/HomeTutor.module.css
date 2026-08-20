@@ -228,6 +228,195 @@
   animation: shimmer 1.4s ease infinite;
 }
 
+.mascotasGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.mascotaCard {
+  border: 1px solid #ece9f7;
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: #fff;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.mascotaCard:hover {
+  box-shadow: 0 4px 16px rgba(107, 79, 187, 0.12);
+  border-color: #ded7f7;
+}
+
+.mascotaCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mascotaFoto {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #f4f1ff;
+}
+
+.mascotaFotoPlaceholder {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f1ff;
+  color: #6B4FBB;
+}
+
+.mascotaNombre {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e1b4b;
+}
+
+.mascotaEspecie {
+  display: block;
+  font-size: 12px;
+  color: #8b87a3;
+  margin-top: 1px;
+}
+
+.proximoTurno {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #f4f1ff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #5b4cc4;
+}
+
+.proximoTurno svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.proximoTurnoFecha {
+  font-weight: 600;
+  font-size: 13px;
+  margin: 0;
+  color: #1e1b4b;
+}
+
+.proximoTurnoLugar {
+  font-size: 12px;
+  margin: 2px 0 0;
+  color: #7a76a0;
+}
+
+.sinTurnos {
+  font-size: 13px;
+  color: #a8a4c0;
+  margin: 0;
+  padding: 10px 0 0;
+}
+
+.mascotaCardAcciones {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.btnSecundario {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: none;
+  background: #6B4FBB;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btnSecundario:hover {
+  background: #5b3fa8;
+}
+
+.btnTexto {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid #ece9f7;
+  background: #fff;
+  color: #6B4FBB;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btnTexto:hover {
+  background: #f4f1ff;
+  border-color: #ded7f7;
+}
+
+.resumenSaludVacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  color: #8b87a3;
+  padding: 32px 0;
+}
+
+.resumenSaludVacio svg {
+  color: #c9c2e8;
+}
+
+.resumenSaludVacio button {
+  margin-top: 6px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 8px;
+  border: none;
+  background: #6B4FBB;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.resumenSaludEstado {
+  text-align: center;
+  color: #8b87a3;
+  padding: 24px 0;
+}
+
+.linkVerTodo {
+  background: none;
+  border: none;
+  color: #6B4FBB;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.linkVerTodo:hover {
+  text-decoration: underline;
+}
+
 @keyframes shimmer {
   0% { background-position: 100% 50%; }
   100% { background-position: 0 50%; }

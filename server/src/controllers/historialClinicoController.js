@@ -202,12 +202,8 @@ export const crearHistorialClinico = async (req, res) => {
     }
 
     // Validación de monto
-    if (monto !== undefined && monto !== null) {
-      if (typeof monto !== 'number' || Number.isNaN(monto) || monto < 0) {
-        return res.status(400).json({
-          message: 'El monto debe ser un número mayor o igual a 0'
-        });
-      }
+    if (monto === undefined || monto === null || typeof monto !== 'number' || Number.isNaN(monto) || monto < 0) {
+      return res.status(400).json({ message: 'El monto es requerido y debe ser un número mayor o igual a 0' });
     }
 
     // Validación de URL del PDF 
@@ -347,7 +343,7 @@ export const actualizarHistorialClinico = async (req, res) => {
     }
 
     const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id })
-    
+
     if (!veterinaria || historialClinico.veterinariaId.toString() !== veterinaria._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -475,3 +471,29 @@ export const actualizarHistorialClinico = async (req, res) => {
     })
   }
 }
+
+export const obtenerHistorialesPorTutor = async (req, res) => {
+  try {
+    // Acá asumimos que el modelo tiene alguna referencia al usuario/tutor
+    // O que buscás las mascotas de ese tutor y luego sus historiales.
+    // Ejemplo directo si el historial guarda el usuarioId:
+    const filtro = { usuarioId: req.user.id };
+
+    // En tu backend: historialClinicoController.js
+    const historiales = await HistorialClinico.find(filtro)
+      .sort({ fecha: -1, hora: -1 })
+      .populate('mascotaId', 'nombre especie')
+      .populate('veterinariaId', 'nombre profesionales');
+
+    res.status(200).json({
+      success: true,
+      data: {
+        historiales
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en obtenerHistorialesPorTutor:', error);
+    res.status(500).json({ message: 'Error al obtener los historiales' });
+  }
+};
