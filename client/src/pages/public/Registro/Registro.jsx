@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import Input from "../../../components/ui/input/Input";
 import Button from "../../../components/ui/button/Button";
 import Card from "../../../components/ui/card/Card";
@@ -82,7 +83,6 @@ function Registro() {
 
       navigate("/login", { replace: true });
     } catch (error) {
-      
       const responseData = error.response?.data;
 
       if (responseData) {
@@ -97,107 +97,192 @@ function Registro() {
     }
   }
 
-  return (
-    <main className="registro-page">
-      <header className="brand">
-        <img src="/logo-mypet.svg" alt="" className="brand-icon" />
-        <img src="/mypet2.svg" alt="MyPet" className="brand-logo" />
-      </header>
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setErrorGeneral("");
+    setEnviando(true);
 
-      <Card className="registro-card">
-        <header className="registro-header">
-          <h1>Crear cuenta</h1>
-          <h2>Unite a miles de familias que cuidan mejor a sus mascotas</h2>
+    if (!rol) {
+      setErrorGeneral("Debes seleccionar un rol antes de continuar");
+      setEnviando(false);
+      return;
+    }
+
+    try {
+      const { data } = await api.post("/auth/google", {
+        token: credentialResponse.credential,
+        role: rol
+      });
+
+      const token = data.token;
+      const user = data.usuario;
+
+      if (!token) {
+        setErrorGeneral("No se recibió un token de autenticación.");
+        return;
+      }
+
+      const userData = {
+        id: user.id || user._id,
+        email: user.email,
+        nombre: user.name,
+        rol: user.role,
+        fotoUrl: user.fotoUrl || "",
+        asistenteVirtual: user.asistenteVirtual || "perro",
+      };
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+
+      const userRol = userData.rol;
+      if (userRol === "dueno") {
+        navigate("/mascotas", { replace: true });
+        return;
+      }
+
+      if (userRol === "veterinaria") {
+        navigate("/registro-veterinaria", { replace: true });
+        return;
+      }
+
+      navigate("/home", { replace: true });
+    } catch (error) {
+      const responseData = error.response?.data;
+
+      if (responseData) {
+        setErrorGeneral(obtenerMensajeError(responseData));
+      } else if (error.request) {
+        setErrorGeneral(
+          "No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.",
+        );
+      } else {
+        setErrorGeneral("No se pudo crear la cuenta con Google.");
+      }
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setErrorGeneral("No se pudo completar el registro con Google.");
+  };
+
+  return (
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <main className="registro-page">
+        <header className="brand">
+          <img src="/logo-mypet.svg" alt="" className="brand-icon" />
+          <img src="/mypet2.svg" alt="MyPet" className="brand-logo" />
         </header>
 
-        <form onSubmit={manejarSubmit}>
-          <p className="input-label">¿Quién sos?</p>
+        <Card className="registro-card">
+          <header className="registro-header">
+            <h1>Crear cuenta</h1>
+            <h2>Unite a miles de familias que cuidan mejor a sus mascotas</h2>
+          </header>
 
-          {errores.rol && <p className="input-error">{errores.rol}</p>}
+          <form onSubmit={manejarSubmit}>
+            <p className="input-label">¿Quién sos?</p>
 
-          <div className="roles-container">
-            <div
-              className={`role-card ${
-                rol === "dueno" ? "role-card-selected" : ""
-              }`}
-              onClick={() => setRol("dueno")}
-            >
-              <div className="role-icon">
-                <span>👤</span>
+            {errores.rol && <p className="input-error">{errores.rol}</p>}
+
+            <div className="roles-container">
+              <div
+                className={`role-card ${
+                  rol === "dueno" ? "role-card-selected" : ""
+                }`}
+                onClick={() => setRol("dueno")}
+              >
+                <div className="role-icon">
+                  <span>👤</span>
+                </div>
+
+                <strong>Soy Tutor</strong>
               </div>
 
-              <strong>Soy Tutor</strong>
-            </div>
+              <div
+                className={`role-card ${
+                  rol === "veterinaria" ? "role-card-selected" : ""
+                }`}
+                onClick={() => setRol("veterinaria")}
+              >
+                <div className="role-icon">
+                  <span>🩺</span>
+                </div>
 
-            <div
-              className={`role-card ${
-                rol === "veterinaria" ? "role-card-selected" : ""
-              }`}
-              onClick={() => setRol("veterinaria")}
-            >
-              <div className="role-icon">
-                <span>🩺</span>
+                <strong>Soy Veterinario</strong>
               </div>
-
-              <strong>Soy Veterinario</strong>
             </div>
-          </div>
 
-          <Input
-            label="Nombre"
-            placeholder="Ana Maria"
-            value={nombre}
-            onChange={(evento) => setNombre(evento.target.value)}
-            error={errores.nombre}
-          />
-
-          <Input
-            label="Email"
-            placeholder="anamaria@gmail.com"
-            value={email}
-            onChange={(evento) => setEmail(evento.target.value)}
-            error={errores.email}
-          />
-
-          <Input
-            label="Contraseña"
-            placeholder="Mínimo 8 caracteres"
-            type="password"
-            value={password}
-            onChange={(evento) => setPassword(evento.target.value)}
-            error={errores.password}
-          />
-
-          <Input
-            label="Confirmar contraseña"
-            placeholder="Repetí tu contraseña"
-            type="password"
-            value={confirmarPassword}
-            onChange={(evento) => setConfirmarPassword(evento.target.value)}
-            error={errores.confirmarPassword}
-          />
-
-          {errorGeneral && <p className="input-error">{errorGeneral}</p>}
-
-          <div className="registro-button">
-            <Button
-              type="submit"
-              texto={enviando ? "Creando cuenta..." : "Crear Cuenta ->"}
-              variante="primario"
-              tamaño="mediano"
-              disabled={enviando}
+            <Input
+              label="Nombre"
+              placeholder="Ana Maria"
+              value={nombre}
+              onChange={(evento) => setNombre(evento.target.value)}
+              error={errores.nombre}
             />
-          </div>
 
-          <p className="login-text">
-            ¿Ya tenés cuenta?{" "}
-            <a href="/login" className="login-link">
-              Iniciá sesión
-            </a>
-          </p>
-        </form>
-      </Card>
-    </main>
+            <Input
+              label="Email"
+              placeholder="anamaria@gmail.com"
+              value={email}
+              onChange={(evento) => setEmail(evento.target.value)}
+              error={errores.email}
+            />
+
+            <Input
+              label="Contraseña"
+              placeholder="Mínimo 8 caracteres"
+              type="password"
+              value={password}
+              onChange={(evento) => setPassword(evento.target.value)}
+              error={errores.password}
+            />
+
+            <Input
+              label="Confirmar contraseña"
+              placeholder="Repetí tu contraseña"
+              type="password"
+              value={confirmarPassword}
+              onChange={(evento) => setConfirmarPassword(evento.target.value)}
+              error={errores.confirmarPassword}
+            />
+
+            {errorGeneral && <p className="input-error">{errorGeneral}</p>}
+
+            <div className="registro-button">
+              <Button
+                type="submit"
+                texto={enviando ? "Creando cuenta..." : "Crear Cuenta ->"}
+                variante="primario"
+                tamaño="mediano"
+                disabled={enviando}
+              />
+            </div>
+
+            <div className="divider" style={{ margin: "20px 0" }}>
+              <span className="divider-line" />
+              <span className="divider-text">o continuá con</span>
+              <span className="divider-line" />
+            </div>
+
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              size="large"
+              width="100%"
+              locale="es_AR"
+            />
+
+            <p className="login-text">
+              ¿Ya tenés cuenta?{" "}
+              <a href="/login" className="login-link">
+                Iniciá sesión
+              </a>
+            </p>
+          </form>
+        </Card>
+      </main>
+    </GoogleOAuthProvider>
   );
 }
 

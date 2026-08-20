@@ -4,6 +4,85 @@ import crypto from 'crypto'
 import User from '../models/User.js'
 import { sendResetPasswordEmail } from '../utils/mailer.js'
 
+import { OAuth2Client } from 'google-auth-library'
+
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+
+export const googleAuth = async (req, res) => {
+  try {
+    const { token, role } = req.body
+
+    if (!token) {
+      return res.status(400).json({ mensaje: 'Token de Google es requerido' })
+    }
+
+    if (!role || !['dueno', 'veterinaria'].includes(role)) {
+      return res.status(400).json({ mensaje: 'Rol inválido' })
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    })
+
+    const payload = ticket.getPayload()
+    const googleId = payload.sub
+    const email = payload.email.toLowerCase()
+    const name = payload.name
+
+    let user = await User.findOne({ email })
+
+    if (user) {
+      if (!user.googleId) {
+        user.googleId = googleId
+        await user.save()
+      }
+    } else {
+      user = new User({
+        name,
+        email,
+        role,
+        googleId,
+        active: true
+      })
+      await user.save()
+    }
+
+    const jwtToken = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role
+      },
+      process.env.JWT_SECRET || 'clave_secreta_temporal',
+      { expiresIn: '24h' }
+    )
+
+    user.historialSesiones.push({ fecha: new Date() })
+    await user.save()
+
+    return res.status(200).json({
+      token: jwtToken,
+      usuario: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        fotoUrl: user.fotoUrl || '',
+        asistenteVirtual: user.asistenteVirtual
+      }
+    })
+  } catch (error) {
+    console.error('Error en googleAuth:', error)
+
+    if (error.message.includes('Invalid token')) {
+      return res.status(401).json({ mensaje: 'Token de Google inválido' })
+    }
+
+    return res.status(500).json({ mensaje: 'Error interno del servidor' })
+  }
+}
+
 const TOKEN_EXPIRATION_MS = 60 * 60 * 1000 // 1 hora
 const SALT_ROUNDS = 10
 

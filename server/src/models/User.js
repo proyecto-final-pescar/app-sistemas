@@ -16,8 +16,11 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'La contraseña es requerida'],
       minlength: [8, 'La contraseña debe tener mínimo 8 caracteres']
+      },
+    googleId: {
+      type: String,
+      sparse: true
     },
     telefono: {
       type: String,
