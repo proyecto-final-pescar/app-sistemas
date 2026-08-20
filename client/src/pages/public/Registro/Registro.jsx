@@ -260,18 +260,26 @@ function Registro() {
             </div>
 
             <div className="divider" style={{ margin: "20px 0" }}>
-              <span className="divider-line" />
-              <span className="divider-text">o continuá con</span>
-              <span className="divider-line" />
-            </div>
+                <span className="divider-line" />
+                <span className="divider-text">o continuá con</span>
+                <span className="divider-line" />
+              </div>
 
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              size="large"
-              width="100%"
-              locale="es_AR"
-            />
+              {!rol && (
+                <p className="input-error" style={{ marginBottom: "12px", fontSize: "17px" }}>
+                  Primero selecciona con qué rol ingresas
+                </p>
+              )}
+
+              <div style={{ opacity: rol ? 1 : 0.5, pointerEvents: rol ? "auto" : "none" }}>
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  size="large"
+                  width="100%"
+                  locale="es_AR"
+                />
+              </div>
 
             <p className="login-text">
               ¿Ya tenés cuenta?{" "}
