@@ -13,7 +13,7 @@ import Veterinaria from '../models/Veterinaria.js'
 const resolverNombresProfesionales = (items, veterinariasPorId) => {
   return items.map((item) => {
     const obj = item.toObject ? item.toObject() : item
-    const veterinaria = veterinariasPorId.get(obj.veterinariaId?.toString())
+    const veterinaria = veterinariasPorId.get((obj.veterinariaId?._id || obj.veterinariaId)?.toString())
     const profesional = veterinaria && obj.profesionalId
       ? veterinaria.profesionales.id(obj.profesionalId)
       : null
@@ -31,7 +31,7 @@ export const obtenerHistorialCompleto = async (req, res) => {
   try {
     const { mascotaId } = req.params
 
-    const [mascota, fichaMedica, historialClinico, vacunasRaw, estudiosRaw] = await Promise.all([
+    const [mascota, fichaMedica, historialClinicoRaw, vacunasRaw, estudiosRaw] = await Promise.all([
 
       Mascota.findById(mascotaId)
         .populate('dueñoId', 'name email telefono'),
@@ -61,6 +61,7 @@ export const obtenerHistorialCompleto = async (req, res) => {
     // en una sola consulta, no una por cada vacuna/estudio.
     const idsVeterinarias = [
       ...new Set([
+        ...historialClinicoRaw.map(h => (h.veterinariaId?._id || h.veterinariaId)?.toString()).filter(Boolean),
         ...vacunasRaw.map(v => v.veterinariaId?.toString()).filter(Boolean),
         ...estudiosRaw.map(e => e.veterinariaId?.toString()).filter(Boolean)
       ])
@@ -73,6 +74,7 @@ export const obtenerHistorialCompleto = async (req, res) => {
       veterinarias.map(v => [v._id.toString(), v])
     )
 
+    const historialClinico = resolverNombresProfesionales(historialClinicoRaw, veterinariasPorId)
     const vacunas = resolverNombresProfesionales(vacunasRaw, veterinariasPorId)
     const estudios = resolverNombresProfesionales(estudiosRaw, veterinariasPorId)
 

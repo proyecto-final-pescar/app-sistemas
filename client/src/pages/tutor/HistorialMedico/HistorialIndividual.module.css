@@ -284,3 +284,32 @@
   color: #9ca3af;
   margin: 0;
 }
+
+/* Botón Volver */
+.backBtn {
+  background: transparent;
+  border: none;
+  color: var(--color-primario, #7c3aed);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  margin-bottom: 1rem;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.backBtn:hover {
+  opacity: 0.8;
+  transform: translateX(-3px);
+}
+
+/* Ajuste opcional para reducir el margen del título si lo ves muy separado */
+.header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+  color: #1f2937;
+}

@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { obtenerMascotas } from "../../../services/MascotaService";
 import { obtenerHistorialesTutor } from "../../../services/historialService";
-import Button from "../../../components/ui/button/Button.jsx"; 
+import Button from "../../../components/ui/button/Button.jsx";
+import ConsultaBadge from "../../../components/historial/ConsultaBadge";
+import SkeletonCard from "../../../components/historial/SkeletonCard";
+import SearchBar from "../../../components/historial/SearchBar";
+import FilterPills from "../../../components/historial/FilterPills";
+import EmptyState from "../../../components/historial/EmptyState";
 
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
@@ -11,30 +16,19 @@ import styles from "../../../styles/MisMascotas.module.css";
 import "./HistorialMedico.css";
 
 // Iconos (MUI)
-import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import PetsOutlinedIcon from '@mui/icons-material/PetsOutlined';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
-import MedicalServicesOutlinedIcon from '@mui/icons-material/MedicalServicesOutlined';
-import NoteAltOutlinedIcon from '@mui/icons-material/NoteAltOutlined';
 
-function EmptyState({ message, onReset }) {
-    return (
-      <div className="hm-empty-card">
-        <p className="hm-empty-text">{message}</p>
-        {onReset && (
-          <Button 
-            texto="Restablecer filtros" 
-            variante="secundario" 
-            tamaño="mediano" 
-            onClick={onReset} 
-          />
-        )}
-      </div>
-    );
-}
+// Mapea el campo real del backend (categoriaServicio) a las claves que espera ConsultaBadge
+const CATEGORIA_A_BADGE = {
+  'Vacunación': 'vacunacion',
+  'Control': 'control',
+  'Consulta': 'consulta',
+  'Cirugía': 'cirugia',
+};
 
 export default function HistorialMedico() {
   const navigate = useNavigate();
@@ -46,13 +40,12 @@ export default function HistorialMedico() {
   // Estados de UI
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Estados de Filtros y Modal
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPet, setSelectedPet] = useState("all");
   const [selectedRecord, setSelectedRecord] = useState(null);
 
-  const [isPetDropdownOpen, setIsPetDropdownOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
@@ -89,10 +82,10 @@ export default function HistorialMedico() {
     const titulo = record.motivoConsulta?.toLowerCase() || '';
     const veterinaria = record.veterinariaId?.nombre?.toLowerCase() || '';
     const busqueda = searchTerm.toLowerCase();
-    
+
     const matchesSearch = titulo.includes(busqueda) || veterinaria.includes(busqueda);
     const matchesPet = selectedPet === 'all' || record.mascotaId?._id === selectedPet;
-    
+
     return matchesSearch && matchesPet;
   });
 
@@ -100,7 +93,7 @@ export default function HistorialMedico() {
   const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
   const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
   const currentItems = filteredRecords.slice(indexOfFirstItem, indexOfLastItem);
-  
+
   const formatearFecha = (fechaIso) => {
     if (!fechaIso) return '';
     return new Date(fechaIso).toLocaleDateString('es-AR', {
@@ -108,102 +101,57 @@ export default function HistorialMedico() {
     });
   };
 
-  if (loading) return <div className={styles.layout}><Sidebar role="tutor" /><div className={styles.pageWrapper}><TopBar title="Historial Médico" />Cargando...</div></div>;
+  // FilterPills usa null = "Todas"; el resto del componente usa 'all'.
+  // Estos dos helpers traducen entre ambos formatos sin tocar la lógica existente.
+  const pillActivo = selectedPet === 'all' ? null : selectedPet;
+  const handlePillChange = (id) => setSelectedPet(id === null ? 'all' : id);
+
   if (error) return <div className={styles.layout}><Sidebar role="tutor" /><div className={styles.pageWrapper}><TopBar title="Historial Médico" />{error}</div></div>;
 
-return (
+  return (
     <div className={styles.layout}>
       <Sidebar role="tutor" />
-      
+
       <div className={styles.pageWrapper}>
         <TopBar title="Historial Médico" />
 
         <main className="hm-main">
-          
+
           {/* Filtros */}
           <div className="hm-filters">
-            {/* Input de Búsqueda */}
-            <div className="hm-search">
-              <div className="hm-search__icon">
-                <SearchOutlinedIcon fontSize="small" />
-              </div>
-              <input
-                type="text"
-                className="hm-search__input"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar en el historial..."
+            <SearchBar
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar en el historial..."
+            />
+
+            <FilterPills
+              mascotas={mascotas}
+              activo={pillActivo}
+              onChange={handlePillChange}
+            />
+
+            <div className="hm-select-mascota-wrapper">
+              <Button
+                texto={selectedPet === 'all' ? 'Elegí una mascota' : 'Ver ficha médica'}
+                variante="primario"
+                tamaño="mediano"
+                disabled={selectedPet === 'all'}
+                onClick={() => navigate(`/tutor/historial-medico/${selectedPet}`)}
               />
-            </div>
-
-            <div className="hm-pet-filters-container">
-                {/* Chips de Mascotas */}
-                <div className="hm-pet-filters">
-                <button
-                    onClick={() => setSelectedPet('all')}
-                    className={`hm-pet-chip ${selectedPet === 'all' ? 'hm-pet-chip--active' : ''}`}
-                >
-                    Todas
-                </button>
-                {mascotas.map((pet) => (
-                    <button
-                    key={pet._id}
-                    onClick={() => setSelectedPet(pet._id)}
-                    className={`hm-pet-chip ${selectedPet === pet._id ? 'hm-pet-chip--active' : ''}`}
-                    >
-                    {pet.foto ? (
-                        <img src={pet.foto} alt={pet.nombre} className="hm-pet-chip__avatar" />
-                    ) : (
-                        <PetsOutlinedIcon fontSize="inherit" />
-                    )}
-                    <span>{pet.nombre}</span>
-                    </button>
-                ))}
-                </div>
-
-                {/* Botón derecho desplegable */}
-                <div className="hm-pet-dropdown-container">
-                    <button 
-                      className="hm-select-pet-btn"
-                      onClick={() => setIsPetDropdownOpen(!isPetDropdownOpen)}
-                    >
-                        <NoteAltOutlinedIcon fontSize="small" /> Elegí una mascota
-                    </button>
-
-                    {isPetDropdownOpen && (
-                      <div className="hm-pet-dropdown-menu">
-                        <button 
-                          className="hm-pet-dropdown-item"
-                          onClick={() => { setSelectedPet('all'); setIsPetDropdownOpen(false); }}
-                        >
-                          Todas las mascotas
-                        </button>
-                        {mascotas.map((pet) => (
-                          <button
-                            key={`drop-${pet._id}`}
-                            className="hm-pet-dropdown-item"
-                            onClick={() => { setSelectedPet(pet._id); setIsPetDropdownOpen(false); }}
-                          >
-                            {pet.foto ? (
-                                <img src={pet.foto} alt={pet.nombre} className="hm-meta-avatar" />
-                            ) : (
-                                <PetsOutlinedIcon fontSize="small" />
-                            )}
-                            {pet.nombre}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                </div>
             </div>
           </div>
 
           {/* Listado de Tarjetas */}
-          {currentItems.length === 0 ? (
-            <EmptyState 
-          
-              message="No encontramos historiales clínicos que coincidan con la búsqueda."
-              onReset={() => { setSearchTerm(''); setSelectedPet('all'); }}
+          {loading ? (
+            <div className="hm-list">
+              {Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)}
+            </div>
+          ) : currentItems.length === 0 ? (
+            <EmptyState
+              icon="🩺"
+              title="Sin resultados"
+              text="No encontramos historiales clínicos que coincidan con la búsqueda."
             />
           ) : (
             <div className="hm-list">
@@ -211,7 +159,7 @@ return (
                 const mascotaNombre = record.mascotaId?.nombre || 'Mascota';
                 const mascotaFoto = mascotas.find(m => m._id === record.mascotaId?._id)?.foto;
                 const vetNombre = record.veterinariaId?.nombre || 'Veterinaria';
-                
+
                 let profNombre = 'Profesional';
                 if (record.veterinariaId?.profesionales && record.profesionalId) {
                   const profesionalEncontrado = record.veterinariaId.profesionales.find(
@@ -228,35 +176,34 @@ return (
                     onClick={() => setSelectedRecord(record)}
                     className="hm-card-pill"
                   >
-                    <div className="hm-card-pill__icon-wrapper">
-                      <MedicalServicesOutlinedIcon fontSize="medium" />
-                    </div>
-
                     <div className="hm-card-pill__content">
-                      <h3 className="hm-card-pill__title">
-                        {record.motivoConsulta}
-                      </h3>
+                      <div className="hm-card-pill__header">
+                        <h3 className="hm-card-pill__title">
+                          {record.motivoConsulta}
+                        </h3>
+                        <ConsultaBadge tipo={CATEGORIA_A_BADGE[record.categoriaServicio] || 'otro'} />
+                      </div>
 
                       <div className="hm-card-pill__meta">
                         <span className="hm-card-pill__meta-item">
-                          <LocationOnOutlinedIcon fontSize="inherit"/> {vetNombre}
+                          <LocationOnOutlinedIcon fontSize="inherit" /> {vetNombre}
                         </span>
-                        
+
                         <span className="hm-card-pill__meta-item">
                           {mascotaFoto ? (
                             <img src={mascotaFoto} alt="mascota" className="hm-meta-avatar" />
                           ) : (
-                            <PetsOutlinedIcon fontSize="inherit"/>
+                            <PetsOutlinedIcon fontSize="inherit" />
                           )}
                           {mascotaNombre}
                         </span>
 
                         <span className="hm-card-pill__meta-item">
-                          <CalendarTodayOutlinedIcon fontSize="inherit"/> {formatearFecha(record.fecha)}
+                          <CalendarTodayOutlinedIcon fontSize="inherit" /> {formatearFecha(record.fecha)}
                         </span>
-                        
+
                         <span className="hm-card-pill__meta-item">
-                          <PersonOutlineOutlinedIcon fontSize="inherit"/> {profNombre}
+                          <PersonOutlineOutlinedIcon fontSize="inherit" /> {profNombre}
                         </span>
                       </div>
                     </div>
@@ -269,19 +216,19 @@ return (
           {/* Paginación */}
           {totalPages > 1 && (
             <div className="hm-pagination">
-              <button 
+              <button
                 className="hm-pagination-btn"
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               >
                 Anterior
               </button>
-              
+
               <span className="hm-pagination-info">
                 Página <strong>{currentPage}</strong> de {totalPages}
               </span>
 
-              <button 
+              <button
                 className="hm-pagination-btn"
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
@@ -295,7 +242,7 @@ return (
           {selectedRecord && (
             <div className="hm-modal-overlay" onClick={() => setSelectedRecord(null)}>
               <div className="hm-modal-clean" onClick={(e) => e.stopPropagation()}>
-                
+
                 <button className="hm-modal-clean__close" onClick={() => setSelectedRecord(null)}>
                   <CloseOutlinedIcon fontSize="small" />
                 </button>
@@ -307,7 +254,10 @@ return (
 
                 <div className="hm-modal-clean__body">
                   <div className="hm-modal-clean__field">
-                    <label>{formatearFecha(selectedRecord.fecha)} a las {selectedRecord.hora || '10:00'}hs</label>
+                    <label>
+                      {formatearFecha(selectedRecord.fecha)}
+                      {selectedRecord.hora ? ` a las ${selectedRecord.hora}hs` : ''}
+                    </label>
                   </div>
 
                   <div className="hm-modal-clean__field">
