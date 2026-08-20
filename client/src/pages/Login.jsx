@@ -72,7 +72,7 @@ function Login() {
 
       const rol = userData.rol;
       if (rol === "dueno") {
-        navigate("/mascotas", { replace: true }); /*/home*/
+        navigate("/home", { replace: true }); /*/home*/
         return;
       }
 
