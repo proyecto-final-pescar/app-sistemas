@@ -29,8 +29,10 @@ import Registro from "./pages/public/Registro/Registro";
 import AdminDashboard from "./pages/admin/AdminDashboard/AdminDashboard";
 import NotFound from "./pages/NotFound/NotFound";
 import BuscarVeterinaria from "./pages/tutor/BuscarVeterinaria/BuscarVeterinaria";
+import HistorialMedico   from "./pages/tutor/HistorialMedico/HistorialMedico";
 import CargaTurnos from "./pages/veterinaria/CargaTurnos/CargaTurnos";
 import GestionTurnos from "./pages/admin/GestionTurnos/GestionTurnos";
+
 
 import PagoExitoso from "./pages/tutor/Pagos/PagoExitoso";
 import PagoPendiente from "./pages/tutor/Pagos/PagoPendiente";
@@ -81,6 +83,8 @@ function App() {
         <Route path="/admin-duenos" element={<PrivateRoute allowedRoles={["administrador"]}><GestionUsuarios /></PrivateRoute> }/>      
         <Route path="/perfil" element={<PerfilUsuario />} />
         <Route path="/admin/veterinarias" element={<PrivateRoute allowedRoles={["administrador"]}><GestionVeterinarias /></PrivateRoute>} />
+        <Route path="/historial-medico" element={
+          <PrivateRoute allowedRoles={["dueno"]}><HistorialMedico /></PrivateRoute>} />
         <Route path="/admin-turnos" element={<PrivateRoute allowedRoles={["administrador"]}><GestionTurnos /></PrivateRoute>} />
         <Route path="/" element={<Landing />} />
         <Route path="/pago-exitoso" element={<PrivateRoute allowedRoles={["dueno"]}><PagoExitoso /></PrivateRoute>} />
