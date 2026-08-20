@@ -21,6 +21,7 @@ import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import PetsOutlinedIcon from '@mui/icons-material/PetsOutlined';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
+import MedicalServicesOutlinedIcon from '@mui/icons-material/MedicalServicesOutlined';
 
 // Mapea el campo real del backend (categoriaServicio) a las claves que espera ConsultaBadge
 const CATEGORIA_A_BADGE = {
@@ -176,12 +177,17 @@ export default function HistorialMedico() {
                     onClick={() => setSelectedRecord(record)}
                     className="hm-card-pill"
                   >
+                    {/* Icono circular violeta de la izquierda */}
+                    <div className="hm-card-pill__icon-wrapper">
+                      <MedicalServicesOutlinedIcon fontSize="medium" />
+                    </div>
+
+                    {/* Contenido principal de la tarjeta */}
                     <div className="hm-card-pill__content">
                       <div className="hm-card-pill__header">
                         <h3 className="hm-card-pill__title">
                           {record.motivoConsulta}
                         </h3>
-                        <ConsultaBadge tipo={CATEGORIA_A_BADGE[record.categoriaServicio] || 'otro'} />
                       </div>
 
                       <div className="hm-card-pill__meta">
