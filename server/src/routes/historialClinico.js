@@ -4,8 +4,8 @@ import {
   crearHistorialClinico,
   obtenerEntradaHistorialClinico,
   obtenerHistorialClinico,
-  obtenerTurnosPendientesRegistro
-  obtenerHistorialesPorTutor // <-- Podés agruparlo acá arriba
+  obtenerTurnosPendientesRegistro,
+  obtenerHistorialesPorTutor
 } from '../controllers/historialClinicoController.js';
 import verifyToken, { authorize } from '../middleware/auth.js';
 import historialAccess from '../middleware/historialAccess.js';

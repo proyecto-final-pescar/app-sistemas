@@ -185,7 +185,7 @@ const FichaPaciente = () => {
 
         <div className={styles.contenido}>
           {/* Botón volver */}
-          <button className={styles.btnVolver} onClick={() => navigate(-1)}>
+          <button className={styles.btnVolver} onClick={() => navigate("/pacientes")}>
             ← Pacientes
           </button>
 
