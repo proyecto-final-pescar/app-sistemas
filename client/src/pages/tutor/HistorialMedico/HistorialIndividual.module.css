@@ -1,0 +1,315 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--color-blanco);
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  padding: 2rem;
+  background: var(--color-blanco);
+  color: #1f2937;
+}
+
+.header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+  color: #1f2937;
+}
+
+.header p {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  margin: 0 0 1.5rem 0;
+}
+
+.mascotaCard {
+  background: var(--color-blanco);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.mascotaInfo {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.mascotaAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e9d5ff;
+  color: var(--color-primario);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.mascotaAvatarFoto {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.mascotaDetails h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.15rem 0;
+}
+
+.mascotaDetails p {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin: 0 0 0.35rem 0;
+}
+
+.badges {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  background: #f3f0ff;
+  border-radius: 0.75rem;
+  padding: 0.875rem;
+  text-align: left;
+  border: 1px solid #e9d5ff;
+}
+
+.cardIcon {
+  width: 18px;
+  height: 18px;
+  color: var(--color-primario);
+  margin: 0 0 0.4rem 0;
+  stroke-width: 1.5;
+}
+
+.cardValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 0.25rem 0;
+}
+
+.cardLabel {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.section {
+  background: #f3f0ff;
+  border-radius: 0.75rem;
+  border: 1px solid #e9d5ff;
+  padding: 1.5rem;
+}
+
+.section h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 1.25rem 0;
+  color: var(--color-primario);
+}
+
+.row {
+  margin-bottom: 1.25rem;
+}
+
+.row:last-child {
+  margin-bottom: 0;
+}
+
+.row label {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--color-primario);
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+}
+
+.row p {
+  font-size: 0.9375rem;
+  color: #1f2937;
+  margin: 0;
+}
+
+
+.vacunaRow {
+  display: grid;
+  grid-template-columns: 1.5fr 1.5fr 1fr;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 1.25rem;
+  background: var(--color-blanco);
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.vacunaRow:last-child {
+  margin-bottom: 0;
+}
+
+.vacunaNombre {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.vacunaFecha {
+  color: #6b7280;
+  font-size: 0.9375rem;
+}
+
+.vacunaVet {
+  color: #6b7280;
+  font-size: 0.9375rem;
+  text-align: right;
+}
+
+.emptyState {
+  padding: 2rem;
+  text-align: center;
+  color: #9ca3af;
+  background: #f9fafb;
+  border-radius: 0.75rem;
+}
+
+.estudios {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  /* el fondo/borde ahora vive en .section */
+}
+
+.estudioCard {
+  background: var(--color-blanco);
+  padding: 1rem 1.25rem;
+  border-radius: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.estudioCard h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.estudioCard p {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.verResultado {
+  font-size: 0.78rem;
+  color: var(--color-primario);
+  background: var(--color-fondo-claro);
+  text-decoration: none;
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  transition: background 0.15s;
+}
+
+.verResultado:hover {
+  background: #ddd6fe;
+}
+
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.responsable {
+  text-align: right;
+}
+
+.responsableLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.15rem 0;
+}
+
+.responsableName {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.1rem 0;
+}
+
+.responsablePhone {
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Botón Volver */
+.backBtn {
+  background: transparent;
+  border: none;
+  color: var(--color-primario, #7c3aed);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  margin-bottom: 1rem;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.backBtn:hover {
+  opacity: 0.8;
+  transform: translateX(-3px);
+}
+
+/* Ajuste opcional para reducir el margen del título si lo ves muy separado */
+.header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+  color: #1f2937;
+}

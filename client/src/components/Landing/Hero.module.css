@@ -1,0 +1,263 @@
+.section {
+  width: 100%;
+  background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 100%);
+  font-family: "Inter", Arial, Helvetica, sans-serif;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 64px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 48px;
+  flex-wrap: wrap;
+  box-sizing: border-box;
+}
+
+.textColumn {
+  flex: 1 1 480px;
+  min-width: 300px;
+}
+
+.title {
+  margin: 24px 0 0;
+  font-size: 44px;
+  line-height: 52px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #1c1533;
+}
+
+.titleAccent {
+  color: var(--color-primario);
+}
+
+.description {
+  margin: 20px 0 0;
+  max-width: 480px;
+  color: #7c6aa6;
+  font-size: 17px;
+  line-height: 26px;
+  font-weight: 400;
+  letter-spacing: -0.15px;
+}
+
+.actionsRow {
+  margin-top: 32px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.link {
+  color: var(--color-primario);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.15px;
+  text-decoration: none;
+}
+
+.statsRow {
+  margin-top: 40px;
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.statValue {
+  margin: 0;
+  color: var(--color-primario);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.statLabel {
+  margin: 2px 0 0;
+  color: #7c6aa6;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.imageColumn {
+  position: relative;
+  flex: 1 1 360px;
+  max-width: 420px;
+}
+
+.heroImage {
+  width: 100%;
+  height: 360px;
+  object-fit: cover;
+  border-radius: 24px;
+  display: block;
+  box-shadow: 0 20px 40px rgba(124, 58, 237, 0.15);
+}
+
+.floatingCard {
+  position: absolute;
+  display: flex;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 12px 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+.floatingCardTop {
+  top: -16px;
+  right: 8px;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 220px;
+}
+
+.floatingCardBottom {
+  bottom: -20px;
+  left: 8px;
+  align-items: center;
+  gap: 10px;
+  max-width: 260px;
+}
+
+.statusDot {
+  margin-top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-cta);
+  flex-shrink: 0;
+}
+
+.floatingLabelSuccess {
+  margin: 0;
+  color: var(--color-cta);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.floatingLabelMuted {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.floatingValue {
+  margin: 2px 0 0;
+  color: #1c1533;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.floatingSubtext {
+  margin: 2px 0 0;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.appointmentIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--color-fondo-claro);
+  color: var(--color-primario);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    padding: 40px 20px;
+    gap: 32px;
+    text-align: center;
+  }
+
+  .textColumn {
+    order: 1;
+    min-width: 0;
+    width: 100%;
+  }
+  .description {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .actionsRow {
+    justify-content: center;
+  }
+
+  .statsRow {
+    justify-content: center;
+    text-align: left;
+  }
+
+  .imageColumn {
+    order: 2;
+    max-width: 420px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .heroImage {
+    height: 280px;
+  }
+
+  .title {
+    font-size: 34px;
+    line-height: 42px;
+  }
+}
+
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 28px;
+    line-height: 36px;
+  }
+  .description {
+    font-size: 15px;
+    line-height: 24px;
+  }
+
+  .actionsRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .actionsRow > * {
+    width: 100%;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  .statsRow {
+    gap: 20px;
+    justify-content: space-between;
+  }
+
+  .heroImage {
+    height: 220px;
+  }
+
+  .floatingCard {
+    position: static;
+    max-width: 100%;
+    margin-top: 12px;
+    box-shadow: none;
+    border: 1px solid #ede9fe;
+  }
+
+  .floatingCardTop,
+  .floatingCardBottom {
+    max-width: 100%;
+  }
+}

@@ -1,0 +1,38 @@
+.textarea-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.textarea-label {
+  color: #2b2142;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.textarea-campo {
+  width: 100%;
+  box-sizing: border-box;
+
+  min-height: 110px;
+  max-height: 110px;
+
+  padding: 12px 14px;
+
+  border: 1px solid #e5ddf8;
+  border-radius: 14px;
+
+  background-color: #ffffff;
+
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+
+  outline: none;
+  resize: none;
+}
+
+.textarea-error {
+  color: red;
+  font-size: 12px;
+}

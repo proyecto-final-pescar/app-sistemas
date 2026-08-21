@@ -1,0 +1,495 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f8f6ff;
+}
+
+.pageWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Previene desbordamientos en flexbox */
+}
+
+.content {
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.volverInicio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6d28d9;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0;
+  transition: opacity 0.15s;
+}
+
+.volverInicio:hover {
+  opacity: 0.7;
+}
+
+/* Buscador y chips dentro del PanelDestacado */
+
+.buscador {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.inputBuscar {
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  border: none;
+  padding: 0 16px;
+  font-size: 15px;
+  outline: none;
+  background-color: #ffffff;
+  color: #1f1739;
+  box-sizing: border-box;
+}
+
+.btnBuscar {
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 12px;
+  border: none;
+  background: #22A96B;
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.btnBuscar:hover {
+  background: #1c8f5a;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.chip {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.chip:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.chipActivo {
+  background: #fff;
+  color: #6B4FBB;
+  font-weight: 600;
+}
+
+/* Foro de perdidos + resumen de salud */
+
+.foroPerdidos {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FDF3D8;
+  border-left: 4px solid #E0A100;
+  border-radius: 12px;
+  padding: 16px 20px;
+  gap: 16px;
+}
+
+.foroPerdidosInfo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.foroPerdidosIcono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #FBE7B6;
+  color: #B45309;
+}
+
+.foroPerdidosInfo strong {
+  display: block;
+  font-size: 15px;
+  color: #451a03;
+}
+
+.foroPerdidosInfo p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #78350f;
+}
+
+.btnVerPublicaciones {
+  background: #7A3E12;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.btnVerPublicaciones:hover {
+  background: #5c2e0d;
+}
+
+.resumenSalud {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.resumenSalud header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.resumenSalud header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #1e1b4b;
+}
+
+.resumenSalud header a {
+  color: #6B4FBB;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.resumenSalud header a:hover {
+  text-decoration: underline;
+}
+
+/* Skeleton & Estados */
+.resultados {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.listaResultados {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.emptyHint {
+  color: #6b6b6b;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.errorBanner {
+  background: #FDEAEA;
+  color: #B02A2A;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.skeletonCard {
+  height: 96px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e6e6e6 37%, #f0f0f0 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+.mascotasGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.mascotaCard {
+  border: 1px solid #ece9f7;
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: #fff;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.mascotaCard:hover {
+  box-shadow: 0 4px 16px rgba(107, 79, 187, 0.12);
+  border-color: #ded7f7;
+}
+
+.mascotaCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mascotaFoto {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #f4f1ff;
+}
+
+.mascotaFotoPlaceholder {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f1ff;
+  color: #6B4FBB;
+}
+
+.mascotaNombre {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e1b4b;
+}
+
+.mascotaEspecie {
+  display: block;
+  font-size: 12px;
+  color: #8b87a3;
+  margin-top: 1px;
+}
+
+.proximoTurno {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #f4f1ff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #5b4cc4;
+}
+
+.proximoTurno svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.proximoTurnoFecha {
+  font-weight: 600;
+  font-size: 13px;
+  margin: 0;
+  color: #1e1b4b;
+}
+
+.proximoTurnoLugar {
+  font-size: 12px;
+  margin: 2px 0 0;
+  color: #7a76a0;
+}
+
+.sinTurnos {
+  font-size: 13px;
+  color: #a8a4c0;
+  margin: 0;
+  padding: 10px 0 0;
+}
+
+.mascotaCardAcciones {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.btnSecundario {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: none;
+  background: #6B4FBB;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btnSecundario:hover {
+  background: #5b3fa8;
+}
+
+.btnTexto {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid #ece9f7;
+  background: #fff;
+  color: #6B4FBB;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btnTexto:hover {
+  background: #f4f1ff;
+  border-color: #ded7f7;
+}
+
+.resumenSaludVacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  color: #8b87a3;
+  padding: 32px 0;
+}
+
+.resumenSaludVacio svg {
+  color: #c9c2e8;
+}
+
+.resumenSaludVacio button {
+  margin-top: 6px;
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 8px;
+  border: none;
+  background: #6B4FBB;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.resumenSaludEstado {
+  text-align: center;
+  color: #8b87a3;
+  padding: 24px 0;
+}
+
+.linkVerTodo {
+  background: none;
+  border: none;
+  color: #6B4FBB;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.linkVerTodo:hover {
+  text-decoration: underline;
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* DISPOSITIVOS MÓVILES (< 768px) */
+@media (max-width: 767px) {
+  .content {
+    padding: 16px;
+    padding-top: 76px; /* Deja espacio suficiente para la barra fija superior en mobile */
+    gap: 16px;
+  }
+
+  .buscador {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .inputBuscar {
+    width: 100%;
+    height: 48px;
+    padding: 12px 16px;
+    line-height: 1.4;
+  }
+
+  .btnBuscar {
+    width: 100%;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chips {
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .chip {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .foroPerdidos {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .foroPerdidosInfo {
+    gap: 12px;
+  }
+
+  .btnVerPublicaciones {
+    width: 100%;
+    text-align: center;
+    padding: 12px;
+  }
+
+  .resumenSalud {
+    padding: 16px;
+  }
+}
+
+/* TABLETS (768px to 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .content {
+    padding: 20px 24px;
+    gap: 20px;
+  }
+
+  .buscador {
+    flex-direction: row;
+  }
+}

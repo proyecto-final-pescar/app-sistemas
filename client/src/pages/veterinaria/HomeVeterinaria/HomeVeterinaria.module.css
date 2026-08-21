@@ -1,0 +1,268 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f9f8ff;
+  font-family: "Inter", Arial, Helvetica, sans-serif;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.contentWrap {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Buscador e inputs */
+.searchBarRow {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  max-width: 100%;
+  align-items: center;
+}
+
+.inputSearchContainer {
+  width: 100%;
+}
+
+
+.btnBuscarIcono {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background-color: var(--color-cta, #059669);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.actionButtonsRow {
+  display: flex;
+  gap: 12px;
+}
+
+/* Grilla inferior de tarjetas oscuras */
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* Reestilización de la tarjeta UI para adaptarla al modo oscuro */
+.metricCard {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 200px;
+  box-shadow: 0 4px 12px rgba(28, 16, 51, 0.03);
+  border: none;
+  box-sizing: border-box;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.cardHeader h3 {
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 20px;
+  color: #1c1033;
+  margin: 0;
+}
+
+.icon {
+  background-color: #ede9fe;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7c3aed;
+}
+
+.cardBody {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.mainDetail {
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  font-size: 18px;
+  color: #1c1033;
+  margin: 0 0 4px 0;
+}
+
+.mainNumber {
+  font-family: "Outfit", sans-serif;
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 42px;
+  color: #1c1033;
+  margin: 0 0 2px 0;
+}
+
+.subDetail {
+  font-family: "Inter", sans-serif;
+  font-weight: 400; /* Regular */
+  font-size: 13px;
+  line-height: 18px;
+  color: #7e6fa0; /* Texto secundario MyPet */
+  margin: 0 0 2px 0;
+}
+
+.timeDetail {
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 18px;
+  color: #1c1033;
+  margin: 4px 0 0 0;
+}
+
+.cardLink {
+  color: #7c3aed;
+  text-decoration: none;
+  font-family: "Inter", sans-serif;
+  font-weight: 500; /* Medium */
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-block;
+  align-self: flex-start;
+  transition: transform 0.2s ease;
+}
+
+.cardLink:hover {
+  transform: translateX(3px);
+}
+
+.emptyText {
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  color: #7e6fa0;
+  margin: 0;
+}
+/* TABLET CHICA */
+@media (min-width: 481px) and (max-width: 767px) {
+  .contentWrap {
+    padding: 72px 20px 20px;
+    gap: 20px;
+  }
+
+  .searchBarRow {
+    gap: 10px;
+  }
+
+  .cardsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .metricCard {
+    min-height: 170px;
+    padding: 20px;
+  }
+}
+
+/* TABLET GRANDE */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .contentWrap {
+    padding: 24px;
+    gap: 20px;
+  }
+
+  .searchBarRow {
+    gap: 10px;
+  }
+
+  .cardsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .metricCard {
+    min-height: 180px;
+    padding: 20px;
+  }
+}
+
+/* MOBILE */
+@media (max-width: 480px) {
+ .contentWrap {
+  padding: 72px 12px 12px;
+  gap: 16px;
+}
+
+  .searchBarRow {
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .inputSearchContainer {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .btnBuscarTexto {
+    display: none;
+  }
+
+  .btnBuscarIcono {
+    display: flex;
+  }
+
+  .actionButtonsRow {
+    gap: 10px;
+  }
+
+  .actionButtonsRow > button {
+    flex: 1;
+  }
+
+  .cardsGrid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .metricCard {
+    min-height: auto;
+    padding: 18px;
+  }
+
+  .mainNumber {
+    font-size: 26px;
+    line-height: 34px;
+  }
+
+  .mainDetail {
+    font-size: 17px;
+  }
+
+  .cardHeader {
+    margin-bottom: 12px;
+  }
+}

@@ -1,0 +1,117 @@
+.contenedor {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.oreja,
+.trazoBoca,
+.trazoOjo {
+  transition: transform 0.25s ease, d 0.25s ease;
+}
+
+.oreja {
+  fill: #C97F3E;
+}
+
+.ojo {
+  fill: #3A2A1E;
+  transition: ry 0.2s ease;
+}
+
+.trazoBoca {
+  fill: none;
+  stroke: #3A2A1E;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.trazoOjo {
+  fill: none;
+  stroke: #3A2A1E;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.bigote {
+  stroke: #B8B8C2;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+/* --- Animaciones por pose --- */
+
+@keyframes respirar {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes rebotarFeliz {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.08) translateY(-3px); }
+}
+
+@keyframes tambalearPreocupado {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-4deg); }
+  75% { transform: rotate(4deg); }
+}
+
+.animIdle {
+  animation: respirar 3s ease-in-out infinite;
+}
+
+.animPensando {
+  animation: respirar 4s ease-in-out infinite;
+}
+
+.animFeliz {
+  animation: rebotarFeliz 0.6s ease-in-out 2;
+}
+
+.animPreocupado {
+  animation: tambalearPreocupado 0.35s ease-in-out 3;
+}
+
+.puntosPensando {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  display: flex;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background-color: var(--color-blanco);
+  box-shadow: 0 1px 3px rgba(28, 16, 51, 0.15);
+}
+
+.puntosPensando span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background-color: var(--color-primario);
+  animation: rebote 1.2s infinite ease-in-out;
+}
+
+.puntosPensando span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.puntosPensando span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes rebote {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animIdle,
+  .animPensando,
+  .animFeliz,
+  .animPreocupado,
+  .puntosPensando span {
+    animation: none;
+  }
+}

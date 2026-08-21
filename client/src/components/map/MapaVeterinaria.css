@@ -1,0 +1,122 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@800&family=Inter:wght@400;500&display=swap");
+
+/* ── Variables de la paleta cromática oficial ── */
+:root {
+  --color-primario: #7c3aed; /* Violeta — selección / focus */
+  --color-cta: #059669; /* Verde — acción principal */
+  --color-texto-principal: #1c1033; /* Violeta oscuro */
+  --color-texto-secundario: #7e6fa0; /* Violeta apagado */
+  --color-fondo-claro: #ede9fe; /* Lavanda suave */
+  --color-blanco: #ffffff; /* Fondo de tarjetas */
+  --color-borde: #cccccc; /* Borde del mapa */
+}
+
+/* ── Contenedor principal del mapa ── */
+.mapa-caracteristicas {
+  width: 100%;
+  height: 500px;
+  border: 2px solid var(--color-borde);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ── Mensajes de estado (loading / error) ── */
+.mapa-estado-mensaje {
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: var(--color-texto-secundario);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.mapa-estado-error {
+  color: #b91c1c;
+}
+
+/* ── Marcador: ubicación del usuario ── */
+.marker-usuario {
+  width: 16px;
+  height: 16px;
+  background-color: #4285f4;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  box-shadow:
+    0 2px 6px rgba(66, 133, 244, 0.5),
+    0 0 0 6px rgba(66, 133, 244, 0.15),
+    0 0 12px 4px rgba(66, 133, 244, 0.25);
+}
+
+.marker-usuario-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.marker-usuario__etiqueta {
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  font-size: 0.78rem;
+  color: var(--color-texto-principal);
+  background-color: var(--color-blanco);
+  padding: 4px 10px;
+  border-radius: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+}
+
+/* ── Marcador: veterinaria ── */
+.marker-vete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background-color: var(--color-fondo-claro);
+  border: 2px solid var(--color-primario);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.marker-vete:hover {
+  transform: scale(1.12);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+.marker-vete__icono {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* ── InfoBubble: tarjeta de veterinaria ── */
+.info-bubble {
+  background-color: var(--color-blanco);
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  text-align: left;
+  transform: translateY(-100%) translateY(7px);
+  cursor: pointer;
+}
+
+.info-bubble__nombre {
+  font-family: "Outfit", sans-serif;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--color-texto-principal);
+  margin: 0 0 4px 0;
+}
+
+.info-bubble__distancia {
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--color-texto-secundario);
+  margin: 0;
+}

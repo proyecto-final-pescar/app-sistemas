@@ -1,0 +1,150 @@
+.formulario-mascota {
+  font-family: 'Inter', sans-serif;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background-color: #ffffff
+}
+
+.formulario-header {
+  text-align: center;
+}
+
+.formulario-icono {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background-color: #EDE9FE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #7C3AED;
+}
+
+.formulario-header h2 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  color: #1C1033;
+  margin: 0;
+  font-size: 26px;
+}
+
+.formulario-header p {
+  margin: 6px 0 0;
+  color: #7E6FA0;
+  font-size: 14px;
+}
+
+.foto-upload {
+  border: 2px dashed #e9ddff;
+  border-radius: 18px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: #7E6FA0;
+  background-color: #FFFFFF;
+}
+
+.foto-upload {
+  border: 2px dashed #e9ddff;
+  border-radius: 18px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  color: #7E6FA0;
+  background-color: #FFFFFF;
+  min-height: 100px;
+  transition: border-color 0.2s ease;
+}
+.foto-upload:hover {
+  border-color: #7c3aed;
+}
+
+.foto-upload input {
+  display: none;
+}
+
+.foto-icono {
+  font-size: 28px;
+}
+
+
+.sexo-opciones {
+  display: flex;
+  gap: 12px;
+}
+
+.sexo-card {
+  font-family: 'Inter', sans-serif;
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #e9ddff;
+  border-color: #E9D5FF;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  color: #1C1033;
+  font-weight: 500;
+}
+
+.sexo-card-selected {
+  border-color: #7c3aed;
+  background-color: #ede9fe;
+  color: #7C3AED;
+}
+
+.formulario-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+
+.preview-foto {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 3px solid #e8dfff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1);
+  pointer-events: none;
+}
+
+
+.foto-preview-wrapper {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.foto-preview-wrapper .preview-foto {
+  width: 100%;
+  height: 100%;
+}
+
+.foto-edit-overlay {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background-color: #7c3aed;
+  color: white;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}

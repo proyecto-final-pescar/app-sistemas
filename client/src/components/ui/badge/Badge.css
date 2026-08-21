@@ -1,0 +1,33 @@
+/* client/src/components/ui/badge/Badge.css */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-confirmado,
+.badge-success {
+  background-color: #d1fae5;
+  color: var(--color-cta);
+}
+
+.badge-pendiente {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.badge-cancelado {
+  background-color: #fee2e2;
+  color: #ef4444;
+}
+
+.badge-secondary {
+  background-color: var(--color-fondo-claro);
+  color: var(--color-primario);
+}

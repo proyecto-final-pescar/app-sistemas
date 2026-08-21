@@ -1,0 +1,343 @@
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--color-fondo-secciones);
+  font-family: var(--fuente-texto);
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.contenido {
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+
+
+.statCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--color-blanco);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(28, 16, 51, 0.04), 0 4px 16px rgba(28, 16, 51, 0.06);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.statCard:hover {
+  box-shadow: 0 2px 4px rgba(28, 16, 51, 0.06), 0 8px 24px rgba(28, 16, 51, 0.1);
+  transform: translateY(-2px);
+}
+
+.statIcono {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iconoUsuarios {
+  background: var(--color-fondo-claro);
+  color: var(--color-primario);
+}
+
+.iconoVeterinarias {
+  background: #ECFDF5;
+  color: var(--color-cta);
+}
+
+.iconoTurnos {
+  background: #FEF3E2;
+  color: #D97706;
+}
+
+.iconoForo {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.statInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-texto-secundario);
+  letter-spacing: 0.5px;
+}
+
+.statValor {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--color-texto-principal);
+}
+
+.statDelta {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-cta);
+}
+
+/* grafico y lista de turnos */
+.grafico,
+.turnosSection {
+  background: var(--color-blanco);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.tituloSeccion {
+  font-family: var(--fuente-titulos);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-texto-principal);
+  margin: 0 0 20px;
+}
+
+.tituloSeccionMuted {
+  color: var(--color-texto-secundario);
+  font-weight: 500;
+}
+
+.barras {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  height: 220px;
+}
+
+.columnaBarra {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+
+.barra {
+  width: 100%;
+  background: var(--color-fondo-claro);
+  border-radius: 8px 8px 0 0;
+  transition: height 0.2s ease;
+}
+
+.barraActiva {
+  background: var(--color-primario);
+}
+
+.labelDia {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--color-texto-secundario);
+}
+
+.labelDiaActivo {
+  color: var(--color-primario);
+  font-weight: 700;
+}
+
+.turnosHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.turnosHeader .tituloSeccion {
+  margin: 0;
+  margin-right: auto;
+}
+
+.inputFecha,
+.inputBusqueda {
+  height: 40px;
+  border: 1px solid var(--color-fondo-claro);
+  border-radius: 10px;
+  padding: 0 14px;
+  font-size: var(--texto-form-size);
+  font-family: var(--fuente-texto);
+  color: var(--color-texto-principal);
+  box-sizing: border-box;
+}
+
+.inputBusqueda {
+  min-width: 200px;
+}
+
+.tabsFiltro {
+  display: flex;
+  gap: 4px;
+  background: var(--color-fondo-secciones);
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.tabFiltro {
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-texto-secundario);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.tabFiltroActivo {
+  background: var(--color-primario);
+  color: var(--color-blanco);
+}
+
+.listaTurnos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.turnoRow {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--color-fondo-secciones);
+  border-radius: 14px;
+  padding: 16px 20px;
+}
+
+.turnoHora {
+  display: flex;
+  flex-direction: column;
+  min-width: 60px;
+}
+
+.turnoHoraLabel {
+  font-size: 11px;
+  color: var(--color-texto-secundario);
+  font-weight: 500;
+}
+
+.turnoHoraValor {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-primario);
+}
+
+.turnoInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.turnoInfoTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.3px;
+}
+
+.badgeConfirmado {
+  background: #D1FAE5;
+  color: #047857;
+}
+
+.badgePendiente {
+  background: #FEF3E2;
+  color: #B45309;
+}
+
+.badgeCancelado {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
+.badgeAtendido {
+  background: var(--color-fondo-claro);
+  color: var(--color-primario);
+}
+
+.turnoMascota {
+  font-size: 14px;
+  color: var(--color-texto-secundario);
+}
+
+.turnoClinica {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-texto-principal);
+  margin: 0;
+}
+
+.turnoProfesional {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  min-width: 140px;
+}
+
+.turnoProfesionalNombre {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-texto-principal);
+}
+
+.turnoProfesionalLabel {
+  font-size: 12px;
+  color: var(--color-texto-secundario);
+}
+
+.botonDetalles {
+  background: var(--color-cta);
+  color: var(--color-blanco);
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.mensaje {
+  color: var(--color-texto-secundario);
+  font-size: 14px;
+}
+
+.error {
+  color: #B91C1C;
+  font-size: 14px;
+  margin-bottom: 16px;
+}

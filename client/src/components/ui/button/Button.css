@@ -1,0 +1,131 @@
+.btn{
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+/* VARIANTES */
+
+.btn-primario {
+  background-color: #059669;
+  color: #FFFFFF;
+  border: none;
+  box-shadow: 0 6px 15px rgba(5, 150, 105, 0.25);
+}
+
+.btn-primario:hover {
+  background-color: #6d28d9;
+}
+
+.btn-secundario {
+  background-color: white;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+.btn-peligro {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+}
+
+.btn-peligro-borde {
+  background-color: white;
+  color: #ef4444;
+  border: 2px solid #ef4444;
+}
+
+.btn-peligro-ghost {
+  background-color: transparent;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.btn-ver-ficha {
+  background-color: transparent;
+  color: #7C3AED;
+  border: 1.5px solid #7C3AED;
+  width: 100%;
+  text-align: center;
+}
+.btn-ver-ficha:hover {
+  background-color: #EDE9FE;
+}
+/* TAMAÑOS */
+
+.btn-chico {
+  padding: 8px 12px;
+  font-size: 12px;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+@media (min-width: 768px) {
+  .btn-chico {
+    padding: 6px 12px;
+    font-size: 12px;
+    min-height: 36px;
+  }
+}
+
+.btn-mediano {
+  height: 48px;
+  min-width: 140px;
+  font-size: 14px;
+  padding: 0 20px;
+}
+ 
+@media (min-width: 768px) {
+  .btn-mediano {
+    height: 44px;
+    font-size: 14px;
+  }
+}
+ 
+@media (min-width: 1024px) {
+  .btn-mediano {
+    height: 48px;
+    font-size: 15px;
+  }
+}
+ 
+.btn-grande {
+  height: 56px;
+  padding: 0 24px;
+  font-size: 16px;
+  min-width: 160px;
+}
+ 
+@media (min-width: 768px) {
+  .btn-grande {
+    height: 48px;
+    padding: 0 20px;
+    font-size: 15px;
+  }
+}
+ 
+@media (min-width: 1024px) {
+  .btn-grande {
+    height: 56px;
+    padding: 0 28px;
+    font-size: 16px;
+  }
+}
+ 

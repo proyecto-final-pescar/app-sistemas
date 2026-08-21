@@ -1,0 +1,94 @@
+.panel {
+    position: relative;
+    overflow: hidden;
+    background: var(--gradiente-primario, linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%));
+    border-radius: 20px;
+    padding: 32px 36px;
+    color: #ffffff;
+}
+
+/* Formas decorativas */
+.circuloGrande {
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+}
+
+.circuloChico {
+    position: absolute;
+    top: 40px;
+    right: 60px;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    pointer-events: none;
+}
+
+.contenidoPrincipal {
+    position: relative;
+    z-index: 1;
+}
+
+.chipsSuperior {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.chipSuperior {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-family: var(--fuente-texto, "Inter", sans-serif);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.titulo {
+    font-family: var(--fuente-titulos, "Outfit", sans-serif);
+    font-weight: 800;
+    font-size: 30px;
+    line-height: 36px;
+    margin: 0 0 8px;
+}
+
+.subtitulo {
+    font-family: var(--fuente-texto, "Inter", sans-serif);
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 22px;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.contenido {
+    margin-top: 22px;
+}
+
+/* Responsividad del Panel */
+@media (max-width: 767px) {
+    .panel {
+        padding: 20px 18px;
+        border-radius: 16px;
+    }
+
+    .titulo {
+        font-size: 22px;
+        line-height: 28px;
+    }
+
+    .subtitulo {
+        font-size: 14px;
+        line-height: 20px;
+    }
+
+    .contenido {
+        margin-top: 16px;
+    }
+}
