@@ -4,7 +4,8 @@ import {
   crearHistorialClinico,
   obtenerEntradaHistorialClinico,
   obtenerHistorialClinico,
-  obtenerHistorialesPorTutor // <-- Podés agruparlo acá arriba
+  obtenerTurnosPendientesRegistro,
+  obtenerHistorialesPorTutor
 } from '../controllers/historialClinicoController.js';
 import verifyToken, { authorize } from '../middleware/auth.js';
 import historialAccess from '../middleware/historialAccess.js';
@@ -34,6 +35,13 @@ router.get(
   obtenerEntradaHistorialClinico
 );
 
+router.get(
+  '/historial-clinico/turnos-pendientes/:mascotaId',
+  verifyToken,
+  authorize('veterinaria'),
+  obtenerTurnosPendientesRegistro
+);
+
 router.post(
   '/historial-clinico',
   verifyToken,
@@ -44,7 +52,7 @@ router.post(
 router.put(
   '/historial-clinico/:id',
   verifyToken,
-  authorize('veterinaria'),
+  authorize('veterinaria'), 
   actualizarHistorialClinico
 );
 

@@ -8,6 +8,7 @@ import {
   obtenerVeterinariaPorId,
   crearVeterinaria,
   actualizarVeterinaria,
+  obtenerPacientesVeterinaria,
 } from "../controllers/veterinariaController.js";
 import {
   calificarVeterinaria,
@@ -21,6 +22,7 @@ router.get("/buscar", verifyToken, buscarVeterinarias);
 router.get("/", verifyToken, obtenerVeterinarias);
 
 router.get("/mia", verifyToken, obtenerMiVeterinaria);
+router.get("/mia/pacientes", verifyToken, verificarRol("veterinaria"), obtenerPacientesVeterinaria);  
 
 router.get("/:id", verifyToken, obtenerVeterinariaPorId);
 router.post("/", verifyToken, verificarRol("veterinaria"), crearVeterinaria);
