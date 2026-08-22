@@ -2,7 +2,8 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 import User from '../models/User.js'
-import { sendResetPasswordEmail } from '../utils/mailer.js'
+import { enviarEmail } from '../utils/mailer.js'
+import { armarEmailResetPassword } from '../templates/emailResetPassword.js'
 
 const TOKEN_EXPIRATION_MS = 60 * 60 * 1000 // 1 hora
 const SALT_ROUNDS = 10
@@ -74,7 +75,8 @@ export const forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + TOKEN_EXPIRATION_MS
     await user.save()
 
-    await sendResetPasswordEmail(user.email, token)
+    const { subject, html } = armarEmailResetPassword(token)
+    await enviarEmail({ to: user.email, subject, html })
 
     return res.status(200).json({
       mensaje: 'Si el email está registrado, vas a recibir un correo con instrucciones'

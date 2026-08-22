@@ -4,6 +4,8 @@ import Veterinaria from '../models/Veterinaria.js';
 import Turno from '../models/Turno.js';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
+import { enviarEmail } from '../utils/mailer.js';
+import { armarEmailSuspensionCuenta } from '../templates/emailSuspensionCuenta.js';
 
 // Escapa caracteres especiales de regex antes de usarlos en $regex.
 
@@ -309,6 +311,14 @@ export const darDeBajaUsuario = async (req, res) => {
 
     usuario.active = false;
     await usuario.save();
+
+    // Aviso por email al usuario suspendido
+    try {
+      const { subject, html } = armarEmailSuspensionCuenta(usuario.name);
+      await enviarEmail({ to: usuario.email, subject, html });
+    } catch (emailError) {
+      console.error('Error al enviar email de suspensión de cuenta:', emailError);
+    }
 
     return res.status(200).json({
       success: true,
