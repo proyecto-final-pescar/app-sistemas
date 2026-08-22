@@ -3,13 +3,24 @@ import {
   actualizarHistorialClinico,
   crearHistorialClinico,
   obtenerEntradaHistorialClinico,
-  obtenerHistorialClinico
+  obtenerHistorialClinico,
+  obtenerTurnosPendientesRegistro,
+  obtenerHistorialesPorTutor
 } from '../controllers/historialClinicoController.js';
 import verifyToken, { authorize } from '../middleware/auth.js';
 import historialAccess from '../middleware/historialAccess.js';
 
 const router = Router();
 
+// 1. PRIMERO LA RUTA ESTÁTICA
+router.get(
+  '/historial/tutor', 
+  verifyToken, 
+  authorize('dueno'), 
+  obtenerHistorialesPorTutor
+);
+
+// 2. DESPUÉS LAS RUTAS DINÁMICAS
 router.get(
   '/historial/:mascotaId',
   verifyToken,
@@ -24,6 +35,13 @@ router.get(
   obtenerEntradaHistorialClinico
 );
 
+router.get(
+  '/historial-clinico/turnos-pendientes/:mascotaId',
+  verifyToken,
+  authorize('veterinaria'),
+  obtenerTurnosPendientesRegistro
+);
+
 router.post(
   '/historial-clinico',
   verifyToken,
@@ -34,8 +52,8 @@ router.post(
 router.put(
   '/historial-clinico/:id',
   verifyToken,
-  authorize('veterianria'),
+  authorize('veterinaria'), 
   actualizarHistorialClinico
-)
+);
 
 export default router;

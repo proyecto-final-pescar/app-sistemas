@@ -21,6 +21,7 @@ import dashboardRouter from './dashboard.js';
 import pagosRouter from './pagos.js';
 import botRouter from './bot.js';
 import notificacionesRoutes from './notificaciones.js';
+import constantesRouter from './constantesRoutes.js';
 
 const router = Router()
 
@@ -46,6 +47,7 @@ router.use('/admin/dashboard', dashboardRouter);
 router.use('/pagos', pagosRouter);
 router.use('/bot', botRouter);
 router.use('/notificaciones', notificacionesRoutes);
+router.use('/constantes', constantesRouter);
 
 
 export default router;

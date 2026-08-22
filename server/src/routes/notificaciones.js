@@ -5,7 +5,7 @@ import {
   contarNoLeidas,
   marcarComoLeida,
   marcarTodasComoLeidas,
-} from '../controllers/notificacionController.js';
+} from '../controllers/NotificacionController.js';
 
 const router = express.Router();
 

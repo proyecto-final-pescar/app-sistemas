@@ -22,10 +22,13 @@ export const calcularEdad = (fechaNacimiento) => {
 
 /**
  * Formatea la edad en un texto legible: "X años" o "X meses" si es menor a 1 año.
- * @param {string | Date} fechaNacimiento
+ * Si no hay fecha de nacimiento, devuelve un texto por defecto.
+ * @param {string | Date | null | undefined} fechaNacimiento
  * @returns {string}
  */
 export const formatearEdad = (fechaNacimiento) => {
+    if (!fechaNacimiento) return "Edad no disponible";
+
     const edad = calcularEdad(fechaNacimiento);
 
     if (edad >= 1) {

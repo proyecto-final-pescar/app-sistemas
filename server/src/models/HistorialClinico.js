@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { CATEGORIAS_SERVICIO } from "../constants/categoriasServicio.js";
 
 const HistorialClinicoSchema = new mongoose.Schema(
   {
@@ -17,7 +18,6 @@ const HistorialClinicoSchema = new mongoose.Schema(
     profesionalId: {
       type: mongoose.Schema.Types.ObjectId,
       required: [true, "El profesional a cargo es requerido"],
-     
     },
 
     veterinariaId: {
@@ -28,7 +28,8 @@ const HistorialClinicoSchema = new mongoose.Schema(
 
     turnoId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Turno", // Opcional: vincular el historial al turno previo que fue atendido
+      ref: "Turno",
+      required: [true, "El turno es requerido"],
     },
 
     fecha: {
@@ -37,7 +38,7 @@ const HistorialClinicoSchema = new mongoose.Schema(
     },
 
     hora: {
-      type: String, // Formato "HH:MM"
+      type: String,
       required: [true, "La hora del turno es requerida"],
       trim: true,
     },
@@ -45,7 +46,7 @@ const HistorialClinicoSchema = new mongoose.Schema(
     categoriaServicio: {
       type: String,
       enum: {
-        values: ["Vacunación", "Control", "Consulta", "Cirugía"], // Si se agrega otra categoría, se puede actualizar este enum
+        values: CATEGORIAS_SERVICIO,
         message: "{VALUE} no es una categoría de servicio válida",
       },
       required: [true, "La categoría del servicio es requerida"],
@@ -68,7 +69,6 @@ const HistorialClinicoSchema = new mongoose.Schema(
       default: 0,
     },
 
-    // Almacena el enlace para la descarga/renderizado del PDF del evento
     urlPdf: {
       type: String,
       trim: true,

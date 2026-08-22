@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { CATEGORIAS_SERVICIO } from '../constants/categoriasServicio.js';
 
 const veterinariaSchema = new mongoose.Schema(
   {
@@ -55,10 +56,15 @@ const veterinariaSchema = new mongoose.Schema(
       }
     },
 
-    servicios: [
+     servicios: [
       {
         categoria: {
           type: String,
+          required: [true, 'La categoría del servicio es requerida'],
+          enum: {
+            values: CATEGORIAS_SERVICIO,
+            message: '{VALUE} no es una categoría de servicio válida'
+          },
           trim: true
         },
         nombre: {

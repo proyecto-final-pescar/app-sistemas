@@ -7,6 +7,7 @@ import ConfirmModal from "../ui/confirm-modal/ConfirmModal";
 import EditarFichaMedicaModal from "./EditarFichaMedicaModal";
 import VacunaModal from "./VacunaModal";
 import EstudioModal from "./EstudioModal";
+import { formatearEdad } from "../../utils/EdadMascota";
 import styles from "./FichaMedicaTab.module.css";
 
 const textoOEstadoVacio = (valor) => {
@@ -19,18 +20,6 @@ const formatearFecha = (fecha) => {
   const valor = new Date(fecha);
   if (Number.isNaN(valor.getTime())) return "No informada";
   return valor.toLocaleDateString("es-AR", { timeZone: "UTC" });
-};
-
-const calcularEdad = (fechaNacimiento) => {
-  if (!fechaNacimiento) return null;
-  const nacimiento = new Date(fechaNacimiento);
-  if (Number.isNaN(nacimiento.getTime())) return null;
-  const hoy = new Date();
-  let edad = hoy.getUTCFullYear() - nacimiento.getUTCFullYear();
-  const antesDelCumple = hoy.getUTCMonth() < nacimiento.getUTCMonth()
-    || (hoy.getUTCMonth() === nacimiento.getUTCMonth() && hoy.getUTCDate() < nacimiento.getUTCDate());
-  if (antesDelCumple) edad -= 1;
-  return edad >= 0 ? edad : null;
 };
 
 const nombreProfesional = (registro) => registro?.profesionalNombre || null;
@@ -62,7 +51,7 @@ const FichaMedicaTab = ({
   const [eliminando, setEliminando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
 
-  const edad = calcularEdad(mascota?.fechaNacimiento);
+  const edadTexto = formatearEdad(mascota?.fechaNacimiento);
   const ultimaConsulta = useMemo(() => {
     if (!historial.length) return null;
     return historial.reduce((ultima, consulta) => (
@@ -149,7 +138,7 @@ const FichaMedicaTab = ({
 
       <div className={styles.metricsGrid}>
         <Card className={styles.metricCard}><span>Peso actual</span><strong>{mascota?.peso !== null && mascota?.peso !== undefined ? `${mascota.peso} kg` : "No informado"}</strong></Card>
-        <Card className={styles.metricCard}><span>Edad actual</span><strong>{edad === null ? "No informada" : `${edad} ${edad === 1 ? "año" : "años"}`}</strong></Card>
+        <Card className={styles.metricCard}><span>Edad actual</span><strong>{edadTexto}</strong></Card>
         <Card className={styles.metricCard}><span>Consultas totales</span><strong>{historial.length}</strong></Card>
         <Card className={styles.metricCard}><span>Última consulta</span><strong>{ultimaConsulta ? formatearFecha(ultimaConsulta.fecha) : "Sin consultas"}</strong></Card>
       </div>

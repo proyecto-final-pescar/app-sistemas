@@ -1,0 +1,457 @@
+/* =========================================
+   CONTENEDORES PRINCIPALES
+========================================= */
+.hm-main {
+  padding: 1rem;
+  /* 👇 Agregamos padding superior para que no choque con el TopBar en celular */
+  padding-top: 5rem; 
+  max-width: 90%;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  font-family: var(--fuente-texto);
+}
+
+@media (min-width: 640px) {
+  .hm-main { 
+    padding: 1.5rem; 
+    padding-top: 6rem; /* Ajuste para tablet si el TopBar es más alto */
+  }
+}
+
+@media (min-width: 1024px) {
+  .hm-main { 
+    padding: 2rem; 
+    /* 👇 En desktop lo reseteamos si tu Sidebar/TopBar ya no se superpone */
+    padding-top: 2rem; 
+  }
+}
+
+/* =========================================
+   FILTROS Y BÚSQUEDA
+========================================= */
+.hm-filters {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 1rem;
+  background-color: var(--color-blanco);
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid #E5E7EB;
+}
+
+@media (min-width: 768px) {
+  .hm-filters {
+    flex-direction: row;
+    align-items: center;
+    background-color: transparent;
+    padding: 0;
+    border: none;
+    gap: 1.5rem;
+  }
+}
+
+/* Buscador */
+.hm-search {
+  position: relative;
+  width: 100%;
+  max-width: 24rem;
+}
+
+.hm-search__icon {
+  position: absolute;
+  top: 50%;
+  left: 1rem;
+  transform: translateY(-50%);
+  display: flex;
+  color: var(--color-texto-secundario);
+}
+
+.hm-search__input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  border-radius: 9999px;
+  border: 1px solid #E5E7EB;
+  font-size: var(--texto-form-size);
+  font-family: var(--fuente-texto);
+  color: var(--color-texto-principal);
+  outline: none;
+  background-color: var(--color-blanco);
+  transition: all 0.2s;
+}
+
+.hm-search__input:focus {
+  border-color: var(--color-primario);
+  box-shadow: 0 0 0 2px var(--color-fondo-claro);
+}
+
+/* Contenedor de Chips y Selector */
+.hm-pet-filters-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    justify-content: space-between;
+}
+
+.hm-pet-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.hm-pet-filters::-webkit-scrollbar { display: none; }
+
+/* Chip inactivo (Transparente, sin borde, texto secundario) */
+.hm-pet-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  font-size: var(--texto-nav-size);
+  font-family: var(--fuente-texto);
+  font-weight: 500;
+  border: none;
+  background-color: transparent;
+  color: var(--color-texto-secundario);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.hm-pet-chip:hover {
+  background-color: var(--color-fondo-claro);
+  color: var(--color-primario);
+}
+
+/* Chip activo (Fondo violeta, texto blanco) */
+.hm-pet-chip--active {
+  background-color: var(--color-primario);
+  color: var(--color-blanco);
+  font-weight: 600;
+}
+
+.hm-pet-chip--active:hover {
+  background-color: var(--color-primario);
+  color: var(--color-blanco);
+}
+
+.hm-pet-chip__avatar {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Botón derecho "Elegí una mascota" */
+.hm-select-pet-btn {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    background-color: transparent;
+    border: none;
+    color: var(--color-texto-principal);
+    font-size: var(--texto-nav-size);
+    font-family: var(--fuente-texto);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.hm-select-mascota-wrapper {
+  margin-left: auto;
+}
+
+.hm-select-pet-btn:hover {
+    color: var(--color-primario);
+}
+
+/* Menú Desplegable de Mascotas */
+.hm-pet-dropdown-container { position: relative; }
+
+.hm-pet-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background-color: var(--color-blanco);
+  border: 1px solid var(--color-fondo-claro);
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hm-pet-dropdown-item {
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-fondo-claro);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--texto-nav-size);
+  font-family: var(--fuente-texto);
+  color: var(--color-texto-principal);
+  transition: background-color 0.2s;
+}
+
+.hm-pet-dropdown-item:last-child { border-bottom: none; }
+
+.hm-pet-dropdown-item:hover {
+  background-color: var(--color-fondo-claro);
+  color: var(--color-primario);
+}
+
+/* =========================================
+   TARJETAS ESTILO PÍLDORA
+========================================= */
+.hm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.hm-card-pill {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 9999px;
+  border: 1px solid #E5E7EB;
+  background-color: var(--color-blanco);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.hm-card-pill:hover {
+  border-color: var(--color-fondo-claro);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.hm-card-pill__icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: #F3E8FF; 
+  color: var(--color-primario, #7C3AED);
+  flex-shrink: 0;
+  border: none; /* Sin borde para que quede como tu imagen 4 */
+}
+
+.hm-card-pill__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.hm-card-pill__title {
+  font-family: var(--fuente-titulos);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--color-texto-principal);
+  margin: 0;
+}
+
+.hm-card-pill__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem;
+  color: var(--color-texto-secundario);
+  font-family: var(--fuente-texto);
+  font-size: 0.85rem;
+}
+
+.hm-card-pill__meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.hm-meta-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* =========================================
+   MODAL DE DETALLE (Diseño de la marca)
+========================================= */
+.hm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background-color: rgba(28, 16, 51, 0.4); 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.hm-modal-clean {
+  background-color: var(--color-blanco);
+  width: 100%;
+  max-width: 480px;
+  border-radius: 12px;
+  padding: 2.5rem 2rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  animation: zoomIn 0.2s ease-out;
+}
+
+.hm-modal-clean__close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: transparent;
+  border: none;
+  color: var(--color-texto-secundario);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  transition: color 0.2s;
+}
+
+.hm-modal-clean__close:hover {
+  color: var(--color-primario);
+}
+
+.hm-modal-clean__header {
+  margin-bottom: 1.5rem;
+  padding-right: 2rem;
+}
+
+.hm-modal-clean__header h2 {
+  font-family: var(--fuente-titulos);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-texto-principal);
+  margin: 0 0 0.5rem 0;
+}
+
+.hm-modal-clean__header p {
+  color: var(--color-texto-secundario);
+  font-family: var(--fuente-texto);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.hm-modal-clean__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.hm-modal-clean__field label {
+  display: block;
+  font-family: var(--fuente-titulos);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--color-texto-principal);
+  margin-bottom: 0.5rem;
+}
+
+.hm-modal-clean__input-mock {
+  padding: 0.25rem 0;
+  color: var(--color-texto-principal);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-form-size);
+  background-color: transparent;
+  line-height: 1.5;
+}
+
+.hm-modal-clean__footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+/* =========================================
+   PAGINACIÓN
+========================================= */
+.hm-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1.5rem;
+  margin-top: 1rem;
+}
+
+.hm-pagination-btn {
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--color-fondo-claro);
+  background-color: var(--color-blanco);
+  color: var(--color-texto-principal);
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.hm-pagination-btn:hover:not(:disabled) {
+  background-color: var(--color-fondo-claro);
+  color: var(--color-primario);
+}
+
+.hm-pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.hm-pagination-info {
+  font-size: 0.875rem;
+  color: var(--color-texto-secundario);
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+/* =========================================
+   ESTADOS VACÍOS (Estilo Mis Turnos)
+========================================= */
+.hm-empty-card {
+  background-color: var(--color-blanco);
+  border-radius: 16px;
+  border: 1px solid #ede9fe; /* Mismo borde que usa MisTurnos */
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06); /* Misma sombra */
+  padding: 40px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.hm-empty-text {
+  color: var(--color-texto-secundario);
+  font-size: 14px;
+  font-family: var(--fuente-texto);
+  margin: 0;
+}
