@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema(
       trim: true
       // agrego el telefono de forma opcional 
     },
+    baneado: {
+      type: Boolean,
+      default: false,
+    },
     zona: {
       type: String,
       trim: true

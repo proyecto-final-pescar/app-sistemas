@@ -13,6 +13,7 @@ function Login() {
     password: "",
   });
   const [error, setError] = useState("");
+  const [errorBaneado, setErrorBaneado] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -41,6 +42,7 @@ function Login() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+    setErrorBaneado("");
     setIsLoading(true);
 
     try {
@@ -102,8 +104,11 @@ function Login() {
       navigate("/home", { replace: true });
     } catch (requestError) {
       const responseData = requestError.response?.data;
+      const statusCode = requestError.response?.status;
 
-      if (responseData) {
+      if (statusCode === 403 && (responseData?.motivo === "cuenta_baneada" || responseData?.mensaje?.includes("baneada"))) {
+        setErrorBaneado(responseData?.mensaje || "Tu cuenta ha sido suspendida por el administrador.");
+      } else if (responseData) {
         setError(getErrorMessage(responseData));
       } else if (requestError.request) {
         setError(
@@ -192,7 +197,29 @@ function Login() {
             </span>
           </label>
 
-          {error && (
+          {errorBaneado && (
+            <div
+              role="alert"
+              aria-live="polite"
+              style={{
+                padding: "12px 16px",
+                marginBottom: "16px",
+                backgroundColor: "#fee2e2",
+                border: "1px solid #fca5a5",
+                borderRadius: "8px",
+                color: "#991b1b",
+                fontSize: "14px",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "10px",
+              }}
+            >
+              <span style={{ marginTop: "2px" }}>⚠️</span>
+              <span>{errorBaneado}</span>
+            </div>
+          )}
+
+          {error && !errorBaneado && (
             <p role="alert" aria-live="polite" className={styles.error}>
               {error}
             </p>
@@ -271,4 +298,4 @@ function EyeIcon() {
   );
 }
 
-export default Login; 
+export default Login;
