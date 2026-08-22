@@ -23,6 +23,12 @@ export const login = async (req, res) => {
       return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
     }
 
+    if (!user.verificado) {
+      return res.status(403).json({
+        mensaje: 'Tu cuenta todavía no fue verificada. Revisá tu correo para activarla.'
+      })
+    }
+
     const token = jwt.sign(
       {
         id: user._id,

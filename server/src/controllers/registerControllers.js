@@ -1,5 +1,4 @@
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../models/User.js';
 import { sendVerificationEmail } from '../utils/mailer.js';
@@ -29,8 +28,15 @@ export const register = async (req, res) => {
     // Encriptar contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generar token de verificación de cuenta
+    // Token de verificación: se manda el valor plano por mail, en la DB se
+    // guarda solo su hash (sha256 alcanza acá: es un token de 32 bytes al
+    // azar con muchísima entropía, no una contraseña elegida por una
+    // persona, así que no hace falta bcrypt para esto).
     const tokenVerificacion = crypto.randomBytes(32).toString('hex');
+    const tokenVerificacionHash = crypto
+      .createHash('sha256')
+      .update(tokenVerificacion)
+      .digest('hex');
 
     // Guardar usuario
     const user = new User({
@@ -39,16 +45,9 @@ export const register = async (req, res) => {
       password: hashedPassword,
       role,
       verificado: false,
-      tokenVerificacion,
+      tokenVerificacion: tokenVerificacionHash,
       tokenVerificacionExpires: Date.now() + TOKEN_VERIFICACION_EXPIRATION_MS
     });
-
-    // Generar token
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
-    );
 
     await user.save();
 
@@ -59,12 +58,11 @@ export const register = async (req, res) => {
       console.error('Error al enviar el email de verificación:', mailError);
     }
 
-    res.status(201).json({
+    // Ya no se devuelve un JWT de sesión: la cuenta todavía no está
+    // verificada, así que no tiene sentido loguearla automáticamente.
+    return res.status(201).json({
       success: true,
-      data: {
-        token,
-        user: { id: user._id, name: user.name, email: user.email, role: user.role }
-      }
+      message: 'Cuenta creada. Revisá tu correo para verificar tu cuenta antes de iniciar sesión.'
     });
 
   } catch (error) {
