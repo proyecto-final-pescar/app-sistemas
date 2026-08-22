@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-
+import { emailRecordatorio } from '../../templates/emailRecordatorio.js'
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -113,6 +113,32 @@ export async function sendResetPasswordEmail(to, token) {
     </body>
     </html>
     `
+  }
+
+  await transporter.sendMail(mailOptions)
+}
+
+export async function sendRecordatorioTurnoEmail({
+  to,
+  nombreDuenio,
+  nombreMascota,
+  nombreVeterinaria,
+  direccionVeterinaria,
+  fecha,
+  hora
+}) {
+  const mailOptions = {
+    from: `"My Pet" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: `Recordatorio: mañana tenés turno para ${nombreMascota}`,
+    html: emailRecordatorio({
+      nombreDuenio,
+      nombreMascota,
+      nombreVeterinaria,
+      direccionVeterinaria,
+      fecha,
+      hora
+    })
   }
 
   await transporter.sendMail(mailOptions)
