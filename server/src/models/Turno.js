@@ -54,6 +54,12 @@ const turnoSchema = new mongoose.Schema(
     
     },
 
+    recordatorioEnviado: {
+      type: Boolean,
+      default: false
+    },
+
+
     // Momento en el que este turno, si sigue en 'pendiente', se libera
     // automáticamente y vuelve a 'disponible' (plazo para pagar online).
     // Se setea en reservarTurno = ahora + PLAZO_PAGO_HORAS.
@@ -94,6 +100,8 @@ const turnoSchema = new mongoose.Schema(
     timestamps: true,
     collection: 'turnos'
   }
+
+  
 );
 
 // Mongo rechaza a nivel de base cualquier intento de insertar dos turnos
