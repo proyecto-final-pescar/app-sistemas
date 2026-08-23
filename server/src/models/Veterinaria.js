@@ -85,13 +85,16 @@ const veterinariaSchema = new mongoose.Schema(
           required: [true, 'La especialidad del profesional es requerida'],
           trim: true
         },
+        // TEMPORAL: se relajó el required hasta implementar la UI de asociación
+        // profesional↔servicio (pendiente, no forma parte de este PR).
         serviciosIds: {
           type: [mongoose.Schema.Types.ObjectId],
-          required: [true, 'Debe brindar al menos un servicio'],
+          /* required: [true, 'Debe brindar al menos un servicio'],
           validate: {
             validator: (arr) => Array.isArray(arr) && arr.length > 0,
             message: 'El profesional debe tener al menos un servicio asignado'
-          }
+          } */
+          default: []
         },
         email: {
           type: String,
