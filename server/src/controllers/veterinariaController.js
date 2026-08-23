@@ -140,6 +140,13 @@ export const crearVeterinaria = async (req, res) => {
     try {
         const usuarioId = req.user.id;
 
+        const veterinariaPorUsuario = await Veterinaria.findOne({ usuarioId });
+        if (veterinariaPorUsuario) {
+            return res.status(409).json({ 
+                message: 'Ya tienes una veterinaria registrada con este usuario.' 
+            });
+        }
+
         // Solo se permiten estos campos, ignoramos cualquier otro que venga en el body
         const {
             nombre,
@@ -156,6 +163,13 @@ export const crearVeterinaria = async (req, res) => {
             horarios,
             urgencias24hs
         } = req.body;
+
+        const veterinariaPorCuit = await Veterinaria.findOne({ cuit });
+        if (veterinariaPorCuit) {
+            return res.status(409).json({ 
+                message: 'Ya existe una clínica registrada con este CUIT.' 
+            });
+        }
 
         const nuevaVeterinaria = new Veterinaria({
             nombre,
