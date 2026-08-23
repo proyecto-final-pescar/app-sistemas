@@ -2,6 +2,10 @@ import { Payment } from 'mercadopago';
 import client from '../config/mercadopago.js';
 import Turno from '../models/Turno.js';
 import Pago from '../models/Pago.js';
+import User from '../models/User.js';
+import Mascota from '../models/Mascota.js';
+import Veterinaria from '../models/Veterinaria.js';
+import { sendConfirmacionTurnoEmail } from '../utils/mailer.js';
 
 // Mapeo de estados de MercadoPago a estados del modelo Pago
 const ESTADO_MP_A_PAGO = {
@@ -20,6 +24,54 @@ const METODO_PAGO_MAP = {
   ticket: 'efectivo',
   bank_transfer: 'transferencia',
   account_money: 'billetera_virtual',
+};
+
+const DIAS_ES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MESES_ES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+];
+
+// Formatea en español usando getters UTC, no locales — turno.fecha se
+// guarda como medianoche UTC, y usar getters locales en un servidor con
+// zona horaria negativa (ej. Argentina) puede mostrar el día anterior.
+const formatearFechaEspanol = (fecha) => {
+  const d = new Date(fecha);
+  return `${DIAS_ES[d.getUTCDay()]} ${d.getUTCDate()} de ${MESES_ES[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
+};
+
+// Envía el email de confirmación de turno. No se llama con "await" desde
+// recibirWebhook: el email es una notificación secundaria, nunca debe
+// bloquear ni afectar la respuesta del webhook a MercadoPago. Por eso
+// todo el cuerpo va en un único try/catch que solo loguea el error.
+const enviarEmailConfirmacionTurno = async (turno, monto) => {
+  try {
+    const [usuario, mascota, veterinaria] = await Promise.all([
+      User.findById(turno.usuarioId).select('name email'),
+      Mascota.findById(turno.mascotaId).select('nombre'),
+      Veterinaria.findById(turno.veterinariaId).select('nombre direccion profesionales')
+    ]);
+
+    if (!usuario?.email) {
+      console.error('No se pudo enviar el email de confirmación: usuario o email no encontrado para el turno', turno._id);
+      return;
+    }
+
+    const profesional = veterinaria?.profesionales?.id(turno.profesionalId);
+
+    await sendConfirmacionTurnoEmail(usuario.email, {
+      nombreDuenio: usuario.name,
+      nombreMascota: mascota?.nombre || 'tu mascota',
+      nombreVeterinaria: veterinaria?.nombre || 'la veterinaria',
+      direccionVeterinaria: veterinaria?.direccion || '',
+      nombreProfesional: profesional?.nombre || null,
+      fecha: formatearFechaEspanol(turno.fecha),
+      hora: turno.hora,
+      montoPagado: monto
+    });
+  } catch (error) {
+    console.error('Error al enviar el email de confirmación de turno:', error);
+  }
 };
 
 // POST /api/pagos/webhook
@@ -145,6 +197,10 @@ export const recibirWebhook = async (req, res) => {
     // 8. Vinculamos el pago al turno
     turno.pagoId = pagoGuardado._id;
     await turno.save();
+
+    // 9. Enviamos el email de confirmación — sin await a propósito, no debe
+    // bloquear ni condicionar la respuesta del webhook (ver JSDoc arriba).
+    enviarEmailConfirmacionTurno(turno, pagoGuardado.monto);
 
     return res.status(200).json({
       message: 'Pago procesado correctamente',
