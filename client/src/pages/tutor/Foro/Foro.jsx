@@ -49,9 +49,6 @@ const TABS_ESTADO = [
   { value: "cerrada", label: "Resueltos" },
 ];
 
-
-// Un solo ConfirmModal se reutiliza para  distintas posibilidades, así no hay que
-// declarar tres modales 
 const CONFIG_CONFIRMACION = {
   eliminar: {
     titulo: "Eliminar publicación",

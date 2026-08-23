@@ -26,3 +26,9 @@ export const crearOfertaHoraria = async (oferta) => {
   const { data } = await api.post("/turnos/oferta", oferta);
   return data;
 };
+
+// turnos que toda no se les registro una consulta 
+export const obtenerTurnosPendientesRegistro = async (mascotaId) => {
+  const { data } = await api.get(`/historial-clinico/turnos-pendientes/${mascotaId}`);
+  return Array.isArray(data?.data) ? data.data : [];
+};

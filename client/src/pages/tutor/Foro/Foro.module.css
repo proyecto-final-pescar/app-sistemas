@@ -129,7 +129,14 @@
   font: inherit;
   font-size: 14px;
   outline: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   appearance: none;
+}
+
+
+.zoneSelect::-ms-expand {
+  display: none;
 }
 
 .selectIcon {
@@ -259,6 +266,42 @@
 
 .badgeFound {
   background: #10b981;
+}
+
+/* Boton de reportar publicacion (sobre la imagen, esquina superior derecha) */
+.reportButton {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  color: #ffffff;
+  background-color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.reportButton:hover {
+  background-color: rgba(239, 68, 68, 0.85);
+}
+
+.reportButton:disabled {
+  cursor: not-allowed;
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.reportButtonReportado {
+  background-color: rgba(16, 185, 129, 0.85);
+}
+
+.reportButtonReportado:hover {
+  background-color: rgba(16, 185, 129, 0.85);
 }
 
 .cardBody {
@@ -626,6 +669,36 @@
   padding-top: 6px;
 }
 
+/* Modal de aviso "ya reportaste esta publicación" */
+.avisoYaReportado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 34px 30px;
+  text-align: center;
+}
+
+.avisoYaReportadoIcono {
+  color: #10b981;
+}
+
+.avisoYaReportadoTitulo {
+  margin: 0;
+  color: #111827;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.avisoYaReportadoTexto {
+  margin: 0;
+  max-width: 420px;
+  color: #5a536f;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
 @keyframes shimmer {
   0% {
     background-position: 100% 50%;
@@ -635,10 +708,7 @@
   }
 }
 
-@media (max-width: 900px) {
-  .layout {
-    display: block;
-  }
+@media (max-width: 1023px) {
 
   .content {
     padding: 26px 22px 42px;
@@ -652,11 +722,33 @@
   .primaryButton {
     width: 100%;
   }
+
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .filters {
+    align-items: stretch;
+  }
+
+  .selectWrap {
+    min-width: 0;
+    flex: 1 1 200px;
+  }
+
+  .tabGroup {
+    flex-wrap: wrap;
+  }
+
+  .tabButton {
+    flex: 1 1 auto;
+  }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 767px) {
   .content {
-    padding: 22px 16px 36px;
+    padding: 26px 16px 36px;
+    padding-top: 76px;
   }
 
   .title {
@@ -673,6 +765,7 @@
   .selectWrap,
   .tabButton {
     width: 100%;
+    flex: 0 1 auto;
   }
 
   .grid,
@@ -706,27 +799,39 @@
   }
 }
 
-.reportButton {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: none;
-  background-color: rgba(0, 0, 0, 0.45);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
+@media (max-width: 400px) {
+  .title {
+    font-size: 24px;
+  }
 
-.reportButton:hover {
-  background-color: rgba(239, 68, 68, 0.85);
-}
+  .subtitle {
+    font-size: 14px;
+  }
 
-.reportButton:disabled {
-  cursor: not-allowed;
-  background-color: rgba(0, 0, 0, 0.25);
+  .cardBody {
+    padding: 13px 14px 14px;
+  }
+
+  .petName {
+    font-size: 16px;
+  }
+
+  .contactButtons {
+    flex-direction: column;
+  }
+
+  .ownerActions {
+    flex-wrap: wrap;
+  }
+
+  .ownerActions > .successButton,
+  .ownerActions > .outlineSuccessButton {
+    flex: 1 1 100%;
+  }
+
+  .modalHeader,
+  .form {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
 }

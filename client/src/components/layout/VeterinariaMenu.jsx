@@ -41,6 +41,7 @@ const menuItems = [
   path: "/pacientes",
   icon: <PawPrint size={20} />,
 },
+
   {
     label: "Turnos",
     path: "/cargar-turnos",
