@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Input from "../../../components/ui/input/Input";
 import Button from "../../../components/ui/button/Button";
 import Card from "../../../components/ui/card/Card";
 import api from "../../../services/api";
+import { reenviarVerificacion } from "../../../services/authService";
+import { MdMarkEmailRead } from "react-icons/md";
 import "./Registro.css";
 
 function Registro() {
-  const navigate = useNavigate();
   const [rol, setRol] = useState("");
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -17,6 +17,15 @@ function Registro() {
   const [errores, setErrores] = useState({});
   const [errorGeneral, setErrorGeneral] = useState("");
   const [enviando, setEnviando] = useState(false);
+
+  // Se guardael email con el que se registro para poder mostrarlo en
+  // la pantalla de confirmacion y reusarlo si pide reenviar el correo.
+  const [registroExitoso, setRegistroExitoso] = useState(false);
+  const [emailRegistrado, setEmailRegistrado] = useState("");
+
+  const [reenviando, setReenviando] = useState(false);
+  const [reenvioEnviado, setReenvioEnviado] = useState(false);
+  const [errorReenvio, setErrorReenvio] = useState("");
 
   function validarFormulario() {
     const nuevosErrores = {};
@@ -70,19 +79,24 @@ function Registro() {
       return;
     }
 
+    const emailNormalizado = email.trim().toLowerCase();
+
     try {
       setEnviando(true);
 
       await api.post("/auth/register", {
         name: nombre.trim(),
-        email: email.trim().toLowerCase(),
+        email: emailNormalizado,
         password,
         role: rol,
       });
 
-      navigate("/login", { replace: true });
+      // Ya no se redirige directo a /login: la cuenta recien creada no
+      // esta verificada todavia, asi que el login la va a rechazar 
+      //  Se muestra una pantalla de confirmación en su lugar
+      setEmailRegistrado(emailNormalizado);
+      setRegistroExitoso(true);
     } catch (error) {
-      
       const responseData = error.response?.data;
 
       if (responseData) {
@@ -95,6 +109,82 @@ function Registro() {
     } finally {
       setEnviando(false);
     }
+  }
+
+  async function manejarReenvio() {
+    setErrorReenvio("");
+    setReenviando(true);
+
+    try {
+      await reenviarVerificacion(emailRegistrado);
+      setReenvioEnviado(true);
+    } catch {
+     
+      setErrorReenvio("No se pudo reenviar el correo. Probá de nuevo en un momento.");
+    } finally {
+      setReenviando(false);
+    }
+  }
+
+  if (registroExitoso) {
+    return (
+      <main className="registro-page">
+        <header className="brand">
+          <img src="/logo-mypet.svg" alt="" className="brand-icon" />
+          <img src="/mypet2.svg" alt="MyPet" className="brand-logo" />
+        </header>
+
+        <Card className="registro-card">
+          <div className="registro-confirmacion">
+            <MdMarkEmailRead
+              className="registro-confirmacion-icon"
+              size={56}
+              aria-hidden="true"
+            />
+            <h1>¡Ya casi terminás!</h1>
+            <p>
+              Te enviamos un correo a <strong>{emailRegistrado}</strong> con un
+              link para verificar tu cuenta.
+            </p>
+            <p className="registro-confirmacion-subtexto">
+              Tenés que confirmar tu email antes de poder iniciar sesión. Si
+              no lo ves, revisá la carpeta de spam.
+            </p>
+
+            <div className="registro-button">
+              <Button
+                type="button"
+                texto="Ir a iniciar sesión"
+                variante="primario"
+                tamaño="mediano"
+                onClick={() => {
+                  window.location.href = "/login";
+                }}
+              />
+            </div>
+
+            {reenvioEnviado ? (
+              <p className="registro-reenvio-ok">
+                Si el email está registrado y pendiente de verificación, vas a
+                recibir un correo con un nuevo enlace.
+              </p>
+            ) : (
+              <>
+                {errorReenvio && <p className="input-error">{errorReenvio}</p>}
+                <button
+                  type="button"
+                  className="registro-reenvio-link"
+                  onClick={manejarReenvio}
+                  disabled={reenviando}
+                >
+                  {reenviando ? "Enviando..." : "¿No te llegó? Reenviar correo"}
+                </button>
+              </>
+            )}
+          </div>
+        </Card>
+      </main>
+    );
   }
 
   return (
