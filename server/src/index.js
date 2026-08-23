@@ -9,6 +9,7 @@ import "./config/mercadopago.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import { iniciarJobsTurnos } from "./jobs/turnoJobs.js";
 
+import { enviarRecordatoriosTurnos } from './jobs/turnoJobs.js'
 
 const app = express();
 const PORT = process.env.PORT || 3000;
