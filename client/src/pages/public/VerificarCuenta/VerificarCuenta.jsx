@@ -6,7 +6,12 @@ import "./VerificarCuenta.css";
 import PanelAuth from "../../../components/ui/panel-auth/PanelAuth";
 import logo from "../../../../public/logo-mypet.svg";
 import logo2 from "../../../../public/mypet2.svg";
-import { MdCheckCircle } from "react-icons/md";
+import {
+  MdCheckCircle,
+  MdErrorOutline,
+  MdSchedule,
+  MdWifiOff,
+} from "react-icons/md";
 
 // Estados posibles de la pantalla. Cubren los 6 casos:
 // a) VERIFICADO       -> token válido, primera vez
@@ -197,7 +202,11 @@ export default function VerificarCuenta() {
       <PanelAuth logoLeft={logo} logoRight={logo2} titulo="El enlace venció">
         <div className="reset__content">
           <div className="reset__success">
-            <span className="reset__success-icon" aria-hidden="true">⚠️</span>
+            <MdSchedule
+              className="reset__success-icon reset__success-icon--vencido"
+              size={56}
+              aria-hidden="true"
+            />
             <h2 className="reset__success-title">Este enlace ya no es válido</h2>
             <p className="reset__success-text">
               Los enlaces de verificación vencen a las 24hs. Pedí uno nuevo.
@@ -215,7 +224,11 @@ export default function VerificarCuenta() {
       <PanelAuth logoLeft={logo} logoRight={logo2} titulo="No pudimos verificar tu cuenta">
         <div className="reset__content">
           <div className="reset__success">
-            <span className="reset__success-icon" aria-hidden="true">⚠️</span>
+            <MdWifiOff
+              className="reset__success-icon reset__success-icon--error"
+              size={56}
+              aria-hidden="true"
+            />
             <h2 className="reset__success-title">Hubo un problema de conexión</h2>
             <p className="reset__success-text">
               No pudimos comunicarnos con el servidor. Probá de nuevo en un momento.
@@ -234,7 +247,11 @@ export default function VerificarCuenta() {
     <PanelAuth logoLeft={logo} logoRight={logo2} titulo="Enlace inválido">
       <div className="reset__content">
         <div className="reset__success">
-          <span className="reset__success-icon" aria-hidden="true">⚠️</span>
+          <MdErrorOutline
+            className="reset__success-icon reset__success-icon--error"
+            size={56}
+            aria-hidden="true"
+          />
           <h2 className="reset__success-title">Este enlace no es válido</h2>
           <p className="reset__success-text">
             Puede que el link esté incompleto o ya no exista. Podés volver a
