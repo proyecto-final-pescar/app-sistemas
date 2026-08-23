@@ -7,6 +7,11 @@ export const obtenerMiVeterinaria = async () => {
   return data.data;
 };
 
+export const actualizarMiVeterinaria = async (veterinaria) => {
+  const { data } = await api.put("/veterinarias/mia", veterinaria);
+  return data.data;
+};
+
 export const getVeterinariaById = async (id) => {
   const { data } = await api.get(`/veterinarias/${id}`);
   return data.data; // ahora devuelve directamente el objeto veterinaria

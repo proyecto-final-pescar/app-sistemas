@@ -56,7 +56,12 @@ const veterinariaSchema = new mongoose.Schema(
       }
     },
 
-     servicios: [
+    especialidades: {
+      type: [{ type: String, trim: true }],
+      default: []
+    },
+
+    servicios: [
       {
         categoria: {
           type: String,
@@ -75,6 +80,12 @@ const veterinariaSchema = new mongoose.Schema(
         precio: {
           type: Number,
           required: [true, 'El precio del servicio es requerido']
+        },
+        duracion: {
+          type: Number,
+          min: [15, 'La duración mínima del servicio es de 15 minutos'],
+          max: [480, 'La duración máxima del servicio es de 480 minutos'],
+          default: 30
         }
       }
     ],

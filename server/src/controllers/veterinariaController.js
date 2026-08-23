@@ -12,6 +12,67 @@ const ESTADOS_TURNO_PACIENTE = ["confirmado", "atendido"];
 const PACIENTES_LIMITE_DEFAULT = 12;
 const PACIENTES_LIMITE_MAXIMO = 50;
 
+const CAMPOS_EDITABLES_MI_VETERINARIA = [
+  "nombre",
+  "direccion",
+  "telefono",
+  "email",
+  "sitioWeb",
+  "horarios",
+  "servicios",
+  "profesionales",
+  "especialidades",
+  "urgencias24hs",
+];
+
+const normalizarServicios = (servicios, veterinaria) => {
+  if (!Array.isArray(servicios)) return servicios;
+
+  return servicios.map((servicio) => {
+    const servicioExistente = servicio?._id
+      ? veterinaria.servicios.id(servicio._id)
+      : null;
+    const normalizado = servicioExistente
+      ? servicioExistente.toObject()
+      : {};
+
+    for (const campo of ["categoria", "nombre", "precio", "duracion"]) {
+      if (servicio?.[campo] !== undefined) normalizado[campo] = servicio[campo];
+    }
+
+    if (servicioExistente) normalizado._id = servicioExistente._id;
+
+    return normalizado;
+  });
+};
+
+const normalizarProfesionales = (profesionales, veterinaria) => {
+  if (!Array.isArray(profesionales)) return profesionales;
+
+  return profesionales.map((profesional) => {
+    const profesionalExistente = profesional?._id
+      ? veterinaria.profesionales.id(profesional._id)
+      : null;
+    const normalizado = profesionalExistente
+      ? profesionalExistente.toObject()
+      : {};
+
+    for (const campo of ["nombre", "especialidad", "email"]) {
+      if (profesional?.[campo] !== undefined) normalizado[campo] = profesional[campo];
+    }
+
+    // Las asociaciones solo se reemplazan cuando el cliente las envía
+    // expresamente. En cualquier actualización parcial se conservan intactas.
+    if (profesional?.serviciosIds !== undefined) {
+      normalizado.serviciosIds = profesional.serviciosIds;
+    }
+
+    if (profesionalExistente) normalizado._id = profesionalExistente._id;
+
+    return normalizado;
+  });
+};
+
 // Escapa caracteres especiales de regex para poder usar el texto de búsqueda
 // del usuario de forma segura en un $regex (evita romper la query o abrir
 // una puerta a ReDoS con patrones maliciosos).
@@ -118,7 +179,7 @@ export const obtenerMiVeterinaria = async (req, res) => {
     try {
         const usuarioId = req.user.id;
 
-        const veterinaria = await Veterinaria.findOne({ usuarioId, estado: 'activa' });
+        const veterinaria = await Veterinaria.findOne({ usuarioId });
 
         if (!veterinaria) {
             return res.status(404).json({ message: 'No tenés una veterinaria registrada.' });
@@ -133,6 +194,56 @@ export const obtenerMiVeterinaria = async (req, res) => {
         console.error('Error en GET /veterinarias/mia:', error);
         res.status(500).json({ message: 'Error interno del servidor' });
     }
+};
+
+// PUT /veterinarias/mia: edita la veterinaria del usuario autenticado
+export const actualizarMiVeterinaria = async (req, res) => {
+  try {
+    if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+      return res.status(400).json({ message: 'Datos inválidos' });
+    }
+
+    for (const campo of ["servicios", "profesionales", "especialidades"]) {
+      if (req.body[campo] !== undefined && !Array.isArray(req.body[campo])) {
+        return res.status(400).json({ message: `${campo} debe ser un arreglo` });
+      }
+    }
+
+    const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id });
+
+    if (!veterinaria) {
+      return res.status(404).json({ message: 'No tenés una veterinaria registrada.' });
+    }
+
+    for (const campo of CAMPOS_EDITABLES_MI_VETERINARIA) {
+      if (req.body[campo] === undefined) continue;
+
+      if (campo === "servicios") {
+        veterinaria.servicios = normalizarServicios(req.body.servicios, veterinaria);
+      } else if (campo === "profesionales") {
+        veterinaria.profesionales = normalizarProfesionales(
+          req.body.profesionales,
+          veterinaria
+        );
+      } else {
+        veterinaria[campo] = req.body[campo];
+      }
+    }
+
+    const veterinariaActualizada = await veterinaria.save();
+
+    return res.status(200).json({
+      success: true,
+      data: veterinariaActualizada,
+    });
+  } catch (error) {
+    if (error.name === 'CastError' || error.name === 'ValidationError') {
+      return res.status(400).json({ message: 'Datos inválidos' });
+    }
+
+    console.error('Error en PUT /veterinarias/mia:', error);
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
 };
 
 // POST /veterinarias: crea el perfil de una veterinaria (solo rol 'veterinaria')
@@ -361,4 +472,4 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
       message: "No se pudieron obtener los pacientes.",
     });
   }
-};   
+};
