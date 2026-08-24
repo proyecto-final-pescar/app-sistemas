@@ -510,6 +510,16 @@
   }
 }
 
+
+.googleBtnWrap {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
 .socialButton {
   display: flex;
   align-items: center;

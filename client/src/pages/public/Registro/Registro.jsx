@@ -5,10 +5,13 @@ import Input from "../../../components/ui/input/Input";
 import Button from "../../../components/ui/button/Button";
 import Card from "../../../components/ui/card/Card";
 import api from "../../../services/api";
+import { useAuth } from "../../../hooks/useAuth.js";
+import { obtenerMensajeError } from "../../../utils/obtenerMensajeError.js";
 import "./Registro.css";
 
 function Registro() {
   const navigate = useNavigate();
+  const { setUsuario } = useAuth();
   const [rol, setRol] = useState("");
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
@@ -53,14 +56,6 @@ function Registro() {
     return Object.keys(nuevosErrores).length === 0;
   }
 
-  const obtenerMensajeError = (data) => {
-    if (typeof data === "string") {
-      return data;
-    }
-
-    return data?.message || data?.mensaje || data?.error || "No se pudo crear la cuenta.";
-  };
-
   async function manejarSubmit(evento) {
     evento.preventDefault();
     setErrorGeneral("");
@@ -101,17 +96,21 @@ function Registro() {
     setErrorGeneral("");
     setEnviando(true);
 
-    if (!rol) {
-      setErrorGeneral("Debes seleccionar un rol antes de continuar");
-      setEnviando(false);
-      return;
-    }
-
     try {
       const { data } = await api.post("/auth/google", {
         token: credentialResponse.credential,
-        role: rol
       });
+
+      if (data.nuevoUsuario) {
+        navigate("/completar-registro-google", {
+          state: {
+            googleCredential: credentialResponse.credential,
+            nombre: data.nombre,
+            email: data.email,
+          },
+        });
+        return;
+      }
 
       const token = data.token;
       const user = data.usuario;
@@ -132,6 +131,7 @@ function Registro() {
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(userData));
+      setUsuario(userData);
 
       const userRol = userData.rol;
       if (userRol === "dueno") {
@@ -259,27 +259,23 @@ function Registro() {
               />
             </div>
 
-            <div className="divider" style={{ margin: "20px 0" }}>
-                <span className="divider-line" />
-                <span className="divider-text">o continuá con</span>
-                <span className="divider-line" />
-              </div>
+            <div className="divider">
+              <span className="divider-line" />
+              <span className="divider-text">o continuá con</span>
+              <span className="divider-line" />
+            </div>
 
-              {!rol && (
-                <p className="input-error" style={{ marginBottom: "12px", fontSize: "17px" }}>
-                  Primero selecciona con qué rol ingresas
-                </p>
-              )}
-
-              <div style={{ opacity: rol ? 1 : 0.5, pointerEvents: rol ? "auto" : "none" }}>
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={handleGoogleError}
-                  size="large"
-                  width="100%"
-                  locale="es_AR"
-                />
-              </div>
+            <div className="google-btn-wrap">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                size="large"
+                width="100%"
+                shape="pill"
+                theme="outline"
+                locale="es_AR"
+              />
+            </div>
 
             <p className="login-text">
               ¿Ya tenés cuenta?{" "}

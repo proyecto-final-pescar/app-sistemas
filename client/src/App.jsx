@@ -36,6 +36,9 @@ import PagoExitoso from "./pages/tutor/Pagos/PagoExitoso";
 import PagoPendiente from "./pages/tutor/Pagos/PagoPendiente";
 import PagoFallido from "./pages/tutor/Pagos/PagoFallido";
 
+import CompletarRegistroGoogle from "./pages/public/CompletarRegistroGoogle/CompletarRegistroGoogle";  
+
+
 function App() {
   return (
     <BrowserRouter>
@@ -51,6 +54,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/register" element={<Registro />} />
+        <Route path="/completar-registro-google" element={<CompletarRegistroGoogle />} />
         <Route path="/tutor/historial-medico/:mascotaId" element={<PrivateRoute allowedRoles={["dueno"]}><HistorialIndividual /></PrivateRoute>} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />

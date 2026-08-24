@@ -4,6 +4,7 @@ import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../hooks/useAuth.js";
 import api from "../services/api.js";
 import { obtenerMiVeterinaria } from "../services/veterinariaService.js";
+import { obtenerMensajeError } from "../utils/obtenerMensajeError.js";
 import styles from "./Login.module.css";
 
 function Login() {
@@ -26,17 +27,37 @@ function Login() {
     }));
   };
 
-  const getErrorMessage = (data) => {
-    if (typeof data === "string") {
-      return data;
+  const redirigirSegunRol = async (userData) => {
+    const rol = userData.rol;
+
+    if (rol === "dueno") {
+      navigate("/mascotas", { replace: true });
+      return;
     }
 
-    return (
-      data?.message ||
-      data?.mensaje ||
-      data?.error ||
-      "No se pudo iniciar sesion."
-    );
+    if (rol === "veterinaria") {
+      try {
+        const miVeterinaria = await obtenerMiVeterinaria();
+        const tienePerfilCompletado = Boolean(
+          miVeterinaria?._id || miVeterinaria?.nombre,
+        );
+        if (tienePerfilCompletado) {
+          navigate("/home-veterinaria", { replace: true });
+        } else {
+          navigate("/registro-veterinaria", { replace: true });
+        }
+      } catch (vetError) {
+        navigate("/registro-veterinaria", { replace: true });
+      }
+      return;
+    }
+
+    if (rol === "administrador") {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+
+    navigate("/home", { replace: true });
   };
 
   const handleSubmit = async (event) => {
@@ -48,9 +69,9 @@ function Login() {
       const { data } = await api.post("/auth/login", {
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
-    });
+      });
 
-    const token = data.token || data.jwt || data.accessToken;
+      const token = data.token || data.jwt || data.accessToken;
       const user = data.user || data.usuario || {};
 
       if (!token) {
@@ -71,40 +92,12 @@ function Login() {
       localStorage.setItem("user", JSON.stringify(userData));
       setUsuario(userData);
 
-      const rol = userData.rol;
-      if (rol === "dueno") {
-        navigate("/mascotas", { replace: true });
-        return;
-      }
-
-      if (rol === "veterinaria") {
-        try {
-          const miVeterinaria = await obtenerMiVeterinaria();
-          const tienePerfilCompletado = Boolean(
-            miVeterinaria?._id || miVeterinaria?.nombre,
-          );
-          if (tienePerfilCompletado) {
-            navigate("/home-veterinaria", { replace: true });
-          } else {
-            navigate("/registro-veterinaria", { replace: true });
-          }
-        } catch (vetError) {
-          navigate("/registro-veterinaria", { replace: true });
-        }
-        return;
-      }
-
-      if (rol === "administrador") {
-        navigate("/dashboard", { replace: true });
-        return;
-      }
-
-      navigate("/home", { replace: true });
+      await redirigirSegunRol(userData);
     } catch (requestError) {
       const responseData = requestError.response?.data;
 
       if (responseData) {
-        setError(getErrorMessage(responseData));
+        setError(obtenerMensajeError(responseData));
       } else if (requestError.request) {
         setError(
           "No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.",
@@ -117,6 +110,8 @@ function Login() {
     }
   };
 
+  // Primer intento de login con Google:no se manda role aca. Si la cuenta ya existe 
+  // Si no existe, responde nuevoUsuario: true  se manda al usuario a completar el registro-seleccionar rol
   const handleGoogleSuccess = async (credentialResponse) => {
     setError("");
     setIsLoading(true);
@@ -124,8 +119,18 @@ function Login() {
     try {
       const { data } = await api.post("/auth/google", {
         token: credentialResponse.credential,
-        role: "dueno"
       });
+
+      if (data.nuevoUsuario) {
+        navigate("/completar-registro-google", {
+          state: {
+            googleCredential: credentialResponse.credential,
+            nombre: data.nombre,
+            email: data.email,
+          },
+        });
+        return;
+      }
 
       const token = data.token;
       const user = data.usuario;
@@ -148,40 +153,12 @@ function Login() {
       localStorage.setItem("user", JSON.stringify(userData));
       setUsuario(userData);
 
-      const rol = userData.rol;
-      if (rol === "dueno") {
-        navigate("/mascotas", { replace: true });
-        return;
-      }
-
-      if (rol === "veterinaria") {
-        try {
-          const miVeterinaria = await obtenerMiVeterinaria();
-          const tienePerfilCompletado = Boolean(
-            miVeterinaria?._id || miVeterinaria?.nombre,
-          );
-          if (tienePerfilCompletado) {
-            navigate("/home-veterinaria", { replace: true });
-          } else {
-            navigate("/registro-veterinaria", { replace: true });
-          }
-        } catch (vetError) {
-          navigate("/registro-veterinaria", { replace: true });
-        }
-        return;
-      }
-
-      if (rol === "administrador") {
-        navigate("/dashboard", { replace: true });
-        return;
-      }
-
-      navigate("/home", { replace: true });
+      await redirigirSegunRol(userData);
     } catch (requestError) {
       const responseData = requestError.response?.data;
 
       if (responseData) {
-        setError(getErrorMessage(responseData));
+        setError(obtenerMensajeError(responseData));
       } else if (requestError.request) {
         setError(
           "No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.",
@@ -291,13 +268,17 @@ function Login() {
             </div>
 
             <div className={styles.socialGrid}>
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                size="large"
-                width="100%"
-                locale="es_AR"
-              />
+              <div className={styles.googleBtnWrap}>
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  size="large"
+                  width="100%"
+                  shape="pill"
+                  theme="outline"
+                  locale="es_AR"
+                />
+              </div>
             </div>
 
             <p className={styles.registerText}>
