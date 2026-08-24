@@ -78,6 +78,14 @@ export const googleAuth = async (req, res) => {
         await user.save()
       }
 
+      // Si la cuenta se había registrado con contraseña y todavía no
+      // confirmaba el email, un login exitoso por Google ya prueba la
+      // titularidad de ese email igual que el link de verificación.
+      if (!user.verificado) {
+        user.verificado = true
+        await user.save()
+      }
+
       // El rol de una cuenta existente nunca se pisa con lo que mande
       // el frontend: manda el rol real que ya tiene en la base.
       const jwtToken = generarJwt(user)
@@ -106,7 +114,11 @@ export const googleAuth = async (req, res) => {
         email,
         role,
         googleId,
-        active: true
+        active: true,
+        // Google ya confirmó este email (chequeado más arriba con
+        // payload.email_verified), así que esta cuenta no debe pasar
+        // por el flujo de "revisá tu correo" del registro tradicional.
+        verificado: true
       })
       await user.save()
     } catch (saveError) {
@@ -159,6 +171,15 @@ export const login = async (req, res) => {
     // Punto 4: mismo chequeo de cuenta suspendida en el login tradicional.
     if (!user.active) {
       return res.status(403).json({ mensaje: 'Tu cuenta está suspendida' })
+    }
+
+    // Cuenta registrada con email/contraseña que todavía no confirmó
+    // el correo. No aplica a cuentas creadas por Google (esas llegan
+    // ya verificadas por Google y nunca pasan por este flujo).
+    if (!user.verificado) {
+      return res.status(403).json({
+        mensaje: 'Tu cuenta todavía no fue verificada. Revisá tu correo para activarla.'
+      })
     }
 
     const token = generarJwt(user)

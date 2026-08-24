@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import authRouter from './rutasLogin.js'
 import authRoutes from './rutasRegistro.js';
+import verificacionRouter from './rutasVerificacion.js';
 import mascotasRouter from './mascotas.js';
 import usuariosRouter from './usuarios.js';
 import veterinariasRouter from './veterinarias.js';
@@ -20,11 +21,13 @@ import dashboardRouter from './dashboard.js';
 import pagosRouter from './pagos.js';
 import botRouter from './bot.js';
 import notificacionesRoutes from './notificaciones.js';
+import constantesRouter from './constantesRoutes.js';
 
 const router = Router()
 
 router.use('/auth', authRouter)
 router.use('/auth', authRoutes);
+router.use('/auth', verificacionRouter);
 router.use('/mascotas', mascotasRouter);
 router.use('/usuarios', usuariosRouter);
 router.use('/veterinarias', veterinariasRouter);
@@ -44,6 +47,7 @@ router.use('/admin/dashboard', dashboardRouter);
 router.use('/pagos', pagosRouter);
 router.use('/bot', botRouter);
 router.use('/notificaciones', notificacionesRoutes);
+router.use('/constantes', constantesRouter);
 
 
 export default router;

@@ -33,11 +33,43 @@ export default function HistorialIndividual() {
     fetchHistorial()
   }, [mascotaId])
 
-  if (loading) return <div className={styles.container}>Cargando...</div>
-  if (error) return <div className={styles.container}><p>{error}</p></div>
-  if (!data) return <div className={styles.container}>No hay datos</div>
+  if (loading) {
+    return (
+      <div className={styles.shell}>
+        <Sidebar />
+        <div className={styles.main}>
+          <TopBar />
+          <div className={styles.container}>Cargando...</div>
+        </div>
+      </div>
+    )
+  }
 
-  const { mascota, fichaMedica, vacunas, estudios } = data
+  if (error) {
+    return (
+      <div className={styles.shell}>
+        <Sidebar />
+        <div className={styles.main}>
+          <TopBar />
+          <div className={styles.container}><p>{error}</p></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className={styles.shell}>
+        <Sidebar />
+        <div className={styles.main}>
+          <TopBar />
+          <div className={styles.container}>No hay datos</div>
+        </div>
+      </div>
+    )
+  }
+
+  const { mascota, fichaMedica, historialClinico, vacunas, estudios } = data
 
   const calcularEdad = () => {
     if (!mascota?.fechaNacimiento) return 'N/A'
@@ -81,6 +113,12 @@ export default function HistorialIndividual() {
       <div className={styles.main}>
         <TopBar />
         <div className={styles.container}>
+          <button
+            className={styles.backBtn}
+            onClick={() => navigate(-1)}
+          >
+            ← Volver
+          </button>
           {/* Header */}
           <div className={styles.header}>
             <h1>Ficha Médica - {mascota?.nombre}</h1>
@@ -157,7 +195,7 @@ export default function HistorialIndividual() {
                 <path d="M8 11h.01" />
                 <path d="M8 16h.01" />
               </svg>
-              <p className={styles.cardValue}>{(vacunas?.length || 0) + (estudios?.length || 0)}</p>
+              <p className={styles.cardValue}>{(historialClinico?.length || 0) + (vacunas?.length || 0) + (estudios?.length || 0)}</p>
               <p className={styles.cardLabel}>Consultas Totales</p>
             </div>
 

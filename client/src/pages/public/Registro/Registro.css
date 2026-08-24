@@ -189,6 +189,98 @@
   text-decoration: none;
 }
 
+/* ── Pantalla de confirmacion post-registro  */
+
+.registro-confirmacion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 8px 0 4px;
+}
+
+.registro-confirmacion-icon {
+  color: #7c3aed;
+  margin-bottom: 10px;
+  animation: registro-icon-pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+@keyframes registro-icon-pop {
+  0% {
+    transform: scale(0.6) rotate(-8deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08) rotate(4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.registro-confirmacion h1 {
+  font-size: 20px;
+  color: #1f1235;
+  margin: 0 0 6px;
+}
+
+.registro-confirmacion p {
+  font-size: 13.5px;
+  color: #4b3f6b;
+  margin: 0 0 4px;
+  line-height: 1.5;
+}
+
+.registro-confirmacion p strong {
+  color: #1f1235;
+}
+
+.registro-confirmacion-subtexto {
+  color: #8b75b7 !important;
+  font-size: 12.5px !important;
+  margin-bottom: 6px !important;
+}
+
+.registro-confirmacion .registro-button {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.registro-reenvio-ok {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  color: #15803d;
+  font-size: 13px;
+  text-align: center;
+}
+
+.registro-reenvio-link {
+  margin-top: 14px;
+  background: transparent;
+  border: none;
+  color: #7c3aed;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.registro-reenvio-link:hover:not(:disabled) {
+  color: #6d28d9;
+}
+
+.registro-reenvio-link:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 360px) {
   .role-card strong {
     font-size: 11px;

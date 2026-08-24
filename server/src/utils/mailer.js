@@ -1,4 +1,7 @@
 import nodemailer from 'nodemailer'
+import { emailVerificacionCuenta } from '../templates/emailVerificacionCuenta.js'
+// nota: mailer.js vive en src/utils/, y la plantilla en src/templates/
+// (carpeta nueva, al mismo nivel que controllers/models/routes/utils)
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -113,6 +116,25 @@ export async function sendResetPasswordEmail(to, token) {
     </body>
     </html>
     `
+  }
+
+  await transporter.sendMail(mailOptions)
+}
+
+/**
+ * Envía el email de verificación de cuenta con el link que incluye el token (SX-06).
+ * @param {string} to - Email del destinatario
+ * @param {string} token - Token de verificación generado
+ * @param {string} nombre - Nombre del usuario, para personalizar el saludo
+ */
+export async function sendVerificationEmail(to, token, nombre) {
+  const verificationUrl = `${process.env.CLIENT_URL}/verificar-cuenta?token=${token}`
+
+  const mailOptions = {
+    from: `"My Pet" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: 'Verificá tu cuenta · My Pet',
+    html: emailVerificacionCuenta({ nombre, verificationUrl })
   }
 
   await transporter.sendMail(mailOptions)

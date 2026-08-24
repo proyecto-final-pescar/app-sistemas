@@ -3,6 +3,9 @@ import HistorialClinico from '../models/HistorialClinico.js';
 import Mascota from '../models/Mascota.js';
 import Veterinaria from '../models/Veterinaria.js';
 import FichaMedica from '../models/FichaMedica.js';
+import Turno from '../models/Turno.js';
+import { CATEGORIAS_SERVICIO } from '../constants/categoriasServicio.js';
+
 
 export const obtenerHistorialClinico = async (req, res) => {
   try {
@@ -46,6 +49,80 @@ export const obtenerEntradaHistorialClinico = async (req, res) => {
   }
 };
 
+
+// Devuelve los turnos de esta mascota, con ESTA veterinaria (la del usuario
+// logueado), que están en condiciones de registrar una consulta:
+//   - estado 'confirmado' : un turno tiene que estar
+//     confirmado para poder registrar la consulta a partir de él
+//   - todavía no tienen un HistorialClinico creado con ese turnoId, evita que se haga mas de un registro de consulta para un mismo turno 
+
+export const obtenerTurnosPendientesRegistro = async (req, res) => {
+  try {
+    const { mascotaId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(mascotaId)) {
+      return res.status(400).json({ message: 'La mascota es inválida' });
+    }
+
+    const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id });
+
+    if (!veterinaria) {
+      return res.status(404).json({
+        message: 'No se encontró una veterinaria asociada a este usuario'
+      });
+    }
+
+    const turnos = await Turno.find({
+      mascotaId,
+      veterinariaId: veterinaria._id,
+      estado: 'confirmado'
+    }).sort({ fecha: -1, hora: -1 });
+
+    if (turnos.length === 0) {
+      return res.status(200).json({ success: true, data: [] });
+    }
+
+    const turnoIds = turnos.map((t) => t._id);
+
+    // Turnos que YA tienen un historial clínico cargado -> se excluyen
+    const turnoIdsConHistorial = await HistorialClinico.distinct('turnoId', {
+      turnoId: { $in: turnoIds }
+    });
+    const idsConHistorial = new Set(
+      turnoIdsConHistorial.map((id) => id.toString())
+    );
+
+    const turnosPendientes = turnos.filter(
+      (turno) => !idsConHistorial.has(turno._id.toString())
+    );
+
+    // profesionalId es un ObjectId de un subdocumento embebido en
+    // Veterinaria.profesionales, sin ref -> se resuelve a mano.
+    const data = turnosPendientes.map((turno) => {
+      const profesional = turno.profesionalId
+        ? veterinaria.profesionales.id(turno.profesionalId)
+        : null;
+
+      return {
+        id: turno._id,
+        fecha: turno.fecha,
+        hora: turno.hora,
+        estado: turno.estado,
+        motivo: turno.motivo || null,
+        profesional: {
+          id: profesional?._id || null,
+          nombre: profesional?.nombre || 'Sin asignar'
+        }
+      };
+    });
+
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.error('Error en GET /historial-clinico/turnos-pendientes/:mascotaId:', error);
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 export const crearHistorialClinico = async (req, res) => {
   try {
     const {
@@ -61,10 +138,6 @@ export const crearHistorialClinico = async (req, res) => {
       urlPdf
     } = req.body;
 
-    const categoriasValidas = ['Vacunación', 'Control', 'Consulta', 'Cirugía'];
-    const estadosValidos = ['Completado', 'Con seguimiento', 'Pendiente'];
-
-
     if (!mascotaId || !mongoose.Types.ObjectId.isValid(mascotaId)) {
       return res.status(400).json({ message: 'La mascota es inválida' });
     }
@@ -73,8 +146,8 @@ export const crearHistorialClinico = async (req, res) => {
       return res.status(400).json({ message: 'El profesional es inválido' });
     }
 
-    if (turnoId && !mongoose.Types.ObjectId.isValid(turnoId)) {
-      return res.status(400).json({ message: 'El turno es inválido' });
+    if (!turnoId || !mongoose.Types.ObjectId.isValid(turnoId)) {
+      return res.status(400).json({ message: 'El turno es requerido' });
     }
 
     // Validación de fecha
@@ -108,10 +181,10 @@ export const crearHistorialClinico = async (req, res) => {
       });
     }
 
-    if (!categoriasValidas.includes(categoriaServicio)) {
+    if (!CATEGORIAS_SERVICIO.includes(categoriaServicio)) {
       return res.status(400).json({
         message: 'La categoría de servicio no es válida',
-        categoriasValidas
+        categoriasValidas: CATEGORIAS_SERVICIO
       });
     }
 
@@ -129,12 +202,8 @@ export const crearHistorialClinico = async (req, res) => {
     }
 
     // Validación de monto
-    if (monto !== undefined && monto !== null) {
-      if (typeof monto !== 'number' || Number.isNaN(monto) || monto < 0) {
-        return res.status(400).json({
-          message: 'El monto debe ser un número mayor o igual a 0'
-        });
-      }
+    if (monto === undefined || monto === null || typeof monto !== 'number' || Number.isNaN(monto) || monto < 0) {
+      return res.status(400).json({ message: 'El monto es requerido y debe ser un número mayor o igual a 0' });
     }
 
     // Validación de URL del PDF 
@@ -161,6 +230,32 @@ export const crearHistorialClinico = async (req, res) => {
         message: 'No se encontró una veterinaria asociada a este usuario'
       });
     }
+
+    // El turno es la fuente de verdad de esta consulta: tiene que existir,
+    // ser de ESTA veterinaria, ser de ESTA mascota, y estar 'confirmado'.
+    const turno = await Turno.findOne({
+      _id: turnoId,
+      veterinariaId: veterinaria._id
+    });
+
+    if (!turno) {
+      return res.status(404).json({
+        message: 'El turno no existe o no pertenece a esta veterinaria'
+      });
+    }
+
+    if (turno.mascotaId?.toString() !== mascotaId) {
+      return res.status(400).json({
+        message: 'El turno no corresponde a esta mascota'
+      });
+    }
+
+    if (turno.estado !== 'confirmado') {
+      return res.status(400).json({
+        message: 'Solo se puede registrar una consulta a partir de un turno confirmado'
+      });
+    }
+
     // Validar que el profesional exista dentro del listado de la veterinaria
     const profesional = veterinaria.profesionales.id(profesionalId);
 
@@ -170,12 +265,18 @@ export const crearHistorialClinico = async (req, res) => {
       });
     }
 
+    if (turno.profesionalId?.toString() !== profesional._id.toString()) {
+      return res.status(400).json({
+        message: 'El profesional no coincide con el profesional asignado al turno'
+      });
+    }
+
     const nuevoHistorial = new HistorialClinico({
       mascotaId,
       usuarioId: mascota.dueñoId,
       profesionalId: profesional._id,
       veterinariaId: veterinaria._id,
-      turnoId: turnoId || undefined,
+      turnoId,
       fecha: fechaValida,
       hora: hora.trim(),
       categoriaServicio,
@@ -186,6 +287,11 @@ export const crearHistorialClinico = async (req, res) => {
     });
 
     await nuevoHistorial.save();
+
+    // El turno pasa de confirmado a atendido una vez que la consulta
+    // quedó registrada.
+    turno.estado = 'atendido';
+    await turno.save();
 
     // Crear FichaMedica automáticamente si no existe
     const fichaExistente = await FichaMedica.findOne({ mascotaId })
@@ -210,6 +316,13 @@ export const crearHistorialClinico = async (req, res) => {
       });
     }
 
+    
+    if (error.code === 11000 && error.keyPattern?.turnoId) {
+      return res.status(409).json({
+        message: 'Ya existe una consulta registrada para este turno'
+      });
+    }
+
     console.error('Error al crear historial clínico:', error);
 
     return res.status(500).json({
@@ -230,7 +343,7 @@ export const actualizarHistorialClinico = async (req, res) => {
     }
 
     const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id })
-    
+
     if (!veterinaria || historialClinico.veterinariaId.toString() !== veterinaria._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -248,8 +361,6 @@ export const actualizarHistorialClinico = async (req, res) => {
       monto,
       urlPdf
     } = req.body
-
-    const categoriasValidas = ['Vacunación', 'Control', 'Consulta', 'Cirugía']
 
     // Validar y actualizar solo campos que vienen y no están vacíos
     if (fecha !== undefined) {
@@ -281,11 +392,11 @@ export const actualizarHistorialClinico = async (req, res) => {
     }
 
     if (categoriaServicio !== undefined) {
-      if (!categoriasValidas.includes(categoriaServicio)) {
+      if (!CATEGORIAS_SERVICIO.includes(categoriaServicio)) {
         return res.status(400).json({
           success: false,
           message: 'Categoría de servicio no válida',
-          categoriasValidas
+          categoriasValidas: CATEGORIAS_SERVICIO
         })
       }
       historialClinico.categoriaServicio = categoriaServicio
@@ -360,3 +471,29 @@ export const actualizarHistorialClinico = async (req, res) => {
     })
   }
 }
+
+export const obtenerHistorialesPorTutor = async (req, res) => {
+  try {
+    // Acá asumimos que el modelo tiene alguna referencia al usuario/tutor
+    // O que buscás las mascotas de ese tutor y luego sus historiales.
+    // Ejemplo directo si el historial guarda el usuarioId:
+    const filtro = { usuarioId: req.user.id };
+
+    // En tu backend: historialClinicoController.js
+    const historiales = await HistorialClinico.find(filtro)
+      .sort({ fecha: -1, hora: -1 })
+      .populate('mascotaId', 'nombre especie')
+      .populate('veterinariaId', 'nombre profesionales');
+
+    res.status(200).json({
+      success: true,
+      data: {
+        historiales
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en obtenerHistorialesPorTutor:', error);
+    res.status(500).json({ message: 'Error al obtener los historiales' });
+  }
+};
