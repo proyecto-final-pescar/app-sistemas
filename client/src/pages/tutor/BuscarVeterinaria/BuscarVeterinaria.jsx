@@ -11,7 +11,6 @@ import { calcularEstadoApertura } from "../../../utils/Horarios";
 import styles from "../../../pages/tutor/HomeTutor/HomeTutor.module.css";
 
 const RADIO_DEFAULT_METROS = 5000;
-
 const FILTROS = ["Emergencias", "Vacunación", "Cerca mío"];
 
 function matchFiltro(vet, filtro) {
@@ -43,8 +42,9 @@ const BuscarVeterinaria = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // NUEVO ESTADO: Controla si el panel inferior está "peek" (1.5 cards), "expanded" (todo) o "minimized" (solo buscador)
+  // ESTADOS DE LA INTERFAZ
   const [sheetState, setSheetState] = useState("peek");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     setInputValue(query);
@@ -66,7 +66,7 @@ const BuscarVeterinaria = () => {
         setError(mensajeBackend || "Tu sesión expiró. Te estamos llevando al login…");
         setTimeout(() => navigate("/login"), 1500);
       } else {
-        setError(mensajeBackend || "No pudimos cargar las veterinarias. Intentá nuevamente.");
+        setError(mensajeBackend || "No pudimos cargar las veterinarias.");
       }
     } finally {
       setLoading(false);
@@ -79,7 +79,6 @@ const BuscarVeterinaria = () => {
       setCercanas([]);
       return;
     }
-
     setLoading(true);
     setError(null);
 
@@ -88,27 +87,18 @@ const BuscarVeterinaria = () => {
         try {
           const { latitude, longitude } = position.coords;
           const data = await buscarVeterinariasCercanas({
-            lat: latitude,
-            lng: longitude,
-            radio: RADIO_DEFAULT_METROS,
+            lat: latitude, lng: longitude, radio: RADIO_DEFAULT_METROS,
           });
           setCercanas(data ?? []);
         } catch (err) {
-          console.error("Error al buscar veterinarias cercanas:", err);
-          const mensajeBackend = err?.response?.data?.message;
-          setError(mensajeBackend || "No pudimos buscar veterinarias cerca tuyo.");
+          setError("No pudimos buscar veterinarias cerca tuyo.");
           setCercanas([]);
         } finally {
           setLoading(false);
         }
       },
       (geoErr) => {
-        console.error("Error de geolocalización:", geoErr);
-        setError(
-          geoErr.code === geoErr.PERMISSION_DENIED
-            ? "Necesitamos tu ubicación para mostrarte veterinarias cerca tuyo. Habilitá el permiso de ubicación."
-            : "No pudimos obtener tu ubicación."
-        );
+        setError("Necesitamos tu ubicación. Habilitá el permiso de ubicación.");
         setCercanas([]);
         setLoading(false);
       }
@@ -116,104 +106,89 @@ const BuscarVeterinaria = () => {
   }, []);
 
   useEffect(() => {
-    if (filtro === "Cerca mío") {
-      buscarCercanas();
-    } else {
-      cargarListado();
-    }
+    if (filtro === "Cerca mío") { buscarCercanas(); } 
+    else { cargarListado(); }
   }, [filtro, buscarCercanas, cargarListado]);
 
   const resultados = useMemo(() => {
-    if (filtro === "Cerca mío") {
-      return (cercanas ?? []).filter((v) => matchTexto(v, query));
-    }
+    if (filtro === "Cerca mío") return (cercanas ?? []).filter((v) => matchTexto(v, query));
     return veterinarias.filter((v) => matchTexto(v, query) && matchFiltro(v, filtro));
   }, [filtro, cercanas, veterinarias, query]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const next = new URLSearchParams();
-    if (inputValue.trim()) {
-      next.set("q", inputValue.trim());
-    }
+    if (inputValue.trim()) next.set("q", inputValue.trim());
     setSearchParams(next);
   };
 
   const handleFiltro = (f) => {
     const next = new URLSearchParams();
-    if (filtro !== f) {
-      next.set("filtro", f);
-    }
+    if (filtro !== f) next.set("filtro", f);
     setSearchParams(next);
   };
 
-  const handleVerClinica = (id) => navigate(`/tutor/veterinarias/${id}`);
-
-  // Manejador del input de búsqueda (expande el panel al teclear)
+  // MANEJADORES DE INTERACCIÓN
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
-    if (e.target.value.length > 0) {
-      setSheetState("expanded");
-    } else {
-      setSheetState("peek");
-    }
+    if (e.target.value.length > 0) setSheetState("expanded");
+    else setSheetState("peek");
   };
 
-  // Manejador para cuando el usuario interactúa con el mapa (minimiza el panel)
   const handleMapInteraction = () => {
-    if (sheetState !== "minimized") {
-      setSheetState("minimized");
-    }
+    if (sheetState !== "minimized") setSheetState("minimized");
   };
 
-  // Restaura el panel si estaba minimizado y el usuario toca el panel
   const handleSheetInteraction = () => {
-    if (sheetState === "minimized") {
-      setSheetState("peek");
-    }
+    if (sheetState === "minimized") setSheetState("peek");
   };
 
   return (
-    <div className={styles.layout}>
-      {/* Sidebar envuelto en la clase que lo oculta globalmente como pediste */}
-      <div className={styles.sidebarContainer}>
+    <div className={styles.vetMasterLayout}>
+      
+      {/* SIDEBAR OCULTO */}
+      <div className={`${styles.sidebarOffscreen} ${isSidebarOpen ? styles.sidebarOpen : ""}`}>
         <Sidebar title="Buscar Veterinaria" />
       </div>
+      
+      {isSidebarOpen && (
+        <div className={styles.vetOverlay} onClick={() => setIsSidebarOpen(false)} />
+      )}
 
-      <div className={styles.pageWrapper}>
-        <TopBar title="Urgencias 24h y Veterinarias Cercanas" />
-
-        <main className={styles.content}>
+      <div className={styles.vetMainView}>
+        
+        {/* HEADER Y BOTÓN HAMBURGUESA */}
+        <div className={styles.vetHeaderWrapper}>
+          <TopBar title="Urgencias 24h y Veterinarias Cercanas" />
           
-          {/* ========================================== */}
-          {/* CONTENEDOR DEL MAPA (Ocupa el fondo de la pantalla) */}
-          {/* ========================================== */}
+          <button 
+            className={styles.hamburgerBtn} 
+            onClick={() => setIsSidebarOpen(true)}
+            aria-label="Abrir menú"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B4FBB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        {/* CONTENEDOR MAPA Y PANEL */}
+        <main className={styles.vetMapArea}>
+          
           <div 
+            className={styles.vetMapBackground}
             onClick={handleMapInteraction}
             onTouchStart={handleMapInteraction}
-            style={{ 
-              position: 'absolute', 
-              top: 0, left: 0, width: '100%', height: '100%', 
-              backgroundColor: '#e5e3df', zIndex: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}
           >
-            {/* AQUÍ VA EL COMPONENTE DEL MAPA */}
             <p style={{ color: '#666', fontWeight: 'bold' }}>[ El Mapa va a cargar aquí ]</p>
           </div>
 
-          {/* ========================================== */}
-          {/* BOTTOM SHEET (Panel deslizable de resultados) */}
-          {/* ========================================== */}
           <div 
-            className={`${styles.bottomSheet} ${
-              sheetState === "expanded" ? styles.sheetExpanded : 
-              sheetState === "minimized" ? styles.sheetMinimized : 
-              styles.sheetPeek
-            }`}
+            className={`${styles.vetSheet} ${styles[sheetState]}`}
             onClick={handleSheetInteraction}
           >
-            {/* Manija de arrastre visual para que el usuario sepa que puede deslizar */}
             <div 
               className={styles.dragHandle} 
               onClick={(e) => {
@@ -232,9 +207,6 @@ const BuscarVeterinaria = () => {
                   onChange={handleInputChange}
                   onFocus={() => setSheetState("expanded")}
                 />
-                <button type="submit" className={styles.btnBuscar}>
-                  Buscar
-                </button>
               </form>
 
               <div className={styles.chips}>
@@ -254,8 +226,7 @@ const BuscarVeterinaria = () => {
               </div>
             </div>
 
-            {/* Área que permite hacer scroll dentro del panel inferior */}
-            <section className={styles.sheetContent}>
+            <section className={styles.vetSheetContent}>
               {error && <div className={styles.errorBanner}>{error}</div>}
 
               {loading ? (
@@ -265,11 +236,7 @@ const BuscarVeterinaria = () => {
                   ))}
                 </div>
               ) : resultados.length === 0 ? (
-                <p className={styles.emptyHint}>
-                  {query || filtro
-                    ? "No encontramos veterinarias para esa búsqueda."
-                    : "No hay veterinarias para mostrar."}
-                </p>
+                <p className={styles.emptyHint}>No encontramos veterinarias.</p>
               ) : (
                 <div className={styles.listaResultados} style={{ marginTop: '16px' }}>
                   {resultados.map((vet) => {
@@ -288,7 +255,6 @@ const BuscarVeterinaria = () => {
               )}
             </section>
           </div>
-
         </main>
       </div>
     </div>

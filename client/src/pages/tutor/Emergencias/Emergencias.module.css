@@ -474,3 +474,333 @@
   color: #dc2626;
   font-weight: 600;
 }
+
+
+
+
+/* =========================================================
+   LAYOUT BASE (SIDEBAR Y HEADER)
+   ========================================================= */
+
+.vetMasterLayout {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--color-fondo-secciones);
+  position: relative;
+}
+
+.sidebarOffscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 2000;
+  transform: translateX(-100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--color-blanco);
+}
+
+.sidebarOpen {
+  transform: translateX(0);
+}
+
+.vetOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1900;
+  backdrop-filter: blur(2px);
+}
+
+.vetMainView {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+}
+
+.vetHeaderWrapper {
+  position: relative;
+  z-index: 10;
+  background: var(--color-fondo-secciones);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.hamburgerBtn {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  background-color: var(--color-blanco);
+  border: 1px solid #EAE0FE;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  box-shadow: 0 2px 8px rgba(107, 79, 187, 0.1);
+  transition: transform 0.2s;
+}
+
+.hamburgerBtn:active {
+  transform: scale(0.95);
+}
+
+/* =========================================================
+   ÁREA DEL MAPA
+   ========================================================= */
+
+.vetMapArea {
+  flex: 1;
+  position: relative;
+  overflow: hidden; 
+}
+
+.vetMapBackground {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 1;
+}
+
+.mapa {
+  width: 100%;
+  height: 100%;
+}
+
+/* =========================================================
+   BOTTOM SHEET / PANEL FLOTANTE
+   ========================================================= */
+
+.vetSheet {
+  position: absolute;
+  z-index: 10;
+  background: var(--color-blanco);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.dragHandle {
+  width: 44px;
+  height: 6px;
+  background: #d1d5db;
+  border-radius: 4px;
+  margin: 12px auto 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.vetSheetContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 16px 16px;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 2px;
+  scrollbar-width: none;
+}
+.lista::-webkit-scrollbar {
+  display: none;
+}
+
+/* Responsividad del panel */
+@media (max-width: 767px) {
+  .vetSheet {
+    bottom: 0; left: 0; width: 100%;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.12);
+  }
+  .peek { height: 420px; } 
+  .expanded { height: 90%; } 
+  .minimized { height: 165px; } 
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .vetSheet {
+    bottom: 24px; left: 24px;
+    width: 380px; 
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  }
+  .peek { height: 480px; }
+  .expanded { height: calc(100% - 48px); } 
+  .minimized { height: 165px; }
+}
+
+@media (min-width: 1025px) {
+  .vetSheet {
+    top: 24px; bottom: 24px; left: 24px;
+    width: 400px;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    height: auto !important;
+    transform: none !important; 
+  }
+  .dragHandle { display: none; }
+}
+
+/* =========================================================
+   ELEMENTOS INTERNOS DEL PANEL (Buscador y Filtros)
+   ========================================================= */
+
+.barraBusqueda {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.buscadorWrapper {
+  display: flex;
+  align-items: center;
+  background: var(--color-blanco);
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 14px;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.buscadorWrapper:focus-within {
+  border-color: var(--color-primario);
+}
+
+.buscadorIcono {
+  color: var(--color-texto-secundario);
+  display: flex;
+  align-items: center;
+}
+
+.buscadorInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: var(--texto-form-size);
+  color: var(--color-texto-principal);
+  background: transparent;
+}
+
+.buscadorClear {
+  background: none; border: none;
+  color: var(--color-texto-secundario);
+  cursor: pointer;
+}
+
+/* Filtros debajo del buscador */
+.filtrosWrapper {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  scrollbar-width: none;
+}
+.filtrosWrapper::-webkit-scrollbar { display: none; }
+
+.btnCercaMio, .btnFiltros {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  background: var(--color-blanco);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btnCercaMioActivo {
+  border-color: var(--color-primario);
+  color: var(--color-primario);
+  background: var(--color-fondo-claro);
+}
+
+.btnFiltrosActivo {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: var(--color-blanco);
+}
+
+.select {
+  flex-shrink: 0;
+  padding: 8px 28px 8px 12px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  background-color: var(--color-blanco);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%237E6FA0' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.resumen {
+  font-size: var(--texto-form-size);
+  color: var(--color-texto-secundario);
+  font-weight: 600;
+  margin: 0 0 10px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+/* =========================================================
+   MAPA Y PINES (Estilos propios tuyos conservados)
+   ========================================================= */
+
+.sinResultados {
+  position: absolute;
+  top: 12px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  background: #fff3cd; color: #856404;
+  padding: 10px 18px; border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex; align-items: center; gap: 12px;
+}
+
+.btnAmpliarBusqueda {
+  background: var(--color-primario); color: var(--color-blanco);
+  border: none; border-radius: 6px; padding: 6px 12px;
+  cursor: pointer; font-weight: 600;
+}
+
+.avisoAmpliada {
+  background: var(--color-fondo-claro); color: var(--color-primario);
+  font-size: 0.8rem; font-weight: 600; padding: 8px 12px;
+  border-radius: 8px; margin: 0 0 10px 0;
+}
+
+.markerUsuarioWrapper { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.markerUsuario { width: 16px; height: 16px; background: var(--color-primario); border: 3px solid var(--color-blanco); border-radius: 50%; box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.25); }
+.markerUsuarioEtiqueta { background: var(--color-blanco); color: var(--color-primario); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+
+.markerVete { background: var(--color-blanco); border: 2px solid var(--color-primario); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: transform 0.15s; }
+.markerVeteActivo { background: var(--color-primario); border-color: #5b21b6; transform: scale(1.2); }
+
+.infoBubble { background: var(--color-blanco); border-radius: 14px; padding: 14px; min-width: 220px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); position: relative; display: flex; flex-direction: column; gap: 6px; }
+.infoBubbleCerrar { position: absolute; top: 8px; right: 10px; background: none; border: none; cursor: pointer; color: var(--color-texto-secundario); }
+.infoBubbleNombre { font-size: 0.9rem; font-weight: 700; margin: 0; padding-right: 20px; }
+.infoBubbleDireccion, .infoBubbleDistancia { font-size: 0.8rem; color: var(--color-texto-secundario); margin: 0; }
+.infoBubbleTags { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag { background: var(--color-fondo-claro); color: var(--color-primario); font-size: 0.7rem; padding: 2px 9px; border-radius: 20px; }
+.infoBubbleBtn { width: 100%; padding: 9px; background: var(--color-primario); color: var(--color-blanco); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+
+.estadoMensaje { text-align: center; padding: 20px; color: var(--color-texto-secundario); }
+.estadoError { color: #dc2626; font-weight: 600; }
+.sinResultadosLista { text-align: center; padding: 32px 0; color: var(--color-texto-secundario); }
