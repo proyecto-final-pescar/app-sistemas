@@ -8,15 +8,8 @@ import {
   Users,
   ShieldCheck,
   Bell,
-  BellOff
+  BellOff,
 } from "lucide-react";
-
-import {
-  obtenerNotificaciones,
-  obtenerCantidadNoLeidas,
-  marcarNotificacionComoLeida,
-  marcarTodasComoLeidas,
-} from "../../services/notificacionesService";
 
 import styles from "./NotificationBell.module.css";
 
@@ -31,7 +24,7 @@ const CONFIG_POR_TIPO = {
 
 const CONFIG_DEFAULT = { icono: Bell, clase: "tipoIconoInfo" };
 
-//Datos mockeados para pruebas de diseño, una vez hecho la logica de notificaciones quitarlo para usar datos reales
+// Datos mock para maquetación y diseño visual
 const NOTIFICACIONES_MOCK = [
   {
     _id: "mock-1",
@@ -88,7 +81,6 @@ const formatearTiempoRelativo = (fecha) => {
 
   const ahora = new Date();
   const creada = new Date(fecha);
-
   const diferenciaMs = ahora - creada;
   const minutos = Math.floor(diferenciaMs / (1000 * 60));
   const horas = Math.floor(diferenciaMs / (1000 * 60 * 60));
@@ -111,26 +103,10 @@ const NotificationBell = () => {
   const containerRef = useRef(null);
 
   const [abierto, setAbierto] = useState(false);
-  const [notificaciones, setNotificaciones] = useState([]);
-  const [noLeidas, setNoLeidas] = useState(0);
-  const [cargando, setCargando] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const cargarConteo = async () => {
-      try {
-        const cantidad = await obtenerCantidadNoLeidas();
-        setNoLeidas(cantidad);
-      } catch (errorConteo) {
-        console.error(
-          "Error al obtener notificaciones no leídas:",
-          errorConteo
-        );
-      }
-    };
-
-    cargarConteo();
-  }, []);
+  const [notificaciones, setNotificaciones] = useState(NOTIFICACIONES_MOCK);
+  
+  // Calculamos las no leídas en base al estado local
+  const noLeidas = notificaciones.filter((item) => !item.leida).length;
 
   useEffect(() => {
     const cerrarAlHacerClickAfuera = (evento) => {
@@ -143,96 +119,34 @@ const NotificationBell = () => {
     };
 
     document.addEventListener("mousedown", cerrarAlHacerClickAfuera);
-
     return () => {
       document.removeEventListener("mousedown", cerrarAlHacerClickAfuera);
     };
   }, []);
 
-  const cargarNotificaciones = async () => {
-    setCargando(true);
-    setError("");
-
-    try {
-      const data = await obtenerNotificaciones();
-      setNotificaciones(
-        Array.isArray(data) && data.length > 0 ? data : NOTIFICACIONES_MOCK
-      );
-    } catch (errorCarga) {
-      console.error(
-        "Error al cargar notificaciones (usando datos de ejemplo):",
-        errorCarga
-      );
-      setNotificaciones(NOTIFICACIONES_MOCK);
-    } finally {
-      setCargando(false);
-    }
+  const handleAbrirCampana = () => {
+    setAbierto((prev) => !prev);
   };
 
-  const handleAbrirCampana = async () => {
-    const nuevoEstado = !abierto;
-    setAbierto(nuevoEstado);
-
-    if (nuevoEstado) {
-      await cargarNotificaciones();
-    }
+  const handleMarcarTodas = () => {
+    setNotificaciones((previas) =>
+      previas.map((item) => ({ ...item, leida: true }))
+    );
   };
 
-  const handleMarcarTodas = async () => {
-    try {
-      await marcarTodasComoLeidas();
-
+  const handleNotificacion = (notificacion) => {
+    if (!notificacion.leida) {
       setNotificaciones((previas) =>
-        previas.map((item) => ({
-          ...item,
-          leida: true,
-        }))
-      );
-
-      setNoLeidas(0);
-    } catch (errorLectura) {
-      console.error(
-        "Error al marcar todas las notificaciones como leídas:",
-        errorLectura
-      );
-
-      setError(
-        errorLectura.message ||
-          "No se pudieron marcar las notificaciones como leídas."
+        previas.map((item) =>
+          item._id === notificacion._id ? { ...item, leida: true } : item
+        )
       );
     }
-  };
 
-  const handleNotificacion = async (notificacion) => {
-    try {
-      if (!notificacion.leida) {
-        await marcarNotificacionComoLeida(notificacion._id);
+    setAbierto(false);
 
-        setNotificaciones((previas) =>
-          previas.map((item) =>
-            item._id === notificacion._id
-              ? { ...item, leida: true }
-              : item
-          )
-        );
-
-        setNoLeidas((cantidad) => Math.max(0, cantidad - 1));
-      }
-
-      setAbierto(false);
-
-      if (notificacion.link) {
-        navigate(notificacion.link);
-      }
-    } catch (errorLectura) {
-      console.error(
-        "Error al marcar la notificación como leída:",
-        errorLectura
-      );
-
-      setError(
-        errorLectura.message || "No se pudo abrir la notificación."
-      );
+    if (notificacion.link) {
+      navigate(notificacion.link);
     }
   };
 
@@ -270,27 +184,13 @@ const NotificationBell = () => {
             )}
           </div>
 
-          {cargando && (
-            <div className={styles.emptyState}>
-              <p>Cargando notificaciones...</p>
-            </div>
-          )}
-
-          {!cargando && error && (
-            <div className={styles.emptyState}>
-              <p>{error}</p>
-            </div>
-          )}
-
-          {!cargando && !error && notificaciones.length === 0 && (
+          {notificaciones.length === 0 ? (
             <div className={styles.emptyState}>
               <BellOff size={32} className={styles.emptyIcon} />
               <p>¡Todo al día!</p>
               <small>No tenés notificaciones nuevas</small>
             </div>
-          )}
-
-          {!cargando && !error && notificaciones.length > 0 && (
+          ) : (
             <div className={styles.lista}>
               {notificaciones.map((notificacion) => {
                 const config =
@@ -314,7 +214,6 @@ const NotificationBell = () => {
 
                     <div className={styles.contenido}>
                       <p>{notificacion.mensaje}</p>
-
                       <span>
                         {formatearTiempoRelativo(notificacion.createdAt)}
                       </span>
@@ -326,9 +225,7 @@ const NotificationBell = () => {
                           ? styles.estadoLeido
                           : styles.estadoNoLeido
                       }`}
-                      aria-label={
-                        notificacion.leida ? "Leída" : "No leída"
-                      }
+                      aria-label={notificacion.leida ? "Leída" : "No leída"}
                     />
                   </button>
                 );
