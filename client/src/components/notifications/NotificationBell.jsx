@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  Calendar,
+  CreditCard,
+  CheckCircle2,
+  XCircle,
+  Users,
+  ShieldCheck,
+  Bell,
+  BellOff
+} from "lucide-react";
 
 import {
   obtenerNotificaciones,
@@ -10,13 +20,68 @@ import {
 
 import styles from "./NotificationBell.module.css";
 
-const ICONOS_POR_TIPO = {
-  turno: "📅",
-  estudio: "🧪",
-  vacuna: "💉",
-  mensaje: "💬",
-  sistema: "🔔",
+const CONFIG_POR_TIPO = {
+  recordatorio_turno: { icono: Calendar, clase: "tipoIconoRecordatorio" },
+  plazo_pago: { icono: CreditCard, clase: "tipoIconoPago" },
+  turno_confirmado: { icono: CheckCircle2, clase: "tipoIconoConfirmado" },
+  turno_cancelado: { icono: XCircle, clase: "tipoIconoCancelado" },
+  turno_reservado: { icono: Users, clase: "tipoIconoInfo" },
+  veterinaria_solicitud: { icono: ShieldCheck, clase: "tipoIconoVeterinaria" },
 };
+
+const CONFIG_DEFAULT = { icono: Bell, clase: "tipoIconoInfo" };
+
+//Datos mockeados para pruebas de diseño, una vez hecho la logica de notificaciones quitarlo para usar datos reales
+const NOTIFICACIONES_MOCK = [
+  {
+    _id: "mock-1",
+    tipo: "recordatorio_turno",
+    mensaje: "Recordatorio: Firulais tiene turno mañana a las 10:30.",
+    leida: false,
+    createdAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+    link: "/mis-turnos",
+  },
+  {
+    _id: "mock-2",
+    tipo: "plazo_pago",
+    mensaje: "El plazo para confirmar el pago de tu turno está por vencer.",
+    leida: false,
+    createdAt: new Date(Date.now() - 49 * 60 * 1000).toISOString(),
+    link: "/mis-turnos",
+  },
+  {
+    _id: "mock-3",
+    tipo: "turno_confirmado",
+    mensaje: "Tu turno con Clínica Patitas fue confirmado para mañana a las 16:00.",
+    leida: false,
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    link: "/mis-turnos",
+  },
+  {
+    _id: "mock-4",
+    tipo: "turno_cancelado",
+    mensaje: "Tu turno del jueves fue cancelado.",
+    leida: true,
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    link: "/mis-turnos",
+  },
+  {
+    _id: "mock-5",
+    tipo: "turno_reservado",
+    mensaje: "Nuevo turno reservado por Lucía para Rocco.",
+    leida: false,
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    link: "/agenda",
+  },
+  {
+    _id: "mock-6",
+    tipo: "veterinaria_solicitud",
+    mensaje: "Nueva veterinaria solicitó registrarse en MyPet.",
+    leida: false,
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    link: "/admin/veterinarias",
+  },
+];
 
 const formatearTiempoRelativo = (fecha) => {
   if (!fecha) return "";
@@ -29,25 +94,11 @@ const formatearTiempoRelativo = (fecha) => {
   const horas = Math.floor(diferenciaMs / (1000 * 60 * 60));
   const dias = Math.floor(diferenciaMs / (1000 * 60 * 60 * 24));
 
-  if (minutos < 1) {
-    return "Ahora";
-  }
-
-  if (minutos < 60) {
-    return `Hace ${minutos} minuto${minutos !== 1 ? "s" : ""}`;
-  }
-
-  if (horas < 24) {
-    return `Hace ${horas} hora${horas !== 1 ? "s" : ""}`;
-  }
-
-  if (dias === 1) {
-    return "Ayer";
-  }
-
-  if (dias < 7) {
-    return `Hace ${dias} días`;
-  }
+  if (minutos < 1) return "Ahora";
+  if (minutos < 60) return `Hace ${minutos} minuto${minutos !== 1 ? "s" : ""}`;
+  if (horas < 24) return `Hace ${horas} hora${horas !== 1 ? "s" : ""}`;
+  if (dias === 1) return "Ayer";
+  if (dias < 7) return `Hace ${dias} días`;
 
   return creada.toLocaleDateString("es-AR", {
     day: "numeric",
@@ -104,13 +155,15 @@ const NotificationBell = () => {
 
     try {
       const data = await obtenerNotificaciones();
-      setNotificaciones(Array.isArray(data) ? data : []);
-    } catch (errorCarga) {
-      console.error("Error al cargar notificaciones:", errorCarga);
-
-      setError(
-        errorCarga.message || "No se pudieron cargar las notificaciones."
+      setNotificaciones(
+        Array.isArray(data) && data.length > 0 ? data : NOTIFICACIONES_MOCK
       );
+    } catch (errorCarga) {
+      console.error(
+        "Error al cargar notificaciones (usando datos de ejemplo):",
+        errorCarga
+      );
+      setNotificaciones(NOTIFICACIONES_MOCK);
     } finally {
       setCargando(false);
     }
@@ -178,8 +231,7 @@ const NotificationBell = () => {
       );
 
       setError(
-        errorLectura.message ||
-          "No se pudo abrir la notificación."
+        errorLectura.message || "No se pudo abrir la notificación."
       );
     }
   };
@@ -193,19 +245,7 @@ const NotificationBell = () => {
         aria-expanded={abierto}
         onClick={handleAbrirCampana}
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-        </svg>
+        <Bell size={20} />
 
         {noLeidas > 0 && (
           <span className={styles.badge}>
@@ -242,44 +282,41 @@ const NotificationBell = () => {
             </div>
           )}
 
-          {!cargando &&
-            !error &&
-            notificaciones.length === 0 && (
-              <div className={styles.emptyState}>
-                <span>🔔</span>
-                <p>¡Todo al día!</p>
-                <small>No tenés notificaciones nuevas</small>
-              </div>
-            )}
+          {!cargando && !error && notificaciones.length === 0 && (
+            <div className={styles.emptyState}>
+              <BellOff size={32} className={styles.emptyIcon} />
+              <p>¡Todo al día!</p>
+              <small>No tenés notificaciones nuevas</small>
+            </div>
+          )}
 
-          {!cargando &&
-            !error &&
-            notificaciones.length > 0 && (
-              <div className={styles.lista}>
-                {notificaciones.map((notificacion) => (
+          {!cargando && !error && notificaciones.length > 0 && (
+            <div className={styles.lista}>
+              {notificaciones.map((notificacion) => {
+                const config =
+                  CONFIG_POR_TIPO[notificacion.tipo] || CONFIG_DEFAULT;
+                const IconoComponente = config.icono;
+
+                return (
                   <button
                     type="button"
                     key={notificacion._id}
                     className={`${styles.notificacion} ${
-                      !notificacion.leida
-                        ? styles.noLeida
-                        : ""
+                      !notificacion.leida ? styles.noLeida : ""
                     }`}
-                    onClick={() =>
-                      handleNotificacion(notificacion)
-                    }
+                    onClick={() => handleNotificacion(notificacion)}
                   >
-                    <span className={styles.tipoIcono}>
-                      {ICONOS_POR_TIPO[notificacion.tipo] || "🔔"}
+                    <span
+                      className={`${styles.tipoIcono} ${styles[config.clase]}`}
+                    >
+                      <IconoComponente size={18} />
                     </span>
 
                     <div className={styles.contenido}>
                       <p>{notificacion.mensaje}</p>
 
                       <span>
-                        {formatearTiempoRelativo(
-                          notificacion.createdAt
-                        )}
+                        {formatearTiempoRelativo(notificacion.createdAt)}
                       </span>
                     </div>
 
@@ -290,15 +327,14 @@ const NotificationBell = () => {
                           : styles.estadoNoLeido
                       }`}
                       aria-label={
-                        notificacion.leida
-                          ? "Leída"
-                          : "No leída"
+                        notificacion.leida ? "Leída" : "No leída"
                       }
                     />
                   </button>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -47,7 +47,7 @@
   width: 390px;
   max-height: 440px;
   overflow-y: auto;
-  background: #ffffff;
+    background: var(--color-fondo-secciones);
   border: 1px solid #ececf3;
   border-radius: 14px;
   box-shadow: 0 12px 32px rgba(28, 16, 51, 0.16);
@@ -65,9 +65,10 @@
 
 .dropdownHeader h3 {
   margin: 0;
-  color: #1c1033;
+  color: var(--color-texto-principal);
   font-size: 16px;
   font-weight: 700;
+  font-family: var(--fuente-titulos);
 }
 .lista {
   display: flex;
@@ -108,7 +109,7 @@
 }
 
 .estadoNoLeido {
-  background: #5b7be7;
+  background: var(--color-primario);
 }
 
 .estadoLeido {
@@ -122,26 +123,33 @@
 
 .contenido p {
   margin: 0;
-  color: #1c1033;
+  color: var(--color-texto-principal);
   font-size: 14px;
   line-height: 20px;
   font-weight: 600;
+  font-family: var(--fuente-texto);
 }
+
 .notificacion:not(.noLeida) .contenido p {
-  color: #8a8a99;
+  color: var(--color-texto-secundario);
   font-weight: 500;
 }
 .contenido span {
   display: block;
   margin-top: 4px;
-  color: #9a91b2;
+  color: var(--color-texto-secundario);
   font-size: 12px;
+  font-family: var(--fuente-texto);
 }
 
 .emptyState {
   padding: 36px 20px;
   text-align: center;
   color: #8276ab;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .emptyState span {
@@ -152,12 +160,18 @@
 
 .emptyState p {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-texto-principal);
 }
 .emptyState small {
   display: block;
-  margin-top: 6px;
+  margin-top: 4px;
   font-size: 12px;
+  color: #9a91b2;
+}
+.emptyIcon {
+  margin-bottom: 10px;
   color: #9a91b2;
 }
 
@@ -171,17 +185,47 @@
     max-height: calc(100vh - 80px);
   }
 }
+
 .tipoIcono {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  font-size: 18px;
 }
+
+.tipoIcono svg {
+  display: block;
+}
+
+.tipoIconoRecordatorio {
+  background: var(--color-fondo-claro);
+  color: var(--color-primario);
+}
+
+.tipoIconoPago {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.tipoIconoConfirmado {
+  background: #d1fae5;
+  color: var(--color-cta);
+}
+
+.tipoIconoCancelado,
+.tipoIconoInfo {
+  background: var(--color-fondo-secciones);
+  color: var(--color-texto-secundario);
+}
+
+.tipoIconoVeterinaria {
+  background: var(--color-fondo-claro);
+  color: var(--color-primario);
+}
+
 .marcarTodas {
   border: none;
   background: transparent;
