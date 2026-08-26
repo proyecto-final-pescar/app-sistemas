@@ -29,7 +29,6 @@ const TABS_BASE = [
   { id: "asistente", label: "Asistente Virtual", icon: Bot },
 ];
 
-
 const OPCIONES_ASISTENTE = [
   {
     tipo: "perro",
@@ -64,7 +63,6 @@ function PerfilUsuario() {
   const [error, setError] = useState(null);
   const [mensajeExito, setMensajeExito] = useState(null);
 
-  // --- Estado de la pestaña "Asistente Virtual" ---
   const [asistenteSeleccionado, setAsistenteSeleccionado] = useState("perro");
   const [guardandoAsistente, setGuardandoAsistente] = useState(false);
   const [errorAsistente, setErrorAsistente] = useState(null);
@@ -100,29 +98,23 @@ function PerfilUsuario() {
     fetchPerfil();
   }, [usuarioId]);
 
- 
   useEffect(() => {
     return () => {
       if (fotoPreview) URL.revokeObjectURL(fotoPreview);
     };
   }, [fotoPreview]);
 
-  // Auto-oculta el mensaje de éxito a los 4 segundos. 
   useEffect(() => {
     if (!mensajeExito) return;
-
     const timer = setTimeout(() => setMensajeExito(null), 4000);
     return () => clearTimeout(timer);
   }, [mensajeExito]);
 
-  // Auto-oculta el mensaje de éxito del asistente a los 4 segundos.
   useEffect(() => {
     if (!exitoAsistente) return;
-
     const timer = setTimeout(() => setExitoAsistente(null), 4000);
     return () => clearTimeout(timer);
   }, [exitoAsistente]);
-
 
   const handleChange = (campo) => (e) => {
     setFormData((prev) => ({ ...prev, [campo]: e.target.value }));
@@ -144,7 +136,6 @@ function PerfilUsuario() {
       return;
     }
 
-    // Solo guardamos el archivo y una preview local; se sube recién al guardar.
     setError(null);
     setFotoArchivo(archivo);
     setFotoPreview((prevUrl) => {
@@ -160,12 +151,10 @@ function PerfilUsuario() {
       setGuardando(true);
       setError(null);
       setMensajeExito(null);
-
-      // La foto recién se sube acá, al confirmar el guardado —
     
-    let fotoUrlFinal = formData.fotoUrl;
+      let fotoUrlFinal = formData.fotoUrl;
       if (fotoArchivo) {
-        fotoUrlFinal = await subirImagen(fotoArchivo, "perfiles");// la foto queda en la carpeta perfiles 
+        fotoUrlFinal = await subirImagen(fotoArchivo, "perfiles");
       }
 
       const { data } = await api.put("/usuarios/perfil", {
@@ -208,7 +197,6 @@ function PerfilUsuario() {
       setErrorAsistente(null);
       setExitoAsistente(null);
 
-      
       await api.put("/usuarios/perfil", { asistenteVirtual: asistenteSeleccionado });
 
       const usuarioActualizado = {
@@ -238,9 +226,33 @@ function PerfilUsuario() {
       return (
         <>
           {perfil.mascotas?.map((mascota) => (
-            <span key={mascota._id} className={styles.badge}>
-              {EMOJI_ESPECIE[mascota.especie] || "🐾"} {mascota.nombre}
-            </span>
+            <button
+              key={mascota._id}
+              type="button"
+              className={styles.badgeMascota}
+              onClick={(e) => {
+                e.currentTarget.scrollIntoView({
+                  behavior: "smooth",
+                  inline: "center",
+                  block: "nearest"
+                });
+              }}
+            >
+              {/* CORRECCIÓN AQUÍ: Se cambió mascota.fotoUrl a mascota.foto basado en la DB */}
+              {mascota.foto ? (
+                <img 
+                  src={mascota.foto} 
+                  alt={mascota.nombre} 
+                  className={styles.fotoMascotaBadge} 
+                />
+              ) : (
+                <span className={styles.emojiMascota}>
+                  {/* Aseguramos que la especie esté en minúscula para que coincida con el diccionario */}
+                  {EMOJI_ESPECIE[mascota.especie?.toLowerCase()] || "🐾"}
+                </span>
+              )}
+              {mascota.nombre}
+            </button>
           ))}
           {anioRegistro && (
             <span className={styles.badge}>Tutora/o desde {anioRegistro}</span>
@@ -271,9 +283,6 @@ function PerfilUsuario() {
   };
 
   const fotoMostrar = fotoPreview || formData.fotoUrl;
-
-  // El chatbot (y por lo tanto la elección de asistente) solo está
-  // habilitado para el rol 'dueno' por ahora (ver PrivateRoute.jsx).
   const tabsVisibles = TABS_BASE.filter(
     (tab) => tab.id !== "asistente" || perfil?.rol === "dueno"
   );
@@ -283,7 +292,9 @@ function PerfilUsuario() {
       <div className={styles.layout}>
         <Sidebar title="Mi Perfil y Configuración"/>
         <div className={styles.contenido}>
-          <TopBar title="Mi Perfil y Configuración" />
+          <div className={styles.headerFijo}>
+            <TopBar title="Mi Perfil y Configuración" />
+          </div>
           <div className={styles.cuerpo}>
             <p className={styles.estadoCarga}>Cargando perfil...</p>
           </div>
@@ -296,7 +307,10 @@ function PerfilUsuario() {
     <div className={styles.layout}>
       <Sidebar />
       <div className={styles.contenido}>
-        <TopBar title="Mi Perfil y Configuración" />
+        
+        <div className={styles.headerFijo}>
+          <TopBar title="Mi Perfil y Configuración" />
+        </div>
 
         <div className={styles.cuerpo}>
           <PanelDestacado
@@ -323,7 +337,14 @@ function PerfilUsuario() {
                 key={id}
                 type="button"
                 className={`${styles.tab} ${tabActiva === id ? styles.tabActiva : ""}`}
-                onClick={() => setTabActiva(id)}
+                onClick={(e) => {
+                  setTabActiva(id);
+                  e.currentTarget.scrollIntoView({
+                    behavior: "smooth",
+                    inline: "center",
+                    block: "nearest"
+                  });
+                }}
               >
                 <Icon size={18} />
                 {label}
