@@ -38,6 +38,10 @@ const CLAVES_DIAS = {
 
 const TABS = ["Datos generales", "Servicios", "Profesionales", "Horarios"];
 
+
+const REGEX_SOLO_LETRAS = /^[a-zA-ZÀ-ÖØ-öø-ÿ\u00f1\u00d1\s'.-]+$/;
+const esTextoValido = (texto) => REGEX_SOLO_LETRAS.test((texto || "").trim());
+
 const IconPlus = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <path d="M12 5v14M5 12h14" />
@@ -81,14 +85,8 @@ const normalizarVeterinaria = (veterinaria) => ({
     email: veterinaria.email || "",
     sitioWeb: veterinaria.sitioWeb || "",
   },
-  especialidades: Array.isArray(veterinaria.especialidades)
-    ? veterinaria.especialidades
-    : [],
   servicios: Array.isArray(veterinaria.servicios)
-    ? veterinaria.servicios.map((servicio) => ({
-        ...servicio,
-        duracion: servicio.duracion ?? 30,
-      }))
+    ? veterinaria.servicios.map((servicio) => ({ ...servicio }))
     : [],
   profesionales: Array.isArray(veterinaria.profesionales)
     ? veterinaria.profesionales.map((profesional) => ({ ...profesional }))
@@ -97,19 +95,61 @@ const normalizarVeterinaria = (veterinaria) => ({
   urgencias24hs: Boolean(veterinaria.urgencias24hs),
 });
 
+
+const construirPayloadServicios = (servicios) => ({
+  servicios: servicios.map((servicio) => ({
+    ...(servicio._id ? { _id: servicio._id } : {}),
+    nombre: servicio.nombre.trim(),
+    categoria: servicio.categoria,
+    precio: Number(servicio.precio),
+  })),
+});
+
+const construirPayloadProfesionales = (profesionales) => ({
+  profesionales: profesionales.map((profesional) => ({
+    ...(profesional._id ? { _id: profesional._id } : {}),
+    nombre: profesional.nombre.trim(),
+    especialidad: profesional.especialidad.trim(),
+    email: profesional.email.trim(),
+    ...(Array.isArray(profesional.serviciosIds)
+      ? { serviciosIds: profesional.serviciosIds }
+      : {}),
+  })),
+});
+
 function MiVeterinaria() {
   const { categorias, loading: cargandoCategorias, error: errorCategorias } =
     useCategoriasServicio();
   const [tabActiva, setTabActiva] = useState(TABS[0]);
   const [formulario, setFormulario] = useState(null);
+
+  const [formularioGuardado, setFormularioGuardado] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [guardando, setGuardando] = useState(false);
+  const [guardandoSeccion, setGuardandoSeccion] = useState({
+    datos: false,
+    horarios: false,
+  });
   const [errorCarga, setErrorCarga] = useState("");
-  const [especialidadNueva, setEspecialidadNueva] = useState("");
   const [modalEdicion, setModalEdicion] = useState(null);
+  const [guardandoModal, setGuardandoModal] = useState(false);
   const [confirmacion, setConfirmacion] = useState(null);
-  const [successModal, setSuccessModal] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
+  const [successModal, setSuccessModal] = useState({ abierto: false, mensaje: "" });
   const [errorModal, setErrorModal] = useState({ abierto: false, mensaje: "" });
+
+  const cambio = (campo) =>
+    formulario && formularioGuardado
+      ? JSON.stringify(formulario[campo]) !== JSON.stringify(formularioGuardado[campo])
+      : false;
+
+  const cambioDatos = cambio("datos");
+  const cambioHorarios =
+    cambio("diasSeleccionados") ||
+    (formulario && formularioGuardado
+      ? formulario.urgencias24hs !== formularioGuardado.urgencias24hs
+      : false);
+
+  const hayCambiosSinGuardar = cambioDatos || cambioHorarios;
 
   const cargarVeterinaria = async () => {
     setCargando(true);
@@ -117,7 +157,9 @@ function MiVeterinaria() {
 
     try {
       const veterinaria = await obtenerMiVeterinaria();
-      setFormulario(normalizarVeterinaria(veterinaria));
+      const normalizada = normalizarVeterinaria(veterinaria);
+      setFormulario(normalizada);
+      setFormularioGuardado(normalizada);
     } catch (error) {
       setErrorCarga(
         obtenerMensajeError(error, "No se pudieron cargar los datos de tu veterinaria."),
@@ -132,7 +174,11 @@ function MiVeterinaria() {
 
     obtenerMiVeterinaria()
       .then((veterinaria) => {
-        if (activo) setFormulario(normalizarVeterinaria(veterinaria));
+        if (activo) {
+          const normalizada = normalizarVeterinaria(veterinaria);
+          setFormulario(normalizada);
+          setFormularioGuardado(normalizada);
+        }
       })
       .catch((error) => {
         if (activo) {
@@ -153,6 +199,19 @@ function MiVeterinaria() {
     };
   }, []);
 
+  
+  useEffect(() => {
+    if (!hayCambiosSinGuardar) return;
+
+    const avisar = (evento) => {
+      evento.preventDefault();
+      evento.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", avisar);
+    return () => window.removeEventListener("beforeunload", avisar);
+  }, [hayCambiosSinGuardar]);
+
   const actualizarDatos = (campo, valor) => {
     setFormulario((actual) => ({
       ...actual,
@@ -160,24 +219,9 @@ function MiVeterinaria() {
     }));
   };
 
-  const agregarEspecialidad = () => {
-    const especialidad = especialidadNueva.trim();
-    if (!especialidad) return;
-    if (formulario.especialidades.some((item) => item.toLowerCase() === especialidad.toLowerCase())) {
-      setErrorModal({ abierto: true, mensaje: "Esa especialidad ya está agregada." });
-      return;
-    }
-
-    setFormulario((actual) => ({
-      ...actual,
-      especialidades: [...actual.especialidades, especialidad],
-    }));
-    setEspecialidadNueva("");
-  };
-
   const abrirServicio = (indice = null) => {
     const servicio = indice === null
-      ? { nombre: "", categoria: "", precio: "", duracion: 30 }
+      ? { nombre: "", categoria: "", precio: "" }
       : { ...formulario.servicios[indice] };
     setModalEdicion({ tipo: "servicio", indice, valores: servicio });
   };
@@ -197,7 +241,8 @@ function MiVeterinaria() {
     }));
   };
 
-  const guardarModal = () => {
+
+  const guardarModal = async () => {
     const { tipo, indice, valores } = modalEdicion;
     let error = "";
 
@@ -206,11 +251,13 @@ function MiVeterinaria() {
         error = "Completá el nombre y la categoría del servicio.";
       } else if (!validarPrecio(valores.precio)) {
         error = "El precio debe ser numérico y mayor a cero.";
-      } else if (!Number.isFinite(Number(valores.duracion)) || Number(valores.duracion) < 15 || Number(valores.duracion) > 480) {
-        error = "La duración debe estar entre 15 y 480 minutos.";
       }
     } else if (!valores.nombre.trim() || !valores.especialidad.trim() || !valores.email.trim()) {
       error = "Completá todos los datos del profesional.";
+    } else if (!esTextoValido(valores.nombre)) {
+      error = "El nombre del profesional solo puede contener letras.";
+    } else if (!esTextoValido(valores.especialidad)) {
+      error = "La especialidad solo puede contener letras.";
     } else if (!validarEmail(valores.email)) {
       error = "Ingresá un email válido para el profesional.";
     }
@@ -222,26 +269,72 @@ function MiVeterinaria() {
 
     const clave = tipo === "servicio" ? "servicios" : "profesionales";
     const normalizado = tipo === "servicio"
-      ? { ...valores, precio: Number(valores.precio), duracion: Number(valores.duracion) }
+      ? { ...valores, precio: Number(valores.precio) }
       : { ...valores };
 
-    setFormulario((actual) => {
-      const items = [...actual[clave]];
-      if (indice === null) items.push(normalizado);
-      else items[indice] = normalizado;
-      return { ...actual, [clave]: items };
-    });
-    setModalEdicion(null);
+    const items = [...formulario[clave]];
+    if (indice === null) items.push(normalizado);
+    else items[indice] = normalizado;
+
+    const payload = tipo === "servicio"
+      ? construirPayloadServicios(items)
+      : construirPayloadProfesionales(items);
+
+    setGuardandoModal(true);
+    try {
+      const actualizada = await actualizarMiVeterinaria(payload);
+      const normalizada = normalizarVeterinaria(actualizada);
+      setFormulario(normalizada);
+      setFormularioGuardado(normalizada);
+      setModalEdicion(null);
+      setSuccessModal({
+        abierto: true,
+        mensaje: tipo === "servicio"
+          ? `El servicio "${normalizado.nombre}" se guardó correctamente.`
+          : `El profesional "${normalizado.nombre}" se guardó correctamente.`,
+      });
+    } catch (errorPeticion) {
+      setModalEdicion((actual) => ({
+        ...actual,
+        error: obtenerMensajeError(errorPeticion, "No se pudo guardar. Intentá de nuevo."),
+      }));
+    } finally {
+      setGuardandoModal(false);
+    }
   };
 
-  const confirmarEliminacion = () => {
-    const { tipo, indice } = confirmacion;
+ 
+  const confirmarEliminacion = async () => {
+    const { tipo, indice, nombre } = confirmacion;
     const clave = tipo === "servicio" ? "servicios" : "profesionales";
-    setFormulario((actual) => ({
-      ...actual,
-      [clave]: actual[clave].filter((_, posicion) => posicion !== indice),
-    }));
-    setConfirmacion(null);
+    const items = formulario[clave].filter((_, posicion) => posicion !== indice);
+
+    const payload = tipo === "servicio"
+      ? construirPayloadServicios(items)
+      : construirPayloadProfesionales(items);
+
+    setEliminando(true);
+    try {
+      const actualizada = await actualizarMiVeterinaria(payload);
+      const normalizada = normalizarVeterinaria(actualizada);
+      setFormulario(normalizada);
+      setFormularioGuardado(normalizada);
+      setConfirmacion(null);
+      setSuccessModal({
+        abierto: true,
+        mensaje: tipo === "servicio"
+          ? `El servicio "${nombre}" se eliminó correctamente.`
+          : `El profesional "${nombre}" se eliminó correctamente.`,
+      });
+    } catch (errorPeticion) {
+      setConfirmacion(null);
+      setErrorModal({
+        abierto: true,
+        mensaje: obtenerMensajeError(errorPeticion, "No se pudo eliminar. Intentá de nuevo."),
+      });
+    } finally {
+      setEliminando(false);
+    }
   };
 
   const toggleDia = (dia) => {
@@ -263,69 +356,68 @@ function MiVeterinaria() {
     }));
   };
 
-  const validarFormulario = () => {
-    const { datos, servicios, profesionales, diasSeleccionados } = formulario;
-    if (!datos.nombre.trim() || !datos.direccion.trim() || !datos.telefono.trim() || !datos.email.trim()) {
-      return "Completá los datos generales obligatorios.";
+ 
+  const validarSeccion = (seccion) => {
+    if (seccion === "datos") {
+      const { datos } = formulario;
+      if (!datos.nombre.trim() || !datos.direccion.trim() || !datos.telefono.trim() || !datos.email.trim()) {
+        return "Completá los datos generales obligatorios.";
+      }
+      if (!validarTelefono(datos.telefono)) return "Ingresá un teléfono válido.";
+      if (!validarEmail(datos.email)) return "Ingresá un email institucional válido.";
+      return "";
     }
-    if (!validarTelefono(datos.telefono)) return "Ingresá un teléfono válido.";
-    if (!validarEmail(datos.email)) return "Ingresá un email institucional válido.";
-    if (servicios.some((s) => !s.nombre?.trim() || !s.categoria || !validarPrecio(s.precio) || Number(s.duracion) < 15 || Number(s.duracion) > 480)) {
-      return "Revisá los datos de los servicios.";
-    }
-    if (profesionales.some((p) => !p.nombre?.trim() || !p.especialidad?.trim() || !validarEmail(p.email || ""))) {
-      return "Revisá los datos de los profesionales.";
-    }
+
+    // horarios
+    const { diasSeleccionados } = formulario;
     if (Object.keys(diasSeleccionados).length === 0) return "Seleccioná al menos un día de atención.";
     return validarHorarios(diasSeleccionados);
   };
 
-  const guardarCambios = async () => {
-    const error = validarFormulario();
+  const construirPayloadSeccion = (seccion) => {
+    if (seccion === "datos") {
+      return {
+        nombre: formulario.datos.nombre.trim(),
+        direccion: formulario.datos.direccion.trim(),
+        telefono: formulario.datos.telefono.trim(),
+        email: formulario.datos.email.trim(),
+        sitioWeb: formulario.datos.sitioWeb.trim(),
+      };
+    }
+
+   
+    return {
+      horarios: construirHorarios(formulario.diasSeleccionados),
+      urgencias24hs: formulario.urgencias24hs,
+    };
+  };
+
+  const guardarSeccion = async (seccion) => {
+    const error = validarSeccion(seccion);
     if (error) {
       setErrorModal({ abierto: true, mensaje: error });
       return;
     }
 
-    const payload = {
-      nombre: formulario.datos.nombre.trim(),
-      direccion: formulario.datos.direccion.trim(),
-      telefono: formulario.datos.telefono.trim(),
-      email: formulario.datos.email.trim(),
-      sitioWeb: formulario.datos.sitioWeb.trim(),
-      especialidades: formulario.especialidades.map((item) => item.trim()),
-      servicios: formulario.servicios.map((servicio) => ({
-        ...(servicio._id ? { _id: servicio._id } : {}),
-        nombre: servicio.nombre.trim(),
-        categoria: servicio.categoria,
-        precio: Number(servicio.precio),
-        duracion: Number(servicio.duracion),
-      })),
-      profesionales: formulario.profesionales.map((profesional) => ({
-        ...(profesional._id ? { _id: profesional._id } : {}),
-        nombre: profesional.nombre.trim(),
-        especialidad: profesional.especialidad.trim(),
-        email: profesional.email.trim(),
-        ...(Array.isArray(profesional.serviciosIds)
-          ? { serviciosIds: profesional.serviciosIds }
-          : {}),
-      })),
-      horarios: construirHorarios(formulario.diasSeleccionados),
-      urgencias24hs: formulario.urgencias24hs,
-    };
+    const payload = construirPayloadSeccion(seccion);
 
-    setGuardando(true);
+    setGuardandoSeccion((actual) => ({ ...actual, [seccion]: true }));
     try {
       const actualizada = await actualizarMiVeterinaria(payload);
-      setFormulario(normalizarVeterinaria(actualizada));
-      setSuccessModal(true);
+      const normalizada = normalizarVeterinaria(actualizada);
+      setFormulario(normalizada);
+      setFormularioGuardado(normalizada);
+      setSuccessModal({
+        abierto: true,
+        mensaje: "Los datos de tu veterinaria se actualizaron correctamente.",
+      });
     } catch (errorPeticion) {
       setErrorModal({
         abierto: true,
         mensaje: obtenerMensajeError(errorPeticion, "No se pudieron guardar los cambios."),
       });
     } finally {
-      setGuardando(false);
+      setGuardandoSeccion((actual) => ({ ...actual, [seccion]: false }));
     }
   };
 
@@ -372,15 +464,6 @@ function MiVeterinaria() {
               <h1>Configuración de la veterinaria</h1>
               <p>Gestioná tu equipo profesional, los servicios que ofrecés y los horarios de atención.</p>
             </div>
-            <div className={styles.saveAction}>
-              <Button
-                texto={guardando ? "Guardando..." : "Guardar cambios"}
-                variante="primario"
-                tamaño="mediano"
-                onClick={guardarCambios}
-                disabled={guardando}
-              />
-            </div>
           </header>
 
           <nav className={styles.tabs} aria-label="Secciones de la veterinaria">
@@ -399,7 +482,21 @@ function MiVeterinaria() {
           {tabActiva === "Datos generales" && (
             <section className={styles.panel}>
               <div className={styles.sectionHeading}>
-                <div><h2>Datos generales</h2><p>Información pública y especialidades de tu clínica.</p></div>
+                <div><h2>Datos generales</h2><p>Información pública de tu clínica.</p></div>
+                <div className={styles.saveAction}>
+                  {cambioDatos && (
+                    <span className={styles.unsavedBadge} role="status">
+                      Cambios sin guardar
+                    </span>
+                  )}
+                  <Button
+                    texto={guardandoSeccion.datos ? "Guardando..." : "Guardar"}
+                    variante="primario"
+                    tamaño="mediano"
+                    onClick={() => guardarSeccion("datos")}
+                    disabled={guardandoSeccion.datos}
+                  />
+                </div>
               </div>
               <div className={styles.formGrid}>
                 <Input label="Nombre de la clínica *" value={formulario.datos.nombre} onChange={(e) => actualizarDatos("nombre", e.target.value)} />
@@ -408,22 +505,6 @@ function MiVeterinaria() {
                 <Input label="Email institucional *" type="email" value={formulario.datos.email} onChange={(e) => actualizarDatos("email", e.target.value)} />
                 <div className={styles.fullWidth}>
                   <Input label="Sitio web" value={formulario.datos.sitioWeb} onChange={(e) => actualizarDatos("sitioWeb", e.target.value)} />
-                </div>
-              </div>
-              <div className={styles.specialties}>
-                <h3>Especialidades</h3>
-                <div className={styles.addSpecialty}>
-                  <input value={especialidadNueva} onChange={(e) => setEspecialidadNueva(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); agregarEspecialidad(); } }} placeholder="Ej: Cardiología" />
-                  <button type="button" onClick={agregarEspecialidad}><IconPlus /> Agregar</button>
-                </div>
-                <div className={styles.chips}>
-                  {formulario.especialidades.length === 0 && <p className={styles.emptyInline}>Todavía no agregaste especialidades.</p>}
-                  {formulario.especialidades.map((especialidad, indice) => (
-                    <span className={styles.chip} key={`${especialidad}-${indice}`}>
-                      {especialidad}
-                      <button type="button" aria-label={`Eliminar ${especialidad}`} onClick={() => setFormulario((actual) => ({ ...actual, especialidades: actual.especialidades.filter((_, posicion) => posicion !== indice) }))}>×</button>
-                    </span>
-                  ))}
                 </div>
               </div>
             </section>
@@ -439,7 +520,7 @@ function MiVeterinaria() {
                 {formulario.servicios.length === 0 && <div className={styles.empty}>No hay servicios cargados.</div>}
                 {formulario.servicios.map((servicio, indice) => (
                   <article className={styles.itemCard} key={servicio._id || `servicio-${indice}`}>
-                    <div className={styles.itemBody}><span className={styles.category}>{servicio.categoria}</span><h3>{servicio.nombre}</h3><p>{servicio.duracion} minutos</p></div>
+                    <div className={styles.itemBody}><span className={styles.category}>{servicio.categoria}</span><h3>{servicio.nombre}</h3></div>
                     <strong className={styles.price}>$ {Number(servicio.precio).toLocaleString("es-AR")}</strong>
                     <div className={styles.actions}>
                       <button type="button" aria-label={`Editar ${servicio.nombre}`} onClick={() => abrirServicio(indice)}><IconEdit /></button>
@@ -475,7 +556,24 @@ function MiVeterinaria() {
 
           {tabActiva === "Horarios" && (
             <section className={styles.panel}>
-              <div className={styles.sectionHeading}><div><h2>Horarios de atención</h2><p>Configurá los días y franjas horarias de la clínica.</p></div></div>
+              <div className={styles.sectionHeading}>
+                <div><h2>Horarios de atención</h2><p>Configurá los días y franjas horarias de la clínica.</p></div>
+                <div className={styles.saveAction}>
+                  {cambioHorarios && (
+                    <span className={styles.unsavedBadge} role="status">
+                      Cambios sin guardar
+                    </span>
+                  )}
+                  <Button
+                    texto={guardandoSeccion.horarios ? "Guardando..." : "Guardar"}
+                    variante="primario"
+                    tamaño="mediano"
+                    onClick={() => guardarSeccion("horarios")}
+                    disabled={guardandoSeccion.horarios}
+                  />
+                </div>
+              </div>
+              <label className={styles.emergency}><input type="checkbox" checked={formulario.urgencias24hs} onChange={(e) => setFormulario((actual) => ({ ...actual, urgencias24hs: e.target.checked }))} /><span /><div><strong>Atención de urgencias 24 horas</strong><small>Mostrá que tu clínica recibe emergencias durante todo el día.</small></div></label>
               <div className={styles.schedule}>
                 {DIAS.map((dia) => {
                   const activo = Boolean(formulario.diasSeleccionados[dia]);
@@ -493,13 +591,12 @@ function MiVeterinaria() {
                   );
                 })}
               </div>
-              <label className={styles.emergency}><input type="checkbox" checked={formulario.urgencias24hs} onChange={(e) => setFormulario((actual) => ({ ...actual, urgencias24hs: e.target.checked }))} /><span /><div><strong>Atención de urgencias 24 horas</strong><small>Mostrá que tu clínica recibe emergencias durante todo el día.</small></div></label>
             </section>
           )}
         </main>
       </div>
 
-      <Modal isOpen={Boolean(modalEdicion)} onClose={() => setModalEdicion(null)}>
+      <Modal isOpen={Boolean(modalEdicion)} onClose={() => (guardandoModal ? null : setModalEdicion(null))}>
         {modalEdicion && (
           <div className={styles.modalForm}>
             <h2>{modalEdicion.indice === null ? "Agregar" : "Editar"} {modalEdicion.tipo}</h2>
@@ -509,7 +606,6 @@ function MiVeterinaria() {
                 <Input label="Nombre *" value={modalEdicion.valores.nombre} onChange={(e) => actualizarModal("nombre", e.target.value)} />
                 <Select label="Categoría *" opciones={categorias} value={modalEdicion.valores.categoria} onChange={(e) => actualizarModal("categoria", e.target.value)} error={errorCategorias} />
                 <Input label="Precio *" type="number" value={modalEdicion.valores.precio} onChange={(e) => actualizarModal("precio", e.target.value)} />
-                <Input label="Duración en minutos *" type="number" value={modalEdicion.valores.duracion} onChange={(e) => actualizarModal("duracion", e.target.value)} />
                 {cargandoCategorias && <p className={styles.helper}>Cargando categorías...</p>}
               </>
             ) : (
@@ -521,15 +617,26 @@ function MiVeterinaria() {
             )}
             {modalEdicion.error && <p className={styles.formError}>{modalEdicion.error}</p>}
             <div className={styles.modalActions}>
-              <Button texto="Cancelar" variante="secundario" tamaño="mediano" onClick={() => setModalEdicion(null)} />
-              <Button texto="Guardar" variante="primario" tamaño="mediano" onClick={guardarModal} disabled={modalEdicion.tipo === "servicio" && cargandoCategorias} />
+              <Button texto="Cancelar" variante="secundario" tamaño="mediano" onClick={() => setModalEdicion(null)} disabled={guardandoModal} />
+              <Button
+                texto={guardandoModal ? "Guardando..." : "Guardar"}
+                variante="primario"
+                tamaño="mediano"
+                onClick={guardarModal}
+                disabled={guardandoModal || (modalEdicion.tipo === "servicio" && cargandoCategorias)}
+              />
             </div>
           </div>
         )}
       </Modal>
 
-      <ConfirmModal abierto={Boolean(confirmacion)} titulo={`Eliminar ${confirmacion?.tipo || "elemento"}`} mensaje={confirmacion ? `¿Querés eliminar “${confirmacion.nombre}”? El cambio se aplicará al guardar.` : ""} textoConfirmar="Eliminar" onConfirm={confirmarEliminacion} onCancel={() => setConfirmacion(null)} />
-      <SuccessModal abierto={successModal} titulo="Cambios guardados" mensaje="Los datos de tu veterinaria se actualizaron correctamente." onClose={() => setSuccessModal(false)} />
+      <ConfirmModal abierto={Boolean(confirmacion)} titulo={`Eliminar ${confirmacion?.tipo || "elemento"}`} mensaje={confirmacion ? `¿Querés eliminar “${confirmacion.nombre}”?` : ""} textoConfirmar={eliminando ? "Eliminando..." : "Eliminar"} onConfirm={confirmarEliminacion} onCancel={() => (eliminando ? null : setConfirmacion(null))} />
+      <SuccessModal
+        abierto={successModal.abierto}
+        titulo="¡Listo!"
+        mensaje={successModal.mensaje}
+        onClose={() => setSuccessModal({ abierto: false, mensaje: "" })}
+      />
       <ErrorModal abierto={errorModal.abierto} titulo="No pudimos completar la acción" mensaje={errorModal.mensaje} onClose={() => setErrorModal({ abierto: false, mensaje: "" })} />
     </div>
   );

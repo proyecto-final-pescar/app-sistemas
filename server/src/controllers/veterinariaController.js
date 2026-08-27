@@ -21,9 +21,35 @@ const CAMPOS_EDITABLES_MI_VETERINARIA = [
   "horarios",
   "servicios",
   "profesionales",
-  "especialidades",
   "urgencias24hs",
 ];
+
+
+const REGEX_SOLO_LETRAS = /^[a-zA-ZÀ-ÖØ-öø-ÿ\u00f1\u00d1\s'.-]+$/;
+const esTextoValido = (texto) => REGEX_SOLO_LETRAS.test((texto || "").trim());
+
+// Valida nombre y especialidad de cada profesional del arreglo.
+
+const validarProfesionales = (profesionales) => {
+  if (!Array.isArray(profesionales)) return null;
+
+  for (const profesional of profesionales) {
+    const nombre = (profesional?.nombre || "").trim();
+    const especialidad = (profesional?.especialidad || "").trim();
+
+    if (!nombre || !especialidad) {
+      return "El nombre y la especialidad del profesional son obligatorios.";
+    }
+    if (!esTextoValido(nombre)) {
+      return `El nombre "${nombre}" solo puede contener letras.`;
+    }
+    if (!esTextoValido(especialidad)) {
+      return `La especialidad "${especialidad}" solo puede contener letras.`;
+    }
+  }
+
+  return null;
+};
 
 const normalizarServicios = (servicios, veterinaria) => {
   if (!Array.isArray(servicios)) return servicios;
@@ -36,7 +62,7 @@ const normalizarServicios = (servicios, veterinaria) => {
       ? servicioExistente.toObject()
       : {};
 
-    for (const campo of ["categoria", "nombre", "precio", "duracion"]) {
+    for (const campo of ["categoria", "nombre", "precio"]) {
       if (servicio?.[campo] !== undefined) normalizado[campo] = servicio[campo];
     }
 
@@ -97,7 +123,6 @@ export const buscarVeterinarias = async (req, res) => {
       return res.status(400).json({ message: 'radio debe ser mayor a 0' });
     }
 
-    // Validación de rangos geoespaciales
     if (lat < -90 || lat > 90) {
       return res.status(400).json({ message: 'La latitud debe estar entre -90 y 90' });
     }
@@ -106,7 +131,6 @@ export const buscarVeterinarias = async (req, res) => {
       return res.status(400).json({ message: 'La longitud debe estar entre -180 y 180' });
     }
 
-    // Límite máximo de radio: 50km
     const RADIO_MAXIMO = 50000;
     if (radio > RADIO_MAXIMO) {
       return res.status(400).json({ message: 'El radio máximo permitido es 50000 metros (50km)' });
@@ -153,7 +177,6 @@ export const obtenerVeterinariaPorId = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Filtramos por id Y por estado activa
         const veterinaria = await Veterinaria.findOne({ _id: id, estado: 'activa' });
 
         if (!veterinaria) {
@@ -203,9 +226,16 @@ export const actualizarMiVeterinaria = async (req, res) => {
       return res.status(400).json({ message: 'Datos inválidos' });
     }
 
-    for (const campo of ["servicios", "profesionales", "especialidades"]) {
+    for (const campo of ["servicios", "profesionales"]) {
       if (req.body[campo] !== undefined && !Array.isArray(req.body[campo])) {
         return res.status(400).json({ message: `${campo} debe ser un arreglo` });
+      }
+    }
+
+    if (req.body.profesionales !== undefined) {
+      const errorProfesionales = validarProfesionales(req.body.profesionales);
+      if (errorProfesionales) {
+        return res.status(400).json({ message: errorProfesionales });
       }
     }
 
@@ -238,7 +268,12 @@ export const actualizarMiVeterinaria = async (req, res) => {
     });
   } catch (error) {
     if (error.name === 'CastError' || error.name === 'ValidationError') {
-      return res.status(400).json({ message: 'Datos inválidos' });
+      // TEMPORAL: exponer detalle de validación para debug — revertir antes de commitear
+      console.error('Detalle de validación PUT /veterinarias/mia:', error.errors || error);
+      return res.status(400).json({
+        message: 'Datos inválidos',
+        detalle: error.errors,
+      });
     }
 
     console.error('Error en PUT /veterinarias/mia:', error);
@@ -258,7 +293,6 @@ export const crearVeterinaria = async (req, res) => {
             });
         }
 
-        // Solo se permiten estos campos, ignoramos cualquier otro que venga en el body
         const {
             nombre,
             direccion,
@@ -268,12 +302,18 @@ export const crearVeterinaria = async (req, res) => {
             email,
             sitioWeb,
             coordenadas,
-            especialidades,
             servicios,
             profesionales,
             horarios,
             urgencias24hs
         } = req.body;
+
+        if (profesionales !== undefined) {
+            const errorProfesionales = validarProfesionales(profesionales);
+            if (errorProfesionales) {
+                return res.status(400).json({ message: errorProfesionales });
+            }
+        }
 
         const veterinariaPorCuit = await Veterinaria.findOne({ cuit });
         if (veterinariaPorCuit) {
@@ -291,13 +331,11 @@ export const crearVeterinaria = async (req, res) => {
             email,
             sitioWeb,
             coordenadas,
-            especialidades,
             servicios,
             profesionales,
             horarios,
             urgencias24hs,
             usuarioId
-            // estado no se permite, siempre arranca como 'activa' por defecto
         });
 
         const veterinariaGuardada = await nuevaVeterinaria.save();
@@ -323,7 +361,6 @@ export const actualizarVeterinaria = async (req, res) => {
         const usuarioId = req.user.id;
         const esAdmin = req.user.role === 'administrador' ;
 
-        // Buscamos solo si está activa
         const veterinaria = await Veterinaria.findOne({ _id: id, estado: 'activa' });
 
         if (!veterinaria) {
@@ -334,7 +371,6 @@ export const actualizarVeterinaria = async (req, res) => {
             return res.status(403).json({ message: 'No tenés permisos para realizar esta acción.' });
         }
 
-        // Solo se permiten estos campos, el cliente no puede cambiar estado ni usuarioId
         const {
             nombre,
             direccion,
@@ -344,14 +380,19 @@ export const actualizarVeterinaria = async (req, res) => {
             email,
             sitioWeb,
             coordenadas,
-            especialidades,
             servicios,
             profesionales,
             horarios,
             urgencias24hs
         } = req.body;
 
-        // Solo actualizamos los campos que vinieron en el body (si no vienen, quedan igual)
+        if (profesionales !== undefined) {
+            const errorProfesionales = validarProfesionales(profesionales);
+            if (errorProfesionales) {
+                return res.status(400).json({ message: errorProfesionales });
+            }
+        }
+
         if (nombre !== undefined) veterinaria.nombre = nombre;
         if (direccion !== undefined) veterinaria.direccion = direccion;
         if (razonSocial !== undefined) veterinaria.razonSocial = razonSocial;
@@ -360,7 +401,6 @@ export const actualizarVeterinaria = async (req, res) => {
         if (email !== undefined) veterinaria.email = email;
         if (sitioWeb !== undefined) veterinaria.sitioWeb = sitioWeb;
         if (coordenadas !== undefined) veterinaria.coordenadas = coordenadas;
-        if (especialidades !== undefined) veterinaria.especialidades = especialidades;
         if (servicios !== undefined) veterinaria.servicios = servicios;
         if (profesionales !== undefined) veterinaria.profesionales = profesionales;
         if (horarios !== undefined) veterinaria.horarios = horarios;
@@ -407,7 +447,6 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
       estado: { $in: ESTADOS_TURNO_PACIENTE },
     });
 
-    // Paginación: page/limit vienen como query params, con defaults y tope máximo
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(
       Math.max(parseInt(req.query.limit, 10) || PACIENTES_LIMITE_DEFAULT, 1),
@@ -422,7 +461,6 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
     if (busqueda) {
       const regex = new RegExp(escaparRegex(busqueda), "i");
 
-     
       const dueñoIds = await User.find({ name: regex }).distinct("_id");
 
       filtro = {
