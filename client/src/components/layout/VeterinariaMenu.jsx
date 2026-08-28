@@ -13,6 +13,19 @@ const menuItems = [
     ),
   },
   {
+    label: "Mi Veterinaria",
+    path: "/mi-veterinaria",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 21h18" />
+        <path d="M5 21V7l7-4 7 4v14" />
+        <path d="M9 10h6" />
+        <path d="M12 7v6" />
+        <path d="M9 21v-5h6v5" />
+      </svg>
+    ),
+  },
+  {
     label: "Registro",
     path: "/registro-veterinaria",
     icon: (
@@ -41,6 +54,7 @@ const menuItems = [
   path: "/pacientes",
   icon: <PawPrint size={20} />,
 },
+
   {
     label: "Turnos",
     path: "/cargar-turnos",

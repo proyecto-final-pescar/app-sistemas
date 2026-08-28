@@ -12,6 +12,7 @@ const ConfirmModal = ({
     mensaje,
     textoConfirmar = "Confirmar",
     textoCancelar = "Cancelar",
+    textoConfirmando = "Procesando…",
     varianteConfirmar = "peligro",
     onConfirm,
     onCancel,
@@ -56,9 +57,10 @@ const ConfirmModal = ({
                         variante="secundario"
                         tamaño="mediano"
                         onClick={onCancel}
+                        disabled={confirmando}
                     />
                     <Button
-                        texto={confirmando ? "Eliminando…" : textoConfirmar}
+                        texto={confirmando ? textoConfirmando : textoConfirmar}
                         variante={varianteConfirmar}
                         tamaño="mediano"
                         onClick={onConfirm}
@@ -76,6 +78,7 @@ ConfirmModal.propTypes = {
     mensaje: PropTypes.node.isRequired,
     textoConfirmar: PropTypes.string,
     textoCancelar: PropTypes.string,
+    textoConfirmando: PropTypes.string,
     varianteConfirmar: PropTypes.string,
     onConfirm: PropTypes.func.isRequired,
     onCancel: PropTypes.func.isRequired,

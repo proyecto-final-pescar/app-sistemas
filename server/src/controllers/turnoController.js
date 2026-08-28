@@ -60,7 +60,7 @@ export const obtenerTurnos = async (req, res) => {
 
     const turnos = await Turno.find(filtro)
       .populate('mascotaId', 'nombre especie')
-      .populate('usuarioId', 'name email')
+      .populate('usuarioId', 'name nombre email')
       .populate('veterinariaId', 'nombre direccion')
       .sort({ fecha: 1, hora: 1 });
 

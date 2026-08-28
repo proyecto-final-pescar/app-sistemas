@@ -4,12 +4,27 @@ import api from "../../../services/api.js";
 import Sidebar from "../../../components/layout/Sidebar.jsx";
 import TopBar from "../../../components/layout/TopBar.jsx";
 import FichaMedicaTab from "../../../components/historial/FichaMedicaTab.jsx";
-//import { actualizarFichaMedica } from "../../../services/fichaMedicaService.js";
+import { actualizarFichaMedica } from "../../../services/fichaMedicaService.js";
 import { crearVacuna, actualizarVacuna, eliminarVacuna } from "../../../services/vacunaService.js";
 import { crearEstudio, actualizarEstudio, eliminarEstudio } from "../../../services/estudioService.js";
 import { subirImagen } from "../../../services/uploadService.js";
 import { obtenerMiVeterinaria } from "../../../services/veterinariaService.js";
+import { obtenerTurnosPendientesRegistro } from "../../../services/turnosService.js";
 import styles from "./FichaPaciente.module.css";
+
+
+const formatearFechaLocal = (fecha) => {
+  if (!fecha) return null;
+
+  const date = new Date(fecha);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
 
 // ── Componente principal ──
 const FichaPaciente = () => {
@@ -26,38 +41,48 @@ const FichaPaciente = () => {
   const [filtroFecha, setFiltroFecha] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-   const [profesionales, setProfesionales] = useState([]);
- 
-useEffect(() => {
-  const cargarDatos = async () => {
-    setIsLoading(true);
-    setError("");
-    try {
-      const [res, veterinaria] = await Promise.all([
-        api.get(`/historial-completo/${mascotaId}`),
-        obtenerMiVeterinaria(),
-      ]);
-      const data = res.data.data ?? {};
 
-      setHistorial(Array.isArray(data.historialClinico) ? data.historialClinico : []);
-      setMascota(data.mascota ?? null);
-      setFichaMedica(data.fichaMedica ?? null);
-      setVacunas(Array.isArray(data.vacunas) ? data.vacunas : []);
-      setEstudios(Array.isArray(data.estudios) ? data.estudios : []);
-      setProfesionales(Array.isArray(veterinaria?.profesionales) ? veterinaria.profesionales : []);
-    } catch (err) {
-      if (err.response?.status === 403) {
-        setError("Todavía no tenés acceso al historial de esta mascota. El acceso se habilita cuando el turno esté confirmado.");
-      } else {
-        setError("No se pudo cargar el historial. Intentá de nuevo más tarde.");
+  const [errorTipo, setErrorTipo] = useState("sistema");
+  const [profesionales, setProfesionales] = useState([]);
+
+  
+  const [turnosPendientes, setTurnosPendientes] = useState([]);
+  const [modalTurnosAbierto, setModalTurnosAbierto] = useState(false);
+
+  useEffect(() => {
+    const cargarDatos = async () => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const [res, veterinaria, turnos] = await Promise.all([
+          api.get(`/historial-completo/${mascotaId}`),
+          obtenerMiVeterinaria(),
+          obtenerTurnosPendientesRegistro(mascotaId),
+        ]);
+        const data = res.data.data ?? {};
+
+        setHistorial(Array.isArray(data.historialClinico) ? data.historialClinico : []);
+        setMascota(data.mascota ?? null);
+        setFichaMedica(data.fichaMedica ?? null);
+        setVacunas(Array.isArray(data.vacunas) ? data.vacunas : []);
+        setEstudios(Array.isArray(data.estudios) ? data.estudios : []);
+        setProfesionales(Array.isArray(veterinaria?.profesionales) ? veterinaria.profesionales : []);
+        setTurnosPendientes(turnos);
+      } catch (err) {
+        if (err.response?.status === 403) {
+          setErrorTipo("acceso");
+          setError("Todavía no tenés acceso al historial de esta mascota. El acceso se habilita cuando el turno esté confirmado.");
+        } else {
+          setErrorTipo("sistema");
+          setError("No se pudo cargar el historial. Intentá de nuevo más tarde.");
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  cargarDatos();
-}, [mascotaId])
+    cargarDatos();
+  }, [mascotaId]);
 
   // Filtros en tiempo real
   const historialFiltrado = historial.filter((entrada) => {
@@ -70,7 +95,7 @@ useEffect(() => {
       entrada.categoriaServicio?.toLowerCase().includes(texto);
 
     const coincideFecha = filtroFecha
-      ? new Date(entrada.fecha).toISOString().slice(0, 10) === filtroFecha
+      ? formatearFechaLocal(entrada.fecha) === filtroFecha
       : true;
 
     return coincideTexto && coincideFecha;
@@ -121,11 +146,35 @@ useEffect(() => {
     await eliminarEstudio(estudioId);
     setEstudios((actuales) => actuales.filter((estudio) => estudio._id !== estudioId));
   };
-  
+
+  // Botón "+ Registrar Consulta": según cuantos turnos pendientes haya,
+  // navega directo, abre el selector, o no hace nada (botón deshabilitado).
+  // Se pasa { origen: "ficha", mascotaId } en el state para que
+  // RegistrarConsulta sepa a dónde volver.
+  const handleClickRegistrarConsulta = () => {
+    if (turnosPendientes.length === 0) return;
+
+    if (turnosPendientes.length === 1) {
+      navigate(`/historial/registrar/${turnosPendientes[0].id}`, {
+        state: { origen: "ficha", mascotaId },
+      });
+      return;
+    }
+
+    setModalTurnosAbierto(true);
+  };
+
+  const handleSeleccionarTurno = (turnoId) => {
+    setModalTurnosAbierto(false);
+    navigate(`/historial/registrar/${turnoId}`, {
+      state: { origen: "ficha", mascotaId },
+    });
+  };
 
   const nombreMascota = mascota?.nombre ?? "Mascota";
   const nombreDueno = mascota?.dueñoId?.nombre ?? mascota?.dueñoId?.name ?? "—";
   const telefonoDueno = mascota?.dueñoId?.telefono ?? "—";
+  const claseError = errorTipo === "acceso" ? styles.estadoSinAcceso : styles.estadoError;
 
   return (
     <div className={styles.layout}>
@@ -136,7 +185,7 @@ useEffect(() => {
 
         <div className={styles.contenido}>
           {/* Botón volver */}
-          <button className={styles.btnVolver} onClick={() => navigate(-1)}>
+          <button className={styles.btnVolver} onClick={() => navigate("/pacientes")}>
             ← Pacientes
           </button>
 
@@ -158,11 +207,70 @@ useEffect(() => {
             </div>
             <button
               className={styles.btnRegistrar}
-              onClick={() => navigate(`/registrar-consulta/${mascotaId}`)}
+              onClick={handleClickRegistrarConsulta}
+              disabled={turnosPendientes.length === 0}
+              title={
+                turnosPendientes.length === 0
+                  ? "No hay turnos confirmados pendientes de registrar"
+                  : undefined
+              }
             >
               + Registrar Consulta
             </button>
           </div>
+
+          {/* Selector de turno, solo cuando hay más de uno pendiente */}
+          {modalTurnosAbierto && (
+            <div className={styles.modalOverlay} onClick={() => setModalTurnosAbierto(false)}>
+              <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.modalHeader}>
+                  <h3 className={styles.modalTitulo}>¿Qué turno querés registrar?</h3>
+                  <button
+                    type="button"
+                    className={styles.modalCerrar}
+                    onClick={() => setModalTurnosAbierto(false)}
+                    aria-label="Cerrar"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className={styles.modalCuerpo}>
+                  <span className={styles.label}>
+                    Esta mascota tiene más de un turno confirmado pendiente de registrar
+                  </span>
+
+                  {turnosPendientes.map((turno) => (
+                    <button
+                      key={turno.id}
+                      type="button"
+                      className={styles.input}
+                      style={{ textAlign: "left", cursor: "pointer" }}
+                      onClick={() => handleSeleccionarTurno(turno.id)}
+                    >
+                      <strong>
+                        {new Date(turno.fecha).toLocaleDateString("es-AR")} · {turno.hora}
+                      </strong>
+                      <div className={styles.archivoNombre}>
+                        {turno.profesional?.nombre}
+                        {turno.motivo ? ` — ${turno.motivo}` : ""}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className={styles.modalFooter}>
+                  <button
+                    type="button"
+                    className={styles.btnCancelar}
+                    onClick={() => setModalTurnosAbierto(false)}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Tabs */}
           <div className={styles.tabs}>
@@ -202,7 +310,7 @@ useEffect(() => {
 
               {/* Estados */}
               {isLoading && <p className={styles.estadoMensaje}>Cargando historial...</p>}
-              {error && <p className={`${styles.estadoMensaje} ${styles.estadoError}`}>{error}</p>}
+              {error && <p className={`${styles.estadoMensaje} ${claseError}`}>{error}</p>}
 
               {/* Lista de consultas */}
               {!isLoading && !error && (
@@ -230,6 +338,15 @@ useEffect(() => {
                                 </svg>
                                 {new Date(entrada.fecha).toLocaleDateString("es-AR")}
                               </span>
+                              {entrada.hora && (
+                                <span>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <polyline points="12 7 12 12 15.5 14" />
+                                  </svg>
+                                  {entrada.hora}
+                                </span>
+                              )}
                               {entrada.profesionalNombre && (
                                 <span>
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -258,7 +375,7 @@ useEffect(() => {
             isLoading ? (
               <p className={styles.estadoMensaje}>Cargando ficha médica...</p>
             ) : error ? (
-              <p className={`${styles.estadoMensaje} ${styles.estadoError}`}>{error}</p>
+              <p className={`${styles.estadoMensaje} ${claseError}`}>{error}</p>
             ) : (
             <FichaMedicaTab
               mascota={mascota}

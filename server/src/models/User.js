@@ -16,8 +16,11 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'La contraseña es requerida'],
       minlength: [8, 'La contraseña debe tener mínimo 8 caracteres']
+      },
+    googleId: {
+      type: String,
+      sparse: true
     },
     telefono: {
       type: String,
@@ -45,7 +48,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ['perro', 'gato'],
       default: 'perro'
-      // Personaje elegido para el chatbot (Max/perro o Mimi/gato).
+      // Personaje elegido para el chatbot (Firu/perro o Luna/gato).
       // Solo tiene sentido para usuarios con role 'dueno', que es el
       // único rol que tiene el chatbot habilitado por ahora — se deja
       // disponible en el schema para todos los roles por simplicidad.
@@ -62,6 +65,19 @@ const userSchema = new mongoose.Schema(
         }
       }
     ],
+    // --- Verificación de cuenta por email (SX-06) ---
+    verificado: {
+      type: Boolean,
+      default: false
+    },
+    tokenVerificacion: {
+      type: String,
+      select: false
+    },
+    tokenVerificacionExpires: {
+      type: Date,
+      select: false
+    },
     // --- Campos para recuperacin de contraseña  ---
     resetPasswordToken: {
       type: String,

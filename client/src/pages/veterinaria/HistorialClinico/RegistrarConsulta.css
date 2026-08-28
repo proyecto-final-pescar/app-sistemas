@@ -22,6 +22,10 @@
   margin: 0 auto;
 }
 
+.registrar-consulta-volver-wrap {
+  margin-bottom: 20px;
+}
+
 .registrar-consulta-banner {
   background: linear-gradient(135deg, #8b3df5, #5f22d9);
   border-radius: 26px;
@@ -148,6 +152,10 @@
 }
 
 @media (max-width: 768px) {
+  .registrar-consulta-volver-wrap {
+    margin-bottom: 16px;
+  }
+
   .registrar-consulta-grid {
     grid-template-columns: 1fr;
   }

@@ -5,17 +5,15 @@ import Publicacion from '../models/Publicacion.js';
 export const obtenerResumenReportes = async (req, res) => {
   try {
     const resumen = await Reporte.aggregate([
+      { $match: { estado: 'pendiente' } },
       {
         $group: {
           _id: '$publicacionId',
           cantidadReportes: { $sum: 1 },
-          pendientes: {
-            $sum: { $cond: [{ $eq: ['$estado', 'pendiente'] }, 1, 0] }
-          },
           ultimoReporte: { $max: '$createdAt' }
         }
       },
-      { $sort: { pendientes: -1, cantidadReportes: -1 } }
+      { $sort: { cantidadReportes: -1, ultimoReporte: -1 } }
     ]);
 
     //  los datos de cada publicacion para mostrar en el listado
@@ -33,7 +31,6 @@ export const obtenerResumenReportes = async (req, res) => {
       publicacion: publicacionesPorId[r._id.toString()] || null,
       publicacionId: r._id,
       cantidadReportes: r.cantidadReportes,
-      pendientes: r.pendientes,
       ultimoReporte: r.ultimoReporte
     }));
 
@@ -175,6 +172,36 @@ export const cambiarEstadoReporte = async (req, res) => {
       return res.status(400).json({ message: 'El id del reporte no es válido' });
     }
     console.error('Error en PATCH /reportes/:id/estado:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// PATCH /reportes/publicacion/:publicacionId/descartar: descarta todos los reportes
+// pendientes de una publicación sin tocar la publicación — solo admin
+export const descartarReportesDePublicacion = async (req, res) => {
+  try {
+    const { publicacionId } = req.params;
+
+    const publicacion = await Publicacion.findById(publicacionId);
+    if (!publicacion) {
+      return res.status(404).json({ message: 'El recurso no existe.' });
+    }
+
+    const resultado = await Reporte.updateMany(
+      { publicacionId, estado: 'pendiente' },
+      { estado: 'descartado' }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Reportes descartados correctamente',
+      modificados: resultado.modifiedCount
+    });
+  } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'El id de la publicación no es válido' });
+    }
+    console.error('Error en PATCH /reportes/publicacion/:publicacionId/descartar:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };

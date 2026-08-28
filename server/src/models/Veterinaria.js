@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { CATEGORIAS_SERVICIO } from '../constants/categoriasServicio.js';
 
 const veterinariaSchema = new mongoose.Schema(
   {
@@ -55,10 +56,15 @@ const veterinariaSchema = new mongoose.Schema(
       }
     },
 
-    servicios: [
+     servicios: [
       {
         categoria: {
           type: String,
+          required: [true, 'La categoría del servicio es requerida'],
+          enum: {
+            values: CATEGORIAS_SERVICIO,
+            message: '{VALUE} no es una categoría de servicio válida'
+          },
           trim: true
         },
         nombre: {
@@ -85,13 +91,16 @@ const veterinariaSchema = new mongoose.Schema(
           required: [true, 'La especialidad del profesional es requerida'],
           trim: true
         },
+        // TEMPORAL: se relajó el required hasta implementar la UI de asociación
+        // profesional↔servicio (pendiente, no forma parte de este PR).
         serviciosIds: {
           type: [mongoose.Schema.Types.ObjectId],
-          required: [true, 'Debe brindar al menos un servicio'],
+          /* required: [true, 'Debe brindar al menos un servicio'],
           validate: {
             validator: (arr) => Array.isArray(arr) && arr.length > 0,
             message: 'El profesional debe tener al menos un servicio asignado'
-          }
+          } */
+          default: []
         },
         email: {
           type: String,
