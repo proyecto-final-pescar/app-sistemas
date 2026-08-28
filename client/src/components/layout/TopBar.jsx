@@ -1,6 +1,7 @@
 import { useAuth } from "../../hooks/useAuth";
+import NotificationBell from "../notifications/NotificationBell";
 
-const TopBar = ({ title = "Dashboard", notifications = 2 }) => {
+const TopBar = ({ title = "Dashboard" }) => {
   const fechaHoy = new Date().toLocaleDateString("es-AR", {
     weekday: "long",
     day: "numeric",
@@ -41,7 +42,7 @@ const TopBar = ({ title = "Dashboard", notifications = 2 }) => {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 24px",
-          overflow: "hidden",
+          overflow: "visible",
           fontFamily: "Arial, Helvetica, sans-serif",
         }}
       >
@@ -65,33 +66,16 @@ const TopBar = ({ title = "Dashboard", notifications = 2 }) => {
           </p>
         </div>
 
-        {/* Acciones derecha */}
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexShrink: 0 }}>
-          {/* Campana */}
-          <div style={{ position: "relative" }}>
-            <div style={{
-              width: "40px", height: "40px", borderRadius: "50%",
-              backgroundColor: "#f5f3ff", display: "flex",
-              alignItems: "center", justifyContent: "center", cursor: "pointer",
-            }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </div>
-            {notifications > 0 && (
-              <span style={{
-                position: "absolute", top: "0px", right: "0px",
-                backgroundColor: "#ef4444", color: "#ffffff",
-                fontSize: "10px", fontWeight: "700",
-                width: "18px", height: "18px", borderRadius: "50%",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                border: "2px solid #ffffff",
-              }}>
-                {notifications > 9 ? "9+" : notifications}
-              </span>
-            )}
-          </div>
+              {/* Acciones derecha */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            flexShrink: 0,
+          }}
+        >
+          <NotificationBell />
 
           {/* Avatar — con soporte para foto de perfil */}
           {usuario?.fotoUrl ? (

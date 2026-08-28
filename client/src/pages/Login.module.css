@@ -498,8 +498,9 @@
 
 /* ========== SOCIAL GRID ========== */
 .socialGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -507,6 +508,16 @@
   .socialGrid {
     gap: 14px;
   }
+}
+
+
+.googleBtnWrap {
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  border-radius: 18px;
+  overflow: hidden;
 }
 
 .socialButton {

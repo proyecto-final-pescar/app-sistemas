@@ -21,6 +21,7 @@ import VerificarCuenta from "./pages/public/VerificarCuenta/VerificarCuenta";
 import Landing from "./pages/public/LandingPage/Landing";
 import FichaPaciente from "./pages/veterinaria/HistorialClinico/FichaPaciente";
 import Pacientes from "./pages/veterinaria/Pacientes/Pacientes";
+import MiVeterinaria from "./pages/veterinaria/MiVeterinaria/MiVeterinaria";
 
 import ModeracionForo from "./pages/admin/ModeracionForo/ModeracionForo";
 import GestionUsuarios from "./pages/admin/GestionUsuarios/GestionUsuarios";
@@ -38,6 +39,9 @@ import PagoExitoso from "./pages/tutor/Pagos/PagoExitoso";
 import PagoPendiente from "./pages/tutor/Pagos/PagoPendiente";
 import PagoFallido from "./pages/tutor/Pagos/PagoFallido";
 
+import CompletarRegistroGoogle from "./pages/public/CompletarRegistroGoogle/CompletarRegistroGoogle";  
+
+
 function App() {
   return (
     <BrowserRouter>
@@ -53,12 +57,14 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/register" element={<Registro />} />
+        <Route path="/completar-registro-google" element={<CompletarRegistroGoogle />} />
         <Route path="/tutor/historial-medico/:mascotaId" element={<PrivateRoute allowedRoles={["dueno"]}><HistorialIndividual /></PrivateRoute>} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/verificar-cuenta" element={<VerificarCuenta />} />
         <Route path="/home" element={<PrivateRoute allowedRoles={["dueno"]}><HomeTutor /></PrivateRoute>} />
         <Route path="/home-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><HomeVeterinaria /></PrivateRoute>} />
+        <Route path="/mi-veterinaria" element={<PrivateRoute allowedRoles={["veterinaria"]}><MiVeterinaria /></PrivateRoute>} />
         <Route path="/mascotas" element={<PrivateRoute allowedRoles={["dueno"]}><MisMascotas /></PrivateRoute>} />
         <Route path="/turnos" element={<PrivateRoute allowedRoles={["dueno"]}><Turnos /></PrivateRoute>} />
         <Route path="/mis-turnos" element={<PrivateRoute allowedRoles={["dueno"]}><MisTurnos /></PrivateRoute>} />
