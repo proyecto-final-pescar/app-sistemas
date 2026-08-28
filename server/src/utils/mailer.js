@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import { emailRecordatorio } from '../../templates/emailRecordatorio.js'
+import { emailRecordatorio } from '../templates/emailRecordatorio.js'
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {

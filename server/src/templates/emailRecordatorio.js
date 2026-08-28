@@ -172,7 +172,7 @@ export const emailRecordatorio = ({
                       color: #7E6FA0;
                     "
                   >
-                    Este es un email automático de My Pet.
+                    Este es un email automático de MyPet.
                   </td>
                 </tr>
 

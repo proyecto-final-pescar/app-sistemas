@@ -122,6 +122,11 @@ turnoSchema.index(
 // liberarTurnosVencidos busca
 // { estado: 'pendiente', venceEn: { $lte: ahora } } cada 15 minutos y libera los turnos nuevamente 
 turnoSchema.index({ estado: 1, venceEn: 1 });
+// El cron de recordatorios (24hs antes) busca
+// { fecha: mañana, estado: 'confirmado', recordatorioEnviado: false }
+// una vez al día. Este índice evita un collection scan a medida que
+// crece la cantidad de turnos históricos.
+turnoSchema.index({ estado: 1, fecha: 1, recordatorioEnviado: 1 });
 
 const Turno = mongoose.model('Turno', turnoSchema);
 

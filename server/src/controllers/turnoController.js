@@ -235,6 +235,7 @@ export const cancelarTurno = async (req, res) => {
     turno.pagoId = undefined;
 
     turno.venceEn = null;
+    turno.recordatorioEnviado = false;
 
     await turno.save();
 
