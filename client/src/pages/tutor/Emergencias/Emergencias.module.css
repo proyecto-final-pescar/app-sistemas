@@ -40,6 +40,39 @@
   }
 }
 
+/*sidebar colapsable*/
+.sidebarDesktopWrapper {
+  flex-shrink: 0;
+  width: 260px; 
+  overflow: hidden;
+  transition: width 0.25s ease;
+}
+
+.sidebarDesktopWrapper.sidebarColapsado {
+  width: 0;
+}
+
+.btnColapsarSidebar {
+  flex-shrink: 0;
+  width: 20px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-blanco);
+  border: none;
+  border-left: 1px solid #EAE0FE;
+  border-right: 1px solid #EAE0FE;
+  color: var(--color-texto-secundario);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btnColapsarSidebar:hover {
+  background: var(--color-fondo-claro);
+  color: var(--color-primario);
+}
+
 .vetOverlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -70,11 +103,6 @@
 
 .topBarContainer { width: 100%; }
 .topBarContainer > * { background-color: var(--color-blanco) !important; width: 100% !important; }
-
-/* Empujamos perfil a la izquierda para el botón hamburguesa */
-@media (min-width: 768px) {
-  .topBarContainer > * { padding-right: 88px !important; }
-}
 
 /* =========================================================
    BOTÓN HAMBURGUESA GENERAL FLOTANTE
@@ -194,6 +222,7 @@
 }
 .lista::-webkit-scrollbar { display: none; }
 
+
 /* Responsividad del panel */
 @media (max-width: 767px) {
   .vetSheet {
@@ -234,6 +263,13 @@
    ELEMENTOS INTERNOS DEL PANEL Y PINES
    ========================================================= */
 
+.panelControles { padding: 0 16px; }
+
+
+@media (min-width: 1025px) {
+  .panelControles { padding-top: 20px; }
+}
+
 .barraBusqueda { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
 .buscadorWrapper { display: flex; align-items: center; background: var(--color-blanco); border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 10px 14px; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .buscadorWrapper:focus-within { border-color: var(--color-primario); }
@@ -242,6 +278,14 @@
 .buscadorClear { background: none; border: none; color: var(--color-texto-secundario); cursor: pointer; }
 .filtrosWrapper { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; scrollbar-width: none; }
 .filtrosWrapper::-webkit-scrollbar { display: none; }
+
+
+@media (min-width: 1025px) {
+  .filtrosWrapper {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
 .btnCercaMio, .btnFiltros { flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1.5px solid #e5e7eb; border-radius: 12px; background: var(--color-blanco); font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .btnCercaMioActivo { border-color: var(--color-primario); color: var(--color-primario); background: var(--color-fondo-claro); }
 .btnFiltrosActivo { background: #dc2626; border-color: #dc2626; color: var(--color-blanco); }
@@ -249,17 +293,25 @@
 .resumen { font-size: var(--texto-form-size); color: var(--color-texto-secundario); font-weight: 600; margin: 0 0 16px 0; padding-bottom: 12px; border-bottom: 1px solid rgba(124, 58, 237, 0.2); }
 
 .sinResultados { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 10; background: #fff3cd; color: #856404; padding: 10px 18px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 12px; }
+
+@media (min-width: 1025px) {
+  .sinResultados {
+    left: auto;
+    right: 24px;
+    transform: none;
+  }
+}
 .btnAmpliarBusqueda { background: var(--color-primario); color: var(--color-blanco); border: none; border-radius: 6px; padding: 6px 12px; cursor: pointer; font-weight: 600; }
 .avisoAmpliada { background: var(--color-fondo-claro); color: var(--color-primario); font-size: 0.8rem; font-weight: 600; padding: 8px 12px; border-radius: 8px; margin: 0 0 10px 0; }
 .markerUsuarioWrapper { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .markerUsuario { width: 16px; height: 16px; background: var(--color-primario); border: 3px solid var(--color-blanco); border-radius: 50%; box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.25); }
 .markerUsuarioEtiqueta { background: var(--color-blanco); color: var(--color-primario); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
-.markerVete { background: var(--color-blanco); border: 2px solid var(--color-primario); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: transform 0.15s; }
-.markerVeteActivo { background: var(--color-primario); border-color: #5b21b6; transform: scale(1.2); }
+.markerVete { background: var(--color-blanco); border: 2px solid var(--color-primario); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: var(--color-primario); box-shadow: 0 2px 8px rgba(0,0,0,0.15); transition: transform 0.15s; }
+.markerVeteActivo { background: var(--color-primario); border-color: #5b21b6; color: var(--color-blanco); transform: scale(1.2); }
 .infoBubble { background: var(--color-blanco); border-radius: 14px; padding: 14px; min-width: 220px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); position: relative; display: flex; flex-direction: column; gap: 6px; }
 .infoBubbleCerrar { position: absolute; top: 8px; right: 10px; background: none; border: none; cursor: pointer; color: var(--color-texto-secundario); }
 .infoBubbleNombre { font-size: 0.9rem; font-weight: 700; margin: 0; padding-right: 20px; }
-.infoBubbleDireccion, .infoBubbleDistancia { font-size: 0.8rem; color: var(--color-texto-secundario); margin: 0; }
+.infoBubbleDireccion, .infoBubbleDistancia { display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--color-texto-secundario); margin: 0; }
 .infoBubbleTags { display: flex; flex-wrap: wrap; gap: 5px; }
 .tag { background: var(--color-fondo-claro); color: var(--color-primario); font-size: 0.7rem; padding: 2px 9px; border-radius: 20px; }
 .infoBubbleBtn { width: 100%; padding: 9px; background: var(--color-primario); color: var(--color-blanco); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 4px; }

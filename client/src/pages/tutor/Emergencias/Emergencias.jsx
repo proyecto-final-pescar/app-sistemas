@@ -15,11 +15,16 @@ const RADIO_MAXIMO_AMPLIADO = 50000;
 
 // Controlador de cámara para el mapa
 const MapController = ({ center }) => {
-  const map = useMap("mapa-emergencias"); 
+  const map = useMap("mapa-emergencias");
   useEffect(() => {
     if (map && center) {
       map.panTo({ lat: center.lat, lng: center.lng });
       map.setZoom(15);
+
+
+      if (window.innerWidth >= 1025) {
+        map.panBy(-212, 0);
+      }
     }
   }, [map, center]);
   return null;
@@ -64,6 +69,10 @@ const IconLocate = () => (
     <line x1="1" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="23" y2="12"/>
   </svg>
 );
+const IconChevronLeft = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>);
+const IconChevronRight = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>);
+const IconHospital = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>);
+const IconRoute = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h6a4 4 0 0 0 4-4v-1a4 4 0 0 0-4-4H10a4 4 0 0 1-4-4v-1"/></svg>);
 
 const Emergencias = () => {
   const navigate = useNavigate();
@@ -86,6 +95,7 @@ const Emergencias = () => {
 
   const [sheetState, setSheetState] = useState("peek");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarColapsado, setSidebarColapsado] = useState(false);
   const [panTarget, setPanTarget] = useState(null);
   
   const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 767);
@@ -223,13 +233,35 @@ const Emergencias = () => {
   return (
     <div className={styles.vetMasterLayout}>
       
-      {/* SIDEBAR OCULTO Y ANIMADO */}
-      <div className={`${styles.sidebarOffscreen} ${isSidebarOpen ? styles.sidebarOpen : ""}`}>
-        <Sidebar role="tutor" activeItem="Emergencias" title="Urgencias 24h y Veterinarias Cercanas" />
-      </div>
-      
-      {isSidebarOpen && (
-        <div className={styles.vetOverlay} onClick={() => setIsSidebarOpen(false)} />
+      {/* Sidebar fijo pero colapsable, solo en esta pantalla */}
+      {!isMobileView && (
+        <>
+          <div className={`${styles.sidebarDesktopWrapper} ${sidebarColapsado ? styles.sidebarColapsado : ""}`}>
+            <Sidebar role="tutor" activeItem="Emergencias" title="Urgencias 24h y Veterinarias Cercanas" />
+          </div>
+          <button
+            type="button"
+            className={styles.btnColapsarSidebar}
+            onClick={() => setSidebarColapsado((v) => !v)}
+            aria-label={sidebarColapsado ? "Mostrar menú" : "Ocultar menú"}
+            title={sidebarColapsado ? "Mostrar menú" : "Ocultar menú"}
+          >
+            {sidebarColapsado ? <IconChevronRight /> : <IconChevronLeft />}
+          </button>
+        </>
+      )}
+
+     
+      {isMobileView && (
+        <>
+          <div className={`${styles.sidebarOffscreen} ${isSidebarOpen ? styles.sidebarOpen : ""}`}>
+            <Sidebar role="tutor" activeItem="Emergencias" title="Urgencias 24h y Veterinarias Cercanas" />
+          </div>
+
+          {isSidebarOpen && (
+            <div className={styles.vetOverlay} onClick={() => setIsSidebarOpen(false)} />
+          )}
+        </>
       )}
 
       {/* VISTA PRINCIPAL */}
@@ -244,18 +276,20 @@ const Emergencias = () => {
           </div>
         )}
 
-        {/* BOTÓN HAMBURGUESA GENERAL FLOTANTE */}
-        <button 
-          className={styles.hamburgerBtn} 
-          onClick={() => setIsSidebarOpen(true)}
-          aria-label="Abrir menú"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B4FBB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="12" x2="21" y2="12"></line>
-            <line x1="3" y1="6" x2="21" y2="6"></line>
-            <line x1="3" y1="18" x2="21" y2="18"></line>
-          </svg>
-        </button>
+       
+        {isMobileView && (
+          <button 
+            className={styles.hamburgerBtn} 
+            onClick={() => setIsSidebarOpen(true)}
+            aria-label="Abrir menú"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B4FBB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+        )}
 
         {/* CONTENEDOR MAPA Y PANEL FLOTANTE */}
         <main className={styles.vetMapArea}>
@@ -296,7 +330,7 @@ const Emergencias = () => {
                     onClick={() => handleMarkerClick(vet)}
                   >
                     <div className={`${styles.markerVete} ${vetDestacada === vet._id ? styles.markerVeteActivo : ""}`}>
-                      <span>🏥</span>
+                      <IconHospital />
                     </div>
                   </AdvancedMarker>
                 ))}
@@ -306,9 +340,9 @@ const Emergencias = () => {
                     <div className={styles.infoBubble} onClick={(e) => e.stopPropagation()}>
                       <button className={styles.infoBubbleCerrar} onClick={handleCerrarBubble}><IconX /></button>
                       <p className={styles.infoBubbleNombre}>{vetSeleccionada.nombre}</p>
-                      <p className={styles.infoBubbleDireccion}>📍 {vetSeleccionada.direccion}</p>
+                      <p className={styles.infoBubbleDireccion}><IconPin /> {vetSeleccionada.direccion}</p>
                       <p className={styles.infoBubbleDistancia}>
-                        🗺 {calcularDistancia(miUbicacion.lat, miUbicacion.lng, getPosition(vetSeleccionada).lat, getPosition(vetSeleccionada).lng)} km
+                        <IconRoute /> {calcularDistancia(miUbicacion.lat, miUbicacion.lng, getPosition(vetSeleccionada).lat, getPosition(vetSeleccionada).lng)} km
                       </p>
                       {vetSeleccionada.especialidades?.length > 0 && (
                         <div className={styles.infoBubbleTags}>
@@ -352,7 +386,7 @@ const Emergencias = () => {
               }}
             />
 
-            <div style={{ padding: "0 16px" }}>
+            <div className={styles.panelControles}>
               <div className={styles.barraBusqueda}>
                 <div className={styles.buscadorWrapper}>
                   <span className={styles.buscadorIcono}><IconSearch /></span>
