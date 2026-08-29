@@ -1,13 +1,29 @@
-import { escapeHtml } from './escapeHtml.js'
+
+const MOTIVOS_NEUTRALES = {
+  contenido_inapropiado: 'contenido que no respeta las normas de convivencia de la comunidad',
+  informacion_falsa: 'información que no pudo ser verificada',
+  spam: 'contenido no deseado o repetitivo',
+  animal_ya_encontrado: 'la mascota ya había sido encontrada al momento del reporte',
+  publicacion_duplicada: 'tratarse de una publicación duplicada',
+  otro: 'no cumplir con las normas de publicación de la comunidad'
+}
+
+function obtenerMotivoNeutral(motivo) {
+  return MOTIVOS_NEUTRALES[motivo] || 'no cumplir con las normas de publicación de la comunidad'
+}
+
 /**
- * Plantilla de email para la verificación de cuenta (SX-06).
- * @param {Object} params
- * @param {string} params.nombre - Nombre del usuario destinatario
- * @param {string} params.verificationUrl - URL con el token de verificación
- * @returns {string} HTML del email
+ * No envia nada, solo genera el contenido 
+ * @param {string} nombreUsuario - Nombre del dueño de la publicación
+ * @param {string} [motivo] 
+ * @returns {{ subject: string, html: string }}
  */
-export function emailVerificacionCuenta({ nombre, verificationUrl }) {
-  const subject = 'Verificá tu cuenta · My Pet'
+export function armarEmailPublicacionDadaDeBaja(nombreUsuario, motivo) {
+  // TODO: confirmar el mail de soporte real y setearlo en SUPPORT_EMAIL (.env)
+  const contactoSoporte = process.env.SUPPORT_EMAIL
+  const motivoTexto = obtenerMotivoNeutral(motivo)
+
+  const subject = 'Tu publicación en el Foro fue dada de baja · My Pet'
 
   const html = `
     <!DOCTYPE html>
@@ -31,38 +47,30 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
               <tr>
                 <td style="padding: 36px 32px 8px 32px;">
                   <h1 style="margin: 0 0 12px 0; font-family: 'Outfit', sans-serif; font-size: 22px; color: #1C1033; font-weight: 800; letter-spacing: -0.3px;">
-                    ¡Hola${nombre ? `, ${escapeHtml(nombre)}` : ''}! Confirmá tu cuenta
+                    Hola${nombreUsuario ? `, ${nombreUsuario}` : ''}
                   </h1>
+                  <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #7E6FA0;">
+                    Te escribimos para informarte que tu publicación en el <strong style="color:#1C1033;">Foro de Mascotas Perdidas</strong>
+                    fue dada de baja luego de ser reportada por otros usuarios de la comunidad.
+                  </p>
                   <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #7E6FA0;">
-                    Gracias por registrarte en My Pet. Para activar tu cuenta y empezar a
-                    usarla, confirmá que este es tu email haciendo clic en el botón de abajo.
-                    Este enlace es válido por <strong style="color:#1C1033;">24 horas</strong>.
+                    El motivo del reporte estuvo relacionado con: <strong style="color:#1C1033;">${motivoTexto}</strong>.
+                    Sabemos que a veces los reportes pueden no reflejar del todo la situación, así que si considerás
+                    que esta decisión fue injusta o que hubo un error, podés escribirnos.
                   </p>
                 </td>
               </tr>
 
-              <!-- Button -->
+              <!-- Contacto -->
               <tr>
                 <td align="center" style="padding: 8px 32px 32px 32px;">
-                  <a href="${verificationUrl}"
+                  <a href="mailto:${contactoSoporte}"
                      style="display: inline-block; background-color: #059669; color: #FFFFFF;
                             font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700;
                             text-decoration: none; padding: 14px 32px; border-radius: 12px;
                             box-shadow: 0 4px 12px rgba(5,150,105,0.30);">
-                    Verificar mi cuenta
+                    Contactar a soporte
                   </a>
-                </td>
-              </tr>
-
-              <!-- Fallback link -->
-              <tr>
-                <td style="padding: 0 32px 28px 32px;">
-                  <p style="margin: 0; font-size: 13px; color: #ABA1C7; line-height: 1.6;">
-                    Si el botón no funciona, copiá y pegá este enlace en tu navegador:
-                  </p>
-                  <p style="margin: 6px 0 0 0; font-size: 13px; color: #7C3AED; word-break: break-all;">
-                    ${verificationUrl}
-                  </p>
                 </td>
               </tr>
 
@@ -77,14 +85,13 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
               <tr>
                 <td style="padding: 24px 32px 32px 32px;">
                   <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #ABA1C7;">
-                    Si no creaste esta cuenta, podés ignorar este email de forma segura.
+                    Este email es informativo, forma parte del proceso de moderación de contenido de My Pet.
                   </p>
                 </td>
               </tr>
 
             </table>
 
-            <!-- Outer footer -->
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; margin-top: 20px;">
               <tr>
                 <td align="center">
@@ -101,5 +108,6 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
     </body>
     </html>
   `
+
   return { subject, html }
 }

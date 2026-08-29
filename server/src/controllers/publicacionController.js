@@ -1,5 +1,7 @@
 import Publicacion from '../models/Publicacion.js';
 import Reporte from '../models/Reporte.js';
+import { enviarEmail } from '../utils/mailer.js';
+import { armarEmailPublicacionDadaDeBaja } from '../templates/emailPublicacionDadaDeBaja.js';
 
 // GET /publicaciones: devuelve todas las publicaciones (con filtros opcionales)
 export const obtenerPublicaciones = async (req, res) => {
@@ -161,14 +163,26 @@ export const eliminarPublicacion = async (req, res) => {
     const usuarioId = req.user.id;
     const esAdmin = req.user.role === 'administrador';
 
-    const publicacion = await Publicacion.findById(id);
+    const publicacion = await Publicacion.findById(id).populate('usuarioId', 'name email');
 
     if (!publicacion) {
       return res.status(404).json({ message: 'El recurso no existe.' });
     }
 
-    if (publicacion.usuarioId.toString() !== usuarioId && !esAdmin) {
+    const esPropietario = publicacion.usuarioId?._id?.toString() === usuarioId;
+
+    if (!esPropietario && !esAdmin) {
       return res.status(403).json({ message: 'No tenés permiso para eliminar esta publicación' });
+    }
+
+    // "baja por moderación" cuando es el admin dando de baja
+   
+    const esBajaPorModeracion = esAdmin && !esPropietario;
+
+  
+    let reportesPendientes = [];
+    if (esBajaPorModeracion) {
+      reportesPendientes = await Reporte.find({ publicacionId: id, estado: 'pendiente' });
     }
 
     // Marcamos como "revisado" los reportes pendientes antes de borrar la publicación
@@ -178,6 +192,21 @@ export const eliminarPublicacion = async (req, res) => {
     );
 
     await publicacion.deleteOne();
+
+    // aviso por email al tutor cuanod el admin dio de baja la publicacion
+    
+    if (esBajaPorModeracion && publicacion.usuarioId?.email) {
+      try {
+        const motivo = reportesPendientes[0]?.motivo;
+        const { subject, html } = armarEmailPublicacionDadaDeBaja(
+          publicacion.usuarioId.name,
+          motivo
+        );
+        await enviarEmail({ to: publicacion.usuarioId.email, subject, html });
+      } catch (emailError) {
+        console.error('Error al enviar email de publicación dada de baja:', emailError);
+      }
+    }
 
     res.status(200).json({ success: true, message: 'Publicación eliminada correctamente' });
   } catch (error) {

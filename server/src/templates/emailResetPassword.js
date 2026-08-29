@@ -1,13 +1,12 @@
-import { escapeHtml } from './escapeHtml.js'
 /**
- * Plantilla de email para la verificación de cuenta (SX-06).
- * @param {Object} params
- * @param {string} params.nombre - Nombre del usuario destinatario
- * @param {string} params.verificationUrl - URL con el token de verificación
- * @returns {string} HTML del email
+ * Arma el asunto y el HTML del email de recuperacion de contraseña
+ * @param {string} token - Token temporal generado
+ * @returns {{ subject: string, html: string }}
  */
-export function emailVerificacionCuenta({ nombre, verificationUrl }) {
-  const subject = 'Verificá tu cuenta · My Pet'
+export function armarEmailResetPassword(token) {
+  const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`
+
+  const subject = 'Recuperación de contraseña · My Pet'
 
   const html = `
     <!DOCTYPE html>
@@ -31,12 +30,12 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
               <tr>
                 <td style="padding: 36px 32px 8px 32px;">
                   <h1 style="margin: 0 0 12px 0; font-family: 'Outfit', sans-serif; font-size: 22px; color: #1C1033; font-weight: 800; letter-spacing: -0.3px;">
-                    ¡Hola${nombre ? `, ${escapeHtml(nombre)}` : ''}! Confirmá tu cuenta
+                    Recuperá tu contraseña
                   </h1>
                   <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #7E6FA0;">
-                    Gracias por registrarte en My Pet. Para activar tu cuenta y empezar a
-                    usarla, confirmá que este es tu email haciendo clic en el botón de abajo.
-                    Este enlace es válido por <strong style="color:#1C1033;">24 horas</strong>.
+                    Recibimos una solicitud para restablecer la contraseña de tu cuenta.
+                    Hacé clic en el botón de abajo para elegir una nueva. Este enlace es
+                    válido por <strong style="color:#1C1033;">1 hora</strong>.
                   </p>
                 </td>
               </tr>
@@ -44,12 +43,12 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
               <!-- Button -->
               <tr>
                 <td align="center" style="padding: 8px 32px 32px 32px;">
-                  <a href="${verificationUrl}"
+                  <a href="${resetUrl}"
                      style="display: inline-block; background-color: #059669; color: #FFFFFF;
                             font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700;
                             text-decoration: none; padding: 14px 32px; border-radius: 12px;
                             box-shadow: 0 4px 12px rgba(5,150,105,0.30);">
-                    Verificar mi cuenta
+                    Restablecer contraseña
                   </a>
                 </td>
               </tr>
@@ -61,7 +60,7 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
                     Si el botón no funciona, copiá y pegá este enlace en tu navegador:
                   </p>
                   <p style="margin: 6px 0 0 0; font-size: 13px; color: #7C3AED; word-break: break-all;">
-                    ${verificationUrl}
+                    ${resetUrl}
                   </p>
                 </td>
               </tr>
@@ -77,7 +76,8 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
               <tr>
                 <td style="padding: 24px 32px 32px 32px;">
                   <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #ABA1C7;">
-                    Si no creaste esta cuenta, podés ignorar este email de forma segura.
+                    Si no solicitaste este cambio, podés ignorar este email de forma segura —
+                    tu contraseña actual seguirá funcionando.
                   </p>
                 </td>
               </tr>
@@ -101,5 +101,6 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
     </body>
     </html>
   `
+
   return { subject, html }
 }

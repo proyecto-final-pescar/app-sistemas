@@ -1,13 +1,15 @@
 import { escapeHtml } from './escapeHtml.js'
 /**
- * Plantilla de email para la verificación de cuenta (SX-06).
- * @param {Object} params
- * @param {string} params.nombre - Nombre del usuario destinatario
- * @param {string} params.verificationUrl - URL con el token de verificación
- * @returns {string} HTML del email
+ * Arma el asunto y el HTML del email de aviso al usuario que cuenta
+ * fue desactivada por el admin
+ * @param {string} nombreUsuario - Nombre del usuario
+ * @returns {{ subject: string, html: string }}
  */
-export function emailVerificacionCuenta({ nombre, verificationUrl }) {
-  const subject = 'Verificá tu cuenta · My Pet'
+export function armarEmailSuspensionCuenta(nombreUsuario) {
+  // TODO: confirmar el mail de soporte real y setearlo en SUPPORT_EMAIL (.env)
+  const contactoSoporte = process.env.SUPPORT_EMAIL
+
+  const subject = 'Tu cuenta en My Pet fue desactivada'
 
   const html = `
     <!DOCTYPE html>
@@ -31,38 +33,26 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
               <tr>
                 <td style="padding: 36px 32px 8px 32px;">
                   <h1 style="margin: 0 0 12px 0; font-family: 'Outfit', sans-serif; font-size: 22px; color: #1C1033; font-weight: 800; letter-spacing: -0.3px;">
-                    ¡Hola${nombre ? `, ${escapeHtml(nombre)}` : ''}! Confirmá tu cuenta
+                    Hola${nombreUsuario ? `, ${escapeHtml(nombreUsuario)}` : ''}
                   </h1>
                   <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #7E6FA0;">
-                    Gracias por registrarte en My Pet. Para activar tu cuenta y empezar a
-                    usarla, confirmá que este es tu email haciendo clic en el botón de abajo.
-                    Este enlace es válido por <strong style="color:#1C1033;">24 horas</strong>.
+                    Te escribimos para informarte que tu cuenta en My Pet fue desactivada por incumplir
+                    las normas de uso de la plataforma. Si considerás que esta decisión fue un error o
+                    querés más información al respecto, podés escribirnos y vamos a revisar tu caso.
                   </p>
                 </td>
               </tr>
 
-              <!-- Button -->
+              <!-- Contacto -->
               <tr>
                 <td align="center" style="padding: 8px 32px 32px 32px;">
-                  <a href="${verificationUrl}"
+                  <a href="mailto:${contactoSoporte}"
                      style="display: inline-block; background-color: #059669; color: #FFFFFF;
                             font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700;
                             text-decoration: none; padding: 14px 32px; border-radius: 12px;
                             box-shadow: 0 4px 12px rgba(5,150,105,0.30);">
-                    Verificar mi cuenta
+                    Apelar esta decisión
                   </a>
-                </td>
-              </tr>
-
-              <!-- Fallback link -->
-              <tr>
-                <td style="padding: 0 32px 28px 32px;">
-                  <p style="margin: 0; font-size: 13px; color: #ABA1C7; line-height: 1.6;">
-                    Si el botón no funciona, copiá y pegá este enlace en tu navegador:
-                  </p>
-                  <p style="margin: 6px 0 0 0; font-size: 13px; color: #7C3AED; word-break: break-all;">
-                    ${verificationUrl}
-                  </p>
                 </td>
               </tr>
 
@@ -77,14 +67,13 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
               <tr>
                 <td style="padding: 24px 32px 32px 32px;">
                   <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #ABA1C7;">
-                    Si no creaste esta cuenta, podés ignorar este email de forma segura.
+                    Este email es informativo, forma parte del proceso de moderación de cuentas de My Pet.
                   </p>
                 </td>
               </tr>
 
             </table>
 
-            <!-- Outer footer -->
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 480px; margin-top: 20px;">
               <tr>
                 <td align="center">
@@ -101,5 +90,6 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
     </body>
     </html>
   `
+
   return { subject, html }
 }
