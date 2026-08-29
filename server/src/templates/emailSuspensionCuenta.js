@@ -1,3 +1,4 @@
+import { escapeHtml } from './escapeHtml.js'
 /**
  * Arma el asunto y el HTML del email de aviso al usuario que cuenta
  * fue desactivada por el admin
@@ -32,7 +33,7 @@ export function armarEmailSuspensionCuenta(nombreUsuario) {
               <tr>
                 <td style="padding: 36px 32px 8px 32px;">
                   <h1 style="margin: 0 0 12px 0; font-family: 'Outfit', sans-serif; font-size: 22px; color: #1C1033; font-weight: 800; letter-spacing: -0.3px;">
-                    Hola${nombreUsuario ? `, ${nombreUsuario}` : ''}
+                    Hola${nombreUsuario ? `, ${escapeHtml(nombreUsuario)}` : ''}
                   </h1>
                   <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #7E6FA0;">
                     Te escribimos para informarte que tu cuenta en My Pet fue desactivada por incumplir

@@ -39,14 +39,8 @@ export async function enviarEmail({ to, subject, html }) {
 export async function sendVerificationEmail(to, token, nombre) {
   const verificationUrl = `${process.env.CLIENT_URL}/verificar-cuenta?token=${token}`
 
-  const mailOptions = {
-    from: `"My Pet" <${process.env.GMAIL_USER}>`,
-    to,
-    subject: 'Verificá tu cuenta · My Pet',
-    html: emailVerificacionCuenta({ nombre, verificationUrl })
-  }
-
-  await transporter.sendMail(mailOptions)
+  const { subject, html } = emailVerificacionCuenta({ nombre, verificationUrl })
+  await enviarEmail({ to, subject, html })
 }
 
 /**
@@ -54,27 +48,10 @@ export async function sendVerificationEmail(to, token, nombre) {
  * @param {object} datos - Datos del turno y del dueño
  */
 export async function sendRecordatorioTurnoEmail({
-  to,
-  nombreDuenio,
-  nombreMascota,
-  nombreVeterinaria,
-  direccionVeterinaria,
-  fecha,
-  hora
+  to, nombreDuenio, nombreMascota, nombreVeterinaria, direccionVeterinaria, fecha, hora
 }) {
-  const mailOptions = {
-    from: `"My Pet" <${process.env.GMAIL_USER}>`,
-    to,
-    subject: `Recordatorio: mañana tenés turno para ${nombreMascota}`,
-    html: emailRecordatorio({
-      nombreDuenio,
-      nombreMascota,
-      nombreVeterinaria,
-      direccionVeterinaria,
-      fecha,
-      hora
-    })
-  }
-
-  await transporter.sendMail(mailOptions)
+  const { subject, html } = emailRecordatorio({
+    nombreDuenio, nombreMascota, nombreVeterinaria, direccionVeterinaria, fecha, hora
+  })
+  await enviarEmail({ to, subject, html })
 }

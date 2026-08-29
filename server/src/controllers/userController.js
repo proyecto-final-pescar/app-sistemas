@@ -20,7 +20,7 @@ export const listarUsuarios = async (req, res) => {
             nombre,
             email,
             telefono,
-            estado, 
+            estado,
             page = 1,
             limit = 10
         } = req.query;
@@ -28,7 +28,7 @@ export const listarUsuarios = async (req, res) => {
         const pageNum = Math.max(parseInt(page, 10) || 1, 1);
         const limitNum = Math.max(parseInt(limit, 10) || 10, 1);
 
-        
+
         const filtro = { role: 'dueno' };
 
         if (nombre) {
@@ -54,7 +54,7 @@ export const listarUsuarios = async (req, res) => {
         const ahora = new Date();
 
         // Para cada usuario de la pag con mascotas y turnos.
-         // con paginacion
+        // con paginacion
         const data = await Promise.all(usuarios.map(async (usuario) => {
             const [cantidadMascotas, turnosProximos, turnosPasados] = await Promise.all([
                 Mascota.countDocuments({ dueñoId: usuario._id }),
@@ -66,7 +66,7 @@ export const listarUsuarios = async (req, res) => {
                 Turno.countDocuments({
                     usuarioId: usuario._id,
                     fecha: { $lt: ahora },
-                    estado: { $ne: 'cancelado' } 
+                    estado: { $ne: 'cancelado' }
                 })
             ]);
 
@@ -180,164 +180,164 @@ export const obtenerPerfilUsuario = async (req, res) => {
 };
 
 export const crearUsuarioAdmin = async (req, res) => {
-  try {
-    const { name, email, password, role, telefono } = req.body;
+    try {
+        const { name, email, password, role, telefono } = req.body;
 
-    // 1. Validación de datos faltantes
-    if (!name || !email || !password || !role) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Faltan campos obligatorios (name, email, password, role)' 
-      });
-    }
-
-    // 2. Validaciones estrictas manuales (ya que no están en el Schema)
-    const validaciones = [];
-
-    // Validar nombre (Mínimo 3 caracteres, solo letras y espacios)
-    if (name.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(name.trim())) {
-        validaciones.push('El nombre debe tener al menos 3 caracteres y contener solo letras.');
-    }
-
-    // Validar formato de email
-    if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email.trim())) {
-        validaciones.push('El formato del email no es válido.');
-    }
-
-    // Validar contraseña (Min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número)
-    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password)) {
-        validaciones.push('La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número.');
-    }
-
-    // Validar roles permitidos
-    const rolesPermitidos = ['administrador', 'tutor', 'veterinaria', 'dueno'];
-    if (!rolesPermitidos.includes(role)) {
-        validaciones.push(`El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}.`);
-    }
-
-    // Validar tel opcional 
-    if (telefono !== undefined && telefono !== null && telefono.trim() !== '') {
-        if (!/^[\d\s()+-]{6,20}$/.test(telefono.trim())) {
-            validaciones.push('El teléfono debe contener solo números, espacios, +, - o paréntesis (6 a 20 caracteres).');
+        // 1. Validación de datos faltantes
+        if (!name || !email || !password || !role) {
+            return res.status(400).json({
+                success: false,
+                message: 'Faltan campos obligatorios (name, email, password, role)'
+            });
         }
-    }
 
-    // Si hay errores de validación, cortamos la ejecución y respondemos (HTTP 400)
-    if (validaciones.length > 0) {
-        return res.status(400).json({
+        // 2. Validaciones estrictas manuales (ya que no están en el Schema)
+        const validaciones = [];
+
+        // Validar nombre (Mínimo 3 caracteres, solo letras y espacios)
+        if (name.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(name.trim())) {
+            validaciones.push('El nombre debe tener al menos 3 caracteres y contener solo letras.');
+        }
+
+        // Validar formato de email
+        if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email.trim())) {
+            validaciones.push('El formato del email no es válido.');
+        }
+
+        // Validar contraseña (Min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número)
+        if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password)) {
+            validaciones.push('La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número.');
+        }
+
+        // Validar roles permitidos
+        const rolesPermitidos = ['administrador', 'tutor', 'veterinaria', 'dueno'];
+        if (!rolesPermitidos.includes(role)) {
+            validaciones.push(`El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}.`);
+        }
+
+        // Validar tel opcional 
+        if (telefono !== undefined && telefono !== null && telefono.trim() !== '') {
+            if (!/^[\d\s()+-]{6,20}$/.test(telefono.trim())) {
+                validaciones.push('El teléfono debe contener solo números, espacios, +, - o paréntesis (6 a 20 caracteres).');
+            }
+        }
+
+        // Si hay errores de validación, cortamos la ejecución y respondemos (HTTP 400)
+        if (validaciones.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Error de validación en los datos ingresados',
+                errors: validaciones
+            });
+        }
+
+        // 3. Regla de negocio: Verificar email duplicado (HTTP 409)
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(409).json({
+                success: false,
+                message: 'El email ya se encuentra registrado en el sistema'
+            });
+        }
+
+        // 4. Hashear la contraseña
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // 5. Crear la instancia (aplicando trim para limpiar espacios accidentales)
+        const newUser = new User({
+            name: name.trim(),
+            email: email.toLowerCase().trim(),
+            password: hashedPassword,
+            role,
+            telefono: telefono ? telefono.trim() : undefined,
+            active: true,
+            historialSesiones: []
+        });
+
+        // 6. Guardar en la DB
+        await newUser.save();
+
+        // 7. Preparar la respuesta ocultando datos sensibles
+        const userResponse = newUser.toObject();
+        delete userResponse.password;
+        delete userResponse.resetPasswordToken;
+        delete userResponse.resetPasswordExpires;
+
+        // 8. Respuesta Exitosa
+        return res.status(201).json({
+            success: true,
+            message: 'Usuario creado exitosamente por el administrador',
+            data: userResponse
+        });
+
+    } catch (error) {
+        console.error('Error en crearUsuarioAdmin:', error);
+        return res.status(500).json({
             success: false,
-            message: 'Error de validación en los datos ingresados',
-            errors: validaciones
+            message: 'Error interno del servidor al intentar crear el usuario'
         });
     }
-
-    // 3. Regla de negocio: Verificar email duplicado (HTTP 409)
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(409).json({ 
-        success: false, 
-        message: 'El email ya se encuentra registrado en el sistema' 
-      });
-    }
-
-    // 4. Hashear la contraseña
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // 5. Crear la instancia (aplicando trim para limpiar espacios accidentales)
-    const newUser = new User({
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      password: hashedPassword,
-      role,
-      telefono: telefono ? telefono.trim() : undefined,
-      active: true,
-      historialSesiones: []
-    });
-
-    // 6. Guardar en la DB
-    await newUser.save();
-
-    // 7. Preparar la respuesta ocultando datos sensibles
-    const userResponse = newUser.toObject();
-    delete userResponse.password;
-    delete userResponse.resetPasswordToken;
-    delete userResponse.resetPasswordExpires;
-
-    // 8. Respuesta Exitosa
-    return res.status(201).json({
-      success: true,
-      message: 'Usuario creado exitosamente por el administrador',
-      data: userResponse
-    });
-
-  } catch (error) {
-    console.error('Error en crearUsuarioAdmin:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Error interno del servidor al intentar crear el usuario' 
-    });
-  }
 };
 
 
 // 3. BAJA LÓGICA (SOFT DELETE) POR ADMIN
 export const darDeBajaUsuario = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'El ID de usuario proporcionado no es válido.'
-      });
-    }
-
-    const usuario = await User.findById(id);
-
-    if (!usuario) {
-      return res.status(404).json({
-        success: false,
-        message: 'El usuario que intentas eliminar no existe.'
-      });
-    }
-
-    if (!usuario.active) {
-      return res.status(400).json({
-        success: false,
-        message: 'El usuario ya se encuentra desactivado.'
-      });
-    }
-
-    usuario.active = false;
-    await usuario.save();
-
-    // Aviso por email al usuario suspendido
     try {
-      const { subject, html } = armarEmailSuspensionCuenta(usuario.name);
-      await enviarEmail({ to: usuario.email, subject, html });
-    } catch (emailError) {
-      console.error('Error al enviar email de suspensión de cuenta:', emailError);
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: 'El ID de usuario proporcionado no es válido.'
+            });
+        }
+
+        const usuario = await User.findById(id);
+
+        if (!usuario) {
+            return res.status(404).json({
+                success: false,
+                message: 'El usuario que intentas eliminar no existe.'
+            });
+        }
+
+        if (!usuario.active) {
+            return res.status(400).json({
+                success: false,
+                message: 'El usuario ya se encuentra desactivado.'
+            });
+        }
+
+        usuario.active = false;
+        await usuario.save();
+
+        // Aviso por email al usuario suspendido
+        try {
+            const { subject, html } = armarEmailSuspensionCuenta(usuario.name);
+            await enviarEmail({ to: usuario.email, subject, html });
+        } catch (emailError) {
+            console.error('Error al enviar email de suspensión de cuenta:', emailError);
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Cuenta de usuario desactivada exitosamente.',
+            data: {
+                id: usuario._id,
+                email: usuario.email,
+                active: usuario.active,
+                fechaBaja: usuario.updatedAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en darDeBajaUsuario:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor al intentar desactivar la cuenta.'
+        });
     }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Cuenta de usuario desactivada exitosamente.',
-      data: {
-        id: usuario._id,
-        email: usuario.email,
-        active: usuario.active,
-        fechaBaja: usuario.updatedAt
-      }
-    });
-
-  } catch (error) {
-    console.error('Error en darDeBajaUsuario:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor al intentar desactivar la cuenta.'
-    });
-  }
 };
 
 // 4. MODIFICACIÓN DE USUARIO (POR ADMIN)
@@ -378,7 +378,7 @@ export const actualizarUsuarioAdmin = async (req, res) => {
                 validaciones.push('El formato del email no es válido.');
             } else {
                 const emailOcupado = await User.findOne({ email: emailLimpio, _id: { $ne: id } });
-                
+
                 if (emailOcupado) {
                     return res.status(409).json({
                         success: false,
@@ -411,6 +411,9 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             if (typeof active !== 'boolean') {
                 validaciones.push('El estado activo debe ser true (activo) o false (inactivo).');
             } else {
+                if (usuario.active === true && active === false) {
+                    seDesactivoUsuario = true;
+                }
                 usuario.active = active;
             }
         }
@@ -437,6 +440,15 @@ export const actualizarUsuarioAdmin = async (req, res) => {
 
         await usuario.save();
 
+        if (req._seDesactivoUsuario) {
+            try {
+                const { subject, html } = armarEmailSuspensionCuenta(usuario.name);
+                await enviarEmail({ to: usuario.email, subject, html });
+            } catch (emailError) {
+                console.error('Error al enviar email de suspensión de cuenta:', emailError);
+            }
+        }
+
         const userResponse = usuario.toObject();
         delete userResponse.password;
         delete userResponse.resetPasswordToken;
@@ -451,10 +463,10 @@ export const actualizarUsuarioAdmin = async (req, res) => {
     } catch (error) {
         if (error.name === 'ValidationError') {
             const messages = Object.values(error.errors).map(val => val.message);
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Error en los datos proporcionados', 
-                errors: messages 
+            return res.status(400).json({
+                success: false,
+                message: 'Error en los datos proporcionados',
+                errors: messages
             });
         }
 
@@ -526,14 +538,14 @@ export const actualizarPerfilPropio = async (req, res) => {
             } else {
                 usuario.zona = zonaLimpia === '' ? undefined : zonaLimpia;
             }
-        } 
+        }
         if (fotoUrl !== undefined) {
-            
+
             usuario.fotoUrl = (fotoUrl === null || fotoUrl === '') ? undefined : fotoUrl.trim();
         }
 
         if (asistenteVirtual !== undefined) {
-         
+
             const tiposPermitidos = ['perro', 'gato'];
             if (!tiposPermitidos.includes(asistenteVirtual)) {
                 validaciones.push(`El asistente debe ser uno de los siguientes: ${tiposPermitidos.join(', ')}.`);

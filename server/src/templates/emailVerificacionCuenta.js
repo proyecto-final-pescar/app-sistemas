@@ -1,3 +1,4 @@
+import { escapeHtml } from './escapeHtml.js'
 /**
  * Plantilla de email para la verificación de cuenta (SX-06).
  * @param {Object} params
@@ -6,7 +7,9 @@
  * @returns {string} HTML del email
  */
 export function emailVerificacionCuenta({ nombre, verificationUrl }) {
-  return `
+  const subject = 'Verificá tu cuenta · My Pet'
+
+  const html = `
     <!DOCTYPE html>
     <html>
     <body style="margin:0; padding:0; background-color:#F5F3FB; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
@@ -28,7 +31,7 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
               <tr>
                 <td style="padding: 36px 32px 8px 32px;">
                   <h1 style="margin: 0 0 12px 0; font-family: 'Outfit', sans-serif; font-size: 22px; color: #1C1033; font-weight: 800; letter-spacing: -0.3px;">
-                    ¡Hola${nombre ? `, ${nombre}` : ''}! Confirmá tu cuenta
+                    ¡Hola${nombre ? `, ${escapeHtml(nombre)}` : ''}! Confirmá tu cuenta
                   </h1>
                   <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #7E6FA0;">
                     Gracias por registrarte en My Pet. Para activar tu cuenta y empezar a
@@ -98,4 +101,5 @@ export function emailVerificacionCuenta({ nombre, verificationUrl }) {
     </body>
     </html>
   `
+  return { subject, html }
 }

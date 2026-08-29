@@ -1,3 +1,4 @@
+import { escapeHtml } from './escapeHtml.js'
 export const emailRecordatorio = ({
   nombreDuenio,
   nombreMascota,
@@ -6,7 +7,9 @@ export const emailRecordatorio = ({
   fecha,
   hora
 }) => {
-  return `
+  const subject = `Recordatorio: mañana tenés turno para ${nombreMascota}`
+
+  const html = `
     <!DOCTYPE html>
     <html lang="es">
       <head>
@@ -91,7 +94,7 @@ export const emailRecordatorio = ({
                         line-height: 1.6;
                       "
                     >
-                      Hola ${nombreDuenio},
+                      Hola ${escapeHtml(nombreDuenio)},,
                     </p>
 
                     <p
@@ -104,7 +107,7 @@ export const emailRecordatorio = ({
                     >
                       Te recordamos que mañana tenés un turno programado para
                       <strong style="color: #1C1033;">
-                        ${nombreMascota}
+                        ${escapeHtml(nombreMascota)}
                       </strong>.
                     </p>
 
@@ -122,28 +125,28 @@ export const emailRecordatorio = ({
                       <tr>
                         <td style="padding-bottom: 12px;">
                           <strong>Veterinaria:</strong>
-                          ${nombreVeterinaria}
+                          ${escapeHtml(nombreVeterinaria)}
                         </td>
                       </tr>
 
                       <tr>
                         <td style="padding-bottom: 12px;">
                           <strong>Dirección:</strong>
-                          ${direccionVeterinaria}
+                          ${escapeHtml(direccionVeterinaria)}
                         </td>
                       </tr>
 
                       <tr>
                         <td style="padding-bottom: 12px;">
                           <strong>Fecha:</strong>
-                          ${fecha}
+                          ${escapeHtml(fecha)}
                         </td>
                       </tr>
 
                       <tr>
                         <td>
                           <strong>Hora:</strong>
-                          ${hora}
+                          ${escapeHtml(hora)}
                         </td>
                       </tr>
                     </table>
@@ -184,4 +187,5 @@ export const emailRecordatorio = ({
       </body>
     </html>
   `
+  return { subject, html }
 }
