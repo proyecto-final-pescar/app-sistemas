@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User as UserIcon, Bell, Bot, Camera } from "lucide-react";
+import { User as UserIcon, Bot, Camera } from "lucide-react";
 import Sidebar from "../../components/layout/Sidebar";
 import TopBar from "../../components/layout/TopBar";
 import PanelDestacado from "../../components/ui/panel-destacado/PanelDestacado";
@@ -25,7 +25,6 @@ const TAMANIO_MAXIMO_FOTO = 5 * 1024 * 1024; // 5MB
 
 const TABS_BASE = [
   { id: "personales", label: "Datos Personales", icon: UserIcon },
-  { id: "notificaciones", label: "Notificaciones", icon: Bell },
   { id: "asistente", label: "Asistente Virtual", icon: Bot },
 ];
 
@@ -414,10 +413,6 @@ function PerfilUsuario() {
                 disabled={guardando}
               />
             </form>
-          )}
-
-          {tabActiva === "notificaciones" && (
-            <div className={styles.card}><p>Próximamente.</p></div>
           )}
 
           {tabActiva === "asistente" && perfil?.rol === "dueno" && (
