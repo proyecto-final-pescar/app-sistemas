@@ -24,21 +24,23 @@
 
 /* Botón volver */
 .btnVolver {
-  background: none;
+  background: var(--color-fondo-claro);
   border: none;
   color: var(--color-primario);
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  padding: 0;
+  padding: 8px 14px;
+  border-radius: 20px;
   margin-bottom: 16px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
+  -webkit-tap-highlight-color: transparent; /* evita el flash/subrayado "pegado" al tocar en mobile */
 }
 
-.btnVolver:hover {
-  text-decoration: underline;
+.btnVolver:active {
+  opacity: 0.6; /* feedback táctil en vez de subrayado */
 }
 
 /* Encabezado */
@@ -427,6 +429,10 @@
     align-items: flex-start;
   }
 
+  .btnVolver:hover {
+    background: #ede9fe; 
+  }
+
   .btnRegistrar {
     align-self: auto;
     width: auto;
@@ -459,13 +465,19 @@
 @media (min-width: 1024px) {
   .contenido {
     padding: 32px 40px;
-    max-width: 1100px;
-    margin: 0 auto;
-    width: 100%;
+    /* se saca el max-width/centrado: mismo criterio que Pacientes.module.css,
+       aprovecha todo el ancho disponible en vez de angostar el contenido */
   }
 
   .titulo {
     font-size: 1.65rem;
+  }
+
+  
+  .listaConsultas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 12px;
   }
 
   .cardMotivo {
