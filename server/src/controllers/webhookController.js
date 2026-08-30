@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { Payment } from 'mercadopago';
 import client from '../config/mercadopago.js';
 import Turno from '../models/Turno.js';
@@ -22,9 +23,52 @@ const METODO_PAGO_MAP = {
   account_money: 'billetera_virtual',
 };
 
+// Validar firma del webhook de MercadoPago
+const validarFirmaWebhook = (req) => {
+  const xSignature = req.headers['x-signature']
+  const xRequestId = req.headers['x-request-id']
+  const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET
+ 
+  if (!xSignature || !xRequestId || !webhookSecret) {
+    return false
+  }
+
+  // El formato de x-signature es: ts=...,v1=...
+  const partes = xSignature.split(',')
+  let ts, v1
+ 
+  for (const parte of partes) {
+    const [key, value] = parte.split('=')
+    if (key === 'ts') ts = value
+    if (key === 'v1') v1 = value
+  }
+  
+   if (!ts || !v1) {
+    return false
+  }
+
+  // Crear el string a firmar: {request_id}.{ts}.{body_raw}
+  const bodyRaw = JSON.stringify(req.body)
+  const dataParaFirmar = `${xRequestId}.${ts}.${bodyRaw}`
+ 
+  // Calcular HMAC-SHA256 con el webhook secret
+  const firmaCalculada = crypto
+    .createHmac('sha256', webhookSecret)
+    .update(dataParaFirmar)
+    .digest('hex')
+ 
+  // Comparar firmas
+  return firmaCalculada === v1
+}
+
 // POST /api/pagos/webhook
 export const recibirWebhook = async (req, res) => {
   try {
+    // Validar firma del webhook
+    if (!validarFirmaWebhook(req)) {
+      return res.status(403).json({ message: 'Firma de webhook inválida' })
+    }
+    
     const { type, data } = req.body;
 
     // 1. Solo procesamos eventos de tipo 'payment'
@@ -103,8 +147,6 @@ export const recibirWebhook = async (req, res) => {
     // 7. Creamos o actualizamos el documento en la colección Pagos
     const metodoPago = METODO_PAGO_MAP[pagoMP.payment_type_id] || null;
 
-    // Si esta notificación ya fue procesada antes (MercadoPago puede reenviar
-    // el mismo webhook más de una vez), no hacemos nada más.
     const pagoExistentePorIdPago = await Pago.findOne({ idPago: String(idPago) });
     if (pagoExistentePorIdPago?.estado === 'aprobado') {
       return res.status(200).json({
@@ -128,8 +170,6 @@ export const recibirWebhook = async (req, res) => {
       metadata: pagoMP,
     };
 
-    // Buscamos el registro pendiente que se creó al iniciar el checkout
-    // (crearPreferenciaPago). Si no existe (caso raro), lo creamos ahora.
     let pagoGuardado = pagoExistentePorIdPago
       ? await Pago.findByIdAndUpdate(pagoExistentePorIdPago._id, datosPago, { new: true })
       : await Pago.findOneAndUpdate(

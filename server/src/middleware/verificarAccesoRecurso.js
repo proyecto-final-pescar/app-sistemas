@@ -29,7 +29,7 @@ export const verificarAccesoRecurso = (Modelo) => async (req, res, next) => {
 
     if (req.user.role === 'veterinaria') {
       const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id })
-      if (!veterinaria) {
+      if (!veterinaria || recurso.veterinariaId.toString() !== veterinaria._id.toString()) {
         return res.status(403).json({
           success: false,
           message: 'No tenés permiso para acceder a este recurso'
