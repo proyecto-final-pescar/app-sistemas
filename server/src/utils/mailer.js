@@ -3,6 +3,7 @@ import { emailVerificacionCuenta } from '../templates/emailVerificacionCuenta.js
 import { emailRecordatorio } from '../templates/emailRecordatorio.js'
 // nota: mailer.js vive en src/utils/, y la plantilla en src/templates/
 // (carpeta nueva, al mismo nivel que controllers/models/routes/utils)
+import { emailConfirmacionTurno } from '../templates/emailConfirmacionTurno.js'
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -41,6 +42,22 @@ export async function sendVerificationEmail(to, token, nombre) {
 
   const { subject, html } = emailVerificacionCuenta({ nombre, verificationUrl })
   await enviarEmail({ to, subject, html })
+}
+
+/**
+ * Envía el email de confirmación de turno tras un pago aprobado.
+ * @param {string} to - Email del dueño de la mascota
+ * @param {Object} datosTurno - Ver JSDoc de emailConfirmacionTurno para los campos
+ */
+export async function sendConfirmacionTurnoEmail(to, datosTurno) {
+  const mailOptions = {
+    from: `"My Pet" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: '¡Tu turno está confirmado! · My Pet',
+    html: emailConfirmacionTurno(datosTurno)
+  }
+
+  await transporter.sendMail(mailOptions)
 }
 
 /**
