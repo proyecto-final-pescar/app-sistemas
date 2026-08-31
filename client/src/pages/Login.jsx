@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../hooks/useAuth.js";
 import api from "../services/api.js";
 import { obtenerMiVeterinaria } from "../services/veterinariaService.js";
+import { obtenerMensajeError } from "../utils/obtenerMensajeError.js";
 import styles from "./Login.module.css";
 
 function Login() {
@@ -26,17 +28,37 @@ function Login() {
     }));
   };
 
-  const getErrorMessage = (data) => {
-    if (typeof data === "string") {
-      return data;
+  const redirigirSegunRol = async (userData) => {
+    const rol = userData.rol;
+
+    if (rol === "dueno") {
+      navigate("/mascotas", { replace: true });
+      return;
     }
 
-    return (
-      data?.message ||
-      data?.mensaje ||
-      data?.error ||
-      "No se pudo iniciar sesion."
-    );
+    if (rol === "veterinaria") {
+      try {
+        const miVeterinaria = await obtenerMiVeterinaria();
+        const tienePerfilCompletado = Boolean(
+          miVeterinaria?._id || miVeterinaria?.nombre,
+        );
+        if (tienePerfilCompletado) {
+          navigate("/home-veterinaria", { replace: true });
+        } else {
+          navigate("/registro-veterinaria", { replace: true });
+        }
+      } catch (vetError) {
+        navigate("/registro-veterinaria", { replace: true });
+      }
+      return;
+    }
+
+    if (rol === "administrador") {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+
+    navigate("/home", { replace: true });
   };
 
   const handleSubmit = async (event) => {
@@ -72,36 +94,68 @@ function Login() {
       localStorage.setItem("user", JSON.stringify(userData));
       setUsuario(userData);
 
-      const rol = userData.rol;
-      if (rol === "dueno") {
-        navigate("/home", { replace: true }); /*/home*/
+      await redirigirSegunRol(userData);
+    } catch (requestError) {
+      const responseData = requestError.response?.data;
+
+      if (responseData) {
+        setError(obtenerMensajeError(responseData));
+      } else if (requestError.request) {
+        setError(
+          "No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.",
+        );
+      } else {
+        setError("Ocurrió un error inesperado. Por favor intentá nuevamente.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Primer intento de login con Google:no se manda role aca. Si la cuenta ya existe 
+  // Si no existe, responde nuevoUsuario: true  se manda al usuario a completar el registro-seleccionar rol
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const { data } = await api.post("/auth/google", {
+        token: credentialResponse.credential,
+      });
+
+      if (data.nuevoUsuario) {
+        navigate("/completar-registro-google", {
+          state: {
+            googleCredential: credentialResponse.credential,
+            nombre: data.nombre,
+            email: data.email,
+          },
+        });
         return;
       }
 
-      if (rol === "veterinaria") {
-        try {
-          const miVeterinaria = await obtenerMiVeterinaria();
-          const tienePerfilCompletado = Boolean(
-            miVeterinaria?._id || miVeterinaria?.nombre,
-          );
+      const token = data.token;
+      const user = data.usuario;
 
-          if (tienePerfilCompletado) {
-            navigate("/home-veterinaria", { replace: true });
-          } else {
-            navigate("/registro-veterinaria", { replace: true });
-          }
-        } catch (vetError) {
-          navigate("/registro-veterinaria", { replace: true });
-        }
+      if (!token) {
+        setError("No se recibió un token de autenticación.");
         return;
       }
 
-      if (rol === "administrador") {
-        navigate("/dashboard", { replace: true });
-        return;
-      }
+      const userData = {
+        id: user.id || user._id,
+        email: user.email,
+        nombre: user.name,
+        rol: user.role,
+        fotoUrl: user.fotoUrl || "",
+        asistenteVirtual: user.asistenteVirtual || "perro",
+      };
 
-      navigate("/home", { replace: true });
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUsuario(userData);
+
+      await redirigirSegunRol(userData);
     } catch (requestError) {
       const responseData = requestError.response?.data;
       const statusCode = requestError.response?.status;
@@ -122,33 +176,49 @@ function Login() {
     }
   };
 
+  const handleGoogleError = () => {
+    setError("No se pudo completar el login con Google.");
+  };
+
   return (
-    <main className={styles.page}>
-      <div className={styles.backgroundIconTop}>♥</div>
-      <div className={styles.backgroundIconLeft}>♥</div>
-      <div className={styles.backgroundIconBottom}>♥</div>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <main className={styles.page}>
+        <div className={styles.backgroundIconTop}>♥</div>
+        <div className={styles.backgroundIconLeft}>♥</div>
+        <div className={styles.backgroundIconBottom}>♥</div>
 
-      <header className={styles.brand}>
-        <img src="/logo-mypet.svg" alt="" className={styles.brandIcon} />
-        <img src="/mypet2.svg" alt="MyPet" className={styles.brandLogo} />
-      </header>
+        <header className={styles.brand}>
+          <img src="/logo-mypet.svg" alt="" className={styles.brandIcon} />
+          <img src="/mypet2.svg" alt="MyPet" className={styles.brandLogo} />
+        </header>
 
-      <section className={styles.panel} aria-labelledby="login-title">
-        <span aria-hidden="true" className={styles.panelTopBar} />
+        <section className={styles.panel} aria-labelledby="login-title">
+          <span aria-hidden="true" className={styles.panelTopBar} />
 
-        <div className={styles.heading}>
-          <h1 id="login-title" className={styles.title}>
-            Iniciar sesión
-          </h1>
-          <p className={styles.subtitle}>Ingresá con tu email y contraseña</p>
-        </div>
+          <div className={styles.heading}>
+            <h1 id="login-title" className={styles.title}>
+              Iniciar sesión
+            </h1>
+            <p className={styles.subtitle}>Ingresá con tu email y contraseña</p>
+          </div>
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <label className={styles.field}>
-            <span className={styles.label}>Email</span>
-            <span className={styles.inputWrap}>
-              <span aria-hidden="true" className={styles.inputIcon}>
-                <EnvelopeIcon />
+          <form onSubmit={handleSubmit} className={styles.form}>
+            <label className={styles.field}>
+              <span className={styles.label}>Email</span>
+              <span className={styles.inputWrap}>
+                <span aria-hidden="true" className={styles.inputIcon}>
+                  <EnvelopeIcon />
+                </span>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  autoComplete="email"
+                  placeholder="ana@mypet.com"
+                  required
+                  className={styles.input}
+                />
               </span>
               <input
                 type="email"
@@ -229,45 +299,61 @@ function Login() {
             {isLoading ? "Ingresando..." : "Ingresar  →"}
           </button>
 
-          <div className={styles.divider}>
-            <span className={styles.dividerLine} />
-            <span className={styles.dividerText}>o continuá con</span>
-            <span className={styles.dividerLine} />
-          </div>
+            {error && (
+              <p role="alert" aria-live="polite" className={styles.error}>
+                {error}
+              </p>
+            )}
 
-          <div className={styles.socialGrid}>
-            <button type="button" className={styles.socialButton}>
-              Google
+            <button type="submit" disabled={isLoading} className={styles.button}>
+              {isLoading ? "Ingresando..." : "Ingresar  →"}
             </button>
-            <button type="button" className={styles.socialButton}>
-              Apple
-            </button>
-          </div>
 
-          <p className={styles.registerText}>
-            ¿No tenés cuenta?{" "}
-            <a href="/registro" className={styles.registerLink}>
-              Registrate
-            </a>
-          </p>
-        </form>
-      </section>
+            <div className={styles.divider}>
+              <span className={styles.dividerLine} />
+              <span className={styles.dividerText}>o continuá con</span>
+              <span className={styles.dividerLine} />
+            </div>
 
-      <p className={styles.termsText}>
-        Al ingresar aceptás nuestros{" "}
-        <a href="/terminos" className={styles.termsLink}>
-          Términos
-        </a>{" "}
-        y{" "}
-        <a href="/privacidad" className={styles.termsLink}>
-          Privacidad
-        </a>
-      </p>
+            <div className={styles.socialGrid}>
+              <div className={styles.googleBtnWrap}>
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  size="large"
+                  width="100%"
+                  shape="pill"
+                  theme="outline"
+                  locale="es_AR"
+                />
+              </div>
+            </div>
 
-      <button type="button" aria-label="Ayuda" className={styles.helpButton}>
-        ?
-      </button>
-    </main>
+            <p className={styles.registerText}>
+              ¿No tenés cuenta?{" "}
+              <a href="/registro" className={styles.registerLink}>
+                Registrate
+              </a>
+            </p>
+          </form>
+        </section>
+
+        <p className={styles.termsText}>
+          Al ingresar aceptás nuestros{" "}
+          <a href="/terminos" className={styles.termsLink}>
+            Términos
+          </a>{" "}
+          y{" "}
+          <a href="/privacidad" className={styles.termsLink}>
+            Privacidad
+          </a>
+        </p>
+
+        <button type="button" aria-label="Ayuda" className={styles.helpButton}>
+          ?
+        </button>
+      </main>
+    </GoogleOAuthProvider>
   );
 }
 

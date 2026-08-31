@@ -14,6 +14,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.2.0",
+    "@react-oauth/google": "^0.13.5",
     "@vis.gl/react-google-maps": "^1.8.3",
     "axios": "^1.18.1",
     "lucide-react": "^1.24.0",

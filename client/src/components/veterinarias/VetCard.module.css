@@ -48,10 +48,23 @@
   text-overflow: ellipsis;
 }
 
+
 .direccion {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.76rem;
   color: #6b7280;
   margin: 0;
+  min-width: 0;
+}
+
+.direccion svg {
+  flex-shrink: 0;
+}
+
+.direccionTexto {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -103,7 +116,9 @@
 }
 
 .metaIcon {
-  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .urgencias {
@@ -180,7 +195,7 @@
 }
 
 .filaInfo .nombre,
-.filaInfo .direccion {
+.filaInfo .direccionTexto {
   white-space: normal;
   overflow: visible;
   text-overflow: clip;

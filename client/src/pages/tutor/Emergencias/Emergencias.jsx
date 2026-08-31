@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
+import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
@@ -11,8 +11,24 @@ const BUENOS_AIRES = { lat: -34.6037, lng: -58.3816 };
 const DIAS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
 const ESPECIALIDADES = ["Todas", "Clínica General", "Cirugía", "Dermatología", "Cardiología", "Laboratorio", "Internación","Vacunación"];
 const RADIOS = [1, 5, 10];
-const RADIO_MAXIMO_AMPLIADO = 50000; //  el tope del back
+const RADIO_MAXIMO_AMPLIADO = 50000;
 
+// Controlador de cámara para el mapa
+const MapController = ({ center }) => {
+  const map = useMap("mapa-emergencias");
+  useEffect(() => {
+    if (map && center) {
+      map.panTo({ lat: center.lat, lng: center.lng });
+      map.setZoom(15);
+
+
+      if (window.innerWidth >= 1025) {
+        map.panBy(-212, 0);
+      }
+    }
+  }, [map, center]);
+  return null;
+};
 
 const estaAbierta = (vet) => {
   if (vet.urgencias24hs) return true;
@@ -42,29 +58,21 @@ const getPosition = (vet) => ({
   lng: vet.coordenadas.coordinates[0],
 });
 
-const IconSearch = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+const IconSearch = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>);
+const IconPin = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>);
+const IconAlert = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>);
+const IconX = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>);
+const IconLocate = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="7"/>
+    <line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="23"/>
+    <line x1="1" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="23" y2="12"/>
   </svg>
 );
-
-const IconPin = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-  </svg>
-);
-
-const IconAlert = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-  </svg>
-);
-
-const IconX = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-  </svg>
-);
+const IconChevronLeft = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>);
+const IconChevronRight = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>);
+const IconHospital = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>);
+const IconRoute = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h6a4 4 0 0 0 4-4v-1a4 4 0 0 0-4-4H10a4 4 0 0 1-4-4v-1"/></svg>);
 
 const Emergencias = () => {
   const navigate = useNavigate();
@@ -85,7 +93,20 @@ const Emergencias = () => {
   const [cercaMioActivo, setCercaMioActivo] = useState(false);
   const [busquedaAmpliada, setBusquedaAmpliada] = useState(false);
 
+  const [sheetState, setSheetState] = useState("peek");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarColapsado, setSidebarColapsado] = useState(false);
+  const [panTarget, setPanTarget] = useState(null);
+  
+  const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 767);
+
   const coordsRef = useRef(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobileView(window.innerWidth <= 767);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const buscarVeterinarias = useCallback(async (lat, lng, radioOverride) => {
     setIsLoading(true);
@@ -124,6 +145,7 @@ const Emergencias = () => {
       setMiUbicacion(coords);
       setGeoAceptada(true);
       setMapKey((k) => k + 1);
+      setPanTarget({ ...coords, _t: Date.now() }); 
       buscarVeterinarias(coords.lat, coords.lng);
     };
     const onError = () => {
@@ -143,9 +165,7 @@ const Emergencias = () => {
   const veterinariasFiltradas = veterinarias
     .filter((v) =>
       filtroEsp === "Todas" ||
-      v.especialidades?.some(
-        (esp) => esp.toLowerCase() === filtroEsp.toLowerCase()
-      )
+      v.especialidades?.some((esp) => esp.toLowerCase() === filtroEsp.toLowerCase())
     )
     .filter((v) => !solo24hs || v.urgencias24hs)
     .filter((v) =>
@@ -156,20 +176,39 @@ const Emergencias = () => {
 
   const abiertas = veterinariasFiltradas.filter(estaAbierta).length;
 
-  const handleMarkerClick  = (vet) => { setVetSeleccionada(vet); setVetDestacada(vet._id); };
-  const handleCardClick    = (vet) => { setVetDestacada(vet._id); setVetSeleccionada(vet); };
-  const handleCerrarBubble = ()    => setVetSeleccionada(null);
+  const handleMarkerClick  = (vet) => { 
+    setVetSeleccionada(vet); 
+    setVetDestacada(vet._id);
+    setPanTarget({ ...getPosition(vet), _t: Date.now() }); 
+  };
+  
+  const handleCardClick    = (vet) => { 
+    setVetDestacada(vet._id); 
+    setVetSeleccionada(vet); 
+    setPanTarget({ ...getPosition(vet), _t: Date.now() }); 
+    
+    if (window.innerWidth <= 767) {
+      setSheetState("minimized");
+    }
+  };
+  
+  const handleCerrarBubble = () => setVetSeleccionada(null);
   const irAlPerfil = (vetId) => navigate(`/tutor/veterinarias/${vetId}`);
 
   const handleCercaMio = () => {
     const nuevoEstado = !cercaMioActivo;
     setCercaMioActivo(nuevoEstado);
-    if (nuevoEstado) {
-      setRadioKm(1);
-      setFiltroEsp("Todas");
-    } else {
-      setRadioKm(5);
+    if (nuevoEstado) { 
+      setRadioKm(1); 
+      setFiltroEsp("Todas"); 
+      setPanTarget({ ...miUbicacion, _t: Date.now() }); 
+    } else { 
+      setRadioKm(5); 
     }
+  };
+
+  const handleRecenterUser = () => {
+    setPanTarget({ ...miUbicacion, _t: Date.now() });
   };
 
   const handleRadioChange = (e) => {
@@ -178,216 +217,248 @@ const Emergencias = () => {
     setBusquedaAmpliada(false);
   };
 
+  const handleBusquedaChange = (e) => {
+    setBusqueda(e.target.value);
+    setSheetState(e.target.value.length > 0 ? "expanded" : "peek");
+  };
+
+  const handleMapInteraction = () => {
+    if (sheetState !== "minimized") setSheetState("minimized");
+  };
+
+  const handleSheetInteraction = () => {
+    if (sheetState === "minimized") setSheetState("peek");
+  };
+
   return (
-    <div className={styles.layout}>
-      <Sidebar role="tutor" activeItem="Emergencias" title="Urgencias 24h y Veterinarias Cercanas" />
+    <div className={styles.vetMasterLayout}>
       
-      <div className={styles.pageWrapper}>
-        <TopBar title="Urgencias 24h y Veterinarias Cercanas" />
+      {/* Sidebar fijo pero colapsable, solo en esta pantalla */}
+      {!isMobileView && (
+        <>
+          <div className={`${styles.sidebarDesktopWrapper} ${sidebarColapsado ? styles.sidebarColapsado : ""}`}>
+            <Sidebar role="tutor" activeItem="Emergencias" title="Urgencias 24h y Veterinarias Cercanas" />
+          </div>
+          <button
+            type="button"
+            className={styles.btnColapsarSidebar}
+            onClick={() => setSidebarColapsado((v) => !v)}
+            aria-label={sidebarColapsado ? "Mostrar menú" : "Ocultar menú"}
+            title={sidebarColapsado ? "Mostrar menú" : "Ocultar menú"}
+          >
+            {sidebarColapsado ? <IconChevronRight /> : <IconChevronLeft />}
+          </button>
+        </>
+      )}
 
-        <main className={styles.content}>
+     
+      {isMobileView && (
+        <>
+          <div className={`${styles.sidebarOffscreen} ${isSidebarOpen ? styles.sidebarOpen : ""}`}>
+            <Sidebar role="tutor" activeItem="Emergencias" title="Urgencias 24h y Veterinarias Cercanas" />
+          </div>
 
-          {/* ── Barra superior: buscador + botones en la misma fila ── */}
-          {!isLoading && (
-            <div className={styles.barraBusqueda}>
-              <div className={styles.buscadorWrapper}>
-                <span className={styles.buscadorIcono}><IconSearch /></span>
-                <input
-                  type="text"
-                  placeholder="Buscar clínica o barrio..."
-                  value={busqueda}
-                  onChange={(e) => setBusqueda(e.target.value)}
-                  className={styles.buscadorInput}
-                />
-                {busqueda && (
-                  <button className={styles.buscadorClear} onClick={() => setBusqueda("")}>
-                    <IconX />
-                  </button>
-                )}
-              </div>
-
-              <button
-                className={`${styles.btnCercaMio} ${cercaMioActivo ? styles.btnCercaMioActivo : ""}`}
-                onClick={handleCercaMio}
-              >
-                <IconPin />
-                Cerca mío
-              </button>
-
-              <button
-                className={`${styles.btnFiltros} ${solo24hs ? styles.btnFiltrosActivo : ""}`}
-                onClick={() => setSolo24hs((v) => !v)}
-              >
-                <IconAlert />
-                24hs
-              </button>
-            </div>
+          {isSidebarOpen && (
+            <div className={styles.vetOverlay} onClick={() => setIsSidebarOpen(false)} />
           )}
+        </>
+      )}
 
-          {/* ── Paneles ── */}
-          {isLoading ? (
-            <div className={styles.paneles}>
-              <div className={styles.mapaWrapper}>
-                <p className={styles.estadoMensaje}>Cargando mapa...</p>
+      {/* VISTA PRINCIPAL */}
+      <div className={styles.vetMainView}>
+        
+        {/* HEADER: ¡Solo existe si NO estamos en celular! */}
+        {!isMobileView && (
+          <div className={styles.vetHeaderWrapper}>
+            <div className={styles.topBarContainer}>
+              <TopBar title="Urgencias 24h y Veterinarias Cercanas" />
+            </div>
+          </div>
+        )}
+
+       
+        {isMobileView && (
+          <button 
+            className={styles.hamburgerBtn} 
+            onClick={() => setIsSidebarOpen(true)}
+            aria-label="Abrir menú"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B4FBB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+        )}
+
+        {/* CONTENEDOR MAPA Y PANEL FLOTANTE */}
+        <main className={styles.vetMapArea}>
+          
+          <div className={styles.vetMapBackground}>
+            <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
+              <Map
+                id="mapa-emergencias"
+                key={mapKey}
+                defaultCenter={miUbicacion}
+                defaultZoom={14}
+                mapId="DEMO_MAP_ID"
+                onClick={() => {
+                  handleCerrarBubble();
+                  handleMapInteraction();
+                }}
+                onDragStart={handleMapInteraction}
+                clickableIcons={false}
+                disableDefaultUI={true}
+                className={styles.mapa}
+              >
+                <MapController center={panTarget} />
+
+                {geoAceptada && (
+                  <AdvancedMarker position={miUbicacion} title="Vos estás aquí">
+                    <div className={styles.markerUsuarioWrapper}>
+                      <div className={styles.markerUsuario} />
+                      <div className={styles.markerUsuarioEtiqueta}>Vos estás aquí</div>
+                    </div>
+                  </AdvancedMarker>
+                )}
+
+                {veterinarias.map((vet) => (
+                  <AdvancedMarker
+                    key={vet._id}
+                    position={getPosition(vet)}
+                    title={vet.nombre}
+                    onClick={() => handleMarkerClick(vet)}
+                  >
+                    <div className={`${styles.markerVete} ${vetDestacada === vet._id ? styles.markerVeteActivo : ""}`}>
+                      <IconHospital />
+                    </div>
+                  </AdvancedMarker>
+                ))}
+
+                {vetSeleccionada && (
+                  <AdvancedMarker position={getPosition(vetSeleccionada)}>
+                    <div className={styles.infoBubble} onClick={(e) => e.stopPropagation()}>
+                      <button className={styles.infoBubbleCerrar} onClick={handleCerrarBubble}><IconX /></button>
+                      <p className={styles.infoBubbleNombre}>{vetSeleccionada.nombre}</p>
+                      <p className={styles.infoBubbleDireccion}><IconPin /> {vetSeleccionada.direccion}</p>
+                      <p className={styles.infoBubbleDistancia}>
+                        <IconRoute /> {calcularDistancia(miUbicacion.lat, miUbicacion.lng, getPosition(vetSeleccionada).lat, getPosition(vetSeleccionada).lng)} km
+                      </p>
+                      {vetSeleccionada.especialidades?.length > 0 && (
+                        <div className={styles.infoBubbleTags}>
+                          {vetSeleccionada.especialidades.slice(0, 3).map((esp) => (
+                            <span key={esp} className={styles.tag}>{esp}</span>
+                          ))}
+                        </div>
+                      )}
+                      <button className={styles.infoBubbleBtn} onClick={() => irAlPerfil(vetSeleccionada._id)}>Ver clínica →</button>
+                    </div>
+                  </AdvancedMarker>
+                )}
+              </Map>
+              
+              {/* BOTÓN REUBICAR (GPS) */}
+              <button 
+                className={styles.btnLocateMe} 
+                onClick={handleRecenterUser}
+                title="Mi ubicación"
+              >
+                <IconLocate />
+              </button>
+            </APIProvider>
+            
+            {sinResultados && (
+              <div className={styles.sinResultados}>
+                <p>No encontramos veterinarias en un radio de {radioKm} km.</p>
+                <button type="button" className={styles.btnAmpliarBusqueda} onClick={handleAmpliarBusqueda}>
+                  Ampliar a 50 km
+                </button>
               </div>
-              <div className={styles.panel}>
-                <p className={styles.estadoMensaje}>Buscando veterinarias...</p>
+            )}
+          </div>
+
+          <div className={`${styles.vetSheet} ${styles[sheetState]}`} onClick={handleSheetInteraction}>
+            <div 
+              className={styles.dragHandle} 
+              onClick={(e) => {
+                e.stopPropagation();
+                setSheetState(sheetState === "expanded" ? "peek" : "expanded");
+              }}
+            />
+
+            <div className={styles.panelControles}>
+              <div className={styles.barraBusqueda}>
+                <div className={styles.buscadorWrapper}>
+                  <span className={styles.buscadorIcono}><IconSearch /></span>
+                  <input
+                    type="text"
+                    placeholder="Buscar clínica o barrio..."
+                    value={busqueda}
+                    onChange={handleBusquedaChange}
+                    onFocus={() => setSheetState("expanded")}
+                    className={styles.buscadorInput}
+                  />
+                  {busqueda && (
+                    <button className={styles.buscadorClear} onClick={() => setBusqueda("")}><IconX /></button>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.filtrosWrapper}>
+                <button className={`${styles.btnCercaMio} ${cercaMioActivo ? styles.btnCercaMioActivo : ""}`} onClick={handleCercaMio}>
+                  <IconPin /> Cerca mío
+                </button>
+                <button className={`${styles.btnFiltros} ${solo24hs ? styles.btnFiltrosActivo : ""}`} onClick={() => setSolo24hs((v) => !v)}>
+                  <IconAlert /> 24hs
+                </button>
+                <select value={filtroEsp} onChange={(e) => setFiltroEsp(e.target.value)} className={styles.select}>
+                  {ESPECIALIDADES.map((e) => (<option key={e} value={e}>{e}</option>))}
+                </select>
+                <select value={radioKm} onChange={handleRadioChange} className={styles.select}>
+                  {RADIOS.map((r) => (<option key={r} value={r}>{r} km</option>))}
+                </select>
               </div>
             </div>
-          ) : (
-            <div className={styles.paneles}>
 
-              {/* ── Mapa ── */}
-              <div className={styles.mapaWrapper}>
-                {sinResultados && (
-                  <div className={styles.sinResultados}>
-                    <p>No encontramos veterinarias en un radio de {radioKm} km.</p>
-                    <button
-                      type="button"
-                      className={styles.btnAmpliarBusqueda}
-                      onClick={handleAmpliarBusqueda}
-                    >
-                      Ampliar búsqueda a 50 km
-                    </button>
-                  </div>
-                )}
-                <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}>
-                  <Map
-                    key={mapKey}
-                    defaultCenter={miUbicacion}
-                    defaultZoom={14}
-                    mapId="DEMO_MAP_ID"
-                    onClick={handleCerrarBubble}
-                    clickableIcons={false}
-                    className={styles.mapa}
-                  >
-                    {geoAceptada && (
-                      <AdvancedMarker position={miUbicacion} title="Vos estás aquí">
-                        <div className={styles.markerUsuarioWrapper}>
-                          <div className={styles.markerUsuario} />
-                          <div className={styles.markerUsuarioEtiqueta}>Vos estás aquí</div>
-                        </div>
-                      </AdvancedMarker>
-                    )}
-
-                    {veterinarias.map((vet) => (
-                      <AdvancedMarker
-                        key={vet._id}
-                        position={getPosition(vet)}
-                        title={vet.nombre}
-                        onClick={() => handleMarkerClick(vet)}
-                      >
-                        <div className={`${styles.markerVete} ${vetDestacada === vet._id ? styles.markerVeteActivo : ""}`}>
-                          <span>🏥</span>
-                        </div>
-                      </AdvancedMarker>
-                    ))}
-
-                    {vetSeleccionada && (
-                      <AdvancedMarker position={getPosition(vetSeleccionada)}>
-                        <div className={styles.infoBubble} onClick={(e) => e.stopPropagation()}>
-                          <button className={styles.infoBubbleCerrar} onClick={handleCerrarBubble}>
-                            <IconX />
-                          </button>
-                          <p className={styles.infoBubbleNombre}>{vetSeleccionada.nombre}</p>
-                          <p className={styles.infoBubbleDireccion}>📍 {vetSeleccionada.direccion}</p>
-                          <p className={styles.infoBubbleDistancia}>
-                            🗺 {calcularDistancia(
-                              miUbicacion.lat, miUbicacion.lng,
-                              getPosition(vetSeleccionada).lat,
-                              getPosition(vetSeleccionada).lng
-                            )} km
-                          </p>
-                          {vetSeleccionada.especialidades?.length > 0 && (
-                            <div className={styles.infoBubbleTags}>
-                              {vetSeleccionada.especialidades.slice(0, 3).map((esp) => (
-                                <span key={esp} className={styles.tag}>{esp}</span>
-                              ))}
-                            </div>
-                          )}
-                          <button
-                            className={styles.infoBubbleBtn}
-                            onClick={() => irAlPerfil(vetSeleccionada._id)}
-                          >
-                            Ver veterinaria →
-                          </button>
-                        </div>
-                      </AdvancedMarker>
-                    )}
-                  </Map>
-                </APIProvider>
-              </div>
-
-              {/* ── Panel derecho ── */}
-              <div className={styles.panel}>
-
-                {/* Filtros */}
-                <div className={styles.filtros}>
-                  <select
-                    value={filtroEsp}
-                    onChange={(e) => setFiltroEsp(e.target.value)}
-                    aria-label="Filtrar por especialidad"
-                    className={styles.select}
-                  >
-                    {ESPECIALIDADES.map((e) => (
-                      <option key={e} value={e}>{e}</option>
-                    ))}
-                  </select>
-
-                  <select
-                    value={radioKm}
-                    onChange={handleRadioChange}
-                    aria-label="Filtrar por radio"
-                    className={styles.select}
-                  >
-                    {RADIOS.map((r) => (
-                      <option key={r} value={r}>{r} km</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Error */}
-                {error && (
-                  <p className={`${styles.estadoMensaje} ${styles.estadoError}`}>{error}</p>
-                )}
-
-                {/* Resumen y lista */}
-                {!error && (
-                  <>
-                    {busquedaAmpliada && veterinariasFiltradas.length > 0 && (
-                      <p className={styles.avisoAmpliada}>
-                        Mostrando resultados en un radio ampliado de 50 km.
+            <section className={styles.vetSheetContent}>
+              {isLoading ? (
+                <p className={styles.estadoMensaje}>Buscando veterinarias...</p>
+              ) : error ? (
+                <p className={`${styles.estadoMensaje} ${styles.estadoError}`}>{error}</p>
+              ) : (
+                <>
+                  {busquedaAmpliada && veterinariasFiltradas.length > 0 && (
+                    <p className={styles.avisoAmpliada}>Mostrando resultados en un radio ampliado de 50 km.</p>
+                  )}
+                  <p className={styles.resumen}>
+                    {abiertas} clínica{abiertas !== 1 ? "s" : ""} abierta{abiertas !== 1 ? "s" : ""} · {veterinariasFiltradas.length} en total
+                  </p>
+                  
+                  <div className={styles.lista}>
+                    {veterinariasFiltradas.map((vet) => {
+                      const pos = getPosition(vet);
+                      return (
+                        <VetCard
+                          key={vet._id}
+                          vet={vet}
+                          activa={vetDestacada === vet._id}
+                          abierta={estaAbierta(vet)}
+                          distancia={calcularDistancia(miUbicacion.lat, miUbicacion.lng, pos.lat, pos.lng)}
+                          onClick={() => handleCardClick(vet)}
+                          onVerDetalle={() => irAlPerfil(vet._id)}
+                        />
+                      );
+                    })}
+                    {veterinariasFiltradas.length === 0 && (
+                      <p className={styles.sinResultadosLista}>
+                        No hay veterinarias que coincidan con los filtros aplicados.
                       </p>
                     )}
-                    <p className={styles.resumen}>
-                      {abiertas} clínica{abiertas !== 1 ? "s" : ""} abierta{abiertas !== 1 ? "s" : ""} · {veterinariasFiltradas.length} en total
-                    </p>
-                    <div className={styles.lista}>
-                      {veterinariasFiltradas.map((vet) => {
-                        const pos = getPosition(vet);
-                        return (
-                          <VetCard
-                            key={vet._id}
-                            vet={vet}
-                            activa={vetDestacada === vet._id}
-                            abierta={estaAbierta(vet)}
-                            distancia={calcularDistancia(miUbicacion.lat, miUbicacion.lng, pos.lat, pos.lng)}
-                            onClick={() => handleCardClick(vet)}
-                            onVerDetalle={() => irAlPerfil(vet._id)}
-                          />
-                        );
-                      })}
-                      {veterinariasFiltradas.length === 0 && (
-                        <p className={styles.sinResultadosLista}>
-                          No hay veterinarias que coincidan con los filtros aplicados.
-                        </p>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
+                  </div>
+                </>
+              )}
+            </section>
+          </div>
         </main>
       </div>
     </div>

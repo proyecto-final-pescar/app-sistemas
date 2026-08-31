@@ -43,16 +43,43 @@ export const recibirWebhook = async (req, res) => {
 
     // 3. Solo procesamos pagos aprobados
     if (pagoMP.status !== 'approved') {
-      // Actualizamos el estado del pago en la BD si existe
-      await Pago.findOneAndUpdate(
-        { idPago: String(idPago) },
+      const metadataPagoId = pagoMP.metadata?.pago_id || pagoMP.metadata?.pagoId;
+      const turnoId = pagoMP.external_reference
+        || pagoMP.metadata?.turno_id
+        || pagoMP.metadata?.turnoId;
+
+      let pagoExistente = await Pago.findOne({ idPago: String(idPago) });
+
+      if (!pagoExistente && metadataPagoId) {
+        pagoExistente = await Pago.findById(metadataPagoId);
+      }
+
+      if (!pagoExistente && turnoId) {
+        pagoExistente = await Pago.findOne({ turnoId }).sort({ createdAt: -1 });
+      }
+
+      if (!pagoExistente) {
+        return res.status(404).json({ message: 'No se encontró el pago asociado a la notificación' });
+      }
+
+      const metodoPago = METODO_PAGO_MAP[pagoMP.payment_type_id] || null;
+      const pagoGuardado = await Pago.findByIdAndUpdate(
+        pagoExistente._id,
         {
+          idPago: String(idPago),
+          metodoPago,
           estado: ESTADO_MP_A_PAGO[pagoMP.status] || 'pendiente',
-          motivoRechazo: pagoMP.status_detail || null,
+          motivoRechazo: pagoMP.status === 'rejected' ? pagoMP.status_detail || null : null,
           metadata: pagoMP,
-        }
+        },
+        { new: true, runValidators: true }
       );
-      return res.status(200).json({ message: `Pago con estado ${pagoMP.status} registrado` });
+
+      return res.status(200).json({
+        message: `Pago con estado ${pagoMP.status} registrado`,
+        turnoId: pagoGuardado.turnoId,
+        pagoId: pagoGuardado._id,
+      });
     }
 
     // 4. Obtenemos el turnoId desde external_reference
@@ -79,7 +106,7 @@ export const recibirWebhook = async (req, res) => {
     // Si esta notificación ya fue procesada antes (MercadoPago puede reenviar
     // el mismo webhook más de una vez), no hacemos nada más.
     const pagoExistentePorIdPago = await Pago.findOne({ idPago: String(idPago) });
-    if (pagoExistentePorIdPago) {
+    if (pagoExistentePorIdPago?.estado === 'aprobado') {
       return res.status(200).json({
         message: 'Notificación ya procesada anteriormente',
         turnoId,
@@ -103,11 +130,13 @@ export const recibirWebhook = async (req, res) => {
 
     // Buscamos el registro pendiente que se creó al iniciar el checkout
     // (crearPreferenciaPago). Si no existe (caso raro), lo creamos ahora.
-    let pagoGuardado = await Pago.findOneAndUpdate(
-      { turnoId: turno._id, estado: 'pendiente' },
-      datosPago,
-      { new: true }
-    );
+    let pagoGuardado = pagoExistentePorIdPago
+      ? await Pago.findByIdAndUpdate(pagoExistentePorIdPago._id, datosPago, { new: true })
+      : await Pago.findOneAndUpdate(
+        { turnoId: turno._id, estado: 'pendiente' },
+        datosPago,
+        { new: true }
+      );
 
     if (!pagoGuardado) {
       pagoGuardado = await Pago.create(datosPago);
