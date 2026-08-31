@@ -22,14 +22,13 @@ export const login = async (req, res) => {
     if (!esValida) {
       return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
     }
-
-    if (user.baneado) {
+    
+    if (!user.active) {
       return res.status(403).json({
-        motivo: "cuenta_baneada",
-        mensaje: "Tu cuenta ha sido suspendida por el administrador."
+        motivo: "cuenta_desactivada",
+        mensaje: "Tu cuenta ha sido desactivada."
       });
     }
-    
     const token = jwt.sign(
       {
         id: user._id,

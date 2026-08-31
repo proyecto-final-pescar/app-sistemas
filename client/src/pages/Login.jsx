@@ -106,8 +106,8 @@ function Login() {
       const responseData = requestError.response?.data;
       const statusCode = requestError.response?.status;
 
-      if (statusCode === 403 && (responseData?.motivo === "cuenta_baneada" || responseData?.mensaje?.includes("baneada"))) {
-        setErrorBaneado(responseData?.mensaje || "Tu cuenta ha sido suspendida por el administrador.");
+      if (statusCode === 403 && responseData?.motivo === "cuenta_desactivada") {
+        setErrorBaneado(responseData?.mensaje || "Tu cuenta ha sido desactivada.");
       } else if (responseData) {
         setError(getErrorMessage(responseData));
       } else if (requestError.request) {
@@ -156,7 +156,7 @@ function Login() {
                 value={formData.email}
                 onChange={handleChange}
                 autoComplete="email"
-                placeholder="ana@mypet.com"
+                placeholder="user@mypet.com"
                 required
                 className={styles.input}
               />

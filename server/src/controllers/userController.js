@@ -208,7 +208,7 @@ export const crearUsuarioAdmin = async (req, res) => {
     }
 
     // Validar roles permitidos
-    const rolesPermitidos = ['administrador', 'tutor', 'veterinaria', 'dueno'];
+    const rolesPermitidos = ['administrador', 'veterinaria', 'dueno'];
     if (!rolesPermitidos.includes(role)) {
         validaciones.push(`El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}.`);
     }
@@ -389,7 +389,7 @@ export const actualizarUsuarioAdmin = async (req, res) => {
         }
 
         if (role !== undefined) {
-            const rolesPermitidos = ['administrador', 'tutor', 'veterinaria', 'dueno'];
+            const rolesPermitidos = ['administrador', 'veterinaria', 'dueno'];
             if (!rolesPermitidos.includes(role)) {
                 validaciones.push(`El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}.`);
             } else {

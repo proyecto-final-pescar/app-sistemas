@@ -9,8 +9,14 @@ const LogoutModal = ({ children, onConfirm }) => {
 
   const handleConfirm = async () => {
     setConfirmando(true);
-    await onConfirm();
-    setConfirmando(false);
+    try {
+      await onConfirm();
+      setAbierto(false);
+    } catch (error) {
+      console.error("Error en logout:", error);
+    } finally {
+      setConfirmando(false);
+    }
   };
 
   const handleClick = () => {
