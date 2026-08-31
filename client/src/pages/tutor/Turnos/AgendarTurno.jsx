@@ -585,63 +585,59 @@ const AgendarTurnos = () => {
                   </div>
                 ) : (
                   <div className={styles.calendarioContainer}>
-                    <div className={styles.diasHeader}>
-                      <div className={styles.espacioHora}></div>
-                      {diasSemana.map((dia) => (
-                        <div
-                          key={dia.fechaStr}
-                          className={`${styles.diaColumna} ${dia.activo ? styles.diaColumnaActivo : ""
-                            }`}
-                        >
-                          <span className={styles.diaNombre}>{dia.nom}</span>
-                          <span className={styles.diaNumero}>{dia.num}</span>
-                          <span className={styles.diaMes}>{dia.mes}</span>
-                        </div>
-                      ))}
-                    </div>
+                    <div className={styles.calendarioScrollHorizontal}>
+  <div className={styles.calendarioContenido}>
 
-                    <div className={styles.gridHorariosScroll}>
-                      {horasVisibles.length === 0 ? (
-                        <p className={styles.sinTurnosText}>
-                          No hay turnos disponibles para este servicio en esta semana.
-                        </p>
-                      ) : (
-                        horasVisibles.map((hora) => (
-                          <div key={hora} className={styles.filaHorario}>
-                            <span className={styles.horaLabel}>{hora}</span>
-                            {diasSemana.map((dia) => {
-                              const opciones =
-                                turnosPorDiaYHora[dia.fechaStr]?.[hora] || [];
-                              const disponible = opciones.length > 0;
+    <div className={styles.diasHeader}>
+      <div className={styles.espacioHora}></div>
 
-                              return (
-                                <button
-                                  key={`${dia.fechaStr}-${hora}`}
-                                  type="button"
-                                  className={`${styles.slotTurno} ${disponible
-                                    ? styles.slotDisponible
-                                    : styles.slotNoDisponible
-                                    }`}
-                                  disabled={!disponible}
-                                  onClick={() => handleSlotClick(dia, hora)}
-                                  title={
-                                    disponible
-                                      ? `${opciones.length} profesional(es) disponible(s)`
-                                      : undefined
-                                  }
-                                >
-                                  {disponible ? (
-                                    <span style={{ fontWeight: "bold" }}>✓</span>
-                                  ) : (
-                                    <span>-</span>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ))
-                      )}
-                    </div>
+      {diasSemana.map((dia) => (
+        <div
+          key={dia.fechaStr}
+          className={`${styles.diaColumna} ${
+            dia.activo ? styles.diaColumnaActivo : ""
+          }`}
+        >
+          <span className={styles.diaNombre}>{dia.nom}</span>
+          <span className={styles.diaNumero}>{dia.num}</span>
+          <span className={styles.diaMes}>{dia.mes}</span>
+        </div>
+      ))}
+    </div>
+
+    <div className={styles.gridHorariosScroll}>
+      {horasVisibles.map((hora) => (
+        <div key={hora} className={styles.filaHorario}>
+          <span className={styles.horaLabel}>{hora}</span>
+
+          {diasSemana.map((dia) => {
+            const opciones =
+              turnosPorDiaYHora[dia.fechaStr]?.[hora] || [];
+
+            const disponible = opciones.length > 0;
+
+            return (
+              <button
+                key={`${dia.fechaStr}-${hora}`}
+                type="button"
+                className={`${styles.slotTurno} ${
+                  disponible
+                    ? styles.slotDisponible
+                    : styles.slotNoDisponible
+                }`}
+                disabled={!disponible}
+                onClick={() => handleSlotClick(dia, hora)}
+              >
+                {disponible ? "✓" : "-"}
+              </button>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+
+  </div>
+</div>
 
                     <div className={styles.leyendaCalendario}>
                       <div className={styles.leyendaItem}>

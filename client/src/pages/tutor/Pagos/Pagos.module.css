@@ -102,3 +102,32 @@
 @keyframes girar {
   to { transform: rotate(360deg); }
 }
+
+@media (max-width: 767px) {
+  .shell {
+    padding: 20px 16px;
+    box-sizing: border-box;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 100%;
+    margin: 48px auto 0;
+    padding: 32px 20px;
+    box-sizing: border-box;
+  }
+
+  .titulo {
+    font-size: 20px;
+  }
+
+  .subtitulo,
+  .mensaje {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .card :global(.btn) {
+    width: 100%;
+  }
+}
