@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import TutorMenu from "./TutorMenu";
 import VeterinariaMenu from "./VeterinariaMenu";
 import AdminMenu from "./AdminMenu";
+import LogoutModal from "../ui/logout-modal/LogoutModal"; 
 import { useAuth } from "../../hooks/useAuth.js";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -49,6 +50,11 @@ const SidebarContenido = ({ onClose }) => {
   const nombreMostrado = usuario?.nombre || usuario?.email || "Usuario";
   const inicial = nombreMostrado.charAt(0).toUpperCase();
   const etiquetaRol = ETIQUETAS_ROL[rol] || "Usuario";
+
+  const handleLogoutConfirm = () => {
+  logout();
+  navigate("/login", { replace: true });
+};
 
   return (
     <>
@@ -106,19 +112,20 @@ const SidebarContenido = ({ onClose }) => {
             <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: "#1f1739", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nombreMostrado}</p>
             <p style={{ margin: 0, fontSize: "11px", color: "#8276ab" }}>{etiquetaRol}</p>
           </div>
-          <button
-            title="Cerrar sesión"
-            onClick={() => { logout(); navigate("/login", { replace: true }); }}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", flexShrink: 0, border: "none", borderRadius: "8px", backgroundColor: "transparent", color: "#c4b5fd", cursor: "pointer" }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff1f4"; e.currentTarget.style.color = "#a31d34"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#c4b5fd"; }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-          </button>
+         <LogoutModal onConfirm={handleLogoutConfirm}>
+            <button
+              title="Cerrar sesión"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", flexShrink: 0, border: "none", borderRadius: "8px", backgroundColor: "transparent", color: "#c4b5fd", cursor: "pointer" }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff1f4"; e.currentTarget.style.color = "#a31d34"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#c4b5fd"; }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          </LogoutModal>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>

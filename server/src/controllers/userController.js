@@ -204,10 +204,11 @@ export const crearUsuarioAdmin = async (req, res) => {
             validaciones.push('El formato del email no es válido.');
         }
 
-        // Validar contraseña (Min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número)
-        if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password)) {
-            validaciones.push('La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número.');
-        }
+    // Validar roles permitidos
+    const rolesPermitidos = ['administrador', 'veterinaria', 'dueno'];
+    if (!rolesPermitidos.includes(role)) {
+        validaciones.push(`El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}.`);
+    }
 
         // Validar roles permitidos
         const rolesPermitidos = ['administrador', 'tutor', 'veterinaria', 'dueno'];
@@ -399,7 +400,7 @@ export const actualizarUsuarioAdmin = async (req, res) => {
         }
 
         if (role !== undefined) {
-            const rolesPermitidos = ['administrador', 'tutor', 'veterinaria', 'dueno'];
+            const rolesPermitidos = ['administrador', 'veterinaria', 'dueno'];
             if (!rolesPermitidos.includes(role)) {
                 validaciones.push(`El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}.`);
             } else {

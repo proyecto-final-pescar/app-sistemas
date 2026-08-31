@@ -168,22 +168,22 @@ export const login = async (req, res) => {
     if (!esValida) {
       return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
     }
-
-    // Punto 4: mismo chequeo de cuenta suspendida en el login tradicional.
+    
     if (!user.active) {
-      return res.status(403).json({ mensaje: 'Tu cuenta está suspendida' })
-    }
-
-    // Cuenta registrada con email/contraseña que todavía no confirmó
-    // el correo. No aplica a cuentas creadas por Google (esas llegan
-    // ya verificadas por Google y nunca pasan por este flujo).
-    if (!user.verificado) {
       return res.status(403).json({
-        mensaje: 'Tu cuenta todavía no fue verificada. Revisá tu correo para activarla.'
-      })
+        motivo: "cuenta_desactivada",
+        mensaje: "Tu cuenta ha sido desactivada."
+      });
     }
-
-    const token = generarJwt(user)
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        role: user.role
+      },
+      process.env.JWT_SECRET || 'clave_secreta_temporal',
+      { expiresIn: '24h' }
+    )
 
     user.historialSesiones.push({ fecha: new Date() })
     await user.save()
@@ -210,6 +210,7 @@ export const forgotPassword = async (req, res) => {
         mensaje: 'Si el email está registrado, vas a recibir un correo con instrucciones'
       })
     }
+    
 
     const token = crypto.randomBytes(32).toString('hex')
 

@@ -14,13 +14,7 @@ function isTokenValid(payload) {
   return Date.now() < payload.exp * 1000; 
 }
 
-/**
- * @param {ReactNode} children - contenido protegido
- * @param {string[]} [allowedRoles] - roles permitidos para esta ruta
- *   (["dueno"], ["veterinaria"], ["administrador"]).
- *   Si no se pasa, solo exige estar logeado(cualquier rol entra)
- */
-const PrivateRoute = ({ children, allowedRoles }) => {
+  const PrivateRoute = ({ children, allowedRoles }) => {
   const location = useLocation();
   const token = localStorage.getItem('token');
   const payload = token ? decodeToken(token) : null;
@@ -29,11 +23,7 @@ const PrivateRoute = ({ children, allowedRoles }) => {
   const role = tokenValido ? (payload.role || payload.rol) : null;
   const rolPermitido = !allowedRoles || allowedRoles.includes(role);
 
-  // Sin token, token vencido/corrupto, o rol que no corresponde a esta
-  // ruta: en todos los casos mandamos a /login.
   if (!tokenValido || !rolPermitido) {
-    // Si había un token pero es inválido o no tiene el rol correcto,
-    // limpiamos el storage para no dejar un estado inconsistente.
     if (token) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -41,12 +31,14 @@ const PrivateRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // No renderizar nada si no hay token válido
+  if (!token) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
   return (
     <>
       {children}
-      {/* El chatbot está scopeado al JWT del tutor (rol "dueno") por
-          ahora. Si se habilita para veterinaria/administrador más
-          adelante, sacar esta condición y dejar solo <ChatBot />. */}
       {role === 'dueno' && <ChatBot />}
     </>
   );

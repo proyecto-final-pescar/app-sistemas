@@ -15,6 +15,7 @@ function Login() {
     password: "",
   });
   const [error, setError] = useState("");
+  const [errorBaneado, setErrorBaneado] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -63,6 +64,7 @@ function Login() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+    setErrorBaneado("");
     setIsLoading(true);
 
     try {
@@ -156,9 +158,12 @@ function Login() {
       await redirigirSegunRol(userData);
     } catch (requestError) {
       const responseData = requestError.response?.data;
+      const statusCode = requestError.response?.status;
 
-      if (responseData) {
-        setError(obtenerMensajeError(responseData));
+      if (statusCode === 403 && responseData?.motivo === "cuenta_desactivada") {
+        setErrorBaneado(responseData?.mensaje || "Tu cuenta ha sido desactivada.");
+      } else if (responseData) {
+        setError(getErrorMessage(responseData));
       } else if (requestError.request) {
         setError(
           "No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.",
@@ -215,41 +220,84 @@ function Login() {
                   className={styles.input}
                 />
               </span>
-            </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                autoComplete="email"
+                placeholder="user@mypet.com"
+                required
+                className={styles.input}
+              />
+            </span>
+          </label>
 
-            <label className={styles.field}>
-              <span className={styles.labelRow}>
-                <span className={styles.label}>Contraseña</span>
-                <a href="/forgot-password" className={styles.forgotLink}>
-                  ¿Olvidaste tu contraseña?
-                </a>
+          <label className={styles.field}>
+            <span className={styles.labelRow}>
+              <span className={styles.label}>Contraseña</span>
+              <a href="/forgot-password" className={styles.forgotLink}>
+                ¿Olvidaste tu contraseña?
+              </a>
+            </span>
+            <span className={styles.inputWrap}>
+              <span aria-hidden="true" className={styles.inputIcon}>
+                <LockIcon />
               </span>
-              <span className={styles.inputWrap}>
-                <span aria-hidden="true" className={styles.inputIcon}>
-                  <LockIcon />
-                </span>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  autoComplete="current-password"
-                  placeholder="Mínimo 8 caracteres"
-                  required
-                  className={styles.input}
-                />
-                <button
-                  type="button"
-                  aria-label={
-                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-                  }
-                  onClick={() => setShowPassword((currentValue) => !currentValue)}
-                  className={styles.passwordButton}
-                >
-                  <EyeIcon />
-                </button>
-              </span>
-            </label>
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                autoComplete="current-password"
+                placeholder="Mínimo 8 caracteres"
+                required
+                className={styles.input}
+              />
+              <button
+                type="button"
+                aria-label={
+                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                }
+                onClick={() => setShowPassword((currentValue) => !currentValue)}
+                className={styles.passwordButton}
+              >
+                <EyeIcon />
+              </button>
+            </span>
+          </label>
+
+          {errorBaneado && (
+            <div
+              role="alert"
+              aria-live="polite"
+              style={{
+                padding: "12px 16px",
+                marginBottom: "16px",
+                backgroundColor: "#fee2e2",
+                border: "1px solid #fca5a5",
+                borderRadius: "8px",
+                color: "#991b1b",
+                fontSize: "14px",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "10px",
+              }}
+            >
+              <span style={{ marginTop: "2px" }}>⚠️</span>
+              <span>{errorBaneado}</span>
+            </div>
+          )}
+
+          {error && !errorBaneado && (
+            <p role="alert" aria-live="polite" className={styles.error}>
+              {error}
+            </p>
+          )}
+
+          <button type="submit" disabled={isLoading} className={styles.button}>
+            {isLoading ? "Ingresando..." : "Ingresar  →"}
+          </button>
 
             {error && (
               <p role="alert" aria-live="polite" className={styles.error}>
