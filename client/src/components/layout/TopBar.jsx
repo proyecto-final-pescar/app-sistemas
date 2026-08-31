@@ -24,7 +24,7 @@ const TopBar = ({ title = "Dashboard" }) => {
         .topbar-root {
           display: flex;
         }
-        @media (max-width: 767px) {
+        @media (max-width: 1023px) {
           .topbar-root {
             display: none;
           }

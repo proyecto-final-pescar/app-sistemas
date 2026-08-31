@@ -72,7 +72,7 @@
 
 @media (max-width: 767px) {
   .burbuja {
-    right: 16px;
-    bottom: 185px; 
+    right: 12px;
+    bottom: 24px;
   }
 }

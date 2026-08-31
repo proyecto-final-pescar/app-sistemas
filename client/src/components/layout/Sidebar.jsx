@@ -248,12 +248,12 @@ const Sidebar = ({ title = "" }) => {
       </div>
 
       <style>{`
-        @media (max-width: 767px) {
+        @media (max-width: 1023px) {
           .sidebar-desktop { display: none !important; }
           .sidebar-mobile-topbar { display: flex !important; }
           .sidebar-mobile-overlay { display: block !important; }
         }
-        @media (min-width: 768px) {
+        @media (min-width: 1024px) {
           .sidebar-mobile-topbar { display: none !important; }
           .sidebar-mobile-drawer { display: none !important; }
           .sidebar-mobile-overlay { display: none !important; }
