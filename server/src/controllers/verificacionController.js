@@ -1,106 +1,117 @@
-import crypto from 'crypto';
-import User from '../models/User.js';
-import { sendVerificationEmail } from '../utils/mailer.js';
+import crypto from 'crypto'
+import prisma from '../../prisma/client.js'
+import { sendVerificationEmail } from '../utils/mailer.js'
 
-const TOKEN_VERIFICACION_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24hs
+const VERIFICACION_TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000 // 24hs
+
+const hashToken = (tokenPlano) =>
+  crypto.createHash('sha256').update(tokenPlano).digest('hex')
 
 export const verificarCuenta = async (req, res) => {
   try {
-    const { token } = req.query;
+    const { token } = req.query
 
     if (!token) {
       return res.status(400).json({
         code: 'INVALID',
         message: 'El enlace de verificación no es válido'
-      });
+      })
     }
 
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const tokenHash = hashToken(token)
 
-    // Se busca solo por el hash (sin filtrar por expiración todavía) para
-    // poder distinguir "no existe" de "existe pero venció" o "ya se usó".
-    const user = await User.findOne({ tokenVerificacion: tokenHash })
-      .select('+tokenVerificacion +tokenVerificacionExpires');
+    
+    const usuarioPassword = await prisma.usuario_password.findFirst({
+      where: { token_verificacion: tokenHash },
+      include: { usuario: true }
+    })
 
-    if (!user) {
+    if (!usuarioPassword) {
       return res.status(400).json({
         code: 'INVALID',
         message: 'El enlace de verificación no es válido'
-      });
+      })
     }
 
-    if (user.verificado) {
+    if (usuarioPassword.usuario.verificado) {
       return res.status(200).json({
         success: true,
         code: 'ALREADY_VERIFIED',
         message: 'Tu cuenta ya estaba verificada'
-      });
+      })
     }
 
-    if (user.tokenVerificacionExpires < Date.now()) {
+    if (!usuarioPassword.token_verificacion_expires || usuarioPassword.token_verificacion_expires < new Date()) {
       return res.status(400).json({
         code: 'EXPIRED',
         message: 'El enlace de verificación venció'
-      });
+      })
     }
 
-    user.verificado = true;
-    await user.save();
+    await prisma.usuario.update({
+      where: { usuario_id: usuarioPassword.usuario_id },
+      data: { verificado: true }
+    })
 
     return res.status(200).json({
       success: true,
       code: 'VERIFIED',
       message: 'Cuenta verificada con éxito'
-    });
+    })
   } catch (error) {
-    console.error('Error en verificarCuenta:', error);
+    console.error('Error en verificarCuenta:', error)
     return res.status(500).json({
       code: 'SERVER_ERROR',
       message: 'Error interno del servidor'
-    });
+    })
   }
-};
+}
 
 export const reenviarVerificacion = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email } = req.body
 
     if (!email) {
-      return res.status(400).json({ message: 'El email es requerido' });
+      return res.status(400).json({ message: 'El email es requerido' })
     }
 
-    // Misma respuesta siempre, exista o no la cuenta, esté o no verificada:
-    // no filtramos esa información por seguridad.
-    const respuestaGenerica = () => res.status(200).json({
-      success: true,
-      message: 'Si el email está registrado y pendiente de verificación, vas a recibir un correo con un nuevo enlace'
-    });
+    
+    const respuestaGenerica = () =>
+      res.status(200).json({
+        success: true,
+        message: 'Si el email está registrado y pendiente de verificación, vas a recibir un correo con un nuevo enlace'
+      })
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const usuario = await prisma.usuario.findUnique({
+      where: { email: email.toLowerCase() },
+      include: { usuario_password: true }
+    })
 
-    if (!user || user.verificado) {
-      return respuestaGenerica();
+    
+    if (!usuario || usuario.verificado || !usuario.usuario_password) {
+      return respuestaGenerica()
     }
 
-    const tokenVerificacion = crypto.randomBytes(32).toString('hex');
-    const tokenVerificacionHash = crypto
-      .createHash('sha256')
-      .update(tokenVerificacion)
-      .digest('hex');
+    const tokenVerificacion = crypto.randomBytes(32).toString('hex')
+    const tokenVerificacionHash = hashToken(tokenVerificacion)
 
-    user.tokenVerificacion = tokenVerificacionHash;
-    user.tokenVerificacionExpires = Date.now() + TOKEN_VERIFICACION_EXPIRATION_MS;
-    await user.save();
+    await prisma.usuario_password.update({
+      where: { usuario_id: usuario.usuario_id },
+      data: {
+        token_verificacion: tokenVerificacionHash,
+        token_verificacion_expires: new Date(Date.now() + VERIFICACION_TOKEN_EXPIRATION_MS)
+      }
+    })
 
     try {
-      await sendVerificationEmail(user.email, tokenVerificacion, user.name);
+      await sendVerificationEmail(usuario.email, tokenVerificacion, usuario.nombre)
     } catch (mailError) {
-      console.error('Error al reenviar el email de verificación:', mailError);
+      console.error('Error al reenviar el email de verificación:', mailError)
     }
 
-    return respuestaGenerica();
+    return respuestaGenerica()
   } catch (error) {
-    console.error('Error en reenviarVerificacion:', error);
-    return res.status(500).json({ message: 'Error interno del servidor' });
+    console.error('Error en reenviarVerificacion:', error)
+    return res.status(500).json({ message: 'Error interno del servidor' })
   }
-};
+}

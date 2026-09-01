@@ -13,13 +13,12 @@ function CompletarRegistroGoogle() {
   const location = useLocation();
   const { setUsuario } = useAuth();
 
-  const { googleCredential, nombre, email } = location.state || {};
+  const { googleCredential, nombre, apellido, email } = location.state || {};
 
   const [rol, setRol] = useState("");
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState(false);
 
-  // si no hay credencial de google se lo manda al login
   if (!googleCredential) {
     navigate("/login", { replace: true });
     return null;
@@ -74,10 +73,11 @@ function CompletarRegistroGoogle() {
       }
 
       const userData = {
-        id: user.id || user._id,
+        id: user.id,
         email: user.email,
-        nombre: user.name,
-        rol: user.role,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        rol: user.rol,
         fotoUrl: user.fotoUrl || "",
         asistenteVirtual: user.asistenteVirtual || "perro",
       };
@@ -128,7 +128,9 @@ function CompletarRegistroGoogle() {
             {nombre ? nombre.charAt(0).toUpperCase() : "?"}
           </div>
           <div>
-            <p className={styles.googleName}>{nombre}</p>
+            <p className={styles.googleName}>
+              {nombre} {apellido}
+            </p>
             <p className={styles.googleEmail}>{email}</p>
           </div>
         </div>

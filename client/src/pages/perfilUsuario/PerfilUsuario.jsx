@@ -4,6 +4,7 @@ import Sidebar from "../../components/layout/Sidebar";
 import TopBar from "../../components/layout/TopBar";
 import PanelDestacado from "../../components/ui/panel-destacado/PanelDestacado";
 import Button from "../../components/ui/button/Button";
+import Select from "../../components/ui/select/Select";
 import PersonajeBot from "../../components/chatbot/PersonajeBot";
 import InterfazChat from "../../components/chatbot/InterfazChat";
 import { useAuth } from "../../hooks/useAuth";
@@ -51,11 +52,13 @@ function PerfilUsuario() {
     name: "",
     email: "",
     telefono: "",
-    zona: "",
+    zonaId: "",
     fotoUrl: "",
   });
   const [fotoArchivo, setFotoArchivo] = useState(null);
   const [fotoPreview, setFotoPreview] = useState(null);
+
+  const [zonas, setZonas] = useState([]);
 
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -66,6 +69,20 @@ function PerfilUsuario() {
   const [guardandoAsistente, setGuardandoAsistente] = useState(false);
   const [errorAsistente, setErrorAsistente] = useState(null);
   const [exitoAsistente, setExitoAsistente] = useState(null);
+
+  useEffect(() => {
+    const fetchZonas = async () => {
+      try {
+        const { data } = await api.get("/zonas");
+        setZonas(data.data || []);
+      } catch (err) {
+        // Si falla, el select queda sin opciones pero no bloquea el resto del perfil.
+        console.error("No se pudieron cargar las zonas:", err);
+      }
+    };
+
+    fetchZonas();
+  }, []);
 
   useEffect(() => {
     if (!usuarioId) return;
@@ -82,7 +99,7 @@ function PerfilUsuario() {
           name: perfilData.nombre || "",
           email: perfilData.email || "",
           telefono: perfilData.telefono || "",
-          zona: perfilData.zona || "",
+          zonaId: perfilData.zonaId != null ? String(perfilData.zonaId) : "",
           fotoUrl: perfilData.fotoUrl || "",
         });
        
@@ -160,13 +177,22 @@ function PerfilUsuario() {
         name: formData.name,
         email: formData.email,
         telefono: formData.telefono,
-        zona: formData.zona,
+        zonaId: formData.zonaId === "" ? null : Number(formData.zonaId),
         fotoUrl: fotoUrlFinal,
       });
 
       const actualizado = data.data;
-      setPerfil((prev) => ({ ...prev, ...actualizado, nombre: actualizado.name }));
-      setFormData((prev) => ({ ...prev, fotoUrl: actualizado.fotoUrl || "" }));
+      setPerfil((prev) => ({
+        ...prev,
+        ...actualizado,
+        nombre: actualizado.name,
+        zona: actualizado.zona,
+      }));
+      setFormData((prev) => ({
+        ...prev,
+        fotoUrl: actualizado.fotoUrl || "",
+        zonaId: actualizado.zonaId != null ? String(actualizado.zonaId) : "",
+      }));
 
       if (fotoPreview) URL.revokeObjectURL(fotoPreview);
       setFotoPreview(null);
@@ -261,20 +287,17 @@ function PerfilUsuario() {
     }
 
     if (perfil.rol === "veterinaria") {
-      return (
-        <>
-          {perfil.veterinaria?.nombre && (
-            <span className={styles.badge}>🏥 {perfil.veterinaria.nombre}</span>
-          )}
-          {perfil.veterinaria?.especialidades?.map((esp) => (
-            <span key={esp} className={styles.badge}>{esp}</span>
-          ))}
-          {anioRegistro && (
-            <span className={styles.badge}>En el equipo desde {anioRegistro}</span>
-          )}
-        </>
-      );
-    }
+  return (
+    <>
+      {perfil.veterinaria?.nombre && (
+        <span className={styles.badge}>🏥 {perfil.veterinaria.nombre}</span>
+      )}
+      {anioRegistro && (
+        <span className={styles.badge}>En el equipo desde {anioRegistro}</span>
+      )}
+    </>
+  );
+}
 
     return anioRegistro ? (
       <span className={styles.badge}>Administrador/a desde {anioRegistro}</span>
@@ -285,6 +308,8 @@ function PerfilUsuario() {
   const tabsVisibles = TABS_BASE.filter(
     (tab) => tab.id !== "asistente" || perfil?.rol === "dueno"
   );
+
+  const opcionesZona = zonas.map((z) => ({ value: String(z.id), label: z.nombre }));
 
   if (cargando) {
     return (
@@ -399,10 +424,13 @@ function PerfilUsuario() {
                   <input id="telefono" type="tel" value={formData.telefono} onChange={handleChange("telefono")} />
                 </div>
 
-                <div className={styles.campo}>
-                  <label htmlFor="zona">Zona </label>
-                  <input id="zona" type="text" value={formData.zona} onChange={handleChange("zona")} />
-                </div>
+                <Select
+                  label="Zona"
+                  placeholder="Sin zona asignada"
+                  opciones={opcionesZona}
+                  value={formData.zonaId}
+                  onChange={handleChange("zonaId")}
+                />
               </div>
 
               <Button
