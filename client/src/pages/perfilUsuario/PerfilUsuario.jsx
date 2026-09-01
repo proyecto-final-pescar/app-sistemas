@@ -4,6 +4,7 @@ import Sidebar from "../../components/layout/Sidebar";
 import TopBar from "../../components/layout/TopBar";
 import PanelDestacado from "../../components/ui/panel-destacado/PanelDestacado";
 import Button from "../../components/ui/button/Button";
+import Select from "../../components/ui/select/Select";
 import PersonajeBot from "../../components/chatbot/PersonajeBot";
 import InterfazChat from "../../components/chatbot/InterfazChat";
 import { useAuth } from "../../hooks/useAuth";
@@ -48,14 +49,16 @@ function PerfilUsuario() {
   const [tabActiva, setTabActiva] = useState("personales");
   const [perfil, setPerfil] = useState(null);
   const [formData, setFormData] = useState({
-    name: "",
+    nombre: "",
     email: "",
     telefono: "",
-    zona: "",
+    zonaId: "",
     fotoUrl: "",
   });
   const [fotoArchivo, setFotoArchivo] = useState(null);
   const [fotoPreview, setFotoPreview] = useState(null);
+
+  const [zonas, setZonas] = useState([]);
 
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -66,6 +69,20 @@ function PerfilUsuario() {
   const [guardandoAsistente, setGuardandoAsistente] = useState(false);
   const [errorAsistente, setErrorAsistente] = useState(null);
   const [exitoAsistente, setExitoAsistente] = useState(null);
+
+  useEffect(() => {
+    const fetchZonas = async () => {
+      try {
+        const { data } = await api.get("/zonas");
+        setZonas(data.data || []);
+      } catch (err) {
+        // Si falla, el select queda sin opciones pero no bloquea el resto del perfil.
+        console.error("No se pudieron cargar las zonas:", err);
+      }
+    };
+
+    fetchZonas();
+  }, []);
 
   useEffect(() => {
     if (!usuarioId) return;
@@ -79,10 +96,10 @@ function PerfilUsuario() {
 
         setPerfil(perfilData);
         setFormData({
-          name: perfilData.nombre || "",
+          nombre: perfilData.nombre || "",
           email: perfilData.email || "",
           telefono: perfilData.telefono || "",
-          zona: perfilData.zona || "",
+          zonaId: perfilData.zonaId != null ? String(perfilData.zonaId) : "",
           fotoUrl: perfilData.fotoUrl || "",
         });
        
@@ -157,16 +174,25 @@ function PerfilUsuario() {
       }
 
       const { data } = await api.put("/usuarios/perfil", {
-        name: formData.name,
+        nombre: formData.nombre,
         email: formData.email,
         telefono: formData.telefono,
-        zona: formData.zona,
+        zonaId: formData.zonaId === "" ? null : Number(formData.zonaId),
         fotoUrl: fotoUrlFinal,
       });
 
       const actualizado = data.data;
-      setPerfil((prev) => ({ ...prev, ...actualizado, nombre: actualizado.name }));
-      setFormData((prev) => ({ ...prev, fotoUrl: actualizado.fotoUrl || "" }));
+      setPerfil((prev) => ({
+        ...prev,
+        ...actualizado,
+        nombre: actualizado.nombre,
+        zona: actualizado.zona,
+      }));
+      setFormData((prev) => ({
+        ...prev,
+        fotoUrl: actualizado.fotoUrl || "",
+        zonaId: actualizado.zonaId != null ? String(actualizado.zonaId) : "",
+      }));
 
       if (fotoPreview) URL.revokeObjectURL(fotoPreview);
       setFotoPreview(null);
@@ -174,7 +200,7 @@ function PerfilUsuario() {
 
       const usuarioActualizado = {
         ...usuario,
-        nombre: actualizado.name,
+        nombre: actualizado.nombre,
         email: actualizado.email,
         fotoUrl: actualizado.fotoUrl,
       };
@@ -261,20 +287,17 @@ function PerfilUsuario() {
     }
 
     if (perfil.rol === "veterinaria") {
-      return (
-        <>
-          {perfil.veterinaria?.nombre && (
-            <span className={styles.badge}>🏥 {perfil.veterinaria.nombre}</span>
-          )}
-          {perfil.veterinaria?.especialidades?.map((esp) => (
-            <span key={esp} className={styles.badge}>{esp}</span>
-          ))}
-          {anioRegistro && (
-            <span className={styles.badge}>En el equipo desde {anioRegistro}</span>
-          )}
-        </>
-      );
-    }
+  return (
+    <>
+      {perfil.veterinaria?.nombre && (
+        <span className={styles.badge}>🏥 {perfil.veterinaria.nombre}</span>
+      )}
+      {anioRegistro && (
+        <span className={styles.badge}>En el equipo desde {anioRegistro}</span>
+      )}
+    </>
+  );
+}
 
     return anioRegistro ? (
       <span className={styles.badge}>Administrador/a desde {anioRegistro}</span>
@@ -285,6 +308,8 @@ function PerfilUsuario() {
   const tabsVisibles = TABS_BASE.filter(
     (tab) => tab.id !== "asistente" || perfil?.rol === "dueno"
   );
+
+  const opcionesZona = zonas.map((z) => ({ value: String(z.id), label: z.nombre }));
 
   if (cargando) {
     return (
@@ -355,14 +380,14 @@ function PerfilUsuario() {
             <form className={styles.card} onSubmit={handleSubmit}>
               <div className={styles.avatarSeccion}>
                 {fotoMostrar ? (
-                  <img src={fotoMostrar} alt={formData.name} className={styles.avatarGrandeFoto} />
+                  <img src={fotoMostrar} alt={formData.nombre} className={styles.avatarGrandeFoto} />
                 ) : (
                   <div className={styles.avatarGrande}>
-                    {formData.name?.[0]?.toUpperCase() || "?"}
+                    {formData.nombre?.[0]?.toUpperCase() || "?"}
                   </div>
                 )}
                 <div>
-                  <h3 className={styles.nombreCard}>{formData.name}</h3>
+                  <h3 className={styles.nombreCard}>{formData.nombre}</h3>
                   <p className={styles.rolCard}>
                     {ETIQUETAS_ROL[perfil?.rol] || perfil?.rol} · Miembro desde{" "}
                     {perfil?.fechaRegistro
@@ -385,8 +410,8 @@ function PerfilUsuario() {
 
               <div className={styles.grid}>
                 <div className={styles.campo}>
-                  <label htmlFor="name">Nombre completo</label>
-                  <input id="name" type="text" value={formData.name} onChange={handleChange("name")} />
+                  <label htmlFor="nombre">Nombre completo</label>
+                  <input id="nombre" type="text" value={formData.nombre} onChange={handleChange("nombre")} />
                 </div>
 
                 <div className={styles.campo}>
@@ -399,10 +424,13 @@ function PerfilUsuario() {
                   <input id="telefono" type="tel" value={formData.telefono} onChange={handleChange("telefono")} />
                 </div>
 
-                <div className={styles.campo}>
-                  <label htmlFor="zona">Zona </label>
-                  <input id="zona" type="text" value={formData.zona} onChange={handleChange("zona")} />
-                </div>
+                <Select
+                  label="Zona"
+                  placeholder="Sin zona asignada"
+                  opciones={opcionesZona}
+                  value={formData.zonaId}
+                  onChange={handleChange("zonaId")}
+                />
               </div>
 
               <Button

@@ -4,6 +4,7 @@ import Veterinaria from '../models/Veterinaria.js';
 import Turno from '../models/Turno.js';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
+import prisma from '../../prisma/client.js'
 import { enviarEmail } from '../utils/mailer.js';
 import { armarEmailSuspensionCuenta } from '../templates/emailSuspensionCuenta.js';
 
@@ -13,7 +14,7 @@ const escapeRegex = (texto) =>
     texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // GET /usuarios: listado paginado de usuarios 
-//  panel "Gestión de Dueños"
+//  panel "Gestión de Dueños"  //no MIGRADO
 export const listarUsuarios = async (req, res) => {
     try {
         const {
@@ -105,79 +106,237 @@ export const listarUsuarios = async (req, res) => {
     }
 };
 
-// GET /usuarios/:id: devuelve el perfil de un usuario junto con sus mascotas
+
+//MIGRADOOOOOO  
 export const obtenerPerfilUsuario = async (req, res) => {
-    try {
-        const { id } = req.params; // El ID del usuario que viene en la URL
+  try {
+    const { id } = req.params
 
-        // Control de acceso: solo el propio usuario o un admin pueden ver el perfil
-        const esElMismoUsuario = req.user.id === id;
-        const esAdmin = req.user.role === 'administrador';
+    const esElMismoUsuario = req.user.id === id
+    const esAdmin = req.user.rol === 'administrador'
 
-        if (!esElMismoUsuario && !esAdmin) {
-            return res.status(403).json({
-                message: 'No tenés permisos para realizar esta acción.'
-            });
-        }
-
-        // Buscar el usuario por ID
-        const usuario = await User.findById(id);
-
-        if (!usuario) {
-            return res.status(404).json({
-                message: 'El recurso no existe.'
-            });
-        }
-
-        // Datos adicionales según el rol: mascotas para dueños,
-        // ficha de la clínica para veterinarias. Admin no tiene ninguno.
-        let mascotas = [];
-        let veterinaria = null;
-
-        if (usuario.role === 'dueno') {
-            mascotas = await Mascota.find({ dueñoId: id });
-        } else if (usuario.role === 'veterinaria') {
-            const vet = await Veterinaria.findOne({ usuarioId: id })
-                .select('nombre especialidades estado');
-            if (vet) {
-                veterinaria = {
-                    nombre: vet.nombre,
-                    especialidades: vet.especialidades,
-                    estado: vet.estado
-                };
-            }
-        }
-
-        // Armar la respuesta con los datos pedidos
-        res.status(200).json({
-            success: true,
-            data: {
-                id: usuario._id,
-                nombre: usuario.name,
-                email: usuario.email,
-                telefono: usuario.telefono || null,
-                zona: usuario.zona || null,
-                fotoUrl: usuario.fotoUrl || null,
-                rol: usuario.role,
-                active: usuario.active, //agregado 
-                fechaRegistro: usuario.createdAt,
-                mascotas: mascotas,
-                veterinaria: veterinaria
-            }
-        });
-
-    } catch (error) {
-        if (error.name === 'CastError') {
-            return res.status(400).json({
-                message: 'El id del usuario no es válido'
-            });
-        }
-        console.error('Error en GET /usuarios/:id:', error);
-        res.status(500).json({
-            message: 'Error interno del servidor'
-        });
+    if (!esElMismoUsuario && !esAdmin) {
+      return res.status(403).json({
+        message: 'No tenés permisos para realizar esta acción.'
+      })
     }
-};
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { usuario_id: id },
+      include: { rol: true, zona: true }
+    })
+
+    if (!usuario) {
+      return res.status(404).json({
+        message: 'El recurso no existe.'
+      })
+    }
+
+    let mascotas = []
+    let veterinaria = null
+
+    if (usuario.rol.nombre === 'dueno') {
+      const mascotasDb = await prisma.mascota.findMany({
+        where: { dueno_id: id, active: true },
+        include: { raza: { include: { especie: true } } },
+        orderBy: { nombre: 'asc' }
+      })
+
+      
+      mascotas = mascotasDb.map((m) => ({
+        _id: m.mascota_id,
+        nombre: m.nombre,
+        foto: m.foto,
+        especie: m.raza?.especie?.nombre || null
+      }))
+    } else if (usuario.rol.nombre === 'veterinaria') {
+      const vet = await prisma.veterinaria.findUnique({
+        where: { usuario_id: id },
+        include: { estado_veterinaria: true }
+      })
+
+      if (vet) {
+        
+        veterinaria = {
+          nombre: vet.nombre,
+          estado: vet.estado_veterinaria.nombre
+        }
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: usuario.usuario_id,
+        nombre: usuario.nombre,
+        apellido: usuario.apellido,
+        email: usuario.email,
+        telefono: usuario.telefono || null,
+        zona: usuario.zona?.nombre || null,
+        zonaId: usuario.zona_id,
+        fotoUrl: usuario.foto_url || null,
+        rol: usuario.rol.nombre,
+        active: usuario.active,
+        fechaRegistro: usuario.created_at,
+        asistenteVirtual: usuario.asistente_virtual_id === 'GAT' ? 'gato' : 'perro',
+        mascotas,
+        veterinaria
+      }
+    })
+  } catch (error) {
+    if (error.code === 'P2023') {
+      return res.status(400).json({
+        message: 'El id del usuario no es válido'
+      })
+    }
+    console.error('Error en GET /usuarios/:id:', error)
+    res.status(500).json({
+      message: 'Error interno del servidor'
+    })
+  }
+}
+
+///MIGRADOOO
+export const actualizarPerfilPropio = async (req, res) => {
+  try {
+    const usuarioId = req.user.id
+    const { nombre, email, telefono, zonaId, fotoUrl, asistenteVirtual } = req.body
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { usuario_id: usuarioId }
+    })
+
+    if (!usuario) {
+      return res.status(404).json({
+        success: false,
+        message: 'El usuario no existe.'
+      })
+    }
+
+    const validaciones = []
+    const data = {}
+
+    if (nombre !== undefined) {
+      if (nombre.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre.trim())) {
+        validaciones.push('El nombre debe tener al menos 3 caracteres y contener solo letras.')
+      } else {
+        data.nombre = nombre.trim()
+      }
+    }
+
+    if (email !== undefined) {
+      const emailLimpio = email.toLowerCase().trim()
+      if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(emailLimpio)) {
+        validaciones.push('El formato del email no es válido.')
+      } else {
+        const emailOcupado = await prisma.usuario.findFirst({
+          where: { email: emailLimpio, usuario_id: { not: usuarioId } }
+        })
+        if (emailOcupado) {
+          return res.status(409).json({
+            success: false,
+            message: 'Ese email ya está en uso por otra cuenta.'
+          })
+        }
+        data.email = emailLimpio
+      }
+    }
+
+    if (telefono !== undefined) {
+      const telefonoLimpio = telefono === null ? '' : telefono.trim()
+      if (telefonoLimpio === '') {
+        data.telefono = null
+      } else if (!/^[\d\s()+-]{6,20}$/.test(telefonoLimpio)) {
+        validaciones.push('El teléfono debe contener solo números, espacios, +, - o paréntesis (6 a 20 caracteres).')
+      } else {
+        data.telefono = telefonoLimpio
+      }
+    }
+
+    if (zonaId !== undefined) {
+      if (zonaId === null || zonaId === '') {
+        data.zona_id = null
+      } else {
+        const zonaIdNum = Number(zonaId)
+        if (!Number.isInteger(zonaIdNum)) {
+          validaciones.push('La zona seleccionada no es válida.')
+        } else {
+          const zonaExiste = await prisma.zona.findUnique({ where: { zona_id: zonaIdNum } })
+          if (!zonaExiste) {
+            validaciones.push('La zona seleccionada no existe.')
+          } else {
+            data.zona_id = zonaIdNum
+          }
+        }
+      }
+    }
+
+    if (fotoUrl !== undefined) {
+      data.foto_url = (fotoUrl === null || fotoUrl === '') ? null : fotoUrl.trim()
+    }
+
+    if (asistenteVirtual !== undefined) {
+      const idPorTipo = { perro: 'PER', gato: 'GAT' }
+      const asistenteId = idPorTipo[asistenteVirtual]
+      if (!asistenteId) {
+        validaciones.push(`El asistente debe ser uno de los siguientes: ${Object.keys(idPorTipo).join(', ')}.`)
+      } else {
+        data.asistente_virtual_id = asistenteId
+      }
+    }
+
+    if (validaciones.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Error de validación en los datos ingresados.',
+        errors: validaciones
+      })
+    }
+
+    const usuarioActualizado = await prisma.usuario.update({
+      where: { usuario_id: usuarioId },
+      data,
+      include: { rol: true, zona: true }
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: 'Perfil actualizado correctamente.',
+      data: {
+        id: usuarioActualizado.usuario_id,
+        nombre: usuarioActualizado.nombre,
+        apellido: usuarioActualizado.apellido,
+        email: usuarioActualizado.email,
+        telefono: usuarioActualizado.telefono,
+        fotoUrl: usuarioActualizado.foto_url,
+        rol: usuarioActualizado.rol.nombre,
+        zonaId: usuarioActualizado.zona_id,
+        zona: usuarioActualizado.zona?.nombre || null,
+        asistenteVirtual: usuarioActualizado.asistente_virtual_id === 'GAT' ? 'gato' : 'perro'
+      }
+    })
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(409).json({
+        success: false,
+        message: 'Ese email ya está en uso por otra cuenta.'
+      })
+    }
+    console.error('Error en actualizarPerfilPropio:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al intentar actualizar el perfil.'
+    })
+  }
+}
+/////
+
+
+
+
+
+
+//TODO: no migrado
 
 export const crearUsuarioAdmin = async (req, res) => {
     try {
@@ -474,121 +633,6 @@ export const actualizarUsuarioAdmin = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Error interno del servidor al intentar actualizar el usuario.'
-        });
-    }
-};
-
-// AUTO-EDICION DE PERFIL
-// El id se toma del token para que
-// sea imposible editar el perfil de otro usuario
-export const actualizarPerfilPropio = async (req, res) => {
-    try {
-        const usuarioId = req.user.id;
-        const { name, email, telefono, zona, fotoUrl, asistenteVirtual } = req.body;
-
-        const usuario = await User.findById(usuarioId);
-        if (!usuario) {
-            return res.status(404).json({
-                success: false,
-                message: 'El usuario no existe.'
-            });
-        }
-
-        const validaciones = [];
-
-        if (name !== undefined) {
-            if (name.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(name.trim())) {
-                validaciones.push('El nombre debe tener al menos 3 caracteres y contener solo letras.');
-            } else {
-                usuario.name = name.trim();
-            }
-        }
-
-        if (email !== undefined) {
-            const emailLimpio = email.toLowerCase().trim();
-            if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(emailLimpio)) {
-                validaciones.push('El formato del email no es válido.');
-            } else {
-                const emailOcupado = await User.findOne({ email: emailLimpio, _id: { $ne: usuarioId } });
-                if (emailOcupado) {
-                    return res.status(409).json({
-                        success: false,
-                        message: 'Ese email ya está en uso por otra cuenta.'
-                    });
-                }
-                usuario.email = emailLimpio;
-            }
-        }
-
-        if (telefono !== undefined) {
-            const telefonoLimpio = telefono === null ? '' : telefono.trim();
-            if (telefonoLimpio === '') {
-                usuario.telefono = undefined;
-            } else if (!/^[\d\s()+-]{6,20}$/.test(telefonoLimpio)) {
-                validaciones.push('El teléfono debe contener solo números, espacios, +, - o paréntesis (6 a 20 caracteres).');
-            } else {
-                usuario.telefono = telefonoLimpio;
-            }
-        }
-
-        if (zona !== undefined) {
-            const zonaLimpia = zona === null ? '' : zona.trim();
-            if (zonaLimpia !== '' && zonaLimpia.length < 3) {
-                validaciones.push('La zona debe tener al menos 3 caracteres.');
-            } else {
-                usuario.zona = zonaLimpia === '' ? undefined : zonaLimpia;
-            }
-        }
-        if (fotoUrl !== undefined) {
-
-            usuario.fotoUrl = (fotoUrl === null || fotoUrl === '') ? undefined : fotoUrl.trim();
-        }
-
-        if (asistenteVirtual !== undefined) {
-
-            const tiposPermitidos = ['perro', 'gato'];
-            if (!tiposPermitidos.includes(asistenteVirtual)) {
-                validaciones.push(`El asistente debe ser uno de los siguientes: ${tiposPermitidos.join(', ')}.`);
-            } else {
-                usuario.asistenteVirtual = asistenteVirtual;
-            }
-        }
-
-        if (validaciones.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Error de validación en los datos ingresados.',
-                errors: validaciones
-            });
-        }
-
-        await usuario.save();
-
-        const userResponse = usuario.toObject();
-        delete userResponse.password;
-        delete userResponse.resetPasswordToken;
-        delete userResponse.resetPasswordExpires;
-
-        return res.status(200).json({
-            success: true,
-            message: 'Perfil actualizado correctamente.',
-            data: userResponse
-        });
-
-    } catch (error) {
-        if (error.name === 'ValidationError') {
-            const messages = Object.values(error.errors).map(val => val.message);
-            return res.status(400).json({
-                success: false,
-                message: 'Error en los datos proporcionados',
-                errors: messages
-            });
-        }
-
-        console.error('Error en actualizarPerfilPropio:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Error interno del servidor al intentar actualizar el perfil.'
         });
     }
 };
