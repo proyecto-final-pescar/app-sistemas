@@ -7,6 +7,7 @@ import { enviarEmail, sendVerificationEmail } from '../utils/mailer.js'
 import { armarEmailResetPassword } from '../templates/emailResetPassword.js'
 import { validateEmail } from '../validators/emailValidator.js'
 import { validatePasswordStrength } from '../validators/passwordValidator.js'
+import { hashToken } from '../utils/tokens.js'
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
@@ -50,16 +51,11 @@ const respuestaUsuario = (token, usuario) => ({
   }
 })
 
-const hashToken = (tokenPlano) =>
-  crypto.createHash('sha256').update(tokenPlano).digest('hex')
-
-
-
 export const register = async (req, res) => {
   try {
-    const { nombre, apellido, email, password, role } = req.body
+    const { nombre, apellido, email, password, rol } = req.body
 
-    if (!nombre || !apellido || !email || !password || !role) {
+    if (!nombre || !apellido || !email || !password || !rol) {
       return res.status(400).json({ mensaje: 'Todos los campos son requeridos' })
     }
 
@@ -73,7 +69,7 @@ export const register = async (req, res) => {
       return res.status(400).json({ mensaje: passwordError })
     }
 
-    const rolId = ROL_ID_POR_NOMBRE[role]
+    const rolId = ROL_ID_POR_NOMBRE[rol]
     if (!rolId) {
       return res.status(400).json({ mensaje: 'Rol inválido' })
     }
@@ -183,7 +179,7 @@ export const login = async (req, res) => {
 
 export const googleAuth = async (req, res) => {
   try {
-    const { token, role } = req.body
+    const { token, rol } = req.body
 
     if (!token) {
       return res.status(400).json({ mensaje: 'Token de Google es requerido' })
@@ -239,8 +235,8 @@ export const googleAuth = async (req, res) => {
       return res.status(200).json(respuestaUsuario(jwtToken, usuario))
     }
 
-    // Usuario nuevo:  teiene que elegir un rol
-    if (!role || !['dueno', 'veterinaria'].includes(role)) {
+    // Usuario nuevo: tiene que elegir un rol
+    if (!rol || !['dueno', 'veterinaria'].includes(rol)) {
       return res.status(200).json({
         nuevoUsuario: true,
         nombre,
@@ -250,7 +246,7 @@ export const googleAuth = async (req, res) => {
       })
     }
 
-    const rolId = ROL_ID_POR_NOMBRE[role]
+    const rolId = ROL_ID_POR_NOMBRE[rol]
 
     try {
       usuario = await prisma.$transaction(async (tx) => {

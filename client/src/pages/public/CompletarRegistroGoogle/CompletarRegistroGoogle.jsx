@@ -61,7 +61,7 @@ function CompletarRegistroGoogle() {
     try {
       const { data } = await api.post("/auth/google", {
         token: googleCredential,
-        role: rol,
+        rol,
       });
 
       const token = data.token;

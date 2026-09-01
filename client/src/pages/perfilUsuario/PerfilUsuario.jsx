@@ -49,7 +49,7 @@ function PerfilUsuario() {
   const [tabActiva, setTabActiva] = useState("personales");
   const [perfil, setPerfil] = useState(null);
   const [formData, setFormData] = useState({
-    name: "",
+    nombre: "",
     email: "",
     telefono: "",
     zonaId: "",
@@ -96,7 +96,7 @@ function PerfilUsuario() {
 
         setPerfil(perfilData);
         setFormData({
-          name: perfilData.nombre || "",
+          nombre: perfilData.nombre || "",
           email: perfilData.email || "",
           telefono: perfilData.telefono || "",
           zonaId: perfilData.zonaId != null ? String(perfilData.zonaId) : "",
@@ -174,7 +174,7 @@ function PerfilUsuario() {
       }
 
       const { data } = await api.put("/usuarios/perfil", {
-        name: formData.name,
+        nombre: formData.nombre,
         email: formData.email,
         telefono: formData.telefono,
         zonaId: formData.zonaId === "" ? null : Number(formData.zonaId),
@@ -185,7 +185,7 @@ function PerfilUsuario() {
       setPerfil((prev) => ({
         ...prev,
         ...actualizado,
-        nombre: actualizado.name,
+        nombre: actualizado.nombre,
         zona: actualizado.zona,
       }));
       setFormData((prev) => ({
@@ -200,7 +200,7 @@ function PerfilUsuario() {
 
       const usuarioActualizado = {
         ...usuario,
-        nombre: actualizado.name,
+        nombre: actualizado.nombre,
         email: actualizado.email,
         fotoUrl: actualizado.fotoUrl,
       };
@@ -380,14 +380,14 @@ function PerfilUsuario() {
             <form className={styles.card} onSubmit={handleSubmit}>
               <div className={styles.avatarSeccion}>
                 {fotoMostrar ? (
-                  <img src={fotoMostrar} alt={formData.name} className={styles.avatarGrandeFoto} />
+                  <img src={fotoMostrar} alt={formData.nombre} className={styles.avatarGrandeFoto} />
                 ) : (
                   <div className={styles.avatarGrande}>
-                    {formData.name?.[0]?.toUpperCase() || "?"}
+                    {formData.nombre?.[0]?.toUpperCase() || "?"}
                   </div>
                 )}
                 <div>
-                  <h3 className={styles.nombreCard}>{formData.name}</h3>
+                  <h3 className={styles.nombreCard}>{formData.nombre}</h3>
                   <p className={styles.rolCard}>
                     {ETIQUETAS_ROL[perfil?.rol] || perfil?.rol} · Miembro desde{" "}
                     {perfil?.fechaRegistro
@@ -410,8 +410,8 @@ function PerfilUsuario() {
 
               <div className={styles.grid}>
                 <div className={styles.campo}>
-                  <label htmlFor="name">Nombre completo</label>
-                  <input id="name" type="text" value={formData.name} onChange={handleChange("name")} />
+                  <label htmlFor="nombre">Nombre completo</label>
+                  <input id="nombre" type="text" value={formData.nombre} onChange={handleChange("nombre")} />
                 </div>
 
                 <div className={styles.campo}>

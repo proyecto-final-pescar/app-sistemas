@@ -1,11 +1,9 @@
 import crypto from 'crypto'
 import prisma from '../../prisma/client.js'
 import { sendVerificationEmail } from '../utils/mailer.js'
+import { hashToken } from '../utils/tokens.js'
 
 const VERIFICACION_TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000 // 24hs
-
-const hashToken = (tokenPlano) =>
-  crypto.createHash('sha256').update(tokenPlano).digest('hex')
 
 export const verificarCuenta = async (req, res) => {
   try {

@@ -14,9 +14,9 @@ export const verificarAccesoRecurso = (Modelo) => async (req, res, next) => {
 
     req.recurso = recurso
 
-    if (req.user.role === 'administrador') return next()
+    if (req.user.rol === 'administrador') return next()
 
-    if (req.user.role === 'dueno') {
+    if (req.user.rol === 'dueno') {
       const mascota = await Mascota.findById(recurso.mascotaId)
       if (!mascota || mascota.dueñoId.toString() !== req.user.id) {
         return res.status(403).json({
@@ -27,7 +27,7 @@ export const verificarAccesoRecurso = (Modelo) => async (req, res, next) => {
       return next()
     }
 
-    if (req.user.role === 'veterinaria') {
+    if (req.user.rol === 'veterinaria') {
       const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id })
       if (!veterinaria) {
         return res.status(403).json({

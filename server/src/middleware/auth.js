@@ -16,16 +16,10 @@ const verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
 
-    // El JWT = hora emite un unico campo "rol" 
-    //  se mantiene  también "role" como alias
-    // por compatibilidad con middlewares que todava no migramos
-    //  sacar este
-    // alias cuando esos archivos se migren a Prisma. !!importante 
     req.user = {
       id: decoded.id,
       email: decoded.email,
-      rol: decoded.rol,
-      role: decoded.rol
+      rol: decoded.rol
     }
 
     next()

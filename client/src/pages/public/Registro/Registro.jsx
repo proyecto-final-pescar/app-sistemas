@@ -9,8 +9,8 @@ import api from "../../../services/api";
 import { reenviarVerificacion } from "../../../services/authService";
 import { useAuth } from "../../../hooks/useAuth.js";
 import { obtenerMensajeError } from "../../../utils/obtenerMensajeError.js";
-import { validateEmail } from "../../../validators/EmailValidator";
-import { validatePassword } from "../../../validators/PasswordValidator";
+import { validateEmail } from "../../../validators/EmailValidator.js";
+import { validatePassword } from "../../../validators/PasswordValidator.js";
 import "./Registro.css";
 
 function Registro() {
@@ -98,7 +98,7 @@ function Registro() {
         apellido: apellido.trim(),
         email: emailNormalizado,
         password,
-        role: rol,
+        rol,
       });
 
       setEmailRegistrado(emailNormalizado);
@@ -168,7 +168,7 @@ function Registro() {
         apellido: user.apellido,
         rol: user.rol,
         fotoUrl: user.fotoUrl || "",
-        asistenteVirtualId: user.asistenteVirtualId || "PER",
+        asistenteVirtual: user.asistenteVirtual || "perro",
       };
 
       localStorage.setItem("token", token);
@@ -177,7 +177,7 @@ function Registro() {
 
       const userRol = userData.rol;
       if (userRol === "dueno") {
-        navigate("/mascotas", { replace: true });
+        navigate("/home", { replace: true });
         return;
       }
 

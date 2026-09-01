@@ -200,8 +200,7 @@ export const obtenerPerfilUsuario = async (req, res) => {
 export const actualizarPerfilPropio = async (req, res) => {
   try {
     const usuarioId = req.user.id
-    
-    const { name, email, telefono, zonaId, fotoUrl, asistenteVirtual } = req.body
+    const { nombre, email, telefono, zonaId, fotoUrl, asistenteVirtual } = req.body
 
     const usuario = await prisma.usuario.findUnique({
       where: { usuario_id: usuarioId }
@@ -217,11 +216,11 @@ export const actualizarPerfilPropio = async (req, res) => {
     const validaciones = []
     const data = {}
 
-    if (name !== undefined) {
-      if (name.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(name.trim())) {
+    if (nombre !== undefined) {
+      if (nombre.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre.trim())) {
         validaciones.push('El nombre debe tener al menos 3 caracteres y contener solo letras.')
       } else {
-        data.nombre = name.trim()
+        data.nombre = nombre.trim()
       }
     }
 
@@ -256,7 +255,6 @@ export const actualizarPerfilPropio = async (req, res) => {
 
     if (zonaId !== undefined) {
       if (zonaId === null || zonaId === '') {
-        // Permite desasignar la zona explícitamente
         data.zona_id = null
       } else {
         const zonaIdNum = Number(zonaId)
@@ -306,7 +304,7 @@ export const actualizarPerfilPropio = async (req, res) => {
       message: 'Perfil actualizado correctamente.',
       data: {
         id: usuarioActualizado.usuario_id,
-        name: usuarioActualizado.nombre,
+        nombre: usuarioActualizado.nombre,
         apellido: usuarioActualizado.apellido,
         email: usuarioActualizado.email,
         telefono: usuarioActualizado.telefono,
@@ -314,7 +312,7 @@ export const actualizarPerfilPropio = async (req, res) => {
         rol: usuarioActualizado.rol.nombre,
         zonaId: usuarioActualizado.zona_id,
         zona: usuarioActualizado.zona?.nombre || null,
-        asistenteVirtualId: usuarioActualizado.asistente_virtual_id
+        asistenteVirtual: usuarioActualizado.asistente_virtual_id === 'GAT' ? 'gato' : 'perro'
       }
     })
   } catch (error) {
@@ -331,14 +329,7 @@ export const actualizarPerfilPropio = async (req, res) => {
     })
   }
 }
-
-
 /////
-
-
-
-
-
 
 
 
