@@ -84,11 +84,10 @@ function Registro() {
     try {
       setEnviando(true);
 
-      await api.post("/auth/register", {
-        name: nombre.trim(),
-        email: emailNormalizado,
-        password,
-        role: rol,
+      await api.post(`/auth/register/${rol}`, {
+         name: nombre.trim(),
+         email: emailNormalizado,
+         password,
       });
 
       // Ya no se redirige directo a /login: la cuenta recién creada no

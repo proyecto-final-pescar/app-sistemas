@@ -34,28 +34,103 @@ const horasHastaTurno = (turno) => {
 
 export const obtenerTurnos = async (req, res) => {
   try {
-    const { veterinariaId, usuarioId, estado, estadoDistinto, servicioId, fechaDesde, fechaHasta } = req.query;
+    const {
+      veterinariaId,
+      usuarioId,
+      estado,
+      estadoDistinto,
+      servicioId,
+      fechaDesde,
+      fechaHasta,
+    } = req.query;
 
-    if (!veterinariaId && !usuarioId) {
-      return res.status(400).json({ message: 'Falta veterinariaId o usuarioId' });
-    }
+    const usuarioAutenticadoId = req.user.id;
+    const rol = req.user.role;
 
     const filtro = {};
 
-    if (veterinariaId) filtro.veterinariaId = veterinariaId;
-    if (servicioId) filtro.servicioId = servicioId;
+    if (rol === 'administrador') {
+      // El administrador puede consultar datos de cualquier usuario o veterinaria.
+      if (!veterinariaId && !usuarioId) {
+        return res.status(400).json({
+          message: 'Falta veterinariaId o usuarioId',
+        });
+      }
 
-    if (usuarioId === 'me') filtro.usuarioId = req.user.id;
-    else if (usuarioId) filtro.usuarioId = usuarioId;
+      if (veterinariaId) {
+        filtro.veterinariaId = veterinariaId;
+      }
 
-    if (estadoDistinto) filtro.estado = { $ne: estadoDistinto };
-    else if (estado) filtro.estado = estado;
+      if (usuarioId === 'me') {
+        filtro.usuarioId = usuarioAutenticadoId;
+      } else if (usuarioId) {
+        filtro.usuarioId = usuarioId;
+      }
+    } else if (rol === 'veterinaria') {
+      // Una veterinaria solo puede consultar su propia agenda.
+      if (!veterinariaId) {
+        return res.status(400).json({
+          message: 'Falta veterinariaId',
+        });
+      }
+
+      const veterinaria = await Veterinaria.findOne({
+        _id: veterinariaId,
+        usuarioId: usuarioAutenticadoId,
+      });
+
+      if (!veterinaria) {
+        return res.status(403).json({
+          message: 'No tenés permisos para consultar los turnos de esta veterinaria.',
+        });
+      }
+
+      filtro.veterinariaId = veterinaria._id;
+
+      // Si además se filtra por usuario, se permite únicamente dentro
+      // de la agenda de la veterinaria autenticada.
+      if (usuarioId && usuarioId !== 'me') {
+        filtro.usuarioId = usuarioId;
+      }
+
+      if (usuarioId === 'me') {
+        filtro.usuarioId = usuarioAutenticadoId;
+      }
+    } else if (rol === 'dueno') {
+      // Un dueño nunca puede consultar turnos pertenecientes a otro usuario.
+      // Ignoramos cualquier usuarioId recibido y usamos siempre el autenticado.
+      filtro.usuarioId = usuarioAutenticadoId;
+
+      if (veterinariaId) {
+        filtro.veterinariaId = veterinariaId;
+      }
+    } else {
+      return res.status(403).json({
+        message: 'No tenés permisos para consultar turnos.',
+      });
+    }
+
+    if (servicioId) {
+      filtro.servicioId = servicioId;
+    }
+
+    if (estadoDistinto) {
+      filtro.estado = { $ne: estadoDistinto };
+    } else if (estado) {
+      filtro.estado = estado;
+    }
 
     // Rango de fechas: usado para traer la semana visible en la grilla
     if (fechaDesde || fechaHasta) {
       filtro.fecha = {};
-      if (fechaDesde) filtro.fecha.$gte = new Date(`${fechaDesde}T00:00:00`);
-      if (fechaHasta) filtro.fecha.$lte = new Date(`${fechaHasta}T23:59:59`);
+
+      if (fechaDesde) {
+        filtro.fecha.$gte = new Date(`${fechaDesde}T00:00:00`);
+      }
+
+      if (fechaHasta) {
+        filtro.fecha.$lte = new Date(`${fechaHasta}T23:59:59`);
+      }
     }
 
     const turnos = await Turno.find(filtro)
@@ -64,17 +139,22 @@ export const obtenerTurnos = async (req, res) => {
       .populate('veterinariaId', 'nombre direccion')
       .sort({ fecha: 1, hora: 1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      data: { turnos }
+      data: { turnos },
     });
-
   } catch (error) {
     if (error.name === 'CastError') {
-      return res.status(400).json({ message: 'El id enviado no es válido' });
+      return res.status(400).json({
+        message: 'El id enviado no es válido',
+      });
     }
+
     console.error('Error en obtenerTurnos:', error);
-    res.status(500).json({ message: 'Error interno del servidor' });
+
+    return res.status(500).json({
+      message: 'Error interno del servidor',
+    });
   }
 };
 
