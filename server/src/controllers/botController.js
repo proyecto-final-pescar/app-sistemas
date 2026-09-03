@@ -1,26 +1,25 @@
-import genAI from '../config/gemini.js';
-import { BOT_SYSTEM_PROMPT } from '../config/botPrompt.js';
+import Groq from 'groq-sdk';
+import { getBotPrompt } from '../config/botPrompt.js';
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
+});
 
 export const chatBot = async (req, res) => {
   try {
-    const { messages } = req.body;
+    const { messages, asistente = 'firu' } = req.body;
 
+    // Validaciones
     if (!messages) {
-      return res.status(400).json({
-        message: 'El historial de mensajes es requerido'
-      });
+      return res.status(400).json({ message: 'El historial de mensajes es requerido' });
     }
 
     if (!Array.isArray(messages)) {
-      return res.status(400).json({
-        message: 'El historial de mensajes debe ser un array'
-      });
+      return res.status(400).json({ message: 'El historial de mensajes debe ser un array' });
     }
 
     if (messages.length === 0) {
-      return res.status(400).json({
-        message: 'El historial de mensajes no puede estar vacío'
-      });
+      return res.status(400).json({ message: 'El historial de mensajes no puede estar vacío' });
     }
 
     const mensajesInvalidos = messages.some(
@@ -32,43 +31,37 @@ export const chatBot = async (req, res) => {
     );
 
     if (mensajesInvalidos) {
-      return res.status(400).json({
-        message: 'El formato de los mensajes es inválido'
-      });
+      return res.status(400).json({ message: 'El formato de los mensajes es inválido' });
     }
 
+    // Últimos 10 mensajes para no exceder tokens
     const ultimosMensajes = messages.slice(-10);
 
-    const historialGemini = ultimosMensajes.map((message) => ({
-      role: message.role === 'assistant' ? 'model' : 'user',
-      parts: [
-        {
-          text: message.content
-        }
-      ]
-    }));
+    // System prompt con la personalidad correcta según el asistente elegido
+    const systemPrompt = getBotPrompt(asistente);
 
-    const model = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
-      systemInstruction: BOT_SYSTEM_PROMPT
+    const completion = await groq.chat.completions.create({
+      // "llama-3.1-8b-instant" fue dado de baja por Groq el 16/08/2026
+      // (tanto free como developer tier). Reemplazado por gpt-oss-20b,
+      // que es el modelo que Groq recomienda como sucesor.
+      model: process.env.GROQ_MODEL || 'openai/gpt-oss-20b',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...ultimosMensajes
+      ],
+      temperature: 0.7,
+      max_tokens: 300
     });
 
-    const result = await model.generateContent({
-      contents: historialGemini
-    });
+    const textoRespuesta = completion.choices[0]?.message?.content ||
+      'No pude generar una respuesta en este momento.';
 
-    const response = result.response;
-    const textoRespuesta = response.text();
-
-    return res.status(200).json({
-      reply: textoRespuesta
-    });
+    return res.status(200).json({ reply: textoRespuesta });
 
   } catch (error) {
     console.error('Error en chatBot:', error);
-
     return res.status(500).json({
-      reply: 'Pety no pudo responder en este momento. Intentá nuevamente en unos minutos.'
+      reply: 'El asistente no pudo responder en este momento. Intentá nuevamente en unos minutos.'
     });
   }
 };
