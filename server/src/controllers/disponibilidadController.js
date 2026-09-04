@@ -1,23 +1,20 @@
 import prisma from '../../prisma/client.js'
 
-// Mapea Date.getDay() (0=domingo...6=sábado) a los códigos fijos de
-// dia_semana definidos en el seed.
 const CODIGO_DIA_SEMANA = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB']
 const NOMBRE_DIA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
 
+const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
+
 // GET /disponibilidad/:veterinariaId?fecha=YYYY-MM-DD&servicioId=opcional
 //
-// A diferencia de la versión anterior, esto ya NO genera horarios al vuelo
-// a partir del horario de atención: devuelve los turnos que la veterinaria
-// ya cargó como disponibles (estado 'DIS') para esa fecha, vía
-// crearOfertaHoraria. Cada resultado incluye el turno_id necesario para
-// poder reservarlo después con reservarTurno.
+// OPCIÓN B: cada turno disponible ya tiene un único profesional fijo
+// (asignado desde que se creó vía crearOfertaHoraria) — ya no hay
+// "candidatos", así que la respuesta devuelve el profesional directo,
+// no un array.
 export const obtenerDisponibilidad = async (req, res) => {
   try {
     const { veterinariaId } = req.params
     const { fecha, servicioId } = req.query
-
-    // ── Validaciones (se mantienen igual que en la versión original) ──
 
     if (!fecha) {
       return res.status(400).json({ message: 'La fecha es requerida. Formato: ?fecha=YYYY-MM-DD' })
@@ -40,8 +37,6 @@ export const obtenerDisponibilidad = async (req, res) => {
       return res.status(400).json({ message: 'No podés consultar disponibilidad para fechas pasadas' })
     }
 
-    // ── Veterinaria activa ──
-
     const veterinaria = await prisma.veterinaria.findUnique({
       where: { veterinaria_id: veterinariaId }
     })
@@ -49,12 +44,6 @@ export const obtenerDisponibilidad = async (req, res) => {
     if (!veterinaria || veterinaria.estado_veterinaria_id !== 'ACT') {
       return res.status(404).json({ message: 'El recurso no existe.' })
     }
-
-    // ── Mensaje amigable si ese día ni siquiera atiende ──
-    // (Optativo: aporta contexto útil, pero ya no es la base del cálculo.
-    // Si por algún motivo no hay fila en horario_veterinaria para ese día,
-    // simplemente no se muestra este mensaje y se sigue con la consulta
-    // de turnos igual — no es bloqueante.)
 
     const codigoDia = CODIGO_DIA_SEMANA[fechaSolicitada.getDay()]
     const nombreDia = NOMBRE_DIA[fechaSolicitada.getDay()]
@@ -76,8 +65,6 @@ export const obtenerDisponibilidad = async (req, res) => {
       })
     }
 
-    // ── Turnos disponibles reales ──
-
     const filtro = {
       veterinaria_id: veterinariaId,
       fecha: new Date(`${fecha}T00:00:00`),
@@ -89,24 +76,18 @@ export const obtenerDisponibilidad = async (req, res) => {
       where: filtro,
       include: {
         servicio: { select: { servicio_id: true, nombre: true, precio: true } },
-        turno_profesional: {
-          include: {
-            profesional: { select: { profesional_id: true, nombre: true, apellido: true } }
-          }
-        }
+        profesional: { select: { profesional_id: true, nombre: true, apellido: true } }
       },
       orderBy: { hora_inicio: 'asc' }
     })
 
-    // Aplana turno_profesional a una lista simple de profesionales candidatos,
-    // que es lo que necesita el frontend para mostrar el selector al reservar.
     const data = turnosDisponibles.map((t) => ({
       turnoId: t.turno_id,
-      horaInicio: t.hora_inicio,
-      horaFin: t.hora_fin,
+      horaInicio: formatearHora(t.hora_inicio),
+      horaFin: formatearHora(t.hora_fin),
       servicio: t.servicio,
       montoServicio: t.monto_servicio,
-      profesionalesCandidatos: t.turno_profesional.map((tp) => tp.profesional)
+      profesional: t.profesional
     }))
 
     if (data.length === 0) {
@@ -116,7 +97,7 @@ export const obtenerDisponibilidad = async (req, res) => {
         data: {
           fecha,
           dia: nombreDia,
-          horarioAtencion: `${horarioDelDia.hora_desde} a ${horarioDelDia.hora_hasta}`,
+          horarioAtencion: `${formatearHora(horarioDelDia.hora_desde)} a ${formatearHora(horarioDelDia.hora_hasta)}`,
           turnosDisponibles: [],
           totalDisponibles: 0
         }
@@ -128,7 +109,7 @@ export const obtenerDisponibilidad = async (req, res) => {
       data: {
         fecha,
         dia: nombreDia,
-        horarioAtencion: `${horarioDelDia.hora_desde} a ${horarioDelDia.hora_hasta}`,
+        horarioAtencion: `${formatearHora(horarioDelDia.hora_desde)} a ${formatearHora(horarioDelDia.hora_hasta)}`,
         turnosDisponibles: data,
         totalDisponibles: data.length
       }

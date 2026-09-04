@@ -1,13 +1,12 @@
 import prisma from '../../prisma/client.js'
 
 // ─────────────────────────────────────────────────────────────
-// Reglas de negocio (idénticas a la versión Mongo)
+// Reglas de negocio
 // ─────────────────────────────────────────────────────────────
 const ANTICIPACION_MINIMA_HORAS = 10
 const PLAZO_PAGO_HORAS = 3          // siempre < ANTICIPACION_MINIMA_HORAS
 const HORAS_LIMITE_CANCELACION = 24 // solo aplica a turnos ya CONFIRMADOS
 
-// Códigos fijos de estado_turno (mnemotécnicos, definidos en el seed)
 const ESTADO = {
   DISPONIBLE: 'DIS',
   PENDIENTE: 'PEN',
@@ -25,14 +24,6 @@ const includeTurnoCompleto = {
 
 // ─────────────────────────────────────────────────────────────
 // Helpers de fecha/hora
-//
-// turno.hora_inicio / hora_fin son columnas `time` de Postgres.
-// Prisma las devuelve como Date ancladas al epoch (1970-01-01),
-// conservando solo horas/minutos en UTC. Esto está verificado
-// contra el comportamiento estándar de @db.Time, pero conviene
-// confirmarlo empíricamente con un console.log apenas se corra
-// contra la base real, por si la versión de Prisma que terminen
-// usando lo representa distinto.
 // ─────────────────────────────────────────────────────────────
 
 const combinarFechaHora = (fecha, horaTime) => {
@@ -51,7 +42,6 @@ const combinarFechaHora = (fecha, horaTime) => {
 
 const horasHasta = (fechaHora) => (fechaHora.getTime() - Date.now()) / (1000 * 60 * 60)
 
-// Convierte "HH:MM" a un valor compatible con una columna `time` de Postgres
 const horaStringATime = (horaStr) => {
   const [h, m] = horaStr.split(':').map(Number)
   return new Date(Date.UTC(1970, 0, 1, h, m, 0, 0))
@@ -62,6 +52,17 @@ const sumarMinutos = (horaTimeUTC, minutos) => {
   copia.setUTCMinutes(copia.getUTCMinutes() + minutos)
   return copia
 }
+
+// Postgres devuelve columnas `time` como Date ancladas al epoch (UTC).
+// Se formatea a "HH:MM" antes de mandar cualquier respuesta al frontend,
+// que sigue esperando ese formato simple (heredado de la versión Mongo).
+const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
+
+const formatearTurno = (turno) => ({
+  ...turno,
+  hora_inicio: formatearHora(turno.hora_inicio),
+  hora_fin: formatearHora(turno.hora_fin)
+})
 
 // ─────────────────────────────────────────────────────────────
 // GET /turnos
@@ -79,9 +80,6 @@ export const obtenerTurnos = async (req, res) => {
     if (veterinariaId) filtro.veterinaria_id = veterinariaId
     if (servicioId) filtro.servicio_id = servicioId
 
-    // turno no tiene columna usuario_id propia: el dueño de la reserva se
-    // deriva a través de mascota.dueno_id. Filtrar "mis turnos" implica
-    // filtrar por esa relación, no por un campo directo.
     if (usuarioId === 'me') {
       filtro.mascota = { dueno_id: req.user.id }
     } else if (usuarioId) {
@@ -103,7 +101,7 @@ export const obtenerTurnos = async (req, res) => {
       orderBy: [{ fecha: 'asc' }, { hora_inicio: 'asc' }]
     })
 
-    return res.status(200).json({ success: true, data: { turnos } })
+    return res.status(200).json({ success: true, data: { turnos: turnos.map(formatearTurno) } })
   } catch (error) {
     if (error.code === 'P2023') {
       return res.status(400).json({ message: 'El id enviado no es válido' })
@@ -122,10 +120,7 @@ export const obtenerTurnoPorId = async (req, res) => {
 
     const turno = await prisma.turno.findUnique({
       where: { turno_id: id },
-      include: {
-        ...includeTurnoCompleto,
-        mascota: { include: { raza: { include: { especie: true } } } }
-      }
+      include: includeTurnoCompleto
     })
 
     if (!turno) {
@@ -144,7 +139,7 @@ export const obtenerTurnoPorId = async (req, res) => {
       }
     }
 
-    return res.status(200).json({ success: true, data: turno })
+    return res.status(200).json({ success: true, data: formatearTurno(turno) })
   } catch (error) {
     if (error.code === 'P2023') {
       return res.status(400).json({ message: 'El id del turno no es válido' })
@@ -157,18 +152,17 @@ export const obtenerTurnoPorId = async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 // POST /turnos/:id/reservar
 //
-// A diferencia de la versión Mongo, acá NO se crea un turno nuevo:
-// el turno ya existe (lo creó la veterinaria vía crearOfertaHoraria,
-// en estado 'disponible' y sin profesional asignado todavía). Reservar
-// significa: elegir uno de los profesionales candidatos y pasar el
-// turno a 'pendiente', todo en una única operación atómica.
+// OPCIÓN B: el profesional queda fijo desde que la veterinaria lo crea
+// (vía crearOfertaHoraria) — cada profesional disponible es un turno
+// propio, no un candidato entre varios. Reservar ya no elige profesional,
+// solo transiciona el turno existente de 'disponible' a 'pendiente'.
 // ─────────────────────────────────────────────────────────────
 export const reservarTurno = async (req, res) => {
   try {
     const { turnoId } = req.params
-    const { profesionalId, mascotaId, motivo, notas } = req.body
+    const { mascotaId, motivo, notas } = req.body
 
-    if (!turnoId || !profesionalId || !mascotaId || !motivo) {
+    if (!turnoId || !mascotaId || !motivo) {
       return res.status(400).json({ message: 'Faltan datos obligatorios para reservar el turno' })
     }
 
@@ -186,29 +180,10 @@ export const reservarTurno = async (req, res) => {
     }
 
     // La mascota tiene que pertenecer a quien está reservando. Como turno
-    // ya no guarda usuario_id propio (el dueño se deriva de mascota.dueno_id),
-    // esta validación reemplaza lo que antes garantizaba implícitamente
-    // "usuarioId: req.user.id" al crear el documento.
+    // no tiene usuario_id propio, el dueño se deriva de mascota.dueno_id.
     const mascota = await prisma.mascota.findUnique({ where: { mascota_id: mascotaId } })
     if (!mascota || mascota.dueno_id !== req.user.id) {
       return res.status(403).json({ message: 'La mascota no te pertenece' })
-    }
-
-    // El profesional elegido tiene que ser uno de los candidatos habilitados
-    // para este turno (turno_profesional). Se valida acá, antes del intento
-    // de UPDATE, para dar un mensaje claro — la FK compuesta en la base
-    // (fk_turno_profesional_candidato) es la red de seguridad final si de
-    // todos modos se colara algo, pero no reemplaza este chequeo previo.
-    const esCandidato = await prisma.turno_profesional.findUnique({
-      where: {
-        // Nombre de campo compuesto por defecto de Prisma para
-        // @@id([turno_id, profesional_id]). Verificar contra el cliente
-        // generado — puede llamarse distinto según el orden de columnas.
-        turno_id_profesional_id: { turno_id: turnoId, profesional_id: profesionalId }
-      }
-    })
-    if (!esCandidato) {
-      return res.status(400).json({ message: 'El profesional elegido no está disponible para este turno' })
     }
 
     const fechaHoraTurno = combinarFechaHora(turno.fecha, turno.hora_inicio)
@@ -221,15 +196,12 @@ export const reservarTurno = async (req, res) => {
     const venceEn = new Date(Date.now() + PLAZO_PAGO_HORAS * 60 * 60 * 1000)
 
     // Compare-and-swap: reemplaza al findOneAndUpdate condicional de Mongo.
-    // updateMany (no update) porque necesitamos filtrar por estado además
-    // del PK — Prisma no permite eso en update() directo. Si count === 0,
-    // alguien más ganó la carrera (o ya no está en 'disponible').
+    // profesional_id NO se toca acá — ya viene fijo desde la creación.
     const resultado = await prisma.$transaction(async (tx) => {
       const actualizado = await tx.turno.updateMany({
         where: { turno_id: turnoId, estado_turno_id: ESTADO.DISPONIBLE },
         data: {
           estado_turno_id: ESTADO.PENDIENTE,
-          profesional_id: profesionalId,
           mascota_id: mascotaId,
           motivo,
           notas: notas || null,
@@ -237,14 +209,9 @@ export const reservarTurno = async (req, res) => {
         }
       })
 
-      if (actualizado.count === 0) {
-        return null
-      }
+      if (actualizado.count === 0) return null
 
-      return tx.turno.findUnique({
-        where: { turno_id: turnoId },
-        include: includeTurnoCompleto
-      })
+      return tx.turno.findUnique({ where: { turno_id: turnoId }, include: includeTurnoCompleto })
     })
 
     if (!resultado) {
@@ -253,21 +220,8 @@ export const reservarTurno = async (req, res) => {
       })
     }
 
-    return res.status(200).json({ success: true, data: { turno: resultado } })
+    return res.status(200).json({ success: true, data: { turno: formatearTurno(resultado) } })
   } catch (error) {
-    // Índice único parcial ix_turno_slot: el profesional elegido ya quedó
-    // asignado a otro turno en el mismo horario exacto (por otra fila de
-    // turno distinta, ej. otro servicio ofrecido en simultáneo). Es el
-    // segundo nivel de protección de concurrencia, más allá del propio
-    // turno_id.
-    if (error.code === 'P2002') {
-      return res.status(409).json({
-        message: 'Ese profesional ya no está disponible en ese horario. Elegí otro candidato u horario.'
-      })
-    }
-    if (error.code === 'P2003') {
-      return res.status(400).json({ message: 'Alguno de los ids enviados no es válido' })
-    }
     if (error.code === 'P2023') {
       return res.status(400).json({ message: 'Alguno de los ids enviados no es válido' })
     }
@@ -317,23 +271,18 @@ export const cancelarTurno = async (req, res) => {
         })
       }
 
-      // TODO(pago): acá se define si se devuelve el pago o queda como
-      // crédito — pendiente de S15-07 (pagos), que todavía no está migrado.
+      // TODO(pago): pendiente de S15-07 (pagos), todavía no migrado.
     }
 
-    // Libera el turno de vuelta al pool de slots disponibles. A diferencia
-    // de la versión Mongo (donde profesionalId quedaba fijo desde la
-    // creación), acá SÍ limpiamos profesional_id: el nuevo modelo permite
-    // varios profesionales candidatos por turno, así que al cancelar, el
-    // slot vuelve a estar abierto para cualquiera de los candidatos
-    // originales (turno_profesional no se toca, sigue conservando la
-    // lista de candidatos). Es una decisión de diseño que se desprende
-    // del propio schema, no una traducción literal del comportamiento viejo.
+    // Opción B: el turno pertenece a UN profesional fijo desde que se creó.
+    // Al cancelar, se libera de vuelta a 'disponible' con ese mismo
+    // profesional — NO se limpia profesional_id (a diferencia de la
+    // versión anterior con candidatos). Coincide con el comportamiento
+    // original de la versión Mongo.
     const turnoLiberado = await prisma.turno.update({
       where: { turno_id: id },
       data: {
         estado_turno_id: ESTADO.DISPONIBLE,
-        profesional_id: null,
         mascota_id: null,
         motivo: null,
         notas: null,
@@ -344,7 +293,7 @@ export const cancelarTurno = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: 'Turno cancelado y horario liberado correctamente',
-      data: { turno: turnoLiberado }
+      data: { turno: formatearTurno(turnoLiberado) }
     })
   } catch (error) {
     if (error.code === 'P2023') {
@@ -364,7 +313,6 @@ export const liberarTurnosVencidos = async () => {
       where: { estado_turno_id: ESTADO.PENDIENTE, vence_en: { lte: new Date() } },
       data: {
         estado_turno_id: ESTADO.DISPONIBLE,
-        profesional_id: null,
         mascota_id: null,
         motivo: null,
         notas: null,
@@ -383,11 +331,11 @@ export const liberarTurnosVencidos = async () => {
 // ─────────────────────────────────────────────────────────────
 // POST /turnos/oferta — la veterinaria carga horarios disponibles
 //
-// Diferencia clave respecto de la versión Mongo: acá se crea UN turno
-// por slot (no uno por profesional), y todos los profesionales que
-// pueden atenderlo quedan como candidatos en turno_profesional. La
-// asignación final de profesional_id ocurre recién cuando alguien
-// reserva (ver reservarTurno).
+// OPCIÓN B: se crea UN turno por cada profesional seleccionado, por
+// slot — cada profesional disponible a esa hora es un turno propio y
+// reservable de forma independiente. El conflicto se detecta ahora por
+// (veterinaria + profesional + fecha + hora), que es exactamente lo
+// que protege el índice único parcial ix_turno_slot en la base.
 // ─────────────────────────────────────────────────────────────
 export const crearOfertaHoraria = async (req, res) => {
   try {
@@ -411,6 +359,7 @@ export const crearOfertaHoraria = async (req, res) => {
       return res.status(400).json({ message: 'El servicio no pertenece a esta veterinaria' })
     }
 
+    const profesionalesValidos = []
     for (const profId of profesionales) {
       const profesional = await prisma.profesional.findUnique({ where: { profesional_id: profId } })
       if (!profesional || profesional.veterinaria_id !== veterinaria.veterinaria_id) {
@@ -425,79 +374,83 @@ export const crearOfertaHoraria = async (req, res) => {
           message: `${profesional.nombre} ${profesional.apellido} no brinda el servicio seleccionado`
         })
       }
+
+      profesionalesValidos.push(profesional)
     }
 
     const conflictos = []
     let creados = 0
 
-    // Nota: no existe un constraint único en la base para
-    // (veterinaria_id, servicio_id, fecha, hora_inicio) — la deduplicación
-    // de acá es a nivel aplicación. En el caso muy improbable de dos
-    // requests de carga de agenda simultáneas para el mismo slot exacto,
-    // podrían colarse turnos duplicados. Si se quiere blindar del todo,
-    // conviene agregar un índice único parcial equivalente al de turnos
-    // por profesional.
     for (const slot of slots) {
       const horaInicioTime = horaStringATime(slot.hora)
       const horaFinTime = sumarMinutos(horaInicioTime, duracion)
 
-      const existente = await prisma.turno.findFirst({
-        where: {
-          veterinaria_id: veterinaria.veterinaria_id,
-          servicio_id: servicioId,
-          fecha: new Date(slot.fecha),
-          hora_inicio: horaInicioTime,
-          estado_turno_id: { not: ESTADO.CANCELADO }
-        }
-      })
-
-      if (existente) {
-        conflictos.push({ fecha: slot.fecha, hora: slot.hora })
-        continue
-      }
-
-      try {
-        await prisma.$transaction(async (tx) => {
-          const nuevoTurno = await tx.turno.create({
-            data: {
-              veterinaria_id: veterinaria.veterinaria_id,
-              servicio_id: servicioId,
-              fecha: new Date(slot.fecha),
-              hora_inicio: horaInicioTime,
-              hora_fin: horaFinTime,
-              monto_servicio: servicio.precio,
-              estado_turno_id: ESTADO.DISPONIBLE
-            }
-          })
-
-          await tx.turno_profesional.createMany({
-            data: profesionales.map((profId) => ({
-              turno_id: nuevoTurno.turno_id,
-              profesional_id: profId
-            }))
-          })
+      for (const profesional of profesionalesValidos) {
+        // Conflicto real: ese profesional ya tiene un turno (de cualquier
+        // servicio) en ese horario exacto — coincide con lo que protege
+        // el índice único parcial de la base.
+        const existente = await prisma.turno.findFirst({
+          where: {
+            veterinaria_id: veterinaria.veterinaria_id,
+            profesional_id: profesional.profesional_id,
+            fecha: new Date(slot.fecha),
+            estado_turno_id: { not: ESTADO.CANCELADO },
+            hora_inicio: { lt: horaFinTime },
+            hora_fin: { gt: horaInicioTime }
+          }
         })
 
-        creados += 1
-      } catch (errorSlot) {
-        // Choque de último momento (condición de carrera con otra carga
-        // de agenda simultánea) — se registra como conflicto y se sigue
-        // con el resto del batch, igual que ordered:false en Mongo.
-        console.error('Conflicto al crear turno de oferta:', errorSlot)
-        conflictos.push({ fecha: slot.fecha, hora: slot.hora })
+        if (existente) {
+          conflictos.push({ fecha: slot.fecha, hora: slot.hora, profesional: `${profesional.nombre} ${profesional.apellido}` })
+          continue
+        }
+
+        try {
+          await prisma.$transaction(async (tx) => {
+            const nuevoTurno = await tx.turno.create({
+              data: {
+                veterinaria_id: veterinaria.veterinaria_id,
+                servicio_id: servicioId,
+                //profesional_id: profesional.profesional_id,
+                fecha: new Date(slot.fecha),
+                hora_inicio: horaInicioTime,
+                hora_fin: horaFinTime,
+                monto_servicio: servicio.precio,
+                estado_turno_id: ESTADO.DISPONIBLE
+              }
+            })
+
+            // Fila "espejo" en turno_profesional: ya no representa
+            // candidatos (eso quedó en la Opción A descartada) — es solo
+            // para satisfacer la FK compuesta fk_turno_profesional_candidato
+            // definida en el schema. Si más adelante se migra el schema
+            // para sacar esa FK y la tabla, este insert se puede borrar.
+            await tx.turno_profesional.create({
+              data: { turno_id: nuevoTurno.turno_id, profesional_id: profesional.profesional_id }
+            })
+
+            await tx.turno.update({
+              where: { turno_id: nuevoTurno.turno_id },
+              data: { profesional_id: profesional.profesional_id }
+            })
+          })
+
+          creados += 1
+        } catch (errorSlot) {
+          console.error('Conflicto al crear turno de oferta:', errorSlot)
+          conflictos.push({ fecha: slot.fecha, hora: slot.hora, profesional: `${profesional.nombre} ${profesional.apellido}` })
+        }
       }
     }
 
     if (creados === 0) {
-      return res.status(409).json({
-        message: construirMensajeConflictos(conflictos)
-      })
+      return res.status(409).json({ message: construirMensajeConflictos(conflictos) })
     }
 
     return res.status(201).json({
       success: true,
       message: conflictos.length > 0
-        ? `Se crearon ${creados} turnos disponibles. ${conflictos.length} horario(s) se omitieron por ya existir.`
+        ? `Se crearon ${creados} turnos disponibles. ${conflictos.length} combinación(es) profesional+horario se omitieron por ya existir.`
         : `Se crearon ${creados} turnos disponibles`,
       data: { cantidad: creados }
     })
@@ -516,5 +469,5 @@ const construirMensajeConflictos = (conflictos) => {
   }
   const ejemplo = conflictos[0]
   const fechaFmt = new Date(`${ejemplo.fecha}T00:00:00`).toLocaleDateString('es-AR')
-  return `No se pudo crear ningún turno. Los ${conflictos.length} horario(s) elegidos ya estaban ofrecidos (ej: ${fechaFmt} a las ${ejemplo.hora}hs).`
+  return `No se pudo crear ningún turno. ${conflictos.length} combinación(es) ya estaban ofrecidas (ej: ${ejemplo.profesional} el ${fechaFmt} a las ${ejemplo.hora}hs).`
 }

@@ -110,22 +110,25 @@ export default function CargaTurnos() {
   }, []);
 
   const cargarExistentes = useCallback(async () => {
-    // Asegurarse de usar la clave primaria UUID de PostgreSQL
     const vetId = veterinaria?.veterinaria_id || veterinaria?.id;
-
-    // Si no hay vetId o si tiene la longitud de un ObjectId de Mongo (24 chars), abortar
     if (!vetId || vetId.length === 24) return;
 
     try {
-      const turnos = await obtenerTurnosPorVeterinaria(vetId, { estado: "disponible" });
+      const turnos = await obtenerTurnosPorVeterinaria(vetId, { estado: "DIS" });
       setSlotsExistentes(
-        turnos.map((t) => ({
-          fecha: new Date(t.fecha).toISOString().split("T")[0],
-          hora: t.hora_inicio || t.hora,
-          servicioId: (t.servicio_id || t.servicioId)?.toString(),
-          profesionalId: (t.profesional_id || t.profesionalId)?.toString(),
-          duracion: t.duracion,
-        }))
+        turnos.map((t) => {
+          const [hIni, mIni] = t.hora_inicio.split(":").map(Number);
+          const [hFin, mFin] = t.hora_fin.split(":").map(Number);
+          const duracionReal = (hFin * 60 + mFin) - (hIni * 60 + mIni);
+
+          return {
+            fecha: new Date(t.fecha).toISOString().split("T")[0],
+            hora: t.hora_inicio,
+            servicioId: t.servicio?.servicio_id,
+            profesionalId: t.profesional?.profesional_id,
+            duracion: duracionReal,
+          };
+        })
       );
     } catch {
       // silencioso
@@ -239,6 +242,25 @@ export default function CargaTurnos() {
     return f;
   });
 
+  const hayOcupacion = (fecha, hora, duracionAEvaluar) => {
+    const fechaStr = fecha.toISOString().split("T")[0];
+    const [h, m] = hora.split(":").map(Number);
+    const inicioNuevo = h * 60 + m;
+    const finNuevo = inicioNuevo + duracionAEvaluar;
+
+    return slotsExistentes.some((s) => {
+      if (s.fecha !== fechaStr) return false;
+      if (!profesionales.some((p) => p.toString() === s.profesionalId)) return false;
+
+      const [sh, sm] = s.hora.split(":").map(Number);
+      const inicioExistente = sh * 60 + sm;
+      const finExistente = inicioExistente + s.duracion;
+
+      // Solapamiento de rangos (mismo criterio que en el backend)
+      return inicioExistente < finNuevo && finExistente > inicioNuevo;
+    });
+  };
+
   const esCeldaBloqueada = (claveDia, hora, diaIndex) => {
     const horario = obtenerHorarioDia(claveDia, diaIndex);
     if (!horario || !horario.desde || !horario.hasta) return true;
@@ -249,19 +271,36 @@ export default function CargaTurnos() {
 
   const esCeldaExistente = (fecha, hora) => {
     const fechaStr = fecha.toISOString().split("T")[0];
+    return slotsExistentes.some((s) => {
+      if (s.fecha !== fechaStr || s.servicioId !== servicioId) return false;
+      if (!profesionales.some((p) => p.toString() === s.profesionalId)) return false;
+      const [sh, sm] = s.hora.split(":").map(Number);
+      const inicioExistente = sh * 60 + sm;
+      const finExistente = inicioExistente + s.duracion;
+      const [h, m] = hora.split(":").map(Number);
+      const minutosCelda = h * 60 + m;
+      return minutosCelda >= inicioExistente && minutosCelda < finExistente;
+    });
+  };
+
+  const esCeldaOcupadaPorOtroServicio = (fecha, hora) => {
+    // Ocupado por CUALQUIER turno del profesional (sin filtrar por servicio)
+    // que se solape, y que además no sea ya el que pinta "ya creado" para
+    // este mismo servicio.
+    const fechaStr = fecha.toISOString().split("T")[0];
     const [h, m] = hora.split(":").map(Number);
     const minutosCelda = h * 60 + m;
 
     return slotsExistentes.some((s) => {
       if (s.fecha !== fechaStr) return false;
-      if (s.servicioId !== servicioId) return false;
+      if (s.servicioId === servicioId) return false; // eso ya lo cubre "ya creado"
       if (!profesionales.some((p) => p.toString() === s.profesionalId)) return false;
 
       const [sh, sm] = s.hora.split(":").map(Number);
-      const inicioSlot = sh * 60 + sm;
-      const finSlot = inicioSlot + (s.duracion || duracion);
+      const inicioExistente = sh * 60 + sm;
+      const finExistente = inicioExistente + s.duracion;
 
-      return minutosCelda >= inicioSlot && minutosCelda < finSlot;
+      return minutosCelda >= inicioExistente && minutosCelda < finExistente;
     });
   };
 
@@ -592,9 +631,10 @@ export default function CargaTurnos() {
                             const bloqueado = esCeldaBloqueada(diaObj.clave, hora, i);
                             const pasado = esCeldaPasada(fecha, hora);
                             const existente = esCeldaExistente(fecha, hora);
+                            const ocupadaOtroServicio = esCeldaOcupadaPorOtroServicio(fecha, hora);
                             const seleccionado = slotsSeleccionados[`${i}-${hora}`];
 
-                            if (bloqueado || pasado) {
+                            if (bloqueado || pasado || ocupadaOtroServicio) {
                               return (
                                 <td key={diaObj.clave} className={styles.tdBloqueado}>
                                   <div className={styles.celdaBloqueada}>
