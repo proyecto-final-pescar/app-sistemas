@@ -1,7 +1,6 @@
 import rateLimit from 'express-rate-limit';
 
-// Ventana y tope pensados para uso normal de chat: ajustar según lo que
-// se vea en producción una vez que haya tráfico real.
+// Ventana y tope pensados para uso normal de chat
 const VENTANA_MS = 5 * 60 * 1000; // 5 minutos
 const MAX_MENSAJES_POR_VENTANA = 20;
 
