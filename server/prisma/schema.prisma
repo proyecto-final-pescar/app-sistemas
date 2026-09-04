@@ -196,12 +196,19 @@ model pago {
   fecha_aprobacion DateTime?    @db.Timestamptz(6)
   created_at       DateTime     @default(now()) @db.Timestamptz(6)
   updated_at       DateTime     @default(now()) @db.Timestamptz(6)
+
+  reembolso_de_id String? @db.Uuid
+
   estado_pago      estado_pago  @relation(fields: [estado_pago_id], references: [estado_pago_id], onDelete: NoAction, onUpdate: NoAction)
   metodo_pago      metodo_pago? @relation(fields: [metodo_pago_id], references: [metodo_pago_id], onDelete: NoAction, onUpdate: NoAction)
   turno            turno        @relation(fields: [turno_id], references: [turno_id], onDelete: NoAction, onUpdate: NoAction)
 
+  pago_original pago?  @relation("PagoReembolso", fields: [reembolso_de_id], references: [pago_id], onDelete: NoAction, onUpdate: NoAction)
+  reembolsos    pago[] @relation("PagoReembolso")
+
   @@index([estado_pago_id], map: "ix_pago_estado")
   @@index([turno_id], map: "ix_pago_turno")
+  @@index([reembolso_de_id], map: "ix_pago_reembolso_de")
 }
 
 model profesional {
