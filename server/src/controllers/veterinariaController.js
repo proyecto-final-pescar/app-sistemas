@@ -2,6 +2,8 @@ import Veterinaria from '../models/Veterinaria.js';
 import Turno from "../models/Turno.js";
 import Mascota from "../models/Mascota.js";
 import User from "../models/User.js";
+import prisma from '../../prisma/client.js'
+import { formatearHora } from '../utils/formatearHora.js';
 
 // Estados de Turno que habilitan a considerar a una mascota "paciente" de la veterinaria.
 // Se excluye 'pendiente' (todavía no confirmado, no hay relación real) y
@@ -158,66 +160,98 @@ export const buscarVeterinarias = async (req, res) => {
 
 // GET /veterinarias: devuelve todas las veterinarias activas
 export const obtenerVeterinarias = async (req, res) => {
-    try {
-        const veterinarias = await Veterinaria.find({ estado: 'activa' });
+  try {
+    const veterinarias = await Veterinaria.find({ estado: 'activa' });
 
-        res.status(200).json({
-            success: true,
-            data: veterinarias
-        });
+    res.status(200).json({
+      success: true,
+      data: veterinarias
+    });
 
-    } catch (error) {
-        console.error('Error en GET /veterinarias:', error);
-        res.status(500).json({ message: 'Error interno del servidor' });
-    }
+  } catch (error) {
+    console.error('Error en GET /veterinarias:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
 };
 
 // GET /veterinarias/:id: devuelve el detalle de una veterinaria activa
 export const obtenerVeterinariaPorId = async (req, res) => {
-    try {
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-        const veterinaria = await Veterinaria.findOne({ _id: id, estado: 'activa' });
+    const veterinaria = await Veterinaria.findOne({ _id: id, estado: 'activa' });
 
-        if (!veterinaria) {
-            return res.status(404).json({ message: 'El recurso no existe.' });
-        }
-
-        res.status(200).json({
-            success: true,
-            data: veterinaria
-        });
-
-    } catch (error) {
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'El id de la veterinaria no es válido' });
-        }
-        console.error('Error en GET /veterinarias/:id:', error);
-        res.status(500).json({ message: 'Error interno del servidor' });
+    if (!veterinaria) {
+      return res.status(404).json({ message: 'El recurso no existe.' });
     }
+
+    res.status(200).json({
+      success: true,
+      data: veterinaria
+    });
+
+  } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'El id de la veterinaria no es válido' });
+    }
+    console.error('Error en GET /veterinarias/:id:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
 };
 
 // GET /veterinarias/mia: devuelve la veterinaria del usuario logueado
+// GET /veterinarias/mia: devuelve la veterinaria del usuario logueado
 export const obtenerMiVeterinaria = async (req, res) => {
-    try {
-        const usuarioId = req.user.id;
+  try {
+    const usuarioId = req.user.id
 
-        const veterinaria = await Veterinaria.findOne({ usuarioId });
+    const veterinaria = await prisma.veterinaria.findUnique({
+      where: { usuario_id: usuarioId },
+      include: {
+        servicio: { where: { active: true }, orderBy: { nombre: 'asc' } },
+        profesional: {
+          where: { active: true },
+          include: { profesional_servicio: { select: { servicio_id: true } } },
+          orderBy: { nombre: 'asc' }
+        },
+        horario_veterinaria: true,
+        estado_veterinaria: true
+      }
+    })
 
-        if (!veterinaria) {
-            return res.status(404).json({ message: 'No tenés una veterinaria registrada.' });
-        }
-
-        res.status(200).json({
-            success: true,
-            data: veterinaria
-        });
-
-    } catch (error) {
-        console.error('Error en GET /veterinarias/mia:', error);
-        res.status(500).json({ message: 'Error interno del servidor' });
+    if (!veterinaria) {
+      return res.status(404).json({ message: 'No tenés una veterinaria registrada.' })
     }
-};
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        veterinaria_id: veterinaria.veterinaria_id,
+        nombre: veterinaria.nombre,
+        direccion: veterinaria.direccion,
+        telefono: veterinaria.telefono,
+        email: veterinaria.email,
+        estado: veterinaria.estado_veterinaria.nombre,
+        estadoId: veterinaria.estado_veterinaria_id,
+        servicios: veterinaria.servicio,
+        profesionales: veterinaria.profesional.map((p) => ({
+          profesional_id: p.profesional_id,
+          nombre: p.nombre,
+          apellido: p.apellido,
+          servicios: p.profesional_servicio.map((ps) => ps.servicio_id)
+        })),
+        horarios: veterinaria.horario_veterinaria.map((h) => ({
+          dia_semana_id: h.dia_semana_id,
+          hora_desde: formatearHora(h.hora_desde),
+          hora_hasta: formatearHora(h.hora_hasta)
+        }))
+      }
+    })
+  } catch (error) {
+    console.error('Error en GET /veterinarias/mia:', error)
+    return res.status(500).json({ message: 'Error interno del servidor' })
+  }
+}
 
 // PUT /veterinarias/mia: edita la veterinaria del usuario autenticado
 export const actualizarMiVeterinaria = async (req, res) => {
@@ -283,148 +317,148 @@ export const actualizarMiVeterinaria = async (req, res) => {
 
 // POST /veterinarias: crea el perfil de una veterinaria (solo rol 'veterinaria')
 export const crearVeterinaria = async (req, res) => {
-    try {
-        const usuarioId = req.user.id;
+  try {
+    const usuarioId = req.user.id;
 
-        const veterinariaPorUsuario = await Veterinaria.findOne({ usuarioId });
-        if (veterinariaPorUsuario) {
-            return res.status(409).json({ 
-                message: 'Ya tienes una veterinaria registrada con este usuario.' 
-            });
-        }
-
-        const {
-            nombre,
-            direccion,
-            razonSocial,
-            cuit,
-            telefono,
-            email,
-            sitioWeb,
-            coordenadas,
-            servicios,
-            profesionales,
-            horarios,
-            urgencias24hs
-        } = req.body;
-
-        if (profesionales !== undefined) {
-            const errorProfesionales = validarProfesionales(profesionales);
-            if (errorProfesionales) {
-                return res.status(400).json({ message: errorProfesionales });
-            }
-        }
-
-        const veterinariaPorCuit = await Veterinaria.findOne({ cuit });
-        if (veterinariaPorCuit) {
-            return res.status(409).json({ 
-                message: 'Ya existe una clínica registrada con este CUIT.' 
-            });
-        }
-
-        const nuevaVeterinaria = new Veterinaria({
-            nombre,
-            direccion,
-            razonSocial,
-            cuit,
-            telefono,
-            email,
-            sitioWeb,
-            coordenadas,
-            servicios,
-            profesionales,
-            horarios,
-            urgencias24hs,
-            usuarioId
-        });
-
-        const veterinariaGuardada = await nuevaVeterinaria.save();
-
-        res.status(201).json({
-            success: true,
-            data: veterinariaGuardada
-        });
-
-    } catch (error) {
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({ message: 'Datos inválidos' });
-        }
-        console.error('Error en POST /veterinarias:', error);
-        res.status(500).json({ message: 'Error interno del servidor' });
+    const veterinariaPorUsuario = await Veterinaria.findOne({ usuarioId });
+    if (veterinariaPorUsuario) {
+      return res.status(409).json({
+        message: 'Ya tienes una veterinaria registrada con este usuario.'
+      });
     }
+
+    const {
+      nombre,
+      direccion,
+      razonSocial,
+      cuit,
+      telefono,
+      email,
+      sitioWeb,
+      coordenadas,
+      servicios,
+      profesionales,
+      horarios,
+      urgencias24hs
+    } = req.body;
+
+    if (profesionales !== undefined) {
+      const errorProfesionales = validarProfesionales(profesionales);
+      if (errorProfesionales) {
+        return res.status(400).json({ message: errorProfesionales });
+      }
+    }
+
+    const veterinariaPorCuit = await Veterinaria.findOne({ cuit });
+    if (veterinariaPorCuit) {
+      return res.status(409).json({
+        message: 'Ya existe una clínica registrada con este CUIT.'
+      });
+    }
+
+    const nuevaVeterinaria = new Veterinaria({
+      nombre,
+      direccion,
+      razonSocial,
+      cuit,
+      telefono,
+      email,
+      sitioWeb,
+      coordenadas,
+      servicios,
+      profesionales,
+      horarios,
+      urgencias24hs,
+      usuarioId
+    });
+
+    const veterinariaGuardada = await nuevaVeterinaria.save();
+
+    res.status(201).json({
+      success: true,
+      data: veterinariaGuardada
+    });
+
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: 'Datos inválidos' });
+    }
+    console.error('Error en POST /veterinarias:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
 };
 
 // PUT /veterinarias/:id: edita una veterinaria activa (dueño o admin)
 export const actualizarVeterinaria = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const usuarioId = req.user.id;
-        const esAdmin = req.user.role === 'administrador' ;
+  try {
+    const { id } = req.params;
+    const usuarioId = req.user.id;
+    const esAdmin = req.user.role === 'administrador';
 
-        const veterinaria = await Veterinaria.findOne({ _id: id, estado: 'activa' });
+    const veterinaria = await Veterinaria.findOne({ _id: id, estado: 'activa' });
 
-        if (!veterinaria) {
-            return res.status(404).json({ message: 'El recurso no existe.' });
-        }
+    if (!veterinaria) {
+      return res.status(404).json({ message: 'El recurso no existe.' });
+    }
 
-        if (veterinaria.usuarioId.toString() !== usuarioId && !esAdmin) {
-            return res.status(403).json({ message: 'No tenés permisos para realizar esta acción.' });
-        }
+    if (veterinaria.usuarioId.toString() !== usuarioId && !esAdmin) {
+      return res.status(403).json({ message: 'No tenés permisos para realizar esta acción.' });
+    }
 
-        const {
-            nombre,
-            direccion,
-            razonSocial,
-            cuit,
-            telefono,
-            email,
-            sitioWeb,
-            coordenadas,
-            servicios,
-            profesionales,
-            horarios,
-            urgencias24hs
-        } = req.body;
+    const {
+      nombre,
+      direccion,
+      razonSocial,
+      cuit,
+      telefono,
+      email,
+      sitioWeb,
+      coordenadas,
+      servicios,
+      profesionales,
+      horarios,
+      urgencias24hs
+    } = req.body;
 
-        if (profesionales !== undefined) {
-            const errorProfesionales = validarProfesionales(profesionales);
-            if (errorProfesionales) {
-                return res.status(400).json({ message: errorProfesionales });
-            }
-        }
+    if (profesionales !== undefined) {
+      const errorProfesionales = validarProfesionales(profesionales);
+      if (errorProfesionales) {
+        return res.status(400).json({ message: errorProfesionales });
+      }
+    }
 
-        if (nombre !== undefined) veterinaria.nombre = nombre;
-        if (direccion !== undefined) veterinaria.direccion = direccion;
-        if (razonSocial !== undefined) veterinaria.razonSocial = razonSocial;
-        if (cuit !== undefined) veterinaria.cuit = cuit;
-        if (telefono !== undefined) veterinaria.telefono = telefono;
-        if (email !== undefined) veterinaria.email = email;
-        if (sitioWeb !== undefined) veterinaria.sitioWeb = sitioWeb;
-        if (coordenadas !== undefined) veterinaria.coordenadas = coordenadas;
-        if (servicios !== undefined) veterinaria.servicios = servicios;
-        if (profesionales !== undefined) veterinaria.profesionales = profesionales;
-        if (horarios !== undefined) veterinaria.horarios = horarios;
-        if (urgencias24hs !== undefined) veterinaria.urgencias24hs = urgencias24hs;
+    if (nombre !== undefined) veterinaria.nombre = nombre;
+    if (direccion !== undefined) veterinaria.direccion = direccion;
+    if (razonSocial !== undefined) veterinaria.razonSocial = razonSocial;
+    if (cuit !== undefined) veterinaria.cuit = cuit;
+    if (telefono !== undefined) veterinaria.telefono = telefono;
+    if (email !== undefined) veterinaria.email = email;
+    if (sitioWeb !== undefined) veterinaria.sitioWeb = sitioWeb;
+    if (coordenadas !== undefined) veterinaria.coordenadas = coordenadas;
+    if (servicios !== undefined) veterinaria.servicios = servicios;
+    if (profesionales !== undefined) veterinaria.profesionales = profesionales;
+    if (horarios !== undefined) veterinaria.horarios = horarios;
+    if (urgencias24hs !== undefined) veterinaria.urgencias24hs = urgencias24hs;
 
-        const veterinariaActualizada = await veterinaria.save();
+    const veterinariaActualizada = await veterinaria.save();
 
-        res.status(200).json({
-            success: true,
-            data: veterinariaActualizada
-        });
+    res.status(200).json({
+      success: true,
+      data: veterinariaActualizada
+    });
 
-    } catch (error) {
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: 'El id de la veterinaria no es válido' });
-        }
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({ message: 'Datos inválidos' });
-        }
-        console.error('Error en PUT /veterinarias/:id:', error);
-        res.status(500).json({ message: 'Error interno del servidor' });
-    } 
- };
-       
+  } catch (error) {
+    if (error.name === 'CastError') {
+      return res.status(400).json({ message: 'El id de la veterinaria no es válido' });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: 'Datos inválidos' });
+    }
+    console.error('Error en PUT /veterinarias/:id:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 // GET /veterinarias/mia/pacientes
 export const obtenerPacientesVeterinaria = async (req, res) => {
   try {
