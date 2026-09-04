@@ -32,12 +32,12 @@ const TABS_BASE = [
 const OPCIONES_ASISTENTE = [
   {
     tipo: "perro",
-    nombre: "Max",
+    nombre: "Firu",
     descripcion: "Un perrito amigable y leal, siempre listo para ayudarte.",
   },
   {
     tipo: "gato",
-    nombre: "Mimi",
+    nombre: "Luna",
     descripcion: "Una gatita dulce e inteligente, tu guía experta en bienestar felino.",
   },
 ];

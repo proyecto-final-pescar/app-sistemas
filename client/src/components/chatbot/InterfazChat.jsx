@@ -57,7 +57,7 @@ export default function InterfazChat({
   onCerrar,
   tipoBot = 'perro',
   pose = 'idle',
-  nombreBot = 'Max',
+  nombreBot = 'Firu',
   inline = false,
   soloVistaPrevia = false,
 }) {

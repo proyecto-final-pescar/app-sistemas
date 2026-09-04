@@ -5,9 +5,22 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
+const ASISTENTES_VALIDOS = ['firu', 'luna'];
+const MAX_CARACTERES_POR_MENSAJE = 2000;
+
+
+const MENSAJES_SIESTA = {
+  firu: 'Guau... ando dormido en una siesta ahora mismo 🐶💤 Volvé a intentar en un ratito.',
+  luna: 'Zzz... estoy en plena siesta gatuna 🐱💤 Probá de nuevo un poco más tarde.'
+};
+
 export const chatBot = async (req, res) => {
+  // Declarado afuera del try para poder usarlo también en el catch
+  let asistente = 'firu';
+
   try {
-    const { messages, asistente = 'firu' } = req.body;
+    const { messages } = req.body;
+    asistente = req.body.asistente || 'firu';
 
     // Validaciones
     if (!messages) {
@@ -22,12 +35,17 @@ export const chatBot = async (req, res) => {
       return res.status(400).json({ message: 'El historial de mensajes no puede estar vacío' });
     }
 
+    if (!ASISTENTES_VALIDOS.includes(asistente)) {
+      return res.status(400).json({ message: 'El asistente elegido no es válido' });
+    }
+
     const mensajesInvalidos = messages.some(
       (message) =>
         !message ||
         !['user', 'assistant'].includes(message.role) ||
         typeof message.content !== 'string' ||
-        !message.content.trim()
+        !message.content.trim() ||
+        message.content.length > MAX_CARACTERES_POR_MENSAJE
     );
 
     if (mensajesInvalidos) {
@@ -61,7 +79,7 @@ export const chatBot = async (req, res) => {
   } catch (error) {
     console.error('Error en chatBot:', error);
     return res.status(500).json({
-      reply: 'El asistente no pudo responder en este momento. Intentá nuevamente en unos minutos.'
+      reply: MENSAJES_SIESTA[asistente] || MENSAJES_SIESTA.firu
     });
   }
 };
