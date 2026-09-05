@@ -23,7 +23,10 @@ import {
   validarCoordenadas,
   validarHorarios,
 } from "../../../utils/RegistroVeterinarias";
+
 import { useCategoriasServicio } from "../../../hooks/useCategoriasServicio";
+import { useEspecialidades } from "../../../hooks/useEspecialidades";
+
 
 const IconSearch = () => (
   <svg
@@ -135,8 +138,9 @@ export default function RegistroDeVeterinaria() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
 
-  // Categorías de servicio — vienen del backend
+  // Categorías de servicio y especialidades — vienen del backend
   const { categorias, loading: loadingCategorias, error: errorCategorias } = useCategoriasServicio();
+  const { especialidades, loading: loadingEspecialidades, error: errorEspecialidades } = useEspecialidades();
 
   // Paso 1
   const [form, setForm] = useState({
@@ -600,6 +604,10 @@ export default function RegistroDeVeterinaria() {
                 <p className={styles.errorMsg}>{errorCategorias}</p>
               )}
 
+              {errorEspecialidades && (
+                <p className={styles.errorMsg}>{errorEspecialidades}</p>
+              )}
+
               <div className={styles.listaItems}>
                 {servicios.map((servicio, index) => (
                   <div key={servicio.id} className={styles.subCard}>
@@ -730,18 +738,26 @@ export default function RegistroDeVeterinaria() {
                       }
                       placeholder="juanperez@email.com"
                     />
-                    <Input
-                      label="Especialidad *"
-                      value={prof.especialidad}
-                      onChange={(e) =>
-                        handleChangeProfesional(
-                          index,
-                          "especialidad",
-                          e.target.value,
-                        )
-                      }
-                      placeholder="Ej: Veterinaria general, Cirugía..."
-                    />
+                    <div className={styles.field}>
+                      <label className={styles.label}>
+                        Especialidad<span className={styles.req}>*</span>
+                      </label>
+                      <select
+                        value={prof.especialidad}
+                        onChange={(e) => handleChangeProfesional(index, "especialidad", e.target.value)}
+                        className={styles.selectHorario}
+                        disabled={loadingEspecialidades}
+                      >
+                        <option value="">
+                          {loadingEspecialidades ? "Cargando especialidades..." : "Seleccioná una especialidad"}
+                        </option>
+                        {especialidades.map((especialidad) => (
+                          <option key={especialidad} value={especialidad}>
+                            {especialidad}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 ))}
               </div>
