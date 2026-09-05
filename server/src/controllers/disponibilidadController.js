@@ -1,176 +1,124 @@
-import Veterinaria from "../models/Veterinaria.js";
-import Turno from "../models/Turno.js";
+import prisma from '../../prisma/client.js'
 
-// Genera todos los horarios posibles de un día según apertura y cierre
-// Por ejemplo: desde "09:00" hasta "18:00" cada 30 minutos
-const generarHorarios = (desde, hasta) => {
-  const horarios = [];
-  const [horaDesde, minDesde] = desde.split(":").map(Number);
-  const [horaHasta, minHasta] = hasta.split(":").map(Number);
+const CODIGO_DIA_SEMANA = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB']
+const NOMBRE_DIA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
 
-  let totalMinDesde = horaDesde * 60 + minDesde;
-  const totalMinHasta = horaHasta * 60 + minHasta;
+const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
 
-  while (totalMinDesde < totalMinHasta) {
-    const horas = Math.floor(totalMinDesde / 60)
-      .toString()
-      .padStart(2, "0");
-    const minutos = (totalMinDesde % 60).toString().padStart(2, "0");
-    horarios.push(`${horas}:${minutos}`);
-    totalMinDesde += 30; // turnos cada 30 minutos
-  }
-
-  return horarios;
-};
-
-// Convierte el número del día de la semana al nombre en español
-const obtenerNombreDia = (numeroDia) => {
-  const dias = [
-    "domingo",
-    "lunes",
-    "martes",
-    "miercoles",
-    "jueves",
-    "viernes",
-    "sabado",
-  ];
-  return dias[numeroDia];
-};
-
-// GET /disponibilidad/:veterinariaId?fecha=YYYY-MM-DD
+// GET /disponibilidad/:veterinariaId?fecha=YYYY-MM-DD&servicioId=opcional
+//
+// OPCIÓN B: cada turno disponible ya tiene un único profesional fijo
+// (asignado desde que se creó vía crearOfertaHoraria) — ya no hay
+// "candidatos", así que la respuesta devuelve el profesional directo,
+// no un array.
 export const obtenerDisponibilidad = async (req, res) => {
   try {
-    const { veterinariaId } = req.params;
-    const { fecha } = req.query;
+    const { veterinariaId } = req.params
+    const { fecha, servicioId } = req.query
 
-    // ── Validaciones extras agregadas por mi cuenta ──
-
-    // 1. Validar que se envió la fecha
     if (!fecha) {
-      return res
-        .status(400)
-        .json({ message: "La fecha es requerida. Formato: ?fecha=YYYY-MM-DD" });
+      return res.status(400).json({ message: 'La fecha es requerida. Formato: ?fecha=YYYY-MM-DD' })
     }
 
-    // 2. Validar formato de fecha (YYYY-MM-DD)
-    const formatoFecha = /^\d{4}-\d{2}-\d{2}$/;
+    const formatoFecha = /^\d{4}-\d{2}-\d{2}$/
     if (!formatoFecha.test(fecha)) {
       return res.status(400).json({
-        message: "Formato de fecha inválido. Usá YYYY-MM-DD (ej: 2026-07-15)",
-      });
+        message: 'Formato de fecha inválido. Usá YYYY-MM-DD (ej: 2026-07-15)'
+      })
     }
 
-    // 3. Validar que la fecha no sea en el pasado
-    const [anioSolicitado, mesSolicitado, diaSolicitado] = fecha
-      .split("-")
-      .map(Number);
-    const fechaSolicitada = new Date(
-      anioSolicitado,
-      mesSolicitado - 1,
-      diaSolicitado,
-    );
+    const [anio, mes, dia] = fecha.split('-').map(Number)
+    const fechaSolicitada = new Date(anio, mes - 1, dia)
 
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    const hoy = new Date()
+    hoy.setHours(0, 0, 0, 0)
 
     if (fechaSolicitada < hoy) {
-      return res.status(400).json({
-        message: "No podés consultar disponibilidad para fechas pasadas",
-      });
+      return res.status(400).json({ message: 'No podés consultar disponibilidad para fechas pasadas' })
     }
 
-    // ── Lógica principal ──
+    const veterinaria = await prisma.veterinaria.findUnique({
+      where: { veterinaria_id: veterinariaId }
+    })
 
-    // 4. Buscar la veterinaria (solo si está activa)
-    const veterinaria = await Veterinaria.findOne({
-      _id: veterinariaId,
-      estado: "activa",
-    });
-
-    if (!veterinaria) {
-      return res.status(404).json({ message: "El recurso no existe." });
+    if (!veterinaria || veterinaria.estado_veterinaria_id !== 'ACT') {
+      return res.status(404).json({ message: 'El recurso no existe.' })
     }
 
-    // 5. Obtener el día de la semana de la fecha solicitada
-    const nombreDia = obtenerNombreDia(fechaSolicitada.getDay());
-    const horarioDia = veterinaria.horarios[nombreDia];
+    const codigoDia = CODIGO_DIA_SEMANA[fechaSolicitada.getDay()]
+    const nombreDia = NOMBRE_DIA[fechaSolicitada.getDay()]
 
-    // 6. Verificar si la veterinaria atiende ese día
-    if (!horarioDia || !horarioDia.desde || !horarioDia.hasta) {
+    const horarioDelDia = await prisma.horario_veterinaria.findUnique({
+      where: {
+        veterinaria_id_dia_semana_id: {
+          veterinaria_id: veterinariaId,
+          dia_semana_id: codigoDia
+        }
+      }
+    })
+
+    if (!horarioDelDia) {
       return res.status(200).json({
         success: true,
         message: `La veterinaria no atiende los ${nombreDia}`,
-        data: {
-          fecha,
-          dia: nombreDia,
-          horariosDisponibles: [],
-          totalDisponibles: 0,
-        },
-      });
+        data: { fecha, dia: nombreDia, turnosDisponibles: [], totalDisponibles: 0 }
+      })
     }
 
-    // 7. Generar todos los horarios posibles del día
-    const todosLosHorarios = generarHorarios(
-      horarioDia.desde,
-      horarioDia.hasta,
-    );
+    const filtro = {
+      veterinaria_id: veterinariaId,
+      fecha: new Date(`${fecha}T00:00:00`),
+      estado_turno_id: 'DIS'
+    }
+    if (servicioId) filtro.servicio_id = servicioId
 
-    // 8. Buscar turnos ya ocupados para esa fecha y veterinaria
-    const fechaInicio = new Date(
-      anioSolicitado,
-      mesSolicitado - 1,
-      diaSolicitado,
-    );
-    const fechaFin = new Date(anioSolicitado, mesSolicitado - 1, diaSolicitado);
-    fechaFin.setDate(fechaFin.getDate() + 1);
+    const turnosDisponibles = await prisma.turno.findMany({
+      where: filtro,
+      include: {
+        servicio: { select: { servicio_id: true, nombre: true, precio: true } },
+        profesional: { select: { profesional_id: true, nombre: true, apellido: true } }
+      },
+      orderBy: { hora_inicio: 'asc' }
+    })
 
-    const turnosOcupados = await Turno.find({
-      veterinariaId,
-      fecha: { $gte: fechaInicio, $lt: fechaFin },
-      estado: { $in: ["pendiente", "confirmado"] },
-    });
+    const data = turnosDisponibles.map((t) => ({
+      turnoId: t.turno_id,
+      horaInicio: formatearHora(t.hora_inicio),
+      horaFin: formatearHora(t.hora_fin),
+      servicio: t.servicio,
+      montoServicio: t.monto_servicio,
+      profesional: t.profesional
+    }))
 
-    // 9. Extraer solo las horas ocupadas
-    const horasOcupadas = turnosOcupados.map((turno) => turno.hora);
-
-    // 10. Filtrar los horarios disponibles
-    const horariosDisponibles = todosLosHorarios.filter(
-      (hora) => !horasOcupadas.includes(hora),
-    );
-
-    // 11. Mensaje descriptivo si no hay disponibilidad (pedido por la tarea)
-    if (horariosDisponibles.length === 0) {
+    if (data.length === 0) {
       return res.status(200).json({
         success: true,
-        message: `No hay turnos disponibles para el ${fecha}. Todos los horarios están ocupados.`,
+        message: `No hay turnos disponibles para el ${fecha}.`,
         data: {
           fecha,
           dia: nombreDia,
-          horarioAtencion: `${horarioDia.desde} a ${horarioDia.hasta}`,
-          horariosDisponibles: [],
-          totalDisponibles: 0,
-        },
-      });
+          horarioAtencion: `${formatearHora(horarioDelDia.hora_desde)} a ${formatearHora(horarioDelDia.hora_hasta)}`,
+          turnosDisponibles: [],
+          totalDisponibles: 0
+        }
+      })
     }
 
-    // 12. Respuesta exitosa con disponibilidad
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: {
         fecha,
         dia: nombreDia,
-        horarioAtencion: `${horarioDia.desde} a ${horarioDia.hasta}`,
-        horariosDisponibles,
-        totalDisponibles: horariosDisponibles.length, // extra: cuántos turnos quedan
-      },
-    });
+        horarioAtencion: `${formatearHora(horarioDelDia.hora_desde)} a ${formatearHora(horarioDelDia.hora_hasta)}`,
+        turnosDisponibles: data,
+        totalDisponibles: data.length
+      }
+    })
   } catch (error) {
-    if (error.name === "CastError") {
-      return res
-        .status(400)
-        .json({ message: "El id de la veterinaria no es válido" });
+    if (error.code === 'P2023') {
+      return res.status(400).json({ message: 'El id de la veterinaria no es válido' })
     }
-    console.error("Error en GET /disponibilidad/:veterinariaId:", error);
-    res.status(500).json({ message: "Error interno del servidor" });
+    console.error('Error en GET /disponibilidad/:veterinariaId:', error)
+    return res.status(500).json({ message: 'Error interno del servidor' })
   }
-};
+}

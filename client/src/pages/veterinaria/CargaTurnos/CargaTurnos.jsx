@@ -18,7 +18,16 @@ const DURACIONES = [
   { value: 120, label: "2 horas" },
 ];
 
-const DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+// Mapeo de días para la BDD (claves de 3 letras usadas en horario_veterinaria)
+const DIAS_MAPA = [
+  { nombre: "Lunes", clave: "LUN" },
+  { nombre: "Martes", clave: "MAR" },
+  { nombre: "Miércoles", clave: "MIE" },
+  { nombre: "Jueves", clave: "JUE" },
+  { nombre: "Viernes", clave: "VIE" },
+  { nombre: "Sábado", clave: "SAB" },
+  { nombre: "Domingo", clave: "DOM" },
+];
 
 const obtenerLunesDeSemana = (offset = 0) => {
   const hoy = new Date();
@@ -30,7 +39,7 @@ const obtenerLunesDeSemana = (offset = 0) => {
 
 const generarFechasSemana = (offset) => {
   const lunes = obtenerLunesDeSemana(offset);
-  return DIAS_SEMANA.map((_, i) => {
+  return DIAS_MAPA.map((_, i) => {
     const f = new Date(lunes);
     f.setDate(lunes.getDate() + i);
     return f;
@@ -72,12 +81,19 @@ export default function CargaTurnos() {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
-  const servicioSeleccionado = veterinaria?.servicios?.find(s => s._id === servicioId);
+  const servicioSeleccionado = veterinaria?.servicios?.find(
+    (s) => s.servicio_id === servicioId
+  );
   const [duracion, setDuracion] = useState(30);
 
-  // Solo los profesionales que brindan el servicio elegido
-  const profesionalesDelServicio = veterinaria?.profesionales
-    ?.filter(p => p.serviciosIds?.includes(servicioId)) || [];
+  // Filtrado adaptado a SQL: busca en la propiedad o array de servicios del profesional
+  const profesionalesDelServicio = veterinaria?.profesionales?.filter((p) => {
+    if (!servicioId) return false;
+    if (Array.isArray(p.servicios)) {
+      return p.servicios.some((s) => (s.servicio_id || s) === servicioId);
+    }
+    return true;
+  }) || [];
 
   useEffect(() => {
     const cargar = async () => {
@@ -94,16 +110,26 @@ export default function CargaTurnos() {
   }, []);
 
   const cargarExistentes = useCallback(async () => {
-    if (!veterinaria?._id) return;
+    const vetId = veterinaria?.veterinaria_id || veterinaria?.id;
+    if (!vetId || vetId.length === 24) return;
+
     try {
-      const turnos = await obtenerTurnosPorVeterinaria(veterinaria._id, { estado: "disponible" });
-      setSlotsExistentes(turnos.map(t => ({
-        fecha: new Date(t.fecha).toISOString().split("T")[0],
-        hora: t.hora,
-        servicioId: t.servicioId?.toString(),
-        profesionalId: t.profesionalId?.toString(),
-        duracion: t.duracion
-      })));
+      const turnos = await obtenerTurnosPorVeterinaria(vetId, { estado: "DIS" });
+      setSlotsExistentes(
+        turnos.map((t) => {
+          const [hIni, mIni] = t.hora_inicio.split(":").map(Number);
+          const [hFin, mFin] = t.hora_fin.split(":").map(Number);
+          const duracionReal = (hFin * 60 + mFin) - (hIni * 60 + mIni);
+
+          return {
+            fecha: new Date(t.fecha).toISOString().split("T")[0],
+            hora: t.hora_inicio,
+            servicioId: t.servicio?.servicio_id,
+            profesionalId: t.profesional?.profesional_id,
+            duracion: duracionReal,
+          };
+        })
+      );
     } catch {
       // silencioso
     }
@@ -113,27 +139,62 @@ export default function CargaTurnos() {
     cargarExistentes();
   }, [cargarExistentes, servicioId, profesionales]);
 
-  
   useEffect(() => {
     if (error || exito) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [error, exito]);
 
-  const normalizarDia = (dia) =>
-    dia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const esFechaPasada = (fecha) => {
+    const f = new Date(fecha);
+    f.setHours(0, 0, 0, 0);
+    return f < hoy;
+  };
 
-  const diasDisponibles = veterinaria?.horarios
-    ? Object.keys(veterinaria.horarios).filter(dia => {
-      const h = veterinaria.horarios[dia];
-      return h?.desde && h?.hasta;
-    }).map(normalizarDia)
-    : [];
+  const esCeldaPasada = (fecha, hora) => {
+    const ahora = new Date();
+    const [h, m] = hora.split(":").map(Number);
+    const fechaSlot = new Date(fecha);
+    fechaSlot.setHours(h, m, 0, 0);
+    return fechaSlot < ahora;
+  };
+
+  // Mapeo flexible de horarios para SQL (horario_veterinaria)
+  // Reemplazar la función obtenerHorarioDia
+  const obtenerHorarioDia = (claveDia, diaIndex) => {
+    if (!veterinaria?.horarios) return null;
+
+    const horarios = Array.isArray(veterinaria.horarios)
+      ? veterinaria.horarios
+      : Object.values(veterinaria.horarios);
+
+    // Mapeo flexible: soporta clave LUN, índice ISO (1-7), índice JS (0-6) o nombre
+    const item = horarios.find((h) => {
+      const val = (h.dia_semana_id || h.dia || "").toString().toUpperCase();
+      return (
+        val === claveDia ||
+        val === String(diaIndex + 1) || // ISO: 1 (Lunes) a 7 (Domingo)
+        val === String(diaIndex)        // JS: 0 a 6
+      );
+    });
+
+    if (!item) return null;
+    return {
+      desde: (item.hora_desde || item.desde || "").slice(0, 5), // Corta a HH:mm
+      hasta: (item.hora_hasta || item.hasta || "").slice(0, 5),
+    };
+  };
+
+
+  const diasDisponibles = DIAS_MAPA.filter((d, i) => {
+    const h = obtenerHorarioDia(d.clave, i);
+    return h && h.desde && h.hasta;
+  }).map((d) => d.clave);
 
   const semanaSinDisponibilidad = (offset) => {
     const fechas = generarFechasSemana(offset);
-    return DIAS_SEMANA.every((dia, i) => {
-      const disponible = diasDisponibles.includes(normalizarDia(dia));
+    return DIAS_MAPA.every((d, i) => {
+      const disponible = diasDisponibles.includes(d.clave);
       return !disponible || esFechaPasada(fechas[i]);
     });
   };
@@ -155,128 +216,157 @@ export default function CargaTurnos() {
     if (!veterinaria?.horarios) return { apertura: "08:00", cierre: "18:00" };
     let minApertura = "23:59";
     let maxCierre = "00:00";
-    Object.values(veterinaria.horarios).forEach(h => {
-      if (!h?.desde || !h?.hasta) return;
-      if (h.desde < minApertura) minApertura = h.desde;
-      if (h.hasta > maxCierre) maxCierre = h.hasta;
+
+    const lista = Array.isArray(veterinaria.horarios)
+      ? veterinaria.horarios
+      : Object.values(veterinaria.horarios);
+
+    lista.forEach((h) => {
+      const desde = h.hora_desde || h.desde;
+      const hasta = h.hora_hasta || h.hasta;
+      if (!desde || !hasta) return;
+      if (desde < minApertura) minApertura = desde;
+      if (hasta > maxCierre) maxCierre = hasta;
     });
-    return { apertura: minApertura, cierre: maxCierre };
+
+    return minApertura === "23:59" ? { apertura: "08:00", cierre: "18:00" } : { apertura: minApertura, cierre: maxCierre };
   };
 
   const { apertura: aperturaGlobal, cierre: cierreGlobal } = obtenerRangoGlobal();
   const filas = generarSlots(aperturaGlobal, cierreGlobal, duracion);
 
   const lunesSemana = obtenerLunesDeSemana(semanaOffset);
-  const fechasSemana = DIAS_SEMANA.map((_, i) => {
+  const fechasSemana = DIAS_MAPA.map((_, i) => {
     const f = new Date(lunesSemana);
     f.setDate(lunesSemana.getDate() + i);
     return f;
   });
 
-  const obtenerHorarioDia = (dia) => {
-    if (!veterinaria?.horarios) return null;
-    const clave = normalizarDia(dia);
-    const horario = veterinaria.horarios[clave];
-    if (!horario?.desde || !horario?.hasta) return null;
-    return horario;
+  const hayOcupacion = (fecha, hora, duracionAEvaluar) => {
+    const fechaStr = fecha.toISOString().split("T")[0];
+    const [h, m] = hora.split(":").map(Number);
+    const inicioNuevo = h * 60 + m;
+    const finNuevo = inicioNuevo + duracionAEvaluar;
+
+    return slotsExistentes.some((s) => {
+      if (s.fecha !== fechaStr) return false;
+      if (!profesionales.some((p) => p.toString() === s.profesionalId)) return false;
+
+      const [sh, sm] = s.hora.split(":").map(Number);
+      const inicioExistente = sh * 60 + sm;
+      const finExistente = inicioExistente + s.duracion;
+
+      // Solapamiento de rangos (mismo criterio que en el backend)
+      return inicioExistente < finNuevo && finExistente > inicioNuevo;
+    });
   };
 
-  const esCeldaBloqueada = (dia, hora) => {
-    const horario = obtenerHorarioDia(dia);
-    if (!horario) return true;
-    return hora < horario.desde || hora >= horario.hasta;
+  const esCeldaBloqueada = (claveDia, hora, diaIndex) => {
+    const horario = obtenerHorarioDia(claveDia, diaIndex);
+    if (!horario || !horario.desde || !horario.hasta) return true;
+
+    const horaMin = hora.slice(0, 5);
+    return horaMin < horario.desde || horaMin >= horario.hasta;
   };
 
   const esCeldaExistente = (fecha, hora) => {
     const fechaStr = fecha.toISOString().split("T")[0];
-    const [h, m] = hora.split(":").map(Number);
-    const minutosCelda = h * 60 + m;
-
-    return slotsExistentes.some(s => {
-      if (s.fecha !== fechaStr) return false;
-      if (s.servicioId !== servicioId) return false;
-      if (!profesionales.some(p => p.toString() === s.profesionalId)) return false;
-
+    return slotsExistentes.some((s) => {
+      if (s.fecha !== fechaStr || s.servicioId !== servicioId) return false;
+      if (!profesionales.some((p) => p.toString() === s.profesionalId)) return false;
       const [sh, sm] = s.hora.split(":").map(Number);
-      const inicioSlot = sh * 60 + sm;
-      const finSlot = inicioSlot + (s.duracion || duracion);
-
-      return minutosCelda >= inicioSlot && minutosCelda < finSlot;
+      const inicioExistente = sh * 60 + sm;
+      const finExistente = inicioExistente + s.duracion;
+      const [h, m] = hora.split(":").map(Number);
+      const minutosCelda = h * 60 + m;
+      return minutosCelda >= inicioExistente && minutosCelda < finExistente;
     });
   };
 
-  const esFechaPasada = (fecha) => {
-    const f = new Date(fecha);
-    f.setHours(0, 0, 0, 0);
-    const h = new Date();
-    h.setHours(0, 0, 0, 0);
-    return f < h;
-  };
-
-  const esCeldaPasada = (fecha, hora) => {
-    const ahora = new Date();
+  const esCeldaOcupadaPorOtroServicio = (fecha, hora) => {
+    // Ocupado por CUALQUIER turno del profesional (sin filtrar por servicio)
+    // que se solape, y que además no sea ya el que pinta "ya creado" para
+    // este mismo servicio.
+    const fechaStr = fecha.toISOString().split("T")[0];
     const [h, m] = hora.split(":").map(Number);
-    const fechaSlot = new Date(fecha);
-    fechaSlot.setHours(h, m, 0, 0);
-    return fechaSlot < ahora;
+    const minutosCelda = h * 60 + m;
+
+    return slotsExistentes.some((s) => {
+      if (s.fecha !== fechaStr) return false;
+      if (s.servicioId === servicioId) return false; // eso ya lo cubre "ya creado"
+      if (!profesionales.some((p) => p.toString() === s.profesionalId)) return false;
+
+      const [sh, sm] = s.hora.split(":").map(Number);
+      const inicioExistente = sh * 60 + sm;
+      const finExistente = inicioExistente + s.duracion;
+
+      return minutosCelda >= inicioExistente && minutosCelda < finExistente;
+    });
   };
 
   const toggleSlot = (diaIdx, hora) => {
     const fecha = fechasSemana[diaIdx];
     if (esFechaPasada(fecha)) return;
     const key = `${diaIdx}-${hora}`;
-    setSlotsSeleccionados(prev => ({
+    setSlotsSeleccionados((prev) => ({
       ...prev,
-      [key]: !prev[key]
+      [key]: !prev[key],
     }));
   };
 
   const toggleTodoElDia = (diaIdx) => {
     const fecha = fechasSemana[diaIdx];
     if (esFechaPasada(fecha)) return;
-    const dia = DIAS_SEMANA[diaIdx];
-    const slotsDelDia = filas.filter(h => !esCeldaBloqueada(dia, h));
-    const todosSeleccionados = slotsDelDia.every(h => slotsSeleccionados[`${diaIdx}-${h}`]);
+    const diaClave = DIAS_MAPA[diaIdx].clave;
+    const slotsDelDia = filas.filter((h) => !esCeldaBloqueada(diaClave, h));
+    const todosSeleccionados = slotsDelDia.every((h) => slotsSeleccionados[`${diaIdx}-${h}`]);
 
     const nuevos = { ...slotsSeleccionados };
-    slotsDelDia.forEach(h => {
+    slotsDelDia.forEach((h) => {
       nuevos[`${diaIdx}-${h}`] = !todosSeleccionados;
     });
     setSlotsSeleccionados(nuevos);
   };
 
   const todoElDiaSeleccionado = (diaIdx) => {
-    const dia = DIAS_SEMANA[diaIdx];
-    const slotsDelDia = filas.filter(h => !esCeldaBloqueada(dia, h));
-    return slotsDelDia.length > 0 && slotsDelDia.every(h => slotsSeleccionados[`${diaIdx}-${h}`]);
+    const diaClave = DIAS_MAPA[diaIdx].clave;
+    const slotsDelDia = filas.filter((h) => !esCeldaBloqueada(diaClave, h));
+    return (
+      slotsDelDia.length > 0 && slotsDelDia.every((h) => slotsSeleccionados[`${diaIdx}-${h}`])
+    );
   };
 
-  const calcularFechasExpandidas = useCallback((diaIdx) => {
-    const fechaBase = fechasSemana[diaIdx];
-    if (esFechaPasada(fechaBase)) return [];
+  const calcularFechasExpandidas = useCallback(
+    (diaIdx) => {
+      const fechaBase = fechasSemana[diaIdx];
+      if (esFechaPasada(fechaBase)) return [];
 
-    const fechas = [];
-    let iteraciones = 1;
-    let intervalo = 7;
+      const fechas = [];
+      let iteraciones = 1;
+      let intervalo = 7;
 
-    if (recurrencia === "quincenal") { iteraciones = 2; intervalo = 7; }
-    else if (recurrencia === "mensual") {
-      const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-      let f = new Date(fechaBase);
-      while (f <= fin) {
-        if (!esFechaPasada(f)) fechas.push(new Date(f));
-        f.setDate(f.getDate() + 7);
+      if (recurrencia === "quincenal") {
+        iteraciones = 2;
+        intervalo = 7;
+      } else if (recurrencia === "mensual") {
+        const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+        let f = new Date(fechaBase);
+        while (f <= fin) {
+          if (!esFechaPasada(f)) fechas.push(new Date(f));
+          f.setDate(f.getDate() + 7);
+        }
+        return fechas;
+      }
+
+      for (let i = 0; i < iteraciones; i++) {
+        const f = new Date(fechaBase);
+        f.setDate(fechaBase.getDate() + i * intervalo);
+        if (!esFechaPasada(f)) fechas.push(f);
       }
       return fechas;
-    }
-
-    for (let i = 0; i < iteraciones; i++) {
-      const f = new Date(fechaBase);
-      f.setDate(fechaBase.getDate() + i * intervalo);
-      if (!esFechaPasada(f)) fechas.push(f);
-    }
-    return fechas;
-  }, [fechasSemana, recurrencia, hoy]);
+    },
+    [fechasSemana, recurrencia, hoy]
+  );
 
   const totalSlotsACrear = () => {
     let total = 0;
@@ -290,8 +380,8 @@ export default function CargaTurnos() {
   };
 
   const toggleProfesional = (id) => {
-    setProfesionales(prev =>
-      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    setProfesionales((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
     );
   };
 
@@ -308,10 +398,10 @@ export default function CargaTurnos() {
       const [diaIdxStr, hora] = key.split(/-(.+)/);
       const diaIdx = Number(diaIdxStr);
       const fechas = calcularFechasExpandidas(diaIdx);
-      fechas.forEach(fecha => {
+      fechas.forEach((fecha) => {
         slotsAEnviar.push({
           fecha: fecha.toISOString().split("T")[0],
-          hora
+          hora,
         });
       });
     });
@@ -322,13 +412,16 @@ export default function CargaTurnos() {
 
     setGuardando(true);
     try {
+      const vetId = veterinaria?.veterinaria_id || veterinaria?.id;
       const result = await crearOfertaHoraria({
+        veterinariaId: vetId,
         servicioId,
         profesionales,
         duracion,
         slots: slotsAEnviar,
       });
-      setExito(`Se crearon ${result.data.cantidad} turnos disponibles correctamente.`);
+      const cantidad = result?.data?.cantidad || result?.cantidad || slotsAEnviar.length;
+      setExito(`Se crearon ${cantidad} turnos disponibles correctamente.`);
       setSlotsSeleccionados({});
       await cargarExistentes();
     } catch (err) {
@@ -387,12 +480,20 @@ export default function CargaTurnos() {
                     <select
                       className={styles.select}
                       value={servicioId}
-                      onChange={(e) => { setServicioId(e.target.value); setProfesionales([]); }}
+                      onChange={(e) => {
+                        setServicioId(e.target.value);
+                        setProfesionales([]);
+                      }}
                     >
                       <option value="">Seleccioná un servicio...</option>
-                      {veterinaria?.servicios?.map(s => (
-                        <option key={s._id} value={s._id}>{s.nombre}</option>
-                      ))}
+                      {veterinaria?.servicios?.map((s) => {
+                        const id = s.servicio_id || s._id;
+                        return (
+                          <option key={id} value={id}>
+                            {s.nombre}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
@@ -405,17 +506,21 @@ export default function CargaTurnos() {
                       {servicioId && profesionalesDelServicio.length === 0 && (
                         <span className={styles.helperTextSuave}>Ningún profesional brinda este servicio todavía.</span>
                       )}
-                      {profesionalesDelServicio.map(p => (
-                        <button
-                          key={p._id}
-                          className={`${styles.chipProf} ${profesionales.includes(p._id) ? styles.chipProfActivo : ""}`}
-                          onClick={() => toggleProfesional(p._id)}
-                          type="button"
-                        >
-                          {p.nombre}
-                          {profesionales.includes(p._id) && <span className={styles.chipX}>×</span>}
-                        </button>
-                      ))}
+                      {profesionalesDelServicio.map((p) => {
+                        const id = p.profesional_id || p._id;
+                        const estaActivo = profesionales.includes(id);
+                        return (
+                          <button
+                            key={id}
+                            className={`${styles.chipProf} ${estaActivo ? styles.chipProfActivo : ""}`}
+                            onClick={() => toggleProfesional(id)}
+                            type="button"
+                          >
+                            {p.nombre} {p.apellido || ""}
+                            {estaActivo && <span className={styles.chipX}>×</span>}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -424,10 +529,15 @@ export default function CargaTurnos() {
                     <select
                       className={styles.select}
                       value={duracion}
-                      onChange={(e) => { setDuracion(Number(e.target.value)); setSlotsSeleccionados({}); }}
+                      onChange={(e) => {
+                        setDuracion(Number(e.target.value));
+                        setSlotsSeleccionados({});
+                      }}
                     >
-                      {DURACIONES.map(d => (
-                        <option key={d.value} value={d.value}>{d.label}</option>
+                      {DURACIONES.map((d) => (
+                        <option key={d.value} value={d.value}>
+                          {d.label}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -451,15 +561,19 @@ export default function CargaTurnos() {
                 <div className={styles.navSemanaTop}>
                   <button
                     className={styles.btnNav}
-                    onClick={() => setSemanaOffset(o => Math.max(o - 1, 0))}
+                    onClick={() => setSemanaOffset((o) => Math.max(o - 1, 0))}
                     disabled={semanaOffset === 0}
                     type="button"
-                  >‹</button>
+                  >
+                    ‹
+                  </button>
                   <button
                     className={styles.btnNav}
-                    onClick={() => setSemanaOffset(o => o + 1)}
+                    onClick={() => setSemanaOffset((o) => o + 1)}
                     type="button"
-                  >›</button>
+                  >
+                    ›
+                  </button>
                 </div>
                 <div className={styles.filaRecurrencia}>
                   <div className={styles.campo}>
@@ -469,8 +583,10 @@ export default function CargaTurnos() {
                       value={recurrencia}
                       onChange={(e) => setRecurrencia(e.target.value)}
                     >
-                      {RECURRENCIAS.map(r => (
-                        <option key={r.value} value={r.value}>{r.label}</option>
+                      {RECURRENCIAS.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -481,14 +597,14 @@ export default function CargaTurnos() {
                     <thead>
                       <tr>
                         <th className={styles.thHora}></th>
-                        {DIAS_SEMANA.map((dia, i) => {
+                        {DIAS_MAPA.map((diaObj, i) => {
                           const fecha = fechasSemana[i];
-                          const disponible = diasDisponibles.includes(normalizarDia(dia));
+                          const disponible = diasDisponibles.includes(diaObj.clave);
                           const pasado = esFechaPasada(fecha);
                           return (
-                            <th key={dia} className={`${styles.thDia} ${!disponible || pasado ? styles.thDiaBloqueado : ""}`}>
+                            <th key={diaObj.clave} className={`${styles.thDia} ${!disponible || pasado ? styles.thDiaBloqueado : ""}`}>
                               <div className={styles.thDiaContenido}>
-                                <span className={styles.thDiaNombre}>{dia}</span>
+                                <span className={styles.thDiaNombre}>{diaObj.nombre}</span>
                                 <span className={styles.thDiaFecha}>{formatearFecha(fecha)}</span>
                                 {disponible && !pasado && (
                                   <button
@@ -507,19 +623,20 @@ export default function CargaTurnos() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filas.map(hora => (
+                      {filas.map((hora) => (
                         <tr key={hora}>
                           <td className={styles.tdHora}>{hora}</td>
-                          {DIAS_SEMANA.map((dia, i) => {
+                          {DIAS_MAPA.map((diaObj, i) => {
                             const fecha = fechasSemana[i];
-                            const bloqueado = esCeldaBloqueada(dia, hora);
+                            const bloqueado = esCeldaBloqueada(diaObj.clave, hora, i);
                             const pasado = esCeldaPasada(fecha, hora);
                             const existente = esCeldaExistente(fecha, hora);
+                            const ocupadaOtroServicio = esCeldaOcupadaPorOtroServicio(fecha, hora);
                             const seleccionado = slotsSeleccionados[`${i}-${hora}`];
 
-                            if (bloqueado || pasado) {
+                            if (bloqueado || pasado || ocupadaOtroServicio) {
                               return (
-                                <td key={dia} className={styles.tdBloqueado}>
+                                <td key={diaObj.clave} className={styles.tdBloqueado}>
                                   <div className={styles.celdaBloqueada}>
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
                                   </div>
@@ -529,14 +646,14 @@ export default function CargaTurnos() {
 
                             if (existente) {
                               return (
-                                <td key={dia} className={styles.tdExistente}>
+                                <td key={diaObj.clave} className={styles.tdExistente}>
                                   <div className={styles.celdaExistente}>{hora}</div>
                                 </td>
                               );
                             }
 
                             return (
-                              <td key={dia} className={styles.tdCelda}>
+                              <td key={diaObj.clave} className={styles.tdCelda}>
                                 <button
                                   type="button"
                                   className={`${styles.celda} ${seleccionado ? styles.celdaSeleccionada : ""}`}
@@ -556,7 +673,7 @@ export default function CargaTurnos() {
 
                 {totalSlotsACrear() > 0 && (
                   <div className={styles.resumen}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                     Se crearán <strong>{totalSlotsACrear()} turnos</strong> de <strong>{servicioSeleccionado?.nombre || "el servicio seleccionado"}</strong> con <strong>{profesionales.length} profesional{profesionales.length !== 1 ? "es" : ""}</strong>.
                   </div>
                 )}
@@ -565,7 +682,11 @@ export default function CargaTurnos() {
               <div className={styles.botones}>
                 <button
                   className={styles.btnCancelar}
-                  onClick={() => { setSlotsSeleccionados({}); setError(""); setExito(""); }}
+                  onClick={() => {
+                    setSlotsSeleccionados({});
+                    setError("");
+                    setExito("");
+                  }}
                 >
                   Cancelar
                 </button>
