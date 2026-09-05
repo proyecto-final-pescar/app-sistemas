@@ -3,7 +3,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 
-import connectDB from "./config/db.js";
+//import connectDB from "./config/db.js";
 import routes from "./routes/index.js";
 import "./config/mercadopago.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
@@ -39,7 +39,7 @@ app.use(express.json());
 app.use("/api", routes);
 app.use("/api/upload", uploadRoutes);
 
-connectDB();
+//connectDB();
 
 app.get("/", (req, res) => {
   res.json({ message: "Servidor funcionando" });
