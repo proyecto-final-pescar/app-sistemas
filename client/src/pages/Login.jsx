@@ -61,6 +61,28 @@ function Login() {
     navigate("/home", { replace: true });
   };
 
+  // Maneja los errores de la request de login, distinguiendo el caso
+  // de cuenta inactiva (motivo === "cuenta_desactivada") del resto,
+  // para poder mostrar cada uno con su propio estilo.
+  const manejarErrorLogin = (requestError) => {
+    const responseData = requestError.response?.data;
+    const statusCode = requestError.response?.status;
+
+    if (statusCode === 403 && responseData?.motivo === "cuenta_desactivada") {
+      setErrorBaneado(
+        responseData?.mensaje || "Tu cuenta ha sido desactivada.",
+      );
+    } else if (responseData) {
+      setError(obtenerMensajeError(responseData));
+    } else if (requestError.request) {
+      setError(
+        "No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.",
+      );
+    } else {
+      setError("Ocurrió un error inesperado. Por favor intentá nuevamente.");
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
@@ -97,17 +119,7 @@ function Login() {
 
       await redirigirSegunRol(userData);
     } catch (requestError) {
-      const responseData = requestError.response?.data;
-
-      if (responseData) {
-        setError(obtenerMensajeError(responseData));
-      } else if (requestError.request) {
-        setError(
-          "No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.",
-        );
-      } else {
-        setError("Ocurrió un error inesperado. Por favor intentá nuevamente.");
-      }
+      manejarErrorLogin(requestError);
     } finally {
       setIsLoading(false);
     }
@@ -115,6 +127,7 @@ function Login() {
 
   const handleGoogleSuccess = async (credentialResponse) => {
     setError("");
+    setErrorBaneado("");
     setIsLoading(true);
 
     try {
@@ -158,20 +171,7 @@ function Login() {
 
       await redirigirSegunRol(userData);
     } catch (requestError) {
-      const responseData = requestError.response?.data;
-      const statusCode = requestError.response?.status;
-
-      if (statusCode === 403 && responseData?.motivo === "cuenta_desactivada") {
-        setErrorBaneado(responseData?.mensaje || "Tu cuenta ha sido desactivada.");
-      } else if (responseData) {
-        setError(getErrorMessage(responseData));
-      } else if (requestError.request) {
-        setError(
-          "No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.",
-        );
-      } else {
-        setError("Ocurrió un error inesperado. Por favor intentá nuevamente.");
-      }
+      manejarErrorLogin(requestError);
     } finally {
       setIsLoading(false);
     }
@@ -221,86 +221,52 @@ function Login() {
                   className={styles.input}
                 />
               </span>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                autoComplete="email"
-                placeholder="user@mypet.com"
-                required
-                className={styles.input}
-              />
-            </span>
-          </label>
+            </label>
 
-          <label className={styles.field}>
-            <span className={styles.labelRow}>
-              <span className={styles.label}>Contraseña</span>
-              <a href="/forgot-password" className={styles.forgotLink}>
-                ¿Olvidaste tu contraseña?
-              </a>
-            </span>
-            <span className={styles.inputWrap}>
-              <span aria-hidden="true" className={styles.inputIcon}>
-                <LockIcon />
+            <label className={styles.field}>
+              <span className={styles.labelRow}>
+                <span className={styles.label}>Contraseña</span>
+                <a href="/forgot-password" className={styles.forgotLink}>
+                  ¿Olvidaste tu contraseña?
+                </a>
               </span>
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                autoComplete="current-password"
-                placeholder="Mínimo 8 caracteres"
-                required
-                className={styles.input}
-              />
-              <button
-                type="button"
-                aria-label={
-                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-                }
-                onClick={() => setShowPassword((currentValue) => !currentValue)}
-                className={styles.passwordButton}
-              >
-                <EyeIcon />
-              </button>
-            </span>
-          </label>
+              <span className={styles.inputWrap}>
+                <span aria-hidden="true" className={styles.inputIcon}>
+                  <LockIcon />
+                </span>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  autoComplete="current-password"
+                  placeholder="Mínimo 8 caracteres"
+                  required
+                  className={styles.input}
+                />
+                <button
+                  type="button"
+                  aria-label={
+                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                  }
+                  onClick={() => setShowPassword((currentValue) => !currentValue)}
+                  className={styles.passwordButton}
+                >
+                  <EyeIcon />
+                </button>
+              </span>
+            </label>
 
-          {errorBaneado && (
-            <div
-              role="alert"
-              aria-live="polite"
-              style={{
-                padding: "12px 16px",
-                marginBottom: "16px",
-                backgroundColor: "#fee2e2",
-                border: "1px solid #fca5a5",
-                borderRadius: "8px",
-                color: "#991b1b",
-                fontSize: "14px",
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "10px",
-              }}
-            >
-              <span style={{ marginTop: "2px" }}>⚠️</span>
-              <span>{errorBaneado}</span>
-            </div>
-          )}
+            {errorBaneado && (
+              <div role="alert" aria-live="polite" className={styles.avisoInactiva}>
+                <span aria-hidden="true" className={styles.avisoInactivaIcono}>
+                  <AlertIcon />
+                </span>
+                <span>{errorBaneado}</span>
+              </div>
+            )}
 
-          {error && !errorBaneado && (
-            <p role="alert" aria-live="polite" className={styles.error}>
-              {error}
-            </p>
-          )}
-
-          <button type="submit" disabled={isLoading} className={styles.button}>
-            {isLoading ? "Ingresando..." : "Ingresar  →"}
-          </button>
-
-            {error && (
+            {error && !errorBaneado && (
               <p role="alert" aria-live="polite" className={styles.error}>
                 {error}
               </p>
@@ -381,6 +347,16 @@ function EyeIcon() {
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" />
       <circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function AlertIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 9v4" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path d="M12 17h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
     </svg>
   );
 }

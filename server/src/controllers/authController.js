@@ -88,7 +88,7 @@ export const register = async (req, res) => {
     const tokenVerificacion = crypto.randomBytes(32).toString('hex')
     const tokenVerificacionHash = hashToken(tokenVerificacion)
 
-   
+
     const usuario = await prisma.$transaction(async (tx) => {
       const nuevoUsuario = await tx.usuario.create({
         data: {
@@ -112,7 +112,7 @@ export const register = async (req, res) => {
       return nuevoUsuario
     })
 
-   
+
     try {
       await sendVerificationEmail(usuario.email, tokenVerificacion, usuario.nombre)
     } catch (mailError) {
@@ -124,7 +124,7 @@ export const register = async (req, res) => {
       message: 'Cuenta creada. Revisá tu correo para verificar tu cuenta antes de iniciar sesión.'
     })
   } catch (error) {
-    
+
     if (error.code === 'P2002') {
       return res.status(409).json({ mensaje: 'El email ya está registrado' })
     }
@@ -158,8 +158,14 @@ export const login = async (req, res) => {
       return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
     }
 
+    // El campo "motivo" es lo que el frontend usa para distinguir este caso
+    // (cuenta desactivada por un admin) de cualquier otro error 403 y así
+    // poder mostrar el aviso correspondiente en el login.
     if (!usuario.active) {
-      return res.status(403).json({ mensaje: 'Tu cuenta está suspendida' })
+      return res.status(403).json({
+        motivo: 'cuenta_desactivada',
+        mensaje: 'Tu cuenta ha sido desactivada.'
+      })
     }
 
     if (!usuario.verificado) {
@@ -205,7 +211,7 @@ export const googleAuth = async (req, res) => {
     const email = payload.email.toLowerCase()
     const nombreGoogle = payload.name || ''
     const [nombre, ...resto] = nombreGoogle.split(' ')
-    const apellido = resto.join(' ') || nombre 
+    const apellido = resto.join(' ') || nombre
 
     let usuario = await prisma.usuario.findUnique({
       where: { email },
@@ -213,8 +219,13 @@ export const googleAuth = async (req, res) => {
     })
 
     if (usuario) {
+      // Mismo campo "motivo" que en login por password, para que el
+      // frontend muestre el mismo aviso sin importar el método de acceso.
       if (!usuario.active) {
-        return res.status(403).json({ mensaje: 'Tu cuenta está suspendida' })
+        return res.status(403).json({
+          motivo: 'cuenta_desactivada',
+          mensaje: 'Tu cuenta ha sido desactivada.'
+        })
       }
 
       if (!usuario.usuario_google_auth) {
@@ -288,57 +299,6 @@ export const googleAuth = async (req, res) => {
   }
 }
 
-export const login = async (req, res) => {
-  try {
-    const { email, password } = req.body
-
-    const user = await User.findOne({ email: email.toLowerCase() })
-
-    if (!user) {
-      return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
-    }
-
-    // Cuenta creada por Google nunca tuvo password seteado. Sin este
-    // chequeo, bcrypt.compare(password, undefined) tira una excepción
-    // y cae al 500 genérico en vez de avisar con claridad.
-    if (!user.password) {
-      return res.status(401).json({
-        mensaje: 'Esta cuenta fue creada con Google. Iniciá sesión con Google o restablecé tu contraseña.'
-      })
-    }
-
-    const esValida = await bcrypt.compare(password, user.password)
-
-    if (!esValida) {
-      return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
-    }
-    
-    if (!user.active) {
-      return res.status(403).json({
-        motivo: "cuenta_desactivada",
-        mensaje: "Tu cuenta ha sido desactivada."
-      });
-    }
-    const token = jwt.sign(
-      {
-        id: user._id,
-        email: user.email,
-        role: user.role
-      },
-      process.env.JWT_SECRET || 'clave_secreta_temporal',
-      { expiresIn: '24h' }
-    )
-
-    user.historialSesiones.push({ fecha: new Date() })
-    await user.save()
-
-    return res.status(200).json(respuestaUsuario(token, user))
-  } catch (error) {
-    console.error('Error en el login:', error)
-    return res.status(500).json({ mensaje: 'Error interno del servidor' })
-  }
-}
-
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body
@@ -350,7 +310,6 @@ export const forgotPassword = async (req, res) => {
     const mensajeGenerico = {
       mensaje: 'Si el email está registrado, vas a recibir un correo con instrucciones'
     }
-    
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: email.toLowerCase() },
@@ -363,7 +322,7 @@ export const forgotPassword = async (req, res) => {
     }
 
     const tokenPlano = crypto.randomBytes(32).toString('hex')
-   
+
     const tokenHash = hashToken(tokenPlano)
 
     await prisma.usuario_password.update({

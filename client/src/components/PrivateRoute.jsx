@@ -14,13 +14,18 @@ function isTokenValid(payload) {
   return Date.now() < payload.exp * 1000; 
 }
 
-  const PrivateRoute = ({ children, allowedRoles }) => {
+/**
+ * @param {ReactNode} children - contenido protegido
+ * @param {string[]} [allowedRoles] - roles permitidos para esta ruta
+ *   (["dueno"], ["veterinaria"], ["administrador"]).
+ *   Si no se pasa, solo exige estar logeado (cualquier rol entra)
+ */
+const PrivateRoute = ({ children, allowedRoles }) => {
   const location = useLocation();
   const token = localStorage.getItem('token');
   const payload = token ? decodeToken(token) : null;
   const tokenValido = isTokenValid(payload);
 
-  // solo rol 
   const rol = tokenValido ? payload.rol : null;
   const rolPermitido = !allowedRoles || allowedRoles.includes(rol);
 
@@ -29,11 +34,6 @@ function isTokenValid(payload) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  // No renderizar nada si no hay token válido
-  if (!token) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
