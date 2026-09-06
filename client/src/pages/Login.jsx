@@ -32,7 +32,7 @@ function Login() {
     const rol = userData.rol;
 
     if (rol === "dueno") {
-      navigate("/mascotas", { replace: true });
+      navigate("/home", { replace: true });
       return;
     }
 
@@ -74,7 +74,7 @@ function Login() {
       });
 
       const token = data.token || data.jwt || data.accessToken;
-      const user = data.user || data.usuario || {};
+      const user = data.usuario || data.user || {};
 
       if (!token) {
         setError("No se recibio un token de autenticacion.");
@@ -82,12 +82,13 @@ function Login() {
       }
 
       const userData = {
-        id: user.id || user._id || data.id,
-        email: user.email || data.email || formData.email.trim().toLowerCase(),
-        nombre: user.nombre || user.name || data.nombre || data.name,
-        rol: user.rol || user.role || data.rol || data.role,
-        fotoUrl: user.fotoUrl || data.fotoUrl || "",
-        asistenteVirtual: user.asistenteVirtual || data.asistenteVirtual || "perro",
+        id: user.id,
+        email: user.email,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        rol: user.rol,
+        fotoUrl: user.fotoUrl || "",
+        asistenteVirtual: user.asistenteVirtual || "perro",
       };
 
       localStorage.setItem("token", token);
@@ -112,8 +113,6 @@ function Login() {
     }
   };
 
-  // Primer intento de login con Google:no se manda role aca. Si la cuenta ya existe 
-  // Si no existe, responde nuevoUsuario: true  se manda al usuario a completar el registro-seleccionar rol
   const handleGoogleSuccess = async (credentialResponse) => {
     setError("");
     setIsLoading(true);
@@ -128,6 +127,7 @@ function Login() {
           state: {
             googleCredential: credentialResponse.credential,
             nombre: data.nombre,
+            apellido: data.apellido,
             email: data.email,
           },
         });
@@ -143,10 +143,11 @@ function Login() {
       }
 
       const userData = {
-        id: user.id || user._id,
+        id: user.id,
         email: user.email,
-        nombre: user.name,
-        rol: user.role,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        rol: user.rol,
         fotoUrl: user.fotoUrl || "",
         asistenteVirtual: user.asistenteVirtual || "perro",
       };

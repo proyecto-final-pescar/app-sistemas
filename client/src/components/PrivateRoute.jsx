@@ -20,8 +20,9 @@ function isTokenValid(payload) {
   const payload = token ? decodeToken(token) : null;
   const tokenValido = isTokenValid(payload);
 
-  const role = tokenValido ? (payload.role || payload.rol) : null;
-  const rolPermitido = !allowedRoles || allowedRoles.includes(role);
+  // solo rol 
+  const rol = tokenValido ? payload.rol : null;
+  const rolPermitido = !allowedRoles || allowedRoles.includes(rol);
 
   if (!tokenValido || !rolPermitido) {
     if (token) {
@@ -39,7 +40,8 @@ function isTokenValid(payload) {
   return (
     <>
       {children}
-      {role === 'dueno' && <ChatBot />}
+      {/* El chatbot esta scopeado al JWT del tutor (rol "dueno") */}
+      {rol === 'dueno' && <ChatBot />}
     </>
   );
 };

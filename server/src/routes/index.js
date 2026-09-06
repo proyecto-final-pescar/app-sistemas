@@ -22,6 +22,7 @@ import pagosRouter from './pagos.js';
 import botRouter from './bot.js';
 import notificacionesRoutes from './notificaciones.js';
 import constantesRouter from './constantesRoutes.js';
+import zonaRoutes from './zonaRoutes.js'
 
 const router = Router()
 
@@ -48,6 +49,6 @@ router.use('/pagos', pagosRouter);
 router.use('/bot', botRouter);
 router.use('/notificaciones', notificacionesRoutes);
 router.use('/constantes', constantesRouter);
-
+router.use('/zonas', zonaRoutes);
 
 export default router;
