@@ -51,6 +51,10 @@ const mapearVeterinariaLegible = (veterinaria) => {
     telefono: veterinaria.telefono,
     email: veterinaria.email,
     sitioWeb: veterinaria.sitio_web,
+    coordenadas: {
+      type: 'Point',
+      coordinates: [Number(veterinaria.longitud), Number(veterinaria.latitud)]
+    },
     urgencias24hs: veterinaria.urgencias,
     estado: veterinaria.estado_veterinaria_id,
     servicios: (veterinaria.servicio || []).map((s) => ({
@@ -169,6 +173,7 @@ const sincronizarHorarios = async (tx, veterinariaId, horariosBody) => {
       throw { status: 400, message: `Día "${dia}" no reconocido en el catálogo.` };
     }
     horariosResueltos.push({
+      veterinaria_id: veterinariaId,
       dia_semana_id: diaSemanaId,
       hora_desde: horaADateTime(franja.desde),
       hora_hasta: horaADateTime(franja.hasta)
@@ -214,7 +219,12 @@ const aplicarActualizacionVeterinaria = async (veterinariaId, body) => {
     const errorProfesionales = validarProfesionales(profesionalesNormalizados);
     if (errorProfesionales) throw { status: 400, message: errorProfesionales };
   }
-  
+
+  if (serviciosNormalizados !== undefined) {
+    const errorServicios = validarServicios(serviciosNormalizados);
+    if (errorServicios) throw { status: 400, message: errorServicios };
+  }
+
   return prisma.$transaction(async (tx) => {
     const dataVeterinaria = {};
     if (nombre !== undefined) dataVeterinaria.nombre = nombre;
@@ -238,11 +248,11 @@ const aplicarActualizacionVeterinaria = async (veterinariaId, body) => {
 
     return tx.veterinaria.findUnique({
       where: { veterinaria_id: veterinariaId },
-        include: {
-          profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
-          servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
-          horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
-        }
+      include: {
+        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
+        servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
+        horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
+      }
     });
   });
 };
@@ -263,6 +273,27 @@ const validarProfesionales = (profesionales) => {
     }
     if (!esTextoValido(especialidad)) {
       return `La especialidad "${especialidad}" solo puede contener letras.`;
+    }
+  }
+
+  return null;
+};
+
+// Valida nombre, categoría y precio de cada servicio del arreglo.
+const validarServicios = (servicios) => {
+  if (!Array.isArray(servicios)) return null;
+
+  for (const servicio of servicios) {
+    const nombre = (servicio?.nombre || '').trim();
+    const categoria = (servicio?.categoria || '').trim();
+
+    if (!nombre || !categoria || servicio?.precio === undefined || servicio?.precio === null || servicio?.precio === '') {
+      return 'El nombre, la categoría y el precio de cada servicio son obligatorios.';
+    }
+
+    const precio = Number(servicio.precio);
+    if (Number.isNaN(precio) || precio <= 0) {
+      return `El precio "${servicio.precio}" del servicio "${nombre}" debe ser un número mayor a 0.`;
     }
   }
 
@@ -326,7 +357,23 @@ export const buscarVeterinarias = async (req, res) => {
       ORDER BY distancia_metros ASC
     `;
 
-    return res.status(200).json({ success: true, data: veterinarias });
+    const data = veterinarias.map((v) => ({
+      _id: v.veterinaria_id,
+      nombre: v.nombre,
+      direccion: v.direccion,
+      telefono: v.telefono,
+      email: v.email,
+      urgencias24hs: v.urgencias,
+      coordenadas: {
+        type: 'Point',
+        coordinates: [Number(v.longitud), Number(v.latitud)]
+      },
+      distanciaMetros: Number(v.distancia_metros)
+    }));
+
+    return res.status(200).json({ success: true, data });
+
+    //return res.status(200).json({ success: true, data: veterinarias });
   } catch (error) {
     console.error('Error en GET /veterinarias/buscar:', error);
     return res.status(500).json({ message: 'Error interno del servidor' });
@@ -359,11 +406,11 @@ export const obtenerVeterinariaPorId = async (req, res) => {
 
     const veterinaria = await prisma.veterinaria.findFirst({
       where: { veterinaria_id: id, estado_veterinaria_id: 'ACT' },
-        include: {
-          profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
-          servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
-          horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
-        }
+      include: {
+        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
+        servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
+        horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
+      }
     });
 
     if (!veterinaria) {
@@ -384,11 +431,11 @@ export const obtenerMiVeterinaria = async (req, res) => {
 
     const veterinaria = await prisma.veterinaria.findUnique({
       where: { usuario_id: usuarioId },
-        include: {
-          profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
-          servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
-          horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
-        }
+      include: {
+        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
+        servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
+        horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
+      }
     });
 
     if (!veterinaria) {
@@ -416,7 +463,7 @@ export const actualizarMiVeterinaria = async (req, res) => {
 
     const veterinariaActualizada = await aplicarActualizacionVeterinaria(veterinaria.veterinaria_id, req.body);
 
-    return res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinariaActualizada) }); 
+    return res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinariaActualizada) });
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ message: error.message });
     console.error('Error en PUT /veterinarias/mia:', error);
@@ -426,25 +473,25 @@ export const actualizarMiVeterinaria = async (req, res) => {
 
 // POST /veterinarias: crea el perfil de una veterinaria (solo rol 'veterinaria')
 export const crearVeterinaria = async (req, res) => {
-    try {
-        const usuarioId = req.user.id;
+  try {
+    const usuarioId = req.user.id;
 
-        const {
-          nombre,
-          direccion,
-          razonSocial,
-          cuit,
-          telefono,
-          email,
-          sitioWeb,
-          coordenadas,
-          latitud: latitudDirecta,
-          longitud: longitudDirecta,
-          servicios = [],
-          profesionales = [],
-          horarios = {},
-          urgencias24hs
-        } = req.body;
+    const {
+      nombre,
+      direccion,
+      razonSocial,
+      cuit,
+      telefono,
+      email,
+      sitioWeb,
+      coordenadas,
+      latitud: latitudDirecta,
+      longitud: longitudDirecta,
+      servicios = [],
+      profesionales = [],
+      horarios = {},
+      urgencias24hs
+    } = req.body;
 
     const latitud = latitudDirecta ?? coordenadas?.coordinates?.[1];
     const longitud = longitudDirecta ?? coordenadas?.coordinates?.[0];
@@ -457,6 +504,13 @@ export const crearVeterinaria = async (req, res) => {
       const errorProfesionales = validarProfesionales(profesionales);
       if (errorProfesionales) {
         return res.status(400).json({ message: errorProfesionales });
+      }
+    }
+
+    if (servicios.length > 0) {
+      const errorServicios = validarServicios(servicios);
+      if (errorServicios) {
+        return res.status(400).json({ message: errorServicios });
       }
     }
 
@@ -581,7 +635,7 @@ export const actualizarVeterinaria = async (req, res) => {
     return res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
-       
+
 // GET /veterinarias/mia/pacientes
 export const obtenerPacientesVeterinaria = async (req, res) => {
   try {
@@ -623,12 +677,12 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
       mascota_id: { in: idsUnicos },
       ...(busqueda
         ? {
-            OR: [
-              { nombre: { contains: busqueda, mode: 'insensitive' } },
-              { usuario: { nombre: { contains: busqueda, mode: 'insensitive' } } },
-              { usuario: { apellido: { contains: busqueda, mode: 'insensitive' } } }
-            ]
-          }
+          OR: [
+            { nombre: { contains: busqueda, mode: 'insensitive' } },
+            { usuario: { nombre: { contains: busqueda, mode: 'insensitive' } } },
+            { usuario: { apellido: { contains: busqueda, mode: 'insensitive' } } }
+          ]
+        }
         : {})
     };
 
