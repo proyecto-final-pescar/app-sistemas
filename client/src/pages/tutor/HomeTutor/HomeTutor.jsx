@@ -32,8 +32,9 @@ const formatearFechaHora = (fecha, hora) => {
 };
 
 const HomeTutor = () => {
-  const navigate = useNavigate();
   const { usuario } = useAuth();
+  const navigate = useNavigate();
+  
   const [query, setQuery] = useState("");
 
   const [mascotas, setMascotas] = useState([]);
@@ -103,7 +104,7 @@ const HomeTutor = () => {
 
         <main className={styles.content}>
           <PanelDestacado
-            titulo={`¡Hola de vuelta, ${usuario.nombre} 👋`}
+            titulo={`¡Hola de vuelta, ${usuario?.nombre} 👋`}
             subtitulo="Encontrá la mejor atención para tu mejor amigo."
           >
             <form className={styles.buscador} onSubmit={handleSubmit}>
