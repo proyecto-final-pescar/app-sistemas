@@ -104,7 +104,7 @@ export const iniciarJobsTurnos = () => {
   })
 
   // Envía recordatorios para turnos dentro de las próximas 24 horas
-  cron.schedule('*/15 * * * *', () => {
-    enviarRecordatoriosTurnos()
-  })
+  //cron.schedule('*/15 * * * *', () => {
+  //  enviarRecordatoriosTurnos()
+  //})
 }

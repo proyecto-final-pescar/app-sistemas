@@ -17,3 +17,4 @@ export const CATEGORIAS_SERVICIO = [
   'Rehabilitación',
   'Otro'
 ];
+
