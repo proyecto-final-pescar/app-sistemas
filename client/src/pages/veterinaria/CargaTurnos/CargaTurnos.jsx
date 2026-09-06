@@ -110,8 +110,8 @@ export default function CargaTurnos() {
   }, []);
 
   const cargarExistentes = useCallback(async () => {
-    const vetId = veterinaria?.veterinaria_id || veterinaria?.id;
-    if (!vetId || vetId.length === 24) return;
+    const vetId = veterinaria?._id;
+    if (!vetId) return;
 
     try {
       const turnos = await obtenerTurnosPorVeterinaria(vetId, { estado: "DIS" });
@@ -159,29 +159,28 @@ export default function CargaTurnos() {
     return fechaSlot < ahora;
   };
 
+  const CLAVE_A_NOMBRE_DIA = {
+    LUN: "lunes",
+    MAR: "martes",
+    MIE: "miercoles",
+    JUE: "jueves",
+    VIE: "viernes",
+    SAB: "sabado",
+    DOM: "domingo",
+  };
+
   // Mapeo flexible de horarios para SQL (horario_veterinaria)
   // Reemplazar la función obtenerHorarioDia
-  const obtenerHorarioDia = (claveDia, diaIndex) => {
+  const obtenerHorarioDia = (claveDia) => {
     if (!veterinaria?.horarios) return null;
 
-    const horarios = Array.isArray(veterinaria.horarios)
-      ? veterinaria.horarios
-      : Object.values(veterinaria.horarios);
+    const nombreDia = CLAVE_A_NOMBRE_DIA[claveDia];
+    const horario = veterinaria.horarios[nombreDia];
+    if (!horario || !horario.desde || !horario.hasta) return null;
 
-    // Mapeo flexible: soporta clave LUN, índice ISO (1-7), índice JS (0-6) o nombre
-    const item = horarios.find((h) => {
-      const val = (h.dia_semana_id || h.dia || "").toString().toUpperCase();
-      return (
-        val === claveDia ||
-        val === String(diaIndex + 1) || // ISO: 1 (Lunes) a 7 (Domingo)
-        val === String(diaIndex)        // JS: 0 a 6
-      );
-    });
-
-    if (!item) return null;
     return {
-      desde: (item.hora_desde || item.desde || "").slice(0, 5), // Corta a HH:mm
-      hasta: (item.hora_hasta || item.hasta || "").slice(0, 5),
+      desde: horario.desde.slice(0, 5),
+      hasta: horario.hasta.slice(0, 5),
     };
   };
 
@@ -283,24 +282,33 @@ export default function CargaTurnos() {
     });
   };
 
-  const esCeldaOcupadaPorOtroServicio = (fecha, hora) => {
-    // Ocupado por CUALQUIER turno del profesional (sin filtrar por servicio)
-    // que se solape, y que además no sea ya el que pinta "ya creado" para
-    // este mismo servicio.
+  const esCeldaOcupada = (fecha, hora) => {
     const fechaStr = fecha.toISOString().split("T")[0];
     const [h, m] = hora.split(":").map(Number);
-    const minutosCelda = h * 60 + m;
+    const inicioNuevo = h * 60 + m;
+    const finNuevo = inicioNuevo + duracion;
 
     return slotsExistentes.some((s) => {
       if (s.fecha !== fechaStr) return false;
-      if (s.servicioId === servicioId) return false; // eso ya lo cubre "ya creado"
       if (!profesionales.some((p) => p.toString() === s.profesionalId)) return false;
 
       const [sh, sm] = s.hora.split(":").map(Number);
       const inicioExistente = sh * 60 + sm;
       const finExistente = inicioExistente + s.duracion;
 
-      return minutosCelda >= inicioExistente && minutosCelda < finExistente;
+      // Mismo criterio de solapamiento que usa el backend al crear la oferta
+      const solapan = inicioExistente < finNuevo && finExistente > inicioNuevo;
+      if (!solapan) return false;
+
+      // Si es exactamente el mismo turno ya creado (mismo servicio, mismo
+      // inicio, misma duración), no lo marcamos "ocupado": lo pinta lila
+      // la función esCeldaExistente.
+      const esElMismoYaCreado =
+        s.servicioId === servicioId &&
+        inicioExistente === inicioNuevo &&
+        s.duracion === duracion;
+
+      return !esElMismoYaCreado;
     });
   };
 
@@ -412,7 +420,7 @@ export default function CargaTurnos() {
 
     setGuardando(true);
     try {
-      const vetId = veterinaria?.veterinaria_id || veterinaria?.id;
+      const vetId = veterinaria?._id;
       const result = await crearOfertaHoraria({
         veterinariaId: vetId,
         servicioId,
@@ -631,10 +639,10 @@ export default function CargaTurnos() {
                             const bloqueado = esCeldaBloqueada(diaObj.clave, hora, i);
                             const pasado = esCeldaPasada(fecha, hora);
                             const existente = esCeldaExistente(fecha, hora);
-                            const ocupadaOtroServicio = esCeldaOcupadaPorOtroServicio(fecha, hora);
+                            const ocupada = esCeldaOcupada(fecha, hora);
                             const seleccionado = slotsSeleccionados[`${i}-${hora}`];
 
-                            if (bloqueado || pasado || ocupadaOtroServicio) {
+                            if (bloqueado || pasado) {
                               return (
                                 <td key={diaObj.clave} className={styles.tdBloqueado}>
                                   <div className={styles.celdaBloqueada}>
@@ -648,6 +656,16 @@ export default function CargaTurnos() {
                               return (
                                 <td key={diaObj.clave} className={styles.tdExistente}>
                                   <div className={styles.celdaExistente}>{hora}</div>
+                                </td>
+                              );
+                            }
+
+                            if (ocupada) {
+                              return (
+                                <td key={diaObj.clave} className={styles.tdBloqueado}>
+                                  <div className={styles.celdaBloqueada}>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
+                                  </div>
                                 </td>
                               );
                             }
