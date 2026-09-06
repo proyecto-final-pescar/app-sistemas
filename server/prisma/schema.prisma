@@ -79,6 +79,9 @@ model estado_reporte {
   estado_reporte_id String    @id @db.Char(3)
   nombre            String    @unique @db.VarChar(30)
   reporte           reporte[]
+  
+  @@unique([publicacion_id, usuario_id])
+  @@index([estado_reporte_id, publicacion_id], map: "ix_reporte_estado_publicacion")
 }
 
 model estado_turno {
