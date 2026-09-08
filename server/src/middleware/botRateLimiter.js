@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, {ipKeyGenerator} from 'express-rate-limit';
 
 // Ventana y tope pensados para uso normal de chat
 const VENTANA_MS = 5 * 60 * 1000; // 5 minutos
@@ -16,7 +16,7 @@ const botRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 
-  keyGenerator: (req) => req.user?.id || req.ip,
+  keyGenerator: (req) => req.user?.id || ipKeyGenerator(req.ip),
 
   handler: (req, res) => {
     const asistente = req.body?.asistente === 'luna' ? 'luna' : 'firu';

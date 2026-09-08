@@ -79,9 +79,6 @@ model estado_reporte {
   estado_reporte_id String    @id @db.Char(3)
   nombre            String    @unique @db.VarChar(30)
   reporte           reporte[]
-  
-  @@unique([publicacion_id, usuario_id])
-  @@index([estado_reporte_id, publicacion_id], map: "ix_reporte_estado_publicacion")
 }
 
 model estado_turno {
@@ -282,6 +279,7 @@ model reporte {
   usuario           usuario        @relation(fields: [usuario_id], references: [usuario_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([publicacion_id, usuario_id])
+  @@index([estado_reporte_id, publicacion_id], map: "ix_reporte_estado_publicacion")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
