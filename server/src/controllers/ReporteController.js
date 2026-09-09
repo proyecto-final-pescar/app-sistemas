@@ -14,6 +14,9 @@ const SELECT_PUBLICACION = {
   nombre: true,
   foto: true,
   estado_publicacion_id: true,
+  descripcion: true,
+  contacto: true,
+  tipo_contacto_id: true,
   zona: { select: { zona_id: true, nombre: true } }
 };
 const SELECT_USUARIO = { usuario_id: true, nombre: true, apellido: true, email: true };

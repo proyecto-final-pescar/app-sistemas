@@ -13,6 +13,10 @@ import { armarEmailSuspensionCuenta } from '../templates/emailSuspensionCuenta.j
 const escapeRegex = (texto) =>
     texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const esIdInvalido = (error) =>
+  error.code === 'P2023' ||
+  (typeof error.message === 'string' && error.message.includes('invalid input syntax for type uuid'));
+
 // GET /usuarios: listado paginado de usuarios 
 //  panel "Gestión de Dueños"  //no MIGRADO
 export const listarUsuarios = async (req, res) => {
@@ -331,18 +335,11 @@ export const actualizarPerfilPropio = async (req, res) => {
 }
 /////
 
-
-
-
-
-
 //TODO: no migrado
-
 export const crearUsuarioAdmin = async (req, res) => {
     try {
         const { name, email, password, role, telefono } = req.body;
 
-        // 1. Validación de datos faltantes
         if (!name || !email || !password || !role) {
             return res.status(400).json({
                 success: false,
@@ -350,38 +347,31 @@ export const crearUsuarioAdmin = async (req, res) => {
             });
         }
 
-        // 2. Validaciones estrictas manuales (ya que no están en el Schema)
         const validaciones = [];
 
-        // Validar nombre (Mínimo 3 caracteres, solo letras y espacios)
         if (name.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(name.trim())) {
             validaciones.push('El nombre debe tener al menos 3 caracteres y contener solo letras.');
         }
 
-        // Validar formato de email
         if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email.trim())) {
             validaciones.push('El formato del email no es válido.');
         }
 
-        // Validar contraseña (Min 8 caracteres, 1 mayúscula, 1 minúscula, 1 número)
         if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password)) {
             validaciones.push('La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número.');
         }
 
-        // Validar roles permitidos
         const rolesPermitidos = ['administrador', 'tutor', 'veterinaria', 'dueno'];
         if (!rolesPermitidos.includes(role)) {
             validaciones.push(`El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}.`);
         }
 
-        // Validar tel opcional 
         if (telefono !== undefined && telefono !== null && telefono.trim() !== '') {
             if (!/^[\d\s()+-]{6,20}$/.test(telefono.trim())) {
                 validaciones.push('El teléfono debe contener solo números, espacios, +, - o paréntesis (6 a 20 caracteres).');
             }
         }
 
-        // Si hay errores de validación, cortamos la ejecución y respondemos (HTTP 400)
         if (validaciones.length > 0) {
             return res.status(400).json({
                 success: false,
@@ -390,7 +380,6 @@ export const crearUsuarioAdmin = async (req, res) => {
             });
         }
 
-        // 3. Regla de negocio: Verificar email duplicado (HTTP 409)
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(409).json({
@@ -399,11 +388,9 @@ export const crearUsuarioAdmin = async (req, res) => {
             });
         }
 
-        // 4. Hashear la contraseña
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // 5. Crear la instancia (aplicando trim para limpiar espacios accidentales)
         const newUser = new User({
             name: name.trim(),
             email: email.toLowerCase().trim(),
@@ -414,16 +401,13 @@ export const crearUsuarioAdmin = async (req, res) => {
             historialSesiones: []
         });
 
-        // 6. Guardar en la DB
         await newUser.save();
 
-        // 7. Preparar la respuesta ocultando datos sensibles
         const userResponse = newUser.toObject();
         delete userResponse.password;
         delete userResponse.resetPasswordToken;
         delete userResponse.resetPasswordExpires;
 
-        // 8. Respuesta Exitosa
         return res.status(201).json({
             success: true,
             message: 'Usuario creado exitosamente por el administrador',
@@ -440,19 +424,12 @@ export const crearUsuarioAdmin = async (req, res) => {
 };
 
 
-// 3. BAJA LÓGICA (SOFT DELETE) POR ADMIN
+// 3. BAJA LÓGICA (SOFT DELETE) POR ADMIN — MIGRADO 
 export const darDeBajaUsuario = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({
-                success: false,
-                message: 'El ID de usuario proporcionado no es válido.'
-            });
-        }
-
-        const usuario = await User.findById(id);
+        const usuario = await prisma.usuario.findUnique({ where: { usuario_id: id } });
 
         if (!usuario) {
             return res.status(404).json({
@@ -468,13 +445,16 @@ export const darDeBajaUsuario = async (req, res) => {
             });
         }
 
-        usuario.active = false;
-        await usuario.save();
+        const usuarioActualizado = await prisma.usuario.update({
+            where: { usuario_id: id },
+            data: { active: false }
+        });
 
-        // Aviso por email al usuario suspendido
+        // Aviso por email al usuario suspendido (no debe bloquear la baja si falla)
         try {
-            const { subject, html } = armarEmailSuspensionCuenta(usuario.name);
-            await enviarEmail({ to: usuario.email, subject, html });
+            const nombreCompleto = `${usuarioActualizado.nombre} ${usuarioActualizado.apellido}`.trim();
+            const { subject, html } = armarEmailSuspensionCuenta(nombreCompleto);
+            await enviarEmail({ to: usuarioActualizado.email, subject, html });
         } catch (emailError) {
             console.error('Error al enviar email de suspensión de cuenta:', emailError);
         }
@@ -483,14 +463,20 @@ export const darDeBajaUsuario = async (req, res) => {
             success: true,
             message: 'Cuenta de usuario desactivada exitosamente.',
             data: {
-                id: usuario._id,
-                email: usuario.email,
-                active: usuario.active,
-                fechaBaja: usuario.updatedAt
+                id: usuarioActualizado.usuario_id,
+                email: usuarioActualizado.email,
+                active: usuarioActualizado.active,
+                fechaBaja: usuarioActualizado.updated_at ?? new Date()
             }
         });
 
     } catch (error) {
+        if (esIdInvalido(error)) {
+            return res.status(400).json({
+                success: false,
+                message: 'El ID de usuario proporcionado no es válido.'
+            });
+        }
         console.error('Error en darDeBajaUsuario:', error);
         return res.status(500).json({
             success: false,
@@ -499,7 +485,7 @@ export const darDeBajaUsuario = async (req, res) => {
     }
 };
 
-// 4. MODIFICACIÓN DE USUARIO (POR ADMIN)
+// 4. MODIFICACIÓN DE USUARIO (POR ADMIN) — no migrado
 export const actualizarUsuarioAdmin = async (req, res) => {
     try {
         const { id } = req.params;
@@ -512,7 +498,6 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             });
         }
 
-        // 2. Buscar el usuario en la base de datos
         const usuario = await User.findById(id);
         if (!usuario) {
             return res.status(404).json({
@@ -570,9 +555,6 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             if (typeof active !== 'boolean') {
                 validaciones.push('El estado activo debe ser true (activo) o false (inactivo).');
             } else {
-                if (usuario.active === true && active === false) {
-                    seDesactivoUsuario = true;
-                }
                 usuario.active = active;
             }
         }
@@ -580,7 +562,6 @@ export const actualizarUsuarioAdmin = async (req, res) => {
         if (telefono !== undefined) {
             const telefonoLimpio = telefono === null ? '' : telefono.trim();
             if (telefonoLimpio === '') {
-                // Permite vaciar el teléfono explícitamente
                 usuario.telefono = undefined;
             } else if (!/^[\d\s()+-]{6,20}$/.test(telefonoLimpio)) {
                 validaciones.push('El teléfono debe contener solo números, espacios, +, - o paréntesis (6 a 20 caracteres).');
@@ -598,15 +579,6 @@ export const actualizarUsuarioAdmin = async (req, res) => {
         }
 
         await usuario.save();
-
-        if (req._seDesactivoUsuario) {
-            try {
-                const { subject, html } = armarEmailSuspensionCuenta(usuario.name);
-                await enviarEmail({ to: usuario.email, subject, html });
-            } catch (emailError) {
-                console.error('Error al enviar email de suspensión de cuenta:', emailError);
-            }
-        }
 
         const userResponse = usuario.toObject();
         delete userResponse.password;
