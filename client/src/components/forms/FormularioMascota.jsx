@@ -1,20 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./FormularioMascota.css";
 
 import Input from "../ui/input/Input";
 import Select from "../ui/select/Select";
 import Button from "../ui/button/Button";
-import {
-  crearMascota,
-  actualizarMascota,
-} from "../../services/MascotaService";
+import { crearMascota, actualizarMascota } from "../../services/MascotaService";
 import { subirImagen } from "../../services/uploadService";
+import {
+  obtenerEspecies,
+  obtenerRazas,
+} from "../../services/constantesService";
 
-function FormularioMascota({
-  mascotaInicial = null,
-  onCancelar,
-  onGuardado,
-})  {
+function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
   const esEdicion = Boolean(mascotaInicial);
 
   const [nombre, setNombre] = useState(mascotaInicial?.nombre || "");
@@ -22,18 +19,32 @@ function FormularioMascota({
   const [raza, setRaza] = useState(mascotaInicial?.raza || "");
   const [fechaNacimiento, setFechaNacimiento] = useState(
     mascotaInicial?.fechaNacimiento
-        ? mascotaInicial.fechaNacimiento.split("T")[0]
-        : ""
-    );
+      ? mascotaInicial.fechaNacimiento.split("T")[0]
+      : "",
+  );
   const [sexo, setSexo] = useState(mascotaInicial?.sexo || "");
   const [peso, setPeso] = useState(mascotaInicial?.peso || "");
-  const [esCastrado, setEsCastrado] = useState(mascotaInicial?.esCastrado ?? false);
+  const [esCastrado, setEsCastrado] = useState(
+    mascotaInicial?.esCastrado ?? false,
+  );
   const [foto, setFoto] = useState(null);
-const [guardando, setGuardando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
+  const [especiesDisponibles, setEspeciesDisponibles] = useState([]);
+  const [razasDisponibles, setRazasDisponibles] = useState([]);
 
+  // Traer el catálogo de especies del backend
+  useEffect(() => {
+    obtenerEspecies().then(setEspeciesDisponibles);
+  }, []);
 
-
+  useEffect(() => {
+    if (!especie) {
+      setRazasDisponibles([]);
+      return;
+    }
+    obtenerRazas(especie).then(setRazasDisponibles);
+  }, [especie]);
 
   const [errores, setErrores] = useState({});
 
@@ -48,23 +59,25 @@ const [guardando, setGuardando] = useState(false);
       nuevosErrores.especie = "Debe seleccionar una especie";
     }
 
+    if (raza.trim() === "") {
+      nuevosErrores.raza = "Debe seleccionar una raza";
+    }
+
     if (sexo.trim() === "") {
       nuevosErrores.sexo = "Debe seleccionar un sexo";
     }
-    if (fechaNacimiento.trim() === "")
-    {
+    if (fechaNacimiento.trim() === "") {
       nuevosErrores.fechaNacimiento = "Debe seleccionar una fecha aproximada";
     }
-    if (peso.trim() === "")
-    {
-      nuevosErrores.peso = "El campo peso es obligatorio"
+    if (peso.trim() === "") {
+      nuevosErrores.peso = "El campo peso es obligatorio";
     }
 
     setErrores(nuevosErrores);
 
     return Object.keys(nuevosErrores).length === 0;
   }
-async function manejarSubmit(evento) {
+  async function manejarSubmit(evento) {
     evento.preventDefault();
 
     if (!validarFormularioMascota()) return;
@@ -85,7 +98,7 @@ async function manejarSubmit(evento) {
         fechaNacimiento,
         sexo,
         peso,
-        esCastrado,   
+        esCastrado,
         foto: urlFoto,
       };
 
@@ -103,13 +116,13 @@ async function manejarSubmit(evento) {
     }
   }
 
-    function manejarCambioFoto(evento) {
-  const archivo = evento.target.files?.[0];
+  function manejarCambioFoto(evento) {
+    const archivo = evento.target.files?.[0];
 
-  if (archivo) {
-    setFoto(archivo);
+    if (archivo) {
+      setFoto(archivo);
+    }
   }
-}
 
   return (
     <form className="formulario-mascota" onSubmit={manejarSubmit}>
@@ -118,28 +131,32 @@ async function manejarSubmit(evento) {
 
         <h2>{esEdicion ? "Editar Mascota" : "Agregar Mascota"}</h2>
 
-       <p>{esEdicion ? "Modificá los datos de tu mascota" : "Registrá a tu próximo compañero"}</p>
+        <p>
+          {esEdicion
+            ? "Modificá los datos de tu mascota"
+            : "Registrá a tu próximo compañero"}
+        </p>
       </div>
 
-<label className="foto-upload">
-  {foto || mascotaInicial?.foto ? (
-    <div className="foto-preview-wrapper">
-      <img
-        className="preview-foto"
-        src={foto ? URL.createObjectURL(foto) : mascotaInicial.foto}
-        alt="Vista previa"
-      />
-      <div className="foto-edit-overlay">✏️</div>
-    </div>
-  ) : (
-    <>
-      <span className="foto-icono">📷</span>
-      <span>{esEdicion ? "Cambiar foto" : "Subir foto"}</span>
-    </>
-  )}
-  <input type="file" accept="image/*" onChange={manejarCambioFoto} />
-</label>
-  
+      <label className="foto-upload">
+        {foto || mascotaInicial?.foto ? (
+          <div className="foto-preview-wrapper">
+            <img
+              className="preview-foto"
+              src={foto ? URL.createObjectURL(foto) : mascotaInicial.foto}
+              alt="Vista previa"
+            />
+            <div className="foto-edit-overlay">✏️</div>
+          </div>
+        ) : (
+          <>
+            <span className="foto-icono">📷</span>
+            <span>{esEdicion ? "Cambiar foto" : "Subir foto"}</span>
+          </>
+        )}
+        <input type="file" accept="image/*" onChange={manejarCambioFoto} />
+      </label>
+
       <Input
         label="Nombre"
         placeholder="Ej: Luna"
@@ -151,15 +168,21 @@ async function manejarSubmit(evento) {
       <Select
         label="Especie"
         placeholder="Seleccioná una especie"
-        opciones={["Perro", "Gato", "Otro"]}
+        opciones={especiesDisponibles}
         value={especie}
-        onChange={(evento) => setEspecie(evento.target.value)}
+        onChange={(evento) => {
+          setEspecie(evento.target.value);
+          setRaza("");
+        }}
         error={errores.especie}
       />
 
       <Input
         label="Raza"
-        placeholder="Ej: Labrador Retriever"
+        placeholder={
+          especie ? "Seleccioná una raza" : "Elegí primero una especie"
+        }
+        opciones={razasDisponibles}
         value={raza}
         onChange={(evento) => setRaza(evento.target.value)}
         error={errores.raza}
@@ -208,22 +231,22 @@ async function manejarSubmit(evento) {
         error={errores.peso}
       />
       <div>
-      <label className="input-label">Castración</label>
-      <div className="sexo-opciones">
-        <div
-          className={`sexo-card ${esCastrado === true ? "sexo-card-selected" : ""}`}
-          onClick={() => setEsCastrado(true)}
-        >
-          Castrad@
-        </div>
-        <div
-          className={`sexo-card ${esCastrado === false ? "sexo-card-selected" : ""}`}
-          onClick={() => setEsCastrado(false)}
-        >
-          No castrad@
+        <label className="input-label">Castración</label>
+        <div className="sexo-opciones">
+          <div
+            className={`sexo-card ${esCastrado === true ? "sexo-card-selected" : ""}`}
+            onClick={() => setEsCastrado(true)}
+          >
+            Castrad@
+          </div>
+          <div
+            className={`sexo-card ${esCastrado === false ? "sexo-card-selected" : ""}`}
+            onClick={() => setEsCastrado(false)}
+          >
+            No castrad@
+          </div>
         </div>
       </div>
-    </div>
 
       <div className="formulario-acciones">
         <Button
@@ -234,15 +257,15 @@ async function manejarSubmit(evento) {
           onClick={onCancelar}
         />
 
-       <Button
+        <Button
           type="submit"
           disabled={guardando}
           texto={
             guardando
               ? "Guardando..."
               : esEdicion
-              ? "Guardar cambios"
-              : "Agregar Mascota"
+                ? "Guardar cambios"
+                : "Agregar Mascota"
           }
           variante="primario"
           tamaño="mediano"

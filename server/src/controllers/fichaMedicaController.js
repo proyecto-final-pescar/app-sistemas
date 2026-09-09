@@ -1,94 +1,77 @@
-import FichaMedica from '../models/FichaMedica.js'
-import Mascota from '../models/Mascota.js'
+import prisma from '../../prisma/client.js';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const esUuidValido = (id) => UUID_REGEX.test(id || '');
+
+export const mapearFichaMedicaLegible = (ficha) => {
+  if (!ficha) return null;
+  return {
+    _id: ficha.ficha_medica_id,
+    mascotaId: ficha.mascota_id,
+    colorPelaje: ficha.color_pelaje,
+    microchip: ficha.microchip,
+    enfermedadesCronicas: ficha.enfermedades_cronicas,
+    cirugiasPrevias: ficha.cirugias_previas,
+    medicamentosHabituales: ficha.medicamentos_habituales
+  };
+};
 
 export const obtenerFichaMedica = async (req, res) => {
   try {
-    const { mascotaId } = req.params
+    const { mascotaId } = req.params;
+    if (!esUuidValido(mascotaId)) {
+      return res.status(400).json({ success: false, message: 'El id de la mascota no es válido' });
+    }
 
-    const fichaMedica = await FichaMedica.findOne({ mascotaId })
-      .populate('dueñoId', 'nombre email')
+    const fichaMedica = await prisma.ficha_medica.findUnique({
+      where: { mascota_id: mascotaId }
+    });
 
-    // Si no existe todavía no es un error
-    // significa que la mascota no tuvo consultas aún
     if (!fichaMedica) {
       return res.status(200).json({
         success: true,
         data: null,
         message: 'Esta mascota todavía no tiene ficha médica'
-      })
+      });
     }
 
-    return res.status(200).json({
-      success: true,
-      data: fichaMedica
-    })
-
+    return res.status(200).json({ success: true, data: mapearFichaMedicaLegible(fichaMedica) });
   } catch (error) {
-    console.error('Error en obtenerFichaMedica:', error)
-    return res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor'
-    })
+    console.error('Error en obtenerFichaMedica:', error);
+    return res.status(500).json({ success: false, message: 'Error interno del servidor' });
   }
-}
+};
 
 export const actualizarFichaMedica = async (req, res) => {
   try {
-    const { mascotaId } = req.params
+    const { mascotaId } = req.params;
+    if (!esUuidValido(mascotaId)) {
+      return res.status(400).json({ success: false, message: 'El id de la mascota no es válido' });
+    }
+
     const {
-      colorPelaje,
-      microchip,
-      enfermedadesCronicas,
-      cirugiasPrevias,
-      medicamentosHabituales
-    } = req.body
+      colorPelaje, microchip, enfermedadesCronicas, cirugiasPrevias, medicamentosHabituales
+    } = req.body;
 
-    // Buscar si existe la ficha
-    let fichaMedica = await FichaMedica.findOne({ mascotaId })
+    const data = {};
+    if (colorPelaje !== undefined) data.color_pelaje = colorPelaje?.trim();
+    if (microchip !== undefined) data.microchip = microchip?.trim();
+    if (enfermedadesCronicas !== undefined) data.enfermedades_cronicas = enfermedadesCronicas?.trim();
+    if (cirugiasPrevias !== undefined) data.cirugias_previas = cirugiasPrevias?.trim();
+    if (medicamentosHabituales !== undefined) data.medicamentos_habituales = medicamentosHabituales?.trim();
 
-    if (!fichaMedica) {
-      // Si no existe la creamos en este momento
-      const mascota = await Mascota.findById(mascotaId)
-      if (!mascota) {
-        return res.status(404).json({
-          success: false,
-          message: 'Mascota no encontrada'
-        })
-      }
+    const fichaMedica = await prisma.ficha_medica.upsert({
+      where: { mascota_id: mascotaId },
+      update: data,
+      create: { mascota_id: mascotaId, ...data }
+    });
 
-      fichaMedica = new FichaMedica({
-        mascotaId,
-        dueñoId: mascota.dueñoId
-      })
-    }
-
-    // Actualizar solo los campos que vienen en el body
-    if (colorPelaje !== undefined) fichaMedica.colorPelaje = colorPelaje.trim()
-    if (microchip !== undefined) fichaMedica.microchip = microchip.trim()
-    if (enfermedadesCronicas !== undefined) fichaMedica.enfermedadesCronicas = enfermedadesCronicas.trim()
-    if (cirugiasPrevias !== undefined) fichaMedica.cirugiasPrevias = cirugiasPrevias.trim()
-    if (medicamentosHabituales !== undefined) fichaMedica.medicamentosHabituales = medicamentosHabituales.trim()
-
-    await fichaMedica.save()
-
-    return res.status(200).json({
-      success: true,
-      data: fichaMedica
-    })
-
+    return res.status(200).json({ success: true, data: mapearFichaMedicaLegible(fichaMedica) });
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      const errores = Object.values(error.errors).map(e => e.message)
-      return res.status(400).json({
-        success: false,
-        message: 'Error de validación',
-        errores
-      })
+    if (error.code === 'P2003') {
+      return res.status(404).json({ success: false, message: 'Mascota no encontrada' });
     }
-    console.error('Error en actualizarFichaMedica:', error)
-    return res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor'
-    })
+    console.error('Error en actualizarFichaMedica:', error);
+    return res.status(500).json({ success: false, message: 'Error interno del servidor' });
   }
-}
+};

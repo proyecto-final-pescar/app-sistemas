@@ -24,6 +24,12 @@ export const actualizarFichaMedica = async (mascotaId, datosFicha) => {
     return data;
 };
 
+export const obtenerFichaMedica = async (mascotaId) => {
+    const { data } = await api.get(`/ficha-medica/${mascotaId}`);
+    return data;
+};
+
 export default {
-  actualizarFichaMedica,
+    obtenerFichaMedica,
+    actualizarFichaMedica,
 };

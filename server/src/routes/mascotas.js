@@ -5,6 +5,7 @@ import { obtenerHistorialClinico } from '../controllers/historialClinicoControll
 
 import {
     obtenerMascotas,
+    obtenerMascotaPorId,
     crearMascota,
     actualizarMascota,
     eliminarMascota
@@ -17,6 +18,9 @@ router.get('/', authMiddleware, obtenerMascotas);
 
 // Ruta para crear una nueva mascota
 router.post('/', authMiddleware, crearMascota);
+
+// Ruta para obtener una mascota por su ID
+router.get('/:id', authMiddleware, obtenerMascotaPorId);
 
 // Ruta para obtener el historial clínico de una mascota por su ID
 router.get('/:id/historial', authMiddleware, historialAccess, obtenerHistorialClinico);
