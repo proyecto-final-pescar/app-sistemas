@@ -27,3 +27,31 @@ export const resolverDiaSemanaId = async (nombreDia) => {
   });
   return dia?.dia_semana_id ?? null;
 };
+
+export const resolverEspecieId = async (nombre) => {
+  const especie = await prisma.especie.findFirst({
+    where: { nombre: { equals: (nombre || '').trim(), mode: 'insensitive' } },
+    select: { especie_id: true }
+  });
+  return especie?.especie_id ?? null;
+};
+
+export const resolverRazaId = async (especieId, nombreRaza) => {
+  if (!especieId) return null;
+  const raza = await prisma.raza.findFirst({
+    where: {
+      especie_id: especieId,
+      nombre: { equals: (nombreRaza || '').trim(), mode: 'insensitive' }
+    },
+    select: { raza_id: true }
+  });
+  return raza?.raza_id ?? null;
+};
+
+export const resolverSexoMascotaId = async (nombre) => {
+  const sexo = await prisma.sexo_mascota.findFirst({
+    where: { nombre: { equals: (nombre || '').trim(), mode: 'insensitive' } },
+    select: { sexo_mascota_id: true }
+  });
+  return sexo?.sexo_mascota_id ?? null;
+};
