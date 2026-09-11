@@ -7,18 +7,17 @@ import mongoose from 'mongoose';
 import prisma from '../../prisma/client.js'
 import { enviarEmail } from '../utils/mailer.js';
 import { armarEmailSuspensionCuenta } from '../templates/emailSuspensionCuenta.js';
-
-// Escapa caracteres especiales de regex antes de usarlos en $regex.
-
-const escapeRegex = (texto) =>
-    texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+import { armarEmailCambioEstadoCuenta } from '../templates/emailCambioEstadoCuenta.js';
 
 const esIdInvalido = (error) =>
   error.code === 'P2023' ||
   (typeof error.message === 'string' && error.message.includes('invalid input syntax for type uuid'));
 
-// GET /usuarios: listado paginado de usuarios 
-//  panel "Gestión de Dueños"  //no MIGRADO
+
+const ESTADO_TURNO_CANCELADO = 'CAN';
+
+// GET /usuarios: listado paginado de usuarios
+// "Gestion de Dueños" — MIGRADO 
 export const listarUsuarios = async (req, res) => {
     try {
         const {
@@ -33,55 +32,63 @@ export const listarUsuarios = async (req, res) => {
         const pageNum = Math.max(parseInt(page, 10) || 1, 1);
         const limitNum = Math.max(parseInt(limit, 10) || 10, 1);
 
+        const filtro = { rol: { nombre: 'dueno' } };
 
-        const filtro = { role: 'dueno' };
-
-        if (nombre) {
-            filtro.name = { $regex: escapeRegex(nombre.trim()), $options: 'i' };
+        if (nombre?.trim()) {
+            filtro.nombre = { contains: nombre.trim(), mode: 'insensitive' };
         }
-        if (email) {
-            filtro.email = { $regex: escapeRegex(email.trim()), $options: 'i' };
+        if (email?.trim()) {
+            filtro.email = { contains: email.trim(), mode: 'insensitive' };
         }
-        if (telefono) {
-            filtro.telefono = { $regex: escapeRegex(telefono.trim()), $options: 'i' };
+        if (telefono?.trim()) {
+            filtro.telefono = { contains: telefono.trim(), mode: 'insensitive' };
         }
         if (estado === 'true' || estado === 'false') {
             filtro.active = estado === 'true';
         }
 
-        const total = await User.countDocuments(filtro);
+        const [total, usuarios] = await Promise.all([
+            prisma.usuario.count({ where: filtro }),
+            prisma.usuario.findMany({
+                where: filtro,
+                orderBy: { created_at: 'desc' },
+                skip: (pageNum - 1) * limitNum,
+                take: limitNum
+            })
+        ]);
 
-        const usuarios = await User.find(filtro)
-            .sort({ createdAt: -1 })
-            .skip((pageNum - 1) * limitNum)
-            .limit(limitNum);
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
 
-        const ahora = new Date();
-
-        // Para cada usuario de la pag con mascotas y turnos.
-        // con paginacion
         const data = await Promise.all(usuarios.map(async (usuario) => {
             const [cantidadMascotas, turnosProximos, turnosPasados] = await Promise.all([
-                Mascota.countDocuments({ dueñoId: usuario._id }),
-                Turno.countDocuments({
-                    usuarioId: usuario._id,
-                    fecha: { $gte: ahora },
-                    estado: { $ne: 'cancelado' } // no contamos cancelados 
+                prisma.mascota.count({
+                    where: { dueno_id: usuario.usuario_id }
                 }),
-                Turno.countDocuments({
-                    usuarioId: usuario._id,
-                    fecha: { $lt: ahora },
-                    estado: { $ne: 'cancelado' }
+                //  turno -> mascota -> dueno_id
+                prisma.turno.count({
+                    where: {
+                        mascota: { dueno_id: usuario.usuario_id },
+                        fecha: { gte: hoy },
+                        estado_turno_id: { not: ESTADO_TURNO_CANCELADO }
+                    }
+                }),
+                prisma.turno.count({
+                    where: {
+                        mascota: { dueno_id: usuario.usuario_id },
+                        fecha: { lt: hoy },
+                        estado_turno_id: { not: ESTADO_TURNO_CANCELADO }
+                    }
                 })
             ]);
 
             return {
-                id: usuario._id,
-                nombre: usuario.name,
+                id: usuario.usuario_id,
+                nombre: `${usuario.nombre} ${usuario.apellido}`.trim(),
                 email: usuario.email,
                 telefono: usuario.telefono || null,
                 mascotas: cantidadMascotas,
-                registro: usuario.createdAt,
+                registro: usuario.created_at,
                 turnos: {
                     proximos: turnosProximos,
                     pasados: turnosPasados
@@ -485,20 +492,21 @@ export const darDeBajaUsuario = async (req, res) => {
     }
 };
 
-// 4. MODIFICACIÓN DE USUARIO (POR ADMIN) — no migrado
+// 4. MODIFICACI=N DE USUARIO (POR ADMIN) — MIGRADO
 export const actualizarUsuarioAdmin = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, email, password, role, active, telefono } = req.body;
+        const { active } = req.body;
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
+        if (typeof active !== 'boolean') {
             return res.status(400).json({
                 success: false,
-                message: 'El ID de usuario proporcionado no es válido.'
+                message: 'El campo active debe ser true o false.'
             });
         }
 
-        const usuario = await User.findById(id);
+        const usuario = await prisma.usuario.findUnique({ where: { usuario_id: id } });
+
         if (!usuario) {
             return res.status(404).json({
                 success: false,
@@ -506,101 +514,48 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             });
         }
 
-        const validaciones = [];
-
-        if (name !== undefined) {
-            if (name.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(name.trim())) {
-                validaciones.push('El nombre debe tener al menos 3 caracteres y contener solo letras.');
-            } else {
-                usuario.name = name.trim();
-            }
-        }
-
-        if (email !== undefined) {
-            const emailLimpio = email.toLowerCase().trim();
-            if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(emailLimpio)) {
-                validaciones.push('El formato del email no es válido.');
-            } else {
-                const emailOcupado = await User.findOne({ email: emailLimpio, _id: { $ne: id } });
-
-                if (emailOcupado) {
-                    return res.status(409).json({
-                        success: false,
-                        message: 'El nuevo email ingresado ya se encuentra registrado por otra persona.'
-                    });
-                }
-                usuario.email = emailLimpio;
-            }
-        }
-
-        if (password !== undefined) {
-            if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password)) {
-                validaciones.push('La nueva contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número.');
-            } else {
-                const salt = await bcrypt.genSalt(10);
-                usuario.password = await bcrypt.hash(password, salt);
-            }
-        }
-
-        if (role !== undefined) {
-            const rolesPermitidos = ['administrador', 'tutor', 'veterinaria', 'dueno'];
-            if (!rolesPermitidos.includes(role)) {
-                validaciones.push(`El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}.`);
-            } else {
-                usuario.role = role;
-            }
-        }
-
-        if (active !== undefined) {
-            if (typeof active !== 'boolean') {
-                validaciones.push('El estado activo debe ser true (activo) o false (inactivo).');
-            } else {
-                usuario.active = active;
-            }
-        }
-
-        if (telefono !== undefined) {
-            const telefonoLimpio = telefono === null ? '' : telefono.trim();
-            if (telefonoLimpio === '') {
-                usuario.telefono = undefined;
-            } else if (!/^[\d\s()+-]{6,20}$/.test(telefonoLimpio)) {
-                validaciones.push('El teléfono debe contener solo números, espacios, +, - o paréntesis (6 a 20 caracteres).');
-            } else {
-                usuario.telefono = telefonoLimpio;
-            }
-        }
-
-        if (validaciones.length > 0) {
+        if (usuario.active === active) {
             return res.status(400).json({
                 success: false,
-                message: 'Error de validación en los datos ingresados.',
-                errors: validaciones
+                message: active
+                    ? 'El usuario ya se encuentra activo.'
+                    : 'El usuario ya se encuentra desactivado.'
             });
         }
 
-        await usuario.save();
+        const usuarioActualizado = await prisma.usuario.update({
+            where: { usuario_id: id },
+            data: { active }
+        });
 
-        const userResponse = usuario.toObject();
-        delete userResponse.password;
-        delete userResponse.resetPasswordToken;
-        delete userResponse.resetPasswordExpires;
+       
+        try {
+            const nombreCompleto = `${usuarioActualizado.nombre} ${usuarioActualizado.apellido}`.trim();
+            const { subject, html } = armarEmailCambioEstadoCuenta(nombreCompleto, active);
+            await enviarEmail({ to: usuarioActualizado.email, subject, html });
+        } catch (emailError) {
+            console.error('Error al enviar email de cambio de estado de cuenta:', emailError);
+        }
 
         return res.status(200).json({
             success: true,
-            message: 'Usuario actualizado correctamente.',
-            data: userResponse
+            message: active
+                ? 'Cuenta de usuario activada exitosamente.'
+                : 'Cuenta de usuario desactivada exitosamente.',
+            data: {
+                id: usuarioActualizado.usuario_id,
+                email: usuarioActualizado.email,
+                active: usuarioActualizado.active
+            }
         });
 
     } catch (error) {
-        if (error.name === 'ValidationError') {
-            const messages = Object.values(error.errors).map(val => val.message);
+        if (esIdInvalido(error)) {
             return res.status(400).json({
                 success: false,
-                message: 'Error en los datos proporcionados',
-                errors: messages
+                message: 'El ID de usuario proporcionado no es válido.'
             });
         }
-
         console.error('Error en actualizarUsuarioAdmin:', error);
         return res.status(500).json({
             success: false,
