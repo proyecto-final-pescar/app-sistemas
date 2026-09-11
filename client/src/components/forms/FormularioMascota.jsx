@@ -4,7 +4,7 @@ import "./FormularioMascota.css";
 import Input from "../ui/input/Input";
 import Select from "../ui/select/Select";
 import Button from "../ui/button/Button";
-import { crearMascota, actualizarMascota } from "../../services/MascotaService";
+import { crearMascota, actualizarMascota } from "../../services/mascotaService";
 import { subirImagen } from "../../services/uploadService";
 import {
   obtenerEspecies,
@@ -23,7 +23,11 @@ function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
       : "",
   );
   const [sexo, setSexo] = useState(mascotaInicial?.sexo || "");
-  const [peso, setPeso] = useState(mascotaInicial?.peso || "");
+  const [peso, setPeso] = useState(
+    mascotaInicial?.peso !== undefined && mascotaInicial?.peso !== null
+      ? String(mascotaInicial.peso)
+      : ""
+  );
   const [esCastrado, setEsCastrado] = useState(
     mascotaInicial?.esCastrado ?? false,
   );
@@ -69,7 +73,7 @@ function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
     if (fechaNacimiento.trim() === "") {
       nuevosErrores.fechaNacimiento = "Debe seleccionar una fecha aproximada";
     }
-    if (peso.trim() === "") {
+    if (peso.trim() === "") {          
       nuevosErrores.peso = "El campo peso es obligatorio";
     }
 
@@ -177,15 +181,14 @@ function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
         error={errores.especie}
       />
 
-      <Input
+      <Select
         label="Raza"
-        placeholder={
-          especie ? "Seleccioná una raza" : "Elegí primero una especie"
-        }
+        placeholder={especie ? "Seleccioná una raza" : "Elegí primero una especie"}
         opciones={razasDisponibles}
         value={raza}
         onChange={(evento) => setRaza(evento.target.value)}
         error={errores.raza}
+        disabled={!especie}
       />
 
       <Input
@@ -201,18 +204,16 @@ function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
 
         <div className="sexo-opciones">
           <div
-            className={`sexo-card ${
-              sexo === "Macho" ? "sexo-card-selected" : ""
-            }`}
+            className={`sexo-card ${sexo === "Macho" ? "sexo-card-selected" : ""
+              }`}
             onClick={() => setSexo("Macho")}
           >
             Macho
           </div>
 
           <div
-            className={`sexo-card ${
-              sexo === "Hembra" ? "sexo-card-selected" : ""
-            }`}
+            className={`sexo-card ${sexo === "Hembra" ? "sexo-card-selected" : ""
+              }`}
             onClick={() => setSexo("Hembra")}
           >
             Hembra

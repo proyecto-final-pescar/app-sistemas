@@ -22,14 +22,9 @@ const mapearMascotaLegible = (mascota) => {
         esCastrado: mascota.es_castrado,
         peso: Number(mascota.peso),
         dueñoId: mascota.dueno_id,
-        active: mascota.active,
-        ...(mascota.ficha_medica !== undefined && {
-            fichaMedica: mapearFichaMedicaLegible(mascota.ficha_medica)
-        })
+        active: mascota.active
     };
 };
-
-import { mapearFichaMedicaLegible } from './fichaMedicaController.js';
 
 // GET /mascotas: mascotas activas del usuario logueado
 export const obtenerMascotas = async (req, res) => {
@@ -61,7 +56,7 @@ export const obtenerMascotaPorId = async (req, res) => {
 
         const mascota = await prisma.mascota.findUnique({
             where: { mascota_id: id },
-            include: { ...INCLUDE_MASCOTA, ficha_medica: true }
+            include: INCLUDE_MASCOTA
         });
 
         if (!mascota || !mascota.active) {
@@ -115,7 +110,7 @@ export const crearMascota = async (req, res) => {
             dueno_id: duenoId,
             ficha_medica: { create: {} }
         },
-        include: { ...INCLUDE_MASCOTA, ficha_medica: true }
+        include: INCLUDE_MASCOTA
     });
 
     res.status(201).json(mapearMascotaLegible(nuevaMascota));
@@ -187,7 +182,7 @@ export const actualizarMascota = async (req, res) => {
         const mascotaActualizada = await prisma.mascota.update({
             where: { mascota_id: id },
             data,
-            include: { ...INCLUDE_MASCOTA, ficha_medica: true }
+            include: INCLUDE_MASCOTA
         });
 
         res.json(mapearMascotaLegible(mascotaActualizada));

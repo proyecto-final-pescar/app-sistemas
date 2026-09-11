@@ -1,9 +1,12 @@
-import prisma from '../../prisma/client.js';
+import mongoose from 'mongoose';
 import HistorialClinico from '../models/HistorialClinico.js';
+import Mascota from '../models/Mascota.js';
+import Veterinaria from '../models/Veterinaria.js';
 import Turno from '../models/Turno.js';
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const esIdValido = (id) => UUID_REGEX.test(id || '');
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+const sameId = (left, right) => left?.toString() === right?.toString();
 
 const forbidden = (res) =>
   res.status(403).json({
@@ -11,19 +14,16 @@ const forbidden = (res) =>
   });
 
 const getVeterinariaUsuario = async (usuarioId) =>
-  prisma.veterinaria.findUnique({
-    where: { usuario_id: usuarioId },
-    select: { veterinaria_id: true }
-  });
+  Veterinaria.findOne({ usuarioId }).select('_id');
 
 const autorizarHistorialMascota = async (req, res, next, mascotaId) => {
-  if (!esIdValido(mascotaId)) {
+  if (!isValidObjectId(mascotaId)) {
     return res.status(400).json({ message: 'El id de la mascota no es válido' });
   }
 
-  const mascota = await prisma.mascota.findUnique({ where: { mascota_id: mascotaId } });
+  const mascota = await Mascota.findById(mascotaId);
 
-  if (!mascota || !mascota.active) {
+  if (!mascota) {
     return res.status(404).json({ message: 'Mascota no encontrada' });
   }
 
@@ -33,7 +33,7 @@ const autorizarHistorialMascota = async (req, res, next, mascotaId) => {
   req.mascota = mascota;
   req.historialAccess = {
     tipo: 'historial',
-    mascotaId: mascota.mascota_id,
+    mascotaId: mascota._id,
     rol: rolUsuario
   };
 
@@ -41,7 +41,7 @@ const autorizarHistorialMascota = async (req, res, next, mascotaId) => {
     return next();
   }
 
-  if (rolUsuario === 'dueno' && mascota.dueno_id === usuarioId) {
+  if (rolUsuario === 'dueno' && sameId(mascota.dueñoId, usuarioId)) {
     return next();
   }
 
@@ -52,7 +52,29 @@ const autorizarHistorialMascota = async (req, res, next, mascotaId) => {
       return forbidden(res);
     }
 
-    req.historialAccess.veterinariaId = veterinaria.veterinaria_id;
+    // Antes solo se permitía el acceso si ya existía un HistorialClinico previo,
+    // lo cual era circular: la ficha se crea recién después de la primera consulta,
+    // así que una mascota con turno pero sin consultas nunca podía acceder.
+    // Ahora también se permite si hay un turno agendado con esta veterinaria,
+    // excluyendo 'pendiente' (todavía no confirmado) y 'cancelado' (no hay
+    // relación real). 'confirmado' y 'atendido' sí otorgan acceso.
+    const [atendioMascota, tieneTurno] = await Promise.all([
+      HistorialClinico.exists({
+        mascotaId: mascota._id,
+        veterinariaId: veterinaria._id
+      }),
+      Turno.exists({
+        mascotaId: mascota._id,
+        veterinariaId: veterinaria._id,
+        estado: { $nin: ['pendiente', 'cancelado'] }
+      })
+    ]);
+
+    if (!atendioMascota && !tieneTurno) {
+      return forbidden(res);
+    }
+
+    req.historialAccess.veterinariaId = veterinaria._id;
     return next();
   }
 
@@ -60,6 +82,10 @@ const autorizarHistorialMascota = async (req, res, next, mascotaId) => {
 };
 
 const autorizarEntradaHistorial = async (req, res, next, entradaId) => {
+  if (!isValidObjectId(entradaId)) {
+    return res.status(400).json({ message: 'El id de la entrada no es válido' });
+  }
+
   const entrada = await HistorialClinico.findById(entradaId);
 
   if (!entrada) {
@@ -82,18 +108,15 @@ const autorizarEntradaHistorial = async (req, res, next, entradaId) => {
   }
 
   if (rolUsuario === 'dueno') {
-    if (!esIdValido(entrada.mascotaId)) {
-      return res.status(400).json({ message: 'El id de la mascota no es válido' });
-    }
+    const mascota = await Mascota.findById(entrada.mascotaId);
 
-    const mascota = await prisma.mascota.findUnique({ where: { mascota_id: entrada.mascotaId } });
     if (!mascota) {
       return res.status(404).json({ message: 'Mascota no encontrada' });
     }
 
     req.mascota = mascota;
 
-    if (mascota.dueno_id === usuarioId) {
+    if (sameId(mascota.dueñoId, usuarioId)) {
       return next();
     }
 
@@ -103,11 +126,11 @@ const autorizarEntradaHistorial = async (req, res, next, entradaId) => {
   if (rolUsuario === 'veterinaria') {
     const veterinaria = await getVeterinariaUsuario(usuarioId);
 
-    if (!veterinaria || entrada.veterinariaId?.toString() !== veterinaria.veterinaria_id) {
+    if (!veterinaria || !sameId(entrada.veterinariaId, veterinaria._id)) {
       return forbidden(res);
     }
 
-    req.historialAccess.veterinariaId = veterinaria.veterinaria_id;
+    req.historialAccess.veterinariaId = veterinaria._id;
     return next();
   }
 
