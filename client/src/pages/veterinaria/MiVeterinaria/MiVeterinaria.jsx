@@ -86,10 +86,20 @@ const normalizarVeterinaria = (veterinaria) => ({
     sitioWeb: veterinaria.sitioWeb || "",
   },
   servicios: Array.isArray(veterinaria.servicios)
-    ? veterinaria.servicios.map((servicio) => ({ ...servicio }))
+    ? veterinaria.servicios.map((servicio) => ({
+      ...servicio,
+      nombre: servicio.nombre ?? "",
+      categoria: servicio.categoria ?? "",
+    }))
     : [],
   profesionales: Array.isArray(veterinaria.profesionales)
-    ? veterinaria.profesionales.map((profesional) => ({ ...profesional }))
+    ? veterinaria.profesionales.map((profesional) => ({
+      ...profesional,
+      nombre: profesional.nombre ?? "",
+      especialidad: profesional.especialidad ?? "",
+      email: profesional.email ?? "",
+      serviciosIds: Array.isArray(profesional.servicios) ? profesional.servicios : [],
+    }))
     : [],
   diasSeleccionados: horariosASeleccionados(veterinaria.horarios),
   urgencias24hs: Boolean(veterinaria.urgencias24hs),
@@ -99,7 +109,7 @@ const normalizarVeterinaria = (veterinaria) => ({
 const construirPayloadServicios = (servicios) => ({
   servicios: servicios.map((servicio) => ({
     ...(servicio._id ? { _id: servicio._id } : {}),
-    nombre: servicio.nombre.trim(),
+    nombre: (servicio.nombre ?? "").trim(),
     categoria: servicio.categoria,
     precio: Number(servicio.precio),
   })),
@@ -108,9 +118,9 @@ const construirPayloadServicios = (servicios) => ({
 const construirPayloadProfesionales = (profesionales) => ({
   profesionales: profesionales.map((profesional) => ({
     ...(profesional._id ? { _id: profesional._id } : {}),
-    nombre: profesional.nombre.trim(),
-    especialidad: profesional.especialidad.trim(),
-    email: profesional.email.trim(),
+    nombre: (profesional.nombre ?? "").trim(),
+    especialidad: (profesional.especialidad ?? "").trim(),
+    email: (profesional.email ?? "").trim(),
     ...(Array.isArray(profesional.serviciosIds)
       ? { serviciosIds: profesional.serviciosIds }
       : {}),
@@ -632,78 +642,34 @@ function MiVeterinaria() {
 
                 <div className={styles.field}>
                   <label className={styles.label}>Servicios que brinda *</label>
-                  <div className={styles.multiSelect} ref={serviciosDropdownRef}>
-                    <button
-                      type="button"
-                      className={`${styles.multiSelectTrigger} ${serviciosDropdownAbierto ? styles.multiSelectTriggerAbierto : ""}`}
-                      onClick={() => setServiciosDropdownAbierto((abierto) => !abierto)}
-                    >
-                      <span className={(modalEdicion.valores.serviciosIds || []).length === 0 ? styles.multiSelectPlaceholder : ""}>
-                        {(modalEdicion.valores.serviciosIds || []).length > 0
-                          ? `${modalEdicion.valores.serviciosIds.length} servicio(s) seleccionado(s)`
-                          : "Seleccioná los servicios"}
+                  <div className={styles.profesionalesGrid}>
+                    {formulario.servicios.length === 0 && (
+                      <span className={styles.helper}>
+                        No hay servicios cargados todavía.
                       </span>
-                      <span className={`${styles.multiSelectChevron} ${serviciosDropdownAbierto ? styles.multiSelectChevronAbierto : ""}`}>▾</span>
-                    </button>
-
-                    {serviciosDropdownAbierto && (
-                      <div className={styles.multiSelectDropdown}>
-                        {formulario.servicios.length === 0 ? (
-                          <div className={styles.multiSelectVacio}>
-                            No hay servicios cargados todavía.
-                          </div>
-                        ) : (
-                          formulario.servicios.map((servicio) => {
-                            const servicioId = servicio._id || servicio.servicio_id;
-                            const seleccionado = (modalEdicion.valores.serviciosIds || []).includes(servicioId);
-                            return (
-                              <label key={servicioId} className={styles.multiSelectOption}>
-                                <input
-                                  type="checkbox"
-                                  checked={seleccionado}
-                                  onChange={() => {
-                                    const actuales = modalEdicion.valores.serviciosIds || [];
-                                    const nuevos = seleccionado
-                                      ? actuales.filter((id) => id !== servicioId)
-                                      : [...actuales, servicioId];
-                                    actualizarModal("serviciosIds", nuevos);
-                                  }}
-                                />
-                                {servicio.nombre}
-                              </label>
-                            );
-                          })
-                        )}
-                      </div>
                     )}
+                    {formulario.servicios.map((servicio) => {
+                      const servicioId = servicio._id || servicio.servicio_id;
+                      const seleccionado = (modalEdicion.valores.serviciosIds || []).includes(servicioId);
+                      return (
+                        <button
+                          key={servicioId}
+                          type="button"
+                          className={`${styles.chipProf} ${seleccionado ? styles.chipProfActivo : ""}`}
+                          onClick={() => {
+                            const actuales = modalEdicion.valores.serviciosIds || [];
+                            const nuevos = seleccionado
+                              ? actuales.filter((id) => id !== servicioId)
+                              : [...actuales, servicioId];
+                            actualizarModal("serviciosIds", nuevos);
+                          }}
+                        >
+                          {servicio.nombre}
+                          {seleccionado && <span className={styles.chipX}>×</span>}
+                        </button>
+                      );
+                    })}
                   </div>
-
-                  {(modalEdicion.valores.serviciosIds || []).length > 0 && (
-                    <div className={styles.selectedChips}>
-                      {modalEdicion.valores.serviciosIds.map((servicioId) => {
-                        const servicio = formulario.servicios.find(
-                          (s) => (s._id || s.servicio_id) === servicioId
-                        );
-                        if (!servicio) return null;
-                        return (
-                          <span key={servicioId} className={styles.chip}>
-                            {servicio.nombre}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                actualizarModal(
-                                  "serviciosIds",
-                                  modalEdicion.valores.serviciosIds.filter((id) => id !== servicioId)
-                                )
-                              }
-                            >
-                              ×
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
                 </div>
               </>
             )}
