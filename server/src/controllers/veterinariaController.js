@@ -530,7 +530,8 @@ export const crearVeterinaria = async (req, res) => {
         nombre: nombreProf,
         apellido,
         especialidad_id: especialidadId,
-        email: profesional.email
+        email: profesional.email,
+        serviciosIds: profesional.serviciosIds || []
       });
     }
 
@@ -543,6 +544,7 @@ export const crearVeterinaria = async (req, res) => {
         });
       }
       serviciosResueltos.push({
+        idLocal: servicio.idLocal, // ← nuevo, se usa solo en memoria, no se persiste
         nombre: servicio.nombre,
         precio: servicio.precio,
         categoria_servicio_id: categoriaId
@@ -566,7 +568,7 @@ export const crearVeterinaria = async (req, res) => {
     }
 
     const veterinariaCreada = await prisma.$transaction(async (tx) => {
-      return tx.veterinaria.create({
+      const nuevaVeterinaria = await tx.veterinaria.create({
         data: {
           usuario_id: usuarioId,
           nombre,
@@ -579,12 +581,56 @@ export const crearVeterinaria = async (req, res) => {
           latitud,
           longitud,
           urgencias: urgencias24hs ?? false,
-          profesional: { create: profesionalesResueltos },
-          servicio: { create: serviciosResueltos },
+          servicio: {
+            create: serviciosResueltos.map(({ idLocal, ...datosServicio }) => datosServicio)
+          },
           horario_veterinaria: { create: horariosResueltos }
         },
+        include: { servicio: true }
+      });
+
+      // Mapeo idLocal (del front) -> servicio_id (real, recién creado)
+      // Se empareja por posición porque Prisma crea en el mismo orden del array.
+      const mapaIdLocalAServicioId = new Map(
+        nuevaVeterinaria.servicio.map((s, i) => [serviciosResueltos[i].idLocal, s.servicio_id])
+      );
+
+      // Crear cada profesional y su vínculo con los servicios elegidos
+      for (const profesional of profesionalesResueltos) {
+        const nuevoProfesional = await tx.profesional.create({
+          data: {
+            veterinaria_id: nuevaVeterinaria.veterinaria_id,
+            nombre: profesional.nombre,
+            apellido: profesional.apellido,
+            especialidad_id: profesional.especialidad_id,
+            email: profesional.email
+          }
+        });
+
+        const serviciosIdsReales = (profesional.serviciosIds || [])
+          .map((idLocal) => mapaIdLocalAServicioId.get(idLocal))
+          .filter(Boolean);
+
+        if (serviciosIdsReales.length > 0) {
+          await tx.profesional_servicio.createMany({
+            data: serviciosIdsReales.map((servicio_id) => ({
+              profesional_id: nuevoProfesional.profesional_id,
+              servicio_id
+            }))
+          });
+        }
+      }
+
+      return tx.veterinaria.findUnique({
+        where: { veterinaria_id: nuevaVeterinaria.veterinaria_id },
         include: {
-          profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
+          profesional: {
+            where: { active: true },
+            include: {
+              especialidad: { select: { nombre: true } },
+              profesional_servicio: { select: { servicio_id: true } }
+            }
+          },
           servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
           horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
         }

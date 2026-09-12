@@ -286,6 +286,23 @@ export default function RegistroDeVeterinaria() {
     setProfesionales((prev) =>
       prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)),
     );
+
+  const toggleServicioProfesional = (profIndex, servicioId) => {
+    setProfesionales((prev) =>
+      prev.map((p, idx) => {
+        if (idx !== profIndex) return p;
+        const actuales = p.serviciosIds || [];
+        const yaEsta = actuales.includes(servicioId);
+        return {
+          ...p,
+          serviciosIds: yaEsta
+            ? actuales.filter((id) => id !== servicioId)
+            : [...actuales, servicioId],
+        };
+      })
+    );
+  };
+
   const agregarProfesional = () =>
     setProfesionales((prev) => [...prev, profesionalVacio()]);
   const eliminarProfesional = (i) => {
@@ -302,6 +319,8 @@ export default function RegistroDeVeterinaria() {
     if (base) return base;
     if (profesionales.some((p) => !validarEmail(p.email)))
       return "El email de algún profesional no tiene un formato válido.";
+    if (profesionales.some((p) => !(p.serviciosIds || []).length))
+      return "Cada profesional debe brindar al menos un servicio.";
     return "";
   };
   const handleContinuarStep3 = crearHandleContinuar(
@@ -369,6 +388,7 @@ export default function RegistroDeVeterinaria() {
         coordenadas: { type: "Point", coordinates: [form.lng, form.lat] },
         especialidades: [],
         servicios: servicios.map((s) => ({
+          idLocal: s.id,
           categoria: s.categoria,
           nombre: s.nombre,
           precio: Number(s.precio),
@@ -377,6 +397,7 @@ export default function RegistroDeVeterinaria() {
           nombre: p.nombre,
           especialidad: p.especialidad,
           email: p.email,
+          serviciosIds: p.serviciosIds || [],
         })),
         horarios: construirHorarios(diasSeleccionados),
         urgencias24hs: urgencias,
@@ -757,6 +778,35 @@ export default function RegistroDeVeterinaria() {
                           </option>
                         ))}
                       </select>
+                    </div>
+
+                    <div className={styles.field}>
+                      <label className={styles.label}>
+                        Servicios que brinda<span className={styles.req}>*</span>
+                      </label>
+                      <div className={styles.profesionalesGrid}>
+                        {servicios.filter((s) => s.nombre.trim()).length === 0 && (
+                          <span className={styles.helperText}>
+                            Cargá servicios en el paso anterior para poder asignarlos.
+                          </span>
+                        )}
+                        {servicios
+                          .filter((s) => s.nombre.trim())
+                          .map((s) => {
+                            const seleccionado = (prof.serviciosIds || []).includes(s.id);
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                className={`${styles.chipProf} ${seleccionado ? styles.chipProfActivo : ""}`}
+                                onClick={() => toggleServicioProfesional(index, s.id)}
+                              >
+                                {s.nombre}
+                                {seleccionado && <span className={styles.chipX}>×</span>}
+                              </button>
+                            );
+                          })}
+                      </div>
                     </div>
                   </div>
                 ))}
