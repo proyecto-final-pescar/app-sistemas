@@ -652,20 +652,10 @@ export default function CargaTurnos() {
                               );
                             }
 
-                            if (existente) {
+                            if (existente || ocupada) {
                               return (
                                 <td key={diaObj.clave} className={styles.tdExistente}>
                                   <div className={styles.celdaExistente}>{hora}</div>
-                                </td>
-                              );
-                            }
-
-                            if (ocupada) {
-                              return (
-                                <td key={diaObj.clave} className={styles.tdBloqueado}>
-                                  <div className={styles.celdaBloqueada}>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
-                                  </div>
                                 </td>
                               );
                             }
