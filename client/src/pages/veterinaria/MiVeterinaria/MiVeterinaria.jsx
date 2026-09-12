@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
@@ -136,6 +136,8 @@ function MiVeterinaria() {
   const [eliminando, setEliminando] = useState(false);
   const [successModal, setSuccessModal] = useState({ abierto: false, mensaje: "" });
   const [errorModal, setErrorModal] = useState({ abierto: false, mensaje: "" });
+  const [serviciosDropdownAbierto, setServiciosDropdownAbierto] = useState(false);
+  const serviciosDropdownRef = useRef(null);
 
   const cambio = (campo) =>
     formulario && formularioGuardado
@@ -199,7 +201,7 @@ function MiVeterinaria() {
     };
   }, []);
 
-  
+
   useEffect(() => {
     if (!hayCambiosSinGuardar) return;
 
@@ -211,6 +213,19 @@ function MiVeterinaria() {
     window.addEventListener("beforeunload", avisar);
     return () => window.removeEventListener("beforeunload", avisar);
   }, [hayCambiosSinGuardar]);
+
+  useEffect(() => {
+    if (!serviciosDropdownAbierto) return;
+
+    const cerrarSiEsAfuera = (evento) => {
+      if (serviciosDropdownRef.current && !serviciosDropdownRef.current.contains(evento.target)) {
+        setServiciosDropdownAbierto(false);
+      }
+    };
+
+    document.addEventListener("mousedown", cerrarSiEsAfuera);
+    return () => document.removeEventListener("mousedown", cerrarSiEsAfuera);
+  }, [serviciosDropdownAbierto]);
 
   const actualizarDatos = (campo, valor) => {
     setFormulario((actual) => ({
@@ -231,6 +246,7 @@ function MiVeterinaria() {
       ? { nombre: "", especialidad: "", email: "", serviciosIds: [] }
       : { ...formulario.profesionales[indice] };
     setModalEdicion({ tipo: "profesional", indice, valores: profesional });
+    setServiciosDropdownAbierto(false);
   };
 
   const actualizarModal = (campo, valor) => {
@@ -303,7 +319,7 @@ function MiVeterinaria() {
     }
   };
 
- 
+
   const confirmarEliminacion = async () => {
     const { tipo, indice, nombre } = confirmacion;
     const clave = tipo === "servicio" ? "servicios" : "profesionales";
@@ -356,7 +372,7 @@ function MiVeterinaria() {
     }));
   };
 
- 
+
   const validarSeccion = (seccion) => {
     if (seccion === "datos") {
       const { datos } = formulario;
@@ -385,7 +401,7 @@ function MiVeterinaria() {
       };
     }
 
-   
+
     return {
       horarios: construirHorarios(formulario.diasSeleccionados),
       urgencias24hs: formulario.urgencias24hs,
@@ -613,6 +629,82 @@ function MiVeterinaria() {
                 <Input label="Nombre y apellido *" value={modalEdicion.valores.nombre} onChange={(e) => actualizarModal("nombre", e.target.value)} />
                 <Input label="Especialidad *" value={modalEdicion.valores.especialidad} onChange={(e) => actualizarModal("especialidad", e.target.value)} />
                 <Input label="Email *" type="email" value={modalEdicion.valores.email} onChange={(e) => actualizarModal("email", e.target.value)} />
+
+                <div className={styles.field}>
+                  <label className={styles.label}>Servicios que brinda *</label>
+                  <div className={styles.multiSelect} ref={serviciosDropdownRef}>
+                    <button
+                      type="button"
+                      className={`${styles.multiSelectTrigger} ${serviciosDropdownAbierto ? styles.multiSelectTriggerAbierto : ""}`}
+                      onClick={() => setServiciosDropdownAbierto((abierto) => !abierto)}
+                    >
+                      <span className={(modalEdicion.valores.serviciosIds || []).length === 0 ? styles.multiSelectPlaceholder : ""}>
+                        {(modalEdicion.valores.serviciosIds || []).length > 0
+                          ? `${modalEdicion.valores.serviciosIds.length} servicio(s) seleccionado(s)`
+                          : "Seleccioná los servicios"}
+                      </span>
+                      <span className={`${styles.multiSelectChevron} ${serviciosDropdownAbierto ? styles.multiSelectChevronAbierto : ""}`}>▾</span>
+                    </button>
+
+                    {serviciosDropdownAbierto && (
+                      <div className={styles.multiSelectDropdown}>
+                        {formulario.servicios.length === 0 ? (
+                          <div className={styles.multiSelectVacio}>
+                            No hay servicios cargados todavía.
+                          </div>
+                        ) : (
+                          formulario.servicios.map((servicio) => {
+                            const servicioId = servicio._id || servicio.servicio_id;
+                            const seleccionado = (modalEdicion.valores.serviciosIds || []).includes(servicioId);
+                            return (
+                              <label key={servicioId} className={styles.multiSelectOption}>
+                                <input
+                                  type="checkbox"
+                                  checked={seleccionado}
+                                  onChange={() => {
+                                    const actuales = modalEdicion.valores.serviciosIds || [];
+                                    const nuevos = seleccionado
+                                      ? actuales.filter((id) => id !== servicioId)
+                                      : [...actuales, servicioId];
+                                    actualizarModal("serviciosIds", nuevos);
+                                  }}
+                                />
+                                {servicio.nombre}
+                              </label>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {(modalEdicion.valores.serviciosIds || []).length > 0 && (
+                    <div className={styles.selectedChips}>
+                      {modalEdicion.valores.serviciosIds.map((servicioId) => {
+                        const servicio = formulario.servicios.find(
+                          (s) => (s._id || s.servicio_id) === servicioId
+                        );
+                        if (!servicio) return null;
+                        return (
+                          <span key={servicioId} className={styles.chip}>
+                            {servicio.nombre}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                actualizarModal(
+                                  "serviciosIds",
+                                  modalEdicion.valores.serviciosIds.filter((id) => id !== servicioId)
+                                )
+                              }
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </>
             )}
             {modalEdicion.error && <p className={styles.formError}>{modalEdicion.error}</p>}

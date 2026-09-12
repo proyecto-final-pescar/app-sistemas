@@ -93,21 +93,36 @@ const sincronizarProfesionales = async (tx, veterinariaId, profesionalesBody) =>
       throw { status: 400, message: `Especialidad "${profesional.especialidad}" no reconocida.` };
     }
 
+    let profesionalId;
+
     if (profesional.profesional_id && idsExistentes.has(profesional.profesional_id)) {
       await tx.profesional.update({
         where: { profesional_id: profesional.profesional_id },
         data: { nombre, apellido, especialidad_id: especialidadId, email: profesional.email }
       });
+      profesionalId = profesional.profesional_id;
     } else {
-      await tx.profesional.create({
-        data: {
-          veterinaria_id: veterinariaId,
-          nombre,
-          apellido,
-          especialidad_id: especialidadId,
-          email: profesional.email
-        }
+      const nuevoProfesional = await tx.profesional.create({
+        data: { veterinaria_id: veterinariaId, nombre, apellido, especialidad_id: especialidadId, email: profesional.email }
       });
+      profesionalId = nuevoProfesional.profesional_id;
+    }
+
+    // Sincronizar servicios: se borra todo y se recrea, igual criterio
+    // que sincronizarHorarios — simple y evita tener que diffear altas/bajas.
+    if (profesional.serviciosIds !== undefined) {
+      await tx.profesional_servicio.deleteMany({
+        where: { profesional_id: profesionalId }
+      });
+
+      if (profesional.serviciosIds.length > 0) {
+        await tx.profesional_servicio.createMany({
+          data: profesional.serviciosIds.map((servicio_id) => ({
+            profesional_id: profesionalId,
+            servicio_id
+          }))
+        });
+      }
     }
   }
 
@@ -210,7 +225,10 @@ const aplicarActualizacionVeterinaria = async (veterinariaId, body) => {
 
   const profesionalesNormalizados = profesionales?.map((p) => ({
     ...p,
-    profesional_id: p.profesional_id || p._id
+    profesional_id: p.profesional_id || p._id,
+    serviciosIds: Array.isArray(p.serviciosIds)
+      ? p.serviciosIds.map((id) => id) // ya vienen como servicio_id real desde el front, no hace falta traducir
+      : undefined
   }));
   const serviciosNormalizados = servicios?.map((s) => ({
     ...s,
