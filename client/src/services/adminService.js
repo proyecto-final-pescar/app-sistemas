@@ -20,6 +20,22 @@ export const rechazarVeterinariaAdmin = async (id, motivo) => {
 };
 
 /**
+ * Aprueba la solicitud/registro de una veterinaria pendiente
+ */
+export const aprobarVeterinariaAdmin = async (id) => {
+  const { data } = await api.patch(`/admin/veterinarias/${id}/aprobar`);
+  return data;
+};
+
+/**
+ * Cambia el estado de una veterinaria  activar/suspender
+ */
+export const actualizarEstadoVeterinariaAdmin = async (id, estado) => {
+  const { data } = await api.put(`/admin/veterinarias/${id}`, { estado });
+  return data;
+};
+
+/**
  * Obtiene todas las veterinarias
  */
 export const getVeterinariasAdmin = async (params = {}) => {
