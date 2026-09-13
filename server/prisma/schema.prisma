@@ -305,7 +305,9 @@ model servicio {
   veterinaria_id        String                 @db.Uuid
   categoria_servicio_id String                 @db.Char(3)
   nombre                String                 @db.VarChar(150)
+  descripcion           String                 @default("") @db.VarChar(500)
   precio                Decimal                @db.Decimal(12, 2)
+  duracion_minutos      Int                    @default(30) @db.SmallInt
   active                Boolean                @default(true)
   profesional_servicio  profesional_servicio[]
   categoria_servicio    categoria_servicio     @relation(fields: [categoria_servicio_id], references: [categoria_servicio_id], onDelete: NoAction, onUpdate: NoAction)
