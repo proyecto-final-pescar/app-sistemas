@@ -258,9 +258,6 @@ export const reservarTurno = async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 // PATCH /turnos/:id/cancelar
 // ─────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────
-// PATCH /turnos/:id/cancelar
-// ─────────────────────────────────────────────────────────────
 export const cancelarTurno = async (req, res) => {
   try {
     const { id } = req.params
@@ -305,8 +302,9 @@ export const cancelarTurno = async (req, res) => {
     // Se preserva el turno cancelado como registro de auditoría (queda
     // intacto: mascota, motivo, notas, fecha, hora) y se libera el
     // horario creando un turno NUEVO en estado 'disponible' con los
-    // mismos datos de slot. El índice único parcial ix_turno_slot_unico
-    // permite que ambos coexistan porque excluye filas con estado 'CAN'.
+    // mismos datos de slot, incluyendo el mismo profesional_id ya fijo.
+    // El índice único parcial ix_turno_slot_unico permite que ambos
+    // coexistan porque excluye filas con estado 'CAN'.
     const [turnoCancelado, turnoLiberado] = await prisma.$transaction(async (tx) => {
       const cancelado = await tx.turno.update({
         where: { turno_id: id },
@@ -316,6 +314,7 @@ export const cancelarTurno = async (req, res) => {
       const nuevoTurno = await tx.turno.create({
         data: {
           veterinaria_id: turno.veterinaria_id,
+          profesional_id: turno.profesional_id,
           servicio_id: turno.servicio_id,
           fecha: turno.fecha,
           hora_inicio: turno.hora_inicio,
@@ -324,17 +323,6 @@ export const cancelarTurno = async (req, res) => {
           estado_turno_id: ESTADO.DISPONIBLE
         }
       })
-
-      if (turno.profesional_id) {
-        await tx.turno_profesional.create({
-          data: { turno_id: nuevoTurno.turno_id, profesional_id: turno.profesional_id }
-        })
-
-        await tx.turno.update({
-          where: { turno_id: nuevoTurno.turno_id },
-          data: { profesional_id: turno.profesional_id }
-        })
-      }
 
       return [cancelado, nuevoTurno]
     })
@@ -386,8 +374,8 @@ export const liberarTurnosVencidos = async () => {
 // OPCIÓN B: se crea UN turno por cada profesional seleccionado, por
 // slot — cada profesional disponible a esa hora es un turno propio y
 // reservable de forma independiente. El conflicto se detecta ahora por
-// (veterinaria + profesional + fecha + hora), que es exactamente lo
-// que protege el índice único parcial ix_turno_slot en la base.
+// (veterinaria + profesional + fecha + hora), protegido a nivel de base
+// por el índice único parcial ix_turno_slot_unico.
 // ─────────────────────────────────────────────────────────────
 export const crearOfertaHoraria = async (req, res) => {
   try {
@@ -458,39 +446,27 @@ export const crearOfertaHoraria = async (req, res) => {
         }
 
         try {
-          await prisma.$transaction(async (tx) => {
-            const nuevoTurno = await tx.turno.create({
-              data: {
-                veterinaria_id: veterinaria.veterinaria_id,
-                servicio_id: servicioId,
-                //profesional_id: profesional.profesional_id,
-                fecha: new Date(slot.fecha),
-                hora_inicio: horaInicioTime,
-                hora_fin: horaFinTime,
-                monto_servicio: servicio.precio,
-                estado_turno_id: ESTADO.DISPONIBLE
-              }
-            })
-
-            // Fila "espejo" en turno_profesional: ya no representa
-            // candidatos (eso quedó en la Opción A descartada) — es solo
-            // para satisfacer la FK compuesta fk_turno_profesional_candidato
-            // definida en el schema. Si más adelante se migra el schema
-            // para sacar esa FK y la tabla, este insert se puede borrar.
-            await tx.turno_profesional.create({
-              data: { turno_id: nuevoTurno.turno_id, profesional_id: profesional.profesional_id }
-            })
-
-            await tx.turno.update({
-              where: { turno_id: nuevoTurno.turno_id },
-              data: { profesional_id: profesional.profesional_id }
-            })
+          await prisma.turno.create({
+            data: {
+              veterinaria_id: veterinaria.veterinaria_id,
+              servicio_id: servicioId,
+              profesional_id: profesional.profesional_id,
+              fecha: new Date(`${slot.fecha}T00:00:00.000Z`),
+              hora_inicio: horaInicioTime,
+              hora_fin: horaFinTime,
+              monto_servicio: servicio.precio,
+              estado_turno_id: ESTADO.DISPONIBLE
+            }
           })
 
           creados += 1
         } catch (errorSlot) {
-          console.error('Conflicto al crear turno de oferta:', errorSlot)
-          conflictos.push({ fecha: slot.fecha, hora: slot.hora, profesional: `${profesional.nombre} ${profesional.apellido}` })
+          if (errorSlot.code === 'P2002') {
+            conflictos.push({ fecha: slot.fecha, hora: slot.hora, profesional: `${profesional.nombre} ${profesional.apellido}` })
+          } else {
+            console.error('Error inesperado creando turno de oferta:', errorSlot)
+            throw errorSlot
+          }
         }
       }
     }
