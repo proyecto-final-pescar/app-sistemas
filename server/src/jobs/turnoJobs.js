@@ -1,110 +1,81 @@
-import cron from 'node-cron'
+import cron from "node-cron";
+import prisma from "../../prisma/client.js";
+import { enviarEmail } from "../utils/mailer.js";
+import { armarEmailRecordatorioTurnoPendiente } from "../templates/emailRecordatorioTurnoPendiente.js";
 
-import { liberarTurnosVencidos } from '../controllers/turnoController.js'
-import Turno from '../models/Turno.js'
-import { sendRecordatorioTurnoEmail } from '../utils/mailer.js'
+export const procesarTurnosPendientesDePago = async () => {
+  const ahora = new Date();
 
-export const enviarRecordatoriosTurnos = async () => {
   try {
-    const hoy = new Date()
-    const desde = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())
-    const hasta = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 2)
-
-    const turnos = await Turno.find({
-      estado: 'confirmado',
-      recordatorioEnviado: { $ne: true },
-      fecha: { $gte: desde, $lt: hasta }
-    })
-      .populate('usuarioId', 'name email')
-      .populate('mascotaId', 'nombre')
-      .populate('veterinariaId', 'nombre direccion')
-
-    const ahora = new Date()
-    const veinticuatroHorasMs = 24 * 60 * 60 * 1000
-
-    const turnosParaRecordar = turnos.filter((turno) => {
-      const fecha = turno.fecha.toISOString().split('T')[0]
-
-      const fechaHoraTurno = new Date(
-        `${fecha}T${turno.hora}:00-03:00`
-      )
-
-      const diferenciaMs =
-        fechaHoraTurno.getTime() - ahora.getTime()
-
-      return (
-        diferenciaMs > 0 &&
-        diferenciaMs <= veinticuatroHorasMs
-      )
-    })
+    const turnosParaRecordar = await prisma.turno.findMany({
+      where: {
+        estado_turno_id: "PEN",
+        recordatorio_enviado: false,
+        vence_en: { gt: ahora },
+      },
+      include: {
+        mascota: { include: { usuario: true } },
+      },
+    });
 
     for (const turno of turnosParaRecordar) {
-      try {
-        // "Reclamamos" el turno antes de enviar: si otra corrida del cron ya
-        // lo marcó como enviado mientras tanto, esta query no encuentra nada
-        // y saltamos al siguiente turno sin mandar el mail dos veces.
-        const reclamado = await Turno.findOneAndUpdate(
-          { _id: turno._id, recordatorioEnviado: { $ne: true } },
-          { $set: { recordatorioEnviado: true } }
-        )
+      const emailDueno = turno.mascota?.usuario?.email;
+      const nombreDueno = turno.mascota?.usuario?.nombre;
 
-        if (!reclamado) continue
+      const checkoutUrl = `${process.env.CLIENT_URL || "http://localhost:5173"}/mis-turnos`;
 
-        const [anio, mes, dia] = turno.fecha
-          .toISOString()
-          .split('T')[0]
-          .split('-')
-
-        const fechaFormateada = new Date(
-          Number(anio),
-          Number(mes) - 1,
-          Number(dia)
-        ).toLocaleDateString('es-AR', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        })
-
+      if (emailDueno) {
         try {
-          await sendRecordatorioTurnoEmail({
-            to: turno.usuarioId.email,
-            nombreDuenio: turno.usuarioId.name,
-            nombreMascota: turno.mascotaId.nombre,
-            nombreVeterinaria: turno.veterinariaId.nombre,
-            direccionVeterinaria: turno.veterinariaId.direccion,
-            fecha: fechaFormateada,
-            hora: turno.hora
-          })
-        } catch (errorEnvio) {
-          // Si el envío falla, liberamos el turno para que la próxima
-          // corrida del cron pueda reintentarlo.
-          await Turno.findByIdAndUpdate(turno._id, { recordatorioEnviado: false })
-          throw errorEnvio
+          const { subject, html } = armarEmailRecordatorioTurnoPendiente(
+            nombreDueno,
+            checkoutUrl,
+          );
+          await enviarEmail({ to: emailDueno, subject, html });
+
+          await prisma.turno.update({
+            where: { turno_id: turno.turno_id },
+            data: { recordatorio_enviado: true },
+          });
+        } catch (mailError) {
+          console.error(
+            `Error enviando aviso de pago al turno ${turno.turno_id}:`,
+            mailError,
+          );
         }
-      } catch (error) {
-        console.error(
-          `Error al enviar recordatorio del turno ${turno._id}:`,
-          error
-        )
       }
     }
+
+    const turnosExpirados = await prisma.turno.updateMany({
+      where: {
+        estado_turno_id: "PEN",
+        vence_en: { lte: ahora },
+      },
+      data: {
+        estado_turno_id: "DIS",
+        mascota_id: null,
+        motivo: null,
+        recordatorio_enviado: false,
+        vence_en: null,
+      },
+    });
+
+    if (turnosExpirados.count > 0) {
+      console.log(
+        `[Cron Job] Se liberaron automáticamente ${turnosExpirados.count} turnos por falta de pago.`,
+      );
+    }
   } catch (error) {
-    console.error(
-      'Error al obtener turnos para recordatorio:',
-      error
-    )
+    console.error("Error al procesar turnos pendientes de pago:", error);
   }
-}
+};
 
+/**
+ * CRON JOBS GLOBALES DE LA APP
+ */
 export const iniciarJobsTurnos = () => {
-  // Libera turnos vencidos cada 15 minutos
-  cron.schedule('*/15 * * * *', () => {
-    liberarTurnosVencidos()
-  })
+  console.log("⏳ Inicializando Cron Jobs de Turnos...");
 
-  // Envía recordatorios para turnos dentro de las próximas 24 horas
-  //cron.schedule('*/15 * * * *', () => {
-  //  enviarRecordatoriosTurnos()
-  //})
-}
+  cron.schedule("*/5 * * * *", () => {
+    procesarTurnosPendientesDePago();
+  });
+};

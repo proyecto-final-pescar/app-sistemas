@@ -5,6 +5,8 @@ import TopBar from "../../../components/layout/TopBar.jsx";
 import RechazarVetModal from "../../../components/administrador/rechazarVetModal/rechazarVetModal.jsx";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal.jsx";
 import styles from "./GestionVeterinarias.module.css";
+import ErrorModal from "../../../components/ui/error-modal/ErrorModal.jsx";
+import SuccessModal from "../../../components/ui/success-modal/SuccessModal.jsx";
 
 const ITEMS_POR_PAGINA = 10;
 const MAX_SERVICIOS_VISIBLES = 2;
@@ -31,6 +33,8 @@ const GestionVeterinarias = () => {
   const [vetARechazar, setVetARechazar] = useState(null); // { id, nombre } | null
   const [vetAAprobar, setVetAAprobar] = useState(null); // { id, nombre } | null
   const [isAprobando, setIsAprobando] = useState(false);
+  const [modalError, setModalError] = useState({ abierto: false, mensaje: "" });
+  const [modalExito, setModalExito] = useState({ abierto: false, mensaje: "" });
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -107,9 +111,19 @@ const GestionVeterinarias = () => {
         setVeterinarias((prev) => [...prev, { ...aprobada, estado: "activa" }]);
 
       setVetAAprobar(null);
+      setModalExito({
+        abierto: true,
+        mensaje: `La veterinaria "${vetAAprobar.nombre}" ha sido aprobada y ya se le notificó por correo electrónico.`,
+      });
     } catch (err) {
       console.error("Error al aprobar:", err.response?.data || err.message);
-      alert("Error al aprobar la veterinaria.");
+
+      const msj =
+        err.response?.data?.mensaje ||
+        "Ocurrió un error inesperado al aprobar la veterinaria.";
+      setModalError({ abierto: true, mensaje: msj });
+
+      setVetAAprobar(null);
     } finally {
       setIsAprobando(false);
     }
@@ -141,7 +155,10 @@ const GestionVeterinarias = () => {
         "Error al cambiar estado:",
         err.response?.data || err.message,
       );
-      alert("Error al cambiar el estado.");
+      const msj =
+        err.response?.data?.mensaje ||
+        "Ocurrió un error inesperado al aprobar la veterinaria.";
+      setModalError({ abierto: true, mensaje: msj });
     }
   };
 
@@ -483,7 +500,17 @@ const GestionVeterinarias = () => {
         onCancel={cerrarModalAprobacion}
         confirmando={isAprobando}
       />
-
+      <ErrorModal
+        abierto={modalError.abierto}
+        mensaje={modalError.mensaje}
+        onClose={() => setModalError({ abierto: false, mensaje: "" })}
+      />
+      <SuccessModal
+        abierto={modalExito.abierto}
+        titulo="¡Aprobación exitosa!"
+        mensaje={modalExito.mensaje}
+        onClose={() => setModalExito({ abierto: false, mensaje: "" })}
+      />
       {vetARechazar && (
         <RechazarVetModal
           veterinariaId={vetARechazar.id}

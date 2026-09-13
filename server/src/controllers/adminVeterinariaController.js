@@ -1,8 +1,8 @@
 import Veterinaria from "../models/Veterinaria.js";
 import Turno from "../models/Turno.js";
 import prisma from "../../prisma/client.js";
-import { enviarEmail } from '../utils/mailer.js';
-import { armarEmailVeterinariaAprobada } from '../templates/emailVeterinariaAprobada.js';
+import { enviarEmail } from "../utils/mailer.js";
+import { armarEmailVeterinariaAprobada } from "../templates/emailVeterinariaAprobada.js";
 
 // GET /api/admin/veterinarias
 export const obtenerVeterinariasAdmin = async (req, res) => {
@@ -291,35 +291,61 @@ export const eliminarVeterinariaAdmin = async (req, res) => {
 export const aprobarVeterinaria = async (req, res) => {
   try {
     const { id } = req.params;
-    if (req.usuario?.rol !== 'ADM' && req.usuario?.rol !== 'admin') {
-      return res.status(403).json({ mensaje: 'No tienes permisos para realizar esta acción' });
+    // 1. Identificamos dónde viene el usuario (algunos middlewares usan req.user, otros req.usuario)
+    const usuarioLogueado = req.usuario || req.user;
+
+    // Para que aprendas a debugear: mirá tu terminal de Node al hacer clic en aprobar
+    console.log("Datos del usuario ejecutando la acción:", usuarioLogueado);
+
+    if (!usuarioLogueado) {
+      return res
+        .status(401)
+        .json({ mensaje: "No se detectó un usuario autenticado" });
     }
-    
-   const veterinaria = await prisma.veterinaria.findUnique({
+
+    // 2. Extraemos el rol, sea que venga en .rol, .role o .rol_id, y lo pasamos a minúsculas
+    const rolStr = String(
+      usuarioLogueado.rol || usuarioLogueado.rol_id || usuarioLogueado.role,
+    ).toLowerCase();
+
+    // 3. Validamos de forma flexible (si incluye 'adm' deja pasar 'ADM', 'admin', 'administrador')
+    if (!rolStr.includes("adm")) {
+      return res.status(403).json({
+        mensaje: `No tienes permisos para realizar esta acción. Tu rol actual es: ${rolStr}`,
+      });
+    }
+    const veterinaria = await prisma.veterinaria.findUnique({
       where: { veterinaria_id: id },
-      include: { usuario: true } 
+      include: { usuario: true },
     });
 
     if (!veterinaria) {
       return res.status(404).json({ message: "La veterinaria no existe." });
     }
 
-  if (veterinaria.estado_veterinaria_id === 'ACT') {
-      return res.status(400).json({ mensaje: 'La veterinaria ya se encuentra activa' });
+    if (veterinaria.estado_veterinaria_id === "ACT") {
+      return res
+        .status(400)
+        .json({ mensaje: "La veterinaria ya se encuentra activa" });
     }
 
     const vetActualizada = await prisma.veterinaria.update({
       where: { veterinaria_id: id },
-      data: { estado_veterinaria_id: 'ACT' }
+      data: { estado_veterinaria_id: "ACT" },
     });
 
     const destinatario = veterinaria.email || veterinaria.usuario?.email;
     if (destinatario) {
       try {
-        const { subject, html } = armarEmailVeterinariaAprobada(vetActualizada.nombre);
+        const { subject, html } = armarEmailVeterinariaAprobada(
+          vetActualizada.nombre,
+        );
         await enviarEmail({ to: destinatario, subject, html });
       } catch (mailError) {
-        console.error(`Error enviando email de aprobación a ${destinatario}:`, mailError);
+        console.error(
+          `Error enviando email de aprobación a ${destinatario}:`,
+          mailError,
+        );
         // Opcional: Registrar en un servicio de logs (ej. Sentry)
       }
     }
@@ -329,11 +355,13 @@ export const aprobarVeterinaria = async (req, res) => {
       data: vetActualizada,
     });
   } catch (error) {
-    if (error.code === 'P2023') { 
-      return res.status(400).json({ message: "El id de la veterinaria no es válido" });
+    if (error.code === "P2023") {
+      return res
+        .status(400)
+        .json({ message: "El id de la veterinaria no es válido" });
     }
 
-    console.error('Error al aprobar veterinaria:', error);
+    console.error("Error al aprobar veterinaria:", error);
     return res.status(500).json({ message: "Error interno del servidor" });
   }
 };
