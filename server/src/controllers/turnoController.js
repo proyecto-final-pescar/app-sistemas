@@ -259,7 +259,7 @@ export const cancelarTurno = async (req, res) => {
 // por venceEn, y LIBERA el slot (vuelve a 'disponible') NO borra el
 // documento — el turno lo sigue ofreciendo la veterinaria, solo se cae la
 // reserva del tutor que no pagó a tiempo.
-export const liberarTurnosVencidos = async () => {
+/*export const liberarTurnosVencidos = async () => {
   try {
     const resultado = await Turno.updateMany(
       { estado: 'pendiente', venceEn: { $lte: new Date() } },
@@ -276,7 +276,7 @@ export const liberarTurnosVencidos = async () => {
     console.error('Error en liberarTurnosVencidos:', error);
   }
 };
-
+*/
 export const crearOfertaHoraria = async (req, res) => {
   try {
     const { servicioId, profesionales, slots, duracion } = req.body;

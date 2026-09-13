@@ -5,6 +5,8 @@ import TopBar from "../../../components/layout/TopBar.jsx";
 import RechazarVetModal from "../../../components/administrador/rechazarVetModal/rechazarVetModal.jsx";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal.jsx";
 import styles from "./GestionVeterinarias.module.css";
+import ErrorModal from "../../../components/ui/error-modal/ErrorModal.jsx";
+import SuccessModal from "../../../components/ui/success-modal/SuccessModal.jsx";
 
 const ITEMS_POR_PAGINA = 10;
 const MAX_SERVICIOS_VISIBLES = 2;
@@ -31,6 +33,8 @@ const GestionVeterinarias = () => {
   const [vetARechazar, setVetARechazar] = useState(null); // { id, nombre } | null
   const [vetAAprobar, setVetAAprobar] = useState(null); // { id, nombre } | null
   const [isAprobando, setIsAprobando] = useState(false);
+  const [modalError, setModalError] = useState({ abierto: false, mensaje: "" });
+  const [modalExito, setModalExito] = useState({ abierto: false, mensaje: "" });
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -39,12 +43,17 @@ const GestionVeterinarias = () => {
       try {
         const response = await api.get("/admin/veterinarias");
         const todas = response.data.data ?? [];
-
+        console.log(response);
         setVeterinarias(todas.filter((v) => v.estado === "activa"));
         setPendientes(todas.filter((v) => v.estado === "pendiente"));
       } catch (err) {
-        console.error("Error al cargar veterinarias:", err.response?.data || err.message);
-        setError("No se pudieron cargar las veterinarias. Intentá de nuevo más tarde.");
+        console.error(
+          "Error al cargar veterinarias:",
+          err.response?.data || err.message,
+        );
+        setError(
+          "No se pudieron cargar las veterinarias. Intentá de nuevo más tarde.",
+        );
       } finally {
         setIsLoading(false);
       }
@@ -53,11 +62,11 @@ const GestionVeterinarias = () => {
   }, []);
 
   const listaFiltrada = veterinarias.filter((v) =>
-    v.nombre.toLowerCase().includes(busqueda.toLowerCase())
+    v.nombre.toLowerCase().includes(busqueda.toLowerCase()),
   );
 
   const pendientesFiltrados = pendientes.filter((v) =>
-    v.nombre.toLowerCase().includes(busqueda.toLowerCase())
+    v.nombre.toLowerCase().includes(busqueda.toLowerCase()),
   );
 
   const paginar = (lista, pagina) => {
@@ -65,8 +74,12 @@ const GestionVeterinarias = () => {
     return lista.slice(inicio, inicio + ITEMS_POR_PAGINA);
   };
 
-  const totalPaginasListado = Math.ceil(listaFiltrada.length / ITEMS_POR_PAGINA);
-  const totalPaginasPendientes = Math.ceil(pendientesFiltrados.length / ITEMS_POR_PAGINA);
+  const totalPaginasListado = Math.ceil(
+    listaFiltrada.length / ITEMS_POR_PAGINA,
+  );
+  const totalPaginasPendientes = Math.ceil(
+    pendientesFiltrados.length / ITEMS_POR_PAGINA,
+  );
   const listaVisible = paginar(listaFiltrada, paginaListado);
   const pendientesVisibles = paginar(pendientesFiltrados, paginaPendientes);
 
@@ -94,12 +107,23 @@ const GestionVeterinarias = () => {
 
       const aprobada = pendientes.find((v) => v._id === vetAAprobar.id);
       setPendientes((prev) => prev.filter((v) => v._id !== vetAAprobar.id));
-      if (aprobada) setVeterinarias((prev) => [...prev, { ...aprobada, estado: "activa" }]);
+      if (aprobada)
+        setVeterinarias((prev) => [...prev, { ...aprobada, estado: "activa" }]);
 
       setVetAAprobar(null);
+      setModalExito({
+        abierto: true,
+        mensaje: `La veterinaria "${vetAAprobar.nombre}" ha sido aprobada y ya se le notificó por correo electrónico.`,
+      });
     } catch (err) {
       console.error("Error al aprobar:", err.response?.data || err.message);
-      alert("Error al aprobar la veterinaria.");
+
+      const msj =
+        err.response?.data?.mensaje ||
+        "Ocurrió un error inesperado al aprobar la veterinaria.";
+      setModalError({ abierto: true, mensaje: msj });
+
+      setVetAAprobar(null);
     } finally {
       setIsAprobando(false);
     }
@@ -122,16 +146,33 @@ const GestionVeterinarias = () => {
     try {
       await api.put(`/admin/veterinarias/${vet._id}`, { estado: nuevoEstado });
       setVeterinarias((prev) =>
-        prev.map((v) => (v._id === vet._id ? { ...v, estado: nuevoEstado } : v))
+        prev.map((v) =>
+          v._id === vet._id ? { ...v, estado: nuevoEstado } : v,
+        ),
       );
     } catch (err) {
-      console.error("Error al cambiar estado:", err.response?.data || err.message);
-      alert("Error al cambiar el estado.");
+      console.error(
+        "Error al cambiar estado:",
+        err.response?.data || err.message,
+      );
+      const msj =
+        err.response?.data?.mensaje ||
+        "Ocurrió un error inesperado al aprobar la veterinaria.";
+      setModalError({ abierto: true, mensaje: msj });
     }
   };
 
   const IconoDocumento = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <polyline points="14 2 14 8 20 8" />
       <line x1="16" y1="13" x2="8" y2="13" />
@@ -144,7 +185,11 @@ const GestionVeterinarias = () => {
     if (total <= 1) return null;
     return (
       <div className={styles.paginacion}>
-        <button className={styles.paginaBtn} onClick={() => onChange(pagina - 1)} disabled={pagina === 1}>
+        <button
+          className={styles.paginaBtn}
+          onClick={() => onChange(pagina - 1)}
+          disabled={pagina === 1}
+        >
           ← Anterior
         </button>
         {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
@@ -156,7 +201,11 @@ const GestionVeterinarias = () => {
             {n}
           </button>
         ))}
-        <button className={styles.paginaBtn} onClick={() => onChange(pagina + 1)} disabled={pagina === total}>
+        <button
+          className={styles.paginaBtn}
+          onClick={() => onChange(pagina + 1)}
+          disabled={pagina === total}
+        >
           Siguiente →
         </button>
       </div>
@@ -184,20 +233,32 @@ const GestionVeterinarias = () => {
           <div className={styles.tabs}>
             <button
               className={`${styles.tab} ${tabActiva === "porVerificar" ? styles.tabActiva : ""}`}
-              onClick={() => { setTabActiva("porVerificar"); setBusqueda(""); }}
+              onClick={() => {
+                setTabActiva("porVerificar");
+                setBusqueda("");
+              }}
             >
               Por Verificar {pendientes.length > 0 && `(${pendientes.length})`}
             </button>
             <button
               className={`${styles.tab} ${tabActiva === "listado" ? styles.tabActiva : ""}`}
-              onClick={() => { setTabActiva("listado"); setBusqueda(""); }}
+              onClick={() => {
+                setTabActiva("listado");
+                setBusqueda("");
+              }}
             >
               Listado General
             </button>
           </div>
 
-          {isLoading && <p className={styles.estadoMensaje}>Cargando veterinarias...</p>}
-          {error && <p className={`${styles.estadoMensaje} ${styles.estadoError}`}>{error}</p>}
+          {isLoading && (
+            <p className={styles.estadoMensaje}>Cargando veterinarias...</p>
+          )}
+          {error && (
+            <p className={`${styles.estadoMensaje} ${styles.estadoError}`}>
+              {error}
+            </p>
+          )}
 
           {!isLoading && !error && tabActiva === "listado" && (
             <>
@@ -216,27 +277,43 @@ const GestionVeterinarias = () => {
                   </thead>
                   <tbody>
                     {listaVisible.length === 0 ? (
-                      <tr><td colSpan={7} className={styles.sinResultados}>No se encontraron veterinarias.</td></tr>
+                      <tr>
+                        <td colSpan={7} className={styles.sinResultados}>
+                          No se encontraron veterinarias.
+                        </td>
+                      </tr>
                     ) : (
                       listaVisible.map((vet) => (
                         <tr key={vet._id}>
                           <td>{vet.nombre}</td>
                           <td>
-                            <span>{vet.email}</span><br />
-                            <span className={styles.telefono}>{vet.telefono}</span>
+                            <span>{vet.email}</span>
+                            <br />
+                            <span className={styles.telefono}>
+                              {vet.telefono}
+                            </span>
                           </td>
                           <td>{formatServicios(vet.servicios)}</td>
                           <td>{vet.cuit}</td>
-                          <td>{vet.rating ? `${vet.rating} ⭐` : "Sin notas"}</td>
+                          <td>
+                            {vet.rating ? `${vet.rating} ⭐` : "Sin notas"}
+                          </td>
                           <td>
                             <button
                               className={`${styles.toggle} ${vet.estado === "activa" ? styles.toggleOn : styles.toggleOff}`}
                               onClick={() => handleToggleEstado(vet)}
-                              title={vet.estado === "activa" ? "Suspender" : "Activar"}
+                              title={
+                                vet.estado === "activa"
+                                  ? "Suspender"
+                                  : "Activar"
+                              }
                             />
                           </td>
                           <td>
-                            <button className={styles.btnIcono} title="Ver datos del registro">
+                            <button
+                              className={styles.btnIcono}
+                              title="Ver datos del registro"
+                            >
                               <IconoDocumento />
                             </button>
                           </td>
@@ -249,7 +326,9 @@ const GestionVeterinarias = () => {
 
               <div className={styles.cards}>
                 {listaVisible.length === 0 ? (
-                  <p className={styles.sinResultados}>No se encontraron veterinarias.</p>
+                  <p className={styles.sinResultados}>
+                    No se encontraron veterinarias.
+                  </p>
                 ) : (
                   listaVisible.map((vet) => (
                     <div key={vet._id} className={styles.card}>
@@ -265,12 +344,20 @@ const GestionVeterinarias = () => {
                       <p className={styles.cardInfo}>CUIT: {vet.cuit}</p>
                       {vet.servicios?.length > 0 && (
                         <div className={styles.tags}>
-                          {vet.servicios.slice(0, MAX_SERVICIOS_VISIBLES).map((s) => (
-                            <span key={s._id ?? s.nombre} className={styles.tag}>{s.nombre}</span>
-                          ))}
+                          {vet.servicios
+                            .slice(0, MAX_SERVICIOS_VISIBLES)
+                            .map((s) => (
+                              <span
+                                key={s._id ?? s.nombre}
+                                className={styles.tag}
+                              >
+                                {s.nombre}
+                              </span>
+                            ))}
                           {vet.servicios.length > MAX_SERVICIOS_VISIBLES && (
                             <span className={styles.tag}>
-                              +{vet.servicios.length - MAX_SERVICIOS_VISIBLES} más
+                              +{vet.servicios.length - MAX_SERVICIOS_VISIBLES}{" "}
+                              más
                             </span>
                           )}
                         </div>
@@ -280,7 +367,11 @@ const GestionVeterinarias = () => {
                 )}
               </div>
 
-              <Paginacion pagina={paginaListado} total={totalPaginasListado} onChange={setPaginaListado} />
+              <Paginacion
+                pagina={paginaListado}
+                total={totalPaginasListado}
+                onChange={setPaginaListado}
+              />
             </>
           )}
 
@@ -300,27 +391,47 @@ const GestionVeterinarias = () => {
                   </thead>
                   <tbody>
                     {pendientesVisibles.length === 0 ? (
-                      <tr><td colSpan={6} className={styles.sinResultados}>No hay veterinarias pendientes de verificación.</td></tr>
+                      <tr>
+                        <td colSpan={6} className={styles.sinResultados}>
+                          No hay veterinarias pendientes de verificación.
+                        </td>
+                      </tr>
                     ) : (
                       pendientesVisibles.map((vet) => (
                         <tr key={vet._id}>
                           <td>{vet.nombre}</td>
                           <td>
-                            <span>{vet.email}</span><br />
-                            <span className={styles.telefono}>{vet.telefono}</span>
+                            <span>{vet.email}</span>
+                            <br />
+                            <span className={styles.telefono}>
+                              {vet.telefono}
+                            </span>
                           </td>
                           <td>{vet.direccion}</td>
                           <td>{vet.cuit}</td>
-                          <td>{new Date(vet.createdAt).toLocaleDateString("es-AR")}</td>
+                          <td>
+                            {new Date(vet.createdAt).toLocaleDateString(
+                              "es-AR",
+                            )}
+                          </td>
                           <td>
                             <div className={styles.accionesPendiente}>
-                              <button className={styles.btnIcono} title="Ver datos del registro">
+                              <button
+                                className={styles.btnIcono}
+                                title="Ver datos del registro"
+                              >
                                 <IconoDocumento />
                               </button>
-                              <button className={styles.btnAprobar} onClick={() => abrirModalAprobacion(vet)}>
+                              <button
+                                className={styles.btnAprobar}
+                                onClick={() => abrirModalAprobacion(vet)}
+                              >
                                 Aprobar
                               </button>
-                              <button className={styles.btnRechazar} onClick={() => abrirModalRechazo(vet)}>
+                              <button
+                                className={styles.btnRechazar}
+                                onClick={() => abrirModalRechazo(vet)}
+                              >
                                 Rechazar
                               </button>
                             </div>
@@ -334,12 +445,16 @@ const GestionVeterinarias = () => {
 
               <div className={styles.cards}>
                 {pendientesVisibles.length === 0 ? (
-                  <p className={styles.sinResultados}>No hay veterinarias pendientes.</p>
+                  <p className={styles.sinResultados}>
+                    No hay veterinarias pendientes.
+                  </p>
                 ) : (
                   pendientesVisibles.map((vet) => (
                     <div key={vet._id} className={styles.card}>
                       <div className={styles.cardHeader}>
-                        <span className={styles.cardFecha}>{new Date(vet.createdAt).toLocaleDateString("es-AR")}</span>
+                        <span className={styles.cardFecha}>
+                          {new Date(vet.createdAt).toLocaleDateString("es-AR")}
+                        </span>
                       </div>
                       <p className={styles.cardNombre}>{vet.nombre}</p>
                       <p className={styles.cardInfo}>{vet.email}</p>
@@ -347,15 +462,29 @@ const GestionVeterinarias = () => {
                       <p className={styles.cardInfo}>{vet.direccion}</p>
                       <p className={styles.cardInfo}>CUIT: {vet.cuit}</p>
                       <div className={styles.cardAcciones}>
-                        <button className={styles.btnAprobar} onClick={() => abrirModalAprobacion(vet)}>Aprobar</button>
-                        <button className={styles.btnRechazar} onClick={() => abrirModalRechazo(vet)}>Rechazar</button>
+                        <button
+                          className={styles.btnAprobar}
+                          onClick={() => abrirModalAprobacion(vet)}
+                        >
+                          Aprobar
+                        </button>
+                        <button
+                          className={styles.btnRechazar}
+                          onClick={() => abrirModalRechazo(vet)}
+                        >
+                          Rechazar
+                        </button>
                       </div>
                     </div>
                   ))
                 )}
               </div>
 
-              <Paginacion pagina={paginaPendientes} total={totalPaginasPendientes} onChange={setPaginaPendientes} />
+              <Paginacion
+                pagina={paginaPendientes}
+                total={totalPaginasPendientes}
+                onChange={setPaginaPendientes}
+              />
             </>
           )}
         </div>
@@ -371,7 +500,17 @@ const GestionVeterinarias = () => {
         onCancel={cerrarModalAprobacion}
         confirmando={isAprobando}
       />
-
+      <ErrorModal
+        abierto={modalError.abierto}
+        mensaje={modalError.mensaje}
+        onClose={() => setModalError({ abierto: false, mensaje: "" })}
+      />
+      <SuccessModal
+        abierto={modalExito.abierto}
+        titulo="¡Aprobación exitosa!"
+        mensaje={modalExito.mensaje}
+        onClose={() => setModalExito({ abierto: false, mensaje: "" })}
+      />
       {vetARechazar && (
         <RechazarVetModal
           veterinariaId={vetARechazar.id}
