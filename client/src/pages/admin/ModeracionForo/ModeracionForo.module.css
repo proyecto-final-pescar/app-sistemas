@@ -36,38 +36,6 @@
   font-weight: 500;
 }
 
-.select {
-  padding: 7px 12px;
-  border-radius: 8px;
-  border: 1px solid #ede9fe;
-  background: white;
-  font-size: 13px;
-  color: #1f1739;
-  font-family: 'Inter', sans-serif;
-  outline: none;
-  cursor: pointer;
-}
-
-.select:focus {
-  border-color: #7c3aed;
-}
-
-.inputZona {
-  padding: 7px 12px;
-  border-radius: 8px;
-  border: 1px solid #ede9fe;
-  background: white;
-  font-size: 13px;
-  color: #1f1739;
-  font-family: 'Inter', sans-serif;
-  outline: none;
-  width: 160px;
-}
-
-.inputZona:focus {
-  border-color: #7c3aed;
-}
-
 /* Tabla */
 .tablaWrapper {
   background: white;

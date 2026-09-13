@@ -1,18 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Calendar, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import Sidebar from '../../../components/layout/Sidebar';
 import TopBar from '../../../components/layout/TopBar';
 import Card from '../../../components/ui/card/Card';
 import Badge from '../../../components/ui/badge/Badge';
+import DetallesDeTurnoModal from '../../../components/administrador/detallesDeTurnoModal/detallesDeTurnoModal';
 import TurnosAdminService from '../../../services/TurnosAdminService';
 import styles from './GestionTurnos.module.css';
 
 const TABS_ESTADO = ['Todos', 'Confirmados', 'Pendientes', 'Cancelados'];
 
 export default function GestionTurnos() {
-  const navigate = useNavigate();
-
   const [turnos, setTurnos] = useState([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -26,6 +24,7 @@ export default function GestionTurnos() {
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [cargando, setCargando] = useState(true);
+  const [turnoSeleccionadoId, setTurnoSeleccionadoId] = useState(null);
 
   useEffect(() => {
     cargarTurnos();
@@ -56,7 +55,11 @@ export default function GestionTurnos() {
   };
 
   const verDetalle = (turnoId) => {
-    navigate(`/admin/turnos/${turnoId}`);
+    setTurnoSeleccionadoId(turnoId);
+  };
+
+  const cerrarDetalle = () => {
+    setTurnoSeleccionadoId(null);
   };
 
   return (
@@ -187,21 +190,23 @@ export default function GestionTurnos() {
                     </tr>
                   ) : (
                     turnos.map((turno) => (
-                      <tr key={turno._id}>
-                       
+                      <tr key={turno.turno_id}>
                         <td>{new Date(turno.fecha).toLocaleDateString('es-AR')}</td>
                         <td>{turno.hora}</td>
                         <td>{turno.veterinariaNombre}</td>
                         {/* el "usuario" es el cliente que pidió el turno */}
                         <td>{turno.usuarioNombre}</td>
                         <td>
-                          <Badge texto={turno.estado} variante={turno.estado} />
+                          <Badge
+                            texto={turno.estado}
+                            variante={turno.estado?.toLowerCase()}
+                          />
                         </td>
                         <td>
                           <button
                             type="button"
                             className={styles.ver}
-                            onClick={() => verDetalle(turno._id)}
+                            onClick={() => verDetalle(turno.turno_id)}
                           >
                             Ver
                           </button>
@@ -237,6 +242,13 @@ export default function GestionTurnos() {
           </Card>
         </main>
       </div>
+
+      {turnoSeleccionadoId && (
+        <DetallesDeTurnoModal
+          turnoId={turnoSeleccionadoId}
+          onClose={cerrarDetalle}
+        />
+      )}
     </div>
   );
 }
