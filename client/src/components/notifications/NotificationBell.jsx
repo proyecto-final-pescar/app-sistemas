@@ -4,77 +4,34 @@ import {
   Calendar,
   CreditCard,
   CheckCircle2,
-  XCircle,
-  Users,
-  ShieldCheck,
+  FileText,
+  MessageSquare,
+  Info,
+  Syringe,
   Bell,
   BellOff,
 } from "lucide-react";
 
+import {
+  obtenerNotificaciones,
+  marcarNotificacionComoLeida,
+  marcarTodasLasNotificacionesComoLeidas,
+} from "../../services/notificacionService";
+
 import styles from "./NotificationBell.module.css";
 
+// Mapeo alineado 1 a 1 con los 7 valores reales de la tabla tipo_notificacion.
 const CONFIG_POR_TIPO = {
-  recordatorio_turno: { icono: Calendar, clase: "tipoIconoRecordatorio" },
-  plazo_pago: { icono: CreditCard, clase: "tipoIconoPago" },
+  estudio: { icono: FileText, clase: "tipoIconoInfo" },
+  mensaje: { icono: MessageSquare, clase: "tipoIconoInfo" },
+  sistema: { icono: Info, clase: "tipoIconoInfo" },
   turno_confirmado: { icono: CheckCircle2, clase: "tipoIconoConfirmado" },
-  turno_cancelado: { icono: XCircle, clase: "tipoIconoCancelado" },
-  turno_reservado: { icono: Users, clase: "tipoIconoInfo" },
-  veterinaria_solicitud: { icono: ShieldCheck, clase: "tipoIconoVeterinaria" },
+  turno_pendiente_pago: { icono: CreditCard, clase: "tipoIconoPago" },
+  turno_recordatorio: { icono: Calendar, clase: "tipoIconoRecordatorio" },
+  vacuna: { icono: Syringe, clase: "tipoIconoVeterinaria" },
 };
 
 const CONFIG_DEFAULT = { icono: Bell, clase: "tipoIconoInfo" };
-
-// Datos mock para maquetación y diseño visual
-const NOTIFICACIONES_MOCK = [
-  {
-    _id: "mock-1",
-    tipo: "recordatorio_turno",
-    mensaje: "Recordatorio: Firulais tiene turno mañana a las 10:30.",
-    leida: false,
-    createdAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-    link: "/mis-turnos",
-  },
-  {
-    _id: "mock-2",
-    tipo: "plazo_pago",
-    mensaje: "El plazo para confirmar el pago de tu turno está por vencer.",
-    leida: false,
-    createdAt: new Date(Date.now() - 49 * 60 * 1000).toISOString(),
-    link: "/mis-turnos",
-  },
-  {
-    _id: "mock-3",
-    tipo: "turno_confirmado",
-    mensaje: "Tu turno con Clínica Patitas fue confirmado para mañana a las 16:00.",
-    leida: false,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    link: "/mis-turnos",
-  },
-  {
-    _id: "mock-4",
-    tipo: "turno_cancelado",
-    mensaje: "Tu turno del jueves fue cancelado.",
-    leida: true,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    link: "/mis-turnos",
-  },
-  {
-    _id: "mock-5",
-    tipo: "turno_reservado",
-    mensaje: "Nuevo turno reservado por Lucía para Rocco.",
-    leida: false,
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    link: "/agenda",
-  },
-  {
-    _id: "mock-6",
-    tipo: "veterinaria_solicitud",
-    mensaje: "Nueva veterinaria solicitó registrarse en MyPet.",
-    leida: false,
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    link: "/admin/veterinarias",
-  },
-];
 
 const formatearTiempoRelativo = (fecha) => {
   if (!fecha) return "";
@@ -103,10 +60,29 @@ const NotificationBell = () => {
   const containerRef = useRef(null);
 
   const [abierto, setAbierto] = useState(false);
-  const [notificaciones, setNotificaciones] = useState(NOTIFICACIONES_MOCK);
-  
-  // Calculamos las no leídas en base al estado local
+  const [notificaciones, setNotificaciones] = useState([]);
+  const [cargando, setCargando] = useState(true);
+
   const noLeidas = notificaciones.filter((item) => !item.leida).length;
+
+  useEffect(() => {
+    let activo = true;
+
+    obtenerNotificaciones()
+      .then((data) => {
+        if (activo) setNotificaciones(data);
+      })
+      .catch((error) => {
+        console.error("Error al cargar notificaciones:", error);
+      })
+      .finally(() => {
+        if (activo) setCargando(false);
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   useEffect(() => {
     const cerrarAlHacerClickAfuera = (evento) => {
@@ -128,19 +104,34 @@ const NotificationBell = () => {
     setAbierto((prev) => !prev);
   };
 
-  const handleMarcarTodas = () => {
-    setNotificaciones((previas) =>
-      previas.map((item) => ({ ...item, leida: true }))
-    );
+  const handleMarcarTodas = async () => {
+    // Optimista: actualiza la UI antes de esperar la respuesta del servidor.
+    const previas = notificaciones;
+    setNotificaciones((actual) => actual.map((item) => ({ ...item, leida: true })));
+
+    try {
+      await marcarTodasLasNotificacionesComoLeidas();
+    } catch (error) {
+      console.error("Error al marcar todas como leídas:", error);
+      setNotificaciones(previas); // revierte si falló
+    }
   };
 
-  const handleNotificacion = (notificacion) => {
+  const handleNotificacion = async (notificacion) => {
     if (!notificacion.leida) {
-      setNotificaciones((previas) =>
-        previas.map((item) =>
+      const previas = notificaciones;
+      setNotificaciones((actual) =>
+        actual.map((item) =>
           item._id === notificacion._id ? { ...item, leida: true } : item
         )
       );
+
+      try {
+        await marcarNotificacionComoLeida(notificacion._id);
+      } catch (error) {
+        console.error("Error al marcar notificación como leída:", error);
+        setNotificaciones(previas);
+      }
     }
 
     setAbierto(false);
@@ -184,7 +175,11 @@ const NotificationBell = () => {
             )}
           </div>
 
-          {notificaciones.length === 0 ? (
+          {cargando ? (
+            <div className={styles.emptyState}>
+              <p>Cargando...</p>
+            </div>
+          ) : notificaciones.length === 0 ? (
             <div className={styles.emptyState}>
               <BellOff size={32} className={styles.emptyIcon} />
               <p>¡Todo al día!</p>
