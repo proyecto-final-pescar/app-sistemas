@@ -65,9 +65,11 @@ const mapearVeterinariaLegible = (veterinaria) => {
     })),
     profesionales: (veterinaria.profesional || []).map((p) => ({
       _id: p.profesional_id,
-      nombre: [p.nombre, p.apellido].filter(Boolean).join(' '),
+      nombre: p.nombre,
+      apellido: p.apellido,
       especialidad: p.especialidad?.nombre,
-      email: p.email
+      email: p.email,
+      servicios: (p.profesional_servicio || []).map((ps) => ps.servicio_id)
     })),
     horarios
   };
@@ -91,21 +93,36 @@ const sincronizarProfesionales = async (tx, veterinariaId, profesionalesBody) =>
       throw { status: 400, message: `Especialidad "${profesional.especialidad}" no reconocida.` };
     }
 
+    let profesionalId;
+
     if (profesional.profesional_id && idsExistentes.has(profesional.profesional_id)) {
       await tx.profesional.update({
         where: { profesional_id: profesional.profesional_id },
         data: { nombre, apellido, especialidad_id: especialidadId, email: profesional.email }
       });
+      profesionalId = profesional.profesional_id;
     } else {
-      await tx.profesional.create({
-        data: {
-          veterinaria_id: veterinariaId,
-          nombre,
-          apellido,
-          especialidad_id: especialidadId,
-          email: profesional.email
-        }
+      const nuevoProfesional = await tx.profesional.create({
+        data: { veterinaria_id: veterinariaId, nombre, apellido, especialidad_id: especialidadId, email: profesional.email }
       });
+      profesionalId = nuevoProfesional.profesional_id;
+    }
+
+    // Sincronizar servicios: se borra todo y se recrea, igual criterio
+    // que sincronizarHorarios — simple y evita tener que diffear altas/bajas.
+    if (profesional.serviciosIds !== undefined) {
+      await tx.profesional_servicio.deleteMany({
+        where: { profesional_id: profesionalId }
+      });
+
+      if (profesional.serviciosIds.length > 0) {
+        await tx.profesional_servicio.createMany({
+          data: profesional.serviciosIds.map((servicio_id) => ({
+            profesional_id: profesionalId,
+            servicio_id
+          }))
+        });
+      }
     }
   }
 
@@ -208,7 +225,10 @@ const aplicarActualizacionVeterinaria = async (veterinariaId, body) => {
 
   const profesionalesNormalizados = profesionales?.map((p) => ({
     ...p,
-    profesional_id: p.profesional_id || p._id
+    profesional_id: p.profesional_id || p._id,
+    serviciosIds: Array.isArray(p.serviciosIds)
+      ? p.serviciosIds.map((id) => id) // ya vienen como servicio_id real desde el front, no hace falta traducir
+      : undefined
   }));
   const serviciosNormalizados = servicios?.map((s) => ({
     ...s,
@@ -386,7 +406,7 @@ export const obtenerVeterinarias = async (req, res) => {
     const veterinarias = await prisma.veterinaria.findMany({
       where: { estado_veterinaria_id: 'ACT' },
       include: {
-        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
+        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } }, profesional_servicio: { select: { servicio_id: true } } } },
         servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
         horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
       }
@@ -407,7 +427,7 @@ export const obtenerVeterinariaPorId = async (req, res) => {
     const veterinaria = await prisma.veterinaria.findFirst({
       where: { veterinaria_id: id, estado_veterinaria_id: 'ACT' },
       include: {
-        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
+        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } }, profesional_servicio: { select: { servicio_id: true } } } },
         servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
         horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
       }
@@ -425,6 +445,7 @@ export const obtenerVeterinariaPorId = async (req, res) => {
 };
 
 // GET /veterinarias/mia: devuelve la veterinaria del usuario logueado
+// GET /veterinarias/mia: devuelve la veterinaria del usuario logueado
 export const obtenerMiVeterinaria = async (req, res) => {
   try {
     const usuarioId = req.user.id;
@@ -432,7 +453,7 @@ export const obtenerMiVeterinaria = async (req, res) => {
     const veterinaria = await prisma.veterinaria.findUnique({
       where: { usuario_id: usuarioId },
       include: {
-        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
+        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } }, profesional_servicio: { select: { servicio_id: true } } } },
         servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
         horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
       }
@@ -527,7 +548,8 @@ export const crearVeterinaria = async (req, res) => {
         nombre: nombreProf,
         apellido,
         especialidad_id: especialidadId,
-        email: profesional.email
+        email: profesional.email,
+        serviciosIds: profesional.serviciosIds || []
       });
     }
 
@@ -540,6 +562,7 @@ export const crearVeterinaria = async (req, res) => {
         });
       }
       serviciosResueltos.push({
+        idLocal: servicio.idLocal, // ← nuevo, se usa solo en memoria, no se persiste
         nombre: servicio.nombre,
         precio: servicio.precio,
         categoria_servicio_id: categoriaId
@@ -563,7 +586,7 @@ export const crearVeterinaria = async (req, res) => {
     }
 
     const veterinariaCreada = await prisma.$transaction(async (tx) => {
-      return tx.veterinaria.create({
+      const nuevaVeterinaria = await tx.veterinaria.create({
         data: {
           usuario_id: usuarioId,
           nombre,
@@ -576,12 +599,56 @@ export const crearVeterinaria = async (req, res) => {
           latitud,
           longitud,
           urgencias: urgencias24hs ?? false,
-          profesional: { create: profesionalesResueltos },
-          servicio: { create: serviciosResueltos },
+          servicio: {
+            create: serviciosResueltos.map(({ idLocal, ...datosServicio }) => datosServicio)
+          },
           horario_veterinaria: { create: horariosResueltos }
         },
+        include: { servicio: true }
+      });
+
+      // Mapeo idLocal (del front) -> servicio_id (real, recién creado)
+      // Se empareja por posición porque Prisma crea en el mismo orden del array.
+      const mapaIdLocalAServicioId = new Map(
+        nuevaVeterinaria.servicio.map((s, i) => [serviciosResueltos[i].idLocal, s.servicio_id])
+      );
+
+      // Crear cada profesional y su vínculo con los servicios elegidos
+      for (const profesional of profesionalesResueltos) {
+        const nuevoProfesional = await tx.profesional.create({
+          data: {
+            veterinaria_id: nuevaVeterinaria.veterinaria_id,
+            nombre: profesional.nombre,
+            apellido: profesional.apellido,
+            especialidad_id: profesional.especialidad_id,
+            email: profesional.email
+          }
+        });
+
+        const serviciosIdsReales = (profesional.serviciosIds || [])
+          .map((idLocal) => mapaIdLocalAServicioId.get(idLocal))
+          .filter(Boolean);
+
+        if (serviciosIdsReales.length > 0) {
+          await tx.profesional_servicio.createMany({
+            data: serviciosIdsReales.map((servicio_id) => ({
+              profesional_id: nuevoProfesional.profesional_id,
+              servicio_id
+            }))
+          });
+        }
+      }
+
+      return tx.veterinaria.findUnique({
+        where: { veterinaria_id: nuevaVeterinaria.veterinaria_id },
         include: {
-          profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
+          profesional: {
+            where: { active: true },
+            include: {
+              especialidad: { select: { nombre: true } },
+              profesional_servicio: { select: { servicio_id: true } }
+            }
+          },
           servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
           horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
         }
