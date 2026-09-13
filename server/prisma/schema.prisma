@@ -218,7 +218,6 @@ model profesional {
   veterinaria          veterinaria            @relation(fields: [veterinaria_id], references: [veterinaria_id], onDelete: NoAction, onUpdate: NoAction)
   profesional_servicio profesional_servicio[]
   turno                turno[]
-  turno_profesional    turno_profesional[]
   vacuna               vacuna[]
 }
 
@@ -351,7 +350,6 @@ model turno {
 
   consulta                    consulta?
   pago                        pago[]
-  turno_profesional_candidato turno_profesional[] @relation("turno_candidatos")
   estado_turno                estado_turno        @relation(fields: [estado_turno_id], references: [estado_turno_id], onDelete: NoAction, onUpdate: NoAction)
   mascota                     mascota?            @relation(fields: [mascota_id], references: [mascota_id], onDelete: NoAction, onUpdate: NoAction)
   profesional                 profesional?        @relation(fields: [profesional_id], references: [profesional_id], onDelete: NoAction, onUpdate: NoAction)
@@ -363,15 +361,7 @@ model turno {
   @@index([estado_turno_id, vence_en], map: "ix_turno_vencimiento")
 }
 
-model turno_profesional {
-  turno_id       String @db.Uuid
-  profesional_id String @db.Uuid
 
-  turno       turno       @relation("turno_candidatos", fields: [turno_id], references: [turno_id], onDelete: Cascade, onUpdate: NoAction)
-  profesional profesional @relation(fields: [profesional_id], references: [profesional_id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@id([turno_id, profesional_id])
-}
 
 model usuario {
   usuario_id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
