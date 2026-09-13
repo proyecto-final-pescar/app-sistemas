@@ -20,6 +20,17 @@ const DURACIONES = [
 
 const DIAS_SEMANA = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
+const normalizarDia = (dia) =>
+  dia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const esFechaPasada = (fecha) => {
+  const fechaEvaluada = new Date(fecha);
+  fechaEvaluada.setHours(0, 0, 0, 0);
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  return fechaEvaluada < hoy;
+};
+
 const obtenerLunesDeSemana = (offset = 0) => {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -110,6 +121,8 @@ export default function CargaTurnos() {
   }, [veterinaria]);
 
   useEffect(() => {
+    // La función actualiza el estado únicamente después de resolver la petición remota.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarExistentes();
   }, [cargarExistentes, servicioId, profesionales]);
 
@@ -119,9 +132,6 @@ export default function CargaTurnos() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [error, exito]);
-
-  const normalizarDia = (dia) =>
-    dia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
   const diasDisponibles = veterinaria?.horarios
     ? Object.keys(veterinaria.horarios).filter(dia => {
@@ -149,6 +159,8 @@ export default function CargaTurnos() {
 
     if (offset > 0) setSemanaOffset(offset);
     semanaAjustadaRef.current = true;
+    // La semana inicial se calcula una sola vez cuando llega la veterinaria.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [veterinaria]);
 
   const obtenerRangoGlobal = () => {
@@ -205,14 +217,6 @@ export default function CargaTurnos() {
     });
   };
 
-  const esFechaPasada = (fecha) => {
-    const f = new Date(fecha);
-    f.setHours(0, 0, 0, 0);
-    const h = new Date();
-    h.setHours(0, 0, 0, 0);
-    return f < h;
-  };
-
   const esCeldaPasada = (fecha, hora) => {
     const ahora = new Date();
     const [h, m] = hora.split(":").map(Number);
@@ -251,7 +255,7 @@ export default function CargaTurnos() {
     return slotsDelDia.length > 0 && slotsDelDia.every(h => slotsSeleccionados[`${diaIdx}-${h}`]);
   };
 
-  const calcularFechasExpandidas = useCallback((diaIdx) => {
+  const calcularFechasExpandidas = (diaIdx) => {
     const fechaBase = fechasSemana[diaIdx];
     if (esFechaPasada(fechaBase)) return [];
 
@@ -276,7 +280,7 @@ export default function CargaTurnos() {
       if (!esFechaPasada(f)) fechas.push(f);
     }
     return fechas;
-  }, [fechasSemana, recurrencia, hoy]);
+  };
 
   const totalSlotsACrear = () => {
     let total = 0;
@@ -387,7 +391,14 @@ export default function CargaTurnos() {
                     <select
                       className={styles.select}
                       value={servicioId}
-                      onChange={(e) => { setServicioId(e.target.value); setProfesionales([]); }}
+                      onChange={(e) => {
+                        const nuevoServicioId = e.target.value;
+                        const nuevoServicio = veterinaria?.servicios?.find((s) => s._id === nuevoServicioId);
+                        setServicioId(nuevoServicioId);
+                        setDuracion(Number(nuevoServicio?.duracionMinutos) || 30);
+                        setProfesionales([]);
+                        setSlotsSeleccionados({});
+                      }}
                     >
                       <option value="">Seleccioná un servicio...</option>
                       {veterinaria?.servicios?.map(s => (

@@ -10,14 +10,22 @@ import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
 import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
 import ErrorModal from "../../../components/ui/error-modal/ErrorModal";
 import { useCategoriasServicio } from "../../../hooks/useCategoriasServicio";
+import { useEspecialidades } from "../../../hooks/useEspecialidades";
 import {
-  actualizarMiVeterinaria,
+  actualizarMisDatosGenerales,
+  actualizarMisHorarios,
+  actualizarMisProfesionales,
+  actualizarMisServicios,
+  desconectarMercadoPago,
+  iniciarConexionMercadoPago,
   obtenerMiVeterinaria,
+  obtenerMetodoCobro,
 } from "../../../services/veterinariaService";
 import {
   DIAS,
   HORAS,
   construirHorarios,
+  validarCUIT,
   validarEmail,
   validarHorarios,
   validarPrecio,
@@ -36,7 +44,13 @@ const CLAVES_DIAS = {
   Domingo: "domingo",
 };
 
-const TABS = ["Datos generales", "Servicios", "Profesionales", "Horarios"];
+const TABS = ["Datos generales", "Servicios", "Profesionales", "Horarios", "Método de cobro"];
+const DURACIONES_SERVICIO = [
+  { value: 15, label: "15 minutos" },
+  { value: 30, label: "30 minutos" },
+  { value: 60, label: "1 hora" },
+  { value: 120, label: "2 horas" },
+];
 
 
 const REGEX_SOLO_LETRAS = /^[a-zA-ZÀ-ÖØ-öø-ÿ\u00f1\u00d1\s'.-]+$/;
@@ -81,6 +95,8 @@ const normalizarVeterinaria = (veterinaria) => ({
   datos: {
     nombre: veterinaria.nombre || "",
     direccion: veterinaria.direccion || "",
+    razonSocial: veterinaria.razonSocial || "",
+    cuit: veterinaria.cuit || "",
     telefono: veterinaria.telefono || "",
     email: veterinaria.email || "",
     sitioWeb: veterinaria.sitioWeb || "",
@@ -101,7 +117,9 @@ const construirPayloadServicios = (servicios) => ({
     ...(servicio._id ? { _id: servicio._id } : {}),
     nombre: servicio.nombre.trim(),
     categoria: servicio.categoria,
+    descripcion: servicio.descripcion.trim(),
     precio: Number(servicio.precio),
+    duracionMinutos: Number(servicio.duracionMinutos),
   })),
 });
 
@@ -120,6 +138,11 @@ const construirPayloadProfesionales = (profesionales) => ({
 function MiVeterinaria() {
   const { categorias, loading: cargandoCategorias, error: errorCategorias } =
     useCategoriasServicio();
+  const {
+    especialidades,
+    loading: cargandoEspecialidades,
+    error: errorEspecialidades,
+  } = useEspecialidades();
   const [tabActiva, setTabActiva] = useState(TABS[0]);
   const [formulario, setFormulario] = useState(null);
 
@@ -136,6 +159,10 @@ function MiVeterinaria() {
   const [eliminando, setEliminando] = useState(false);
   const [successModal, setSuccessModal] = useState({ abierto: false, mensaje: "" });
   const [errorModal, setErrorModal] = useState({ abierto: false, mensaje: "" });
+  const [metodoCobro, setMetodoCobro] = useState(null);
+  const [cargandoMetodoCobro, setCargandoMetodoCobro] = useState(true);
+  const [procesandoMetodoCobro, setProcesandoMetodoCobro] = useState(false);
+  const [errorMetodoCobro, setErrorMetodoCobro] = useState("");
 
   const cambio = (campo) =>
     formulario && formularioGuardado
@@ -199,6 +226,40 @@ function MiVeterinaria() {
     };
   }, []);
 
+  useEffect(() => {
+    let activo = true;
+
+    obtenerMetodoCobro()
+      .then((metodo) => {
+        if (activo) setMetodoCobro(metodo);
+      })
+      .catch((error) => {
+        if (activo) {
+          setErrorMetodoCobro(
+            obtenerMensajeError(error, "No se pudo cargar el método de cobro."),
+          );
+        }
+      })
+      .finally(() => {
+        if (activo) setCargandoMetodoCobro(false);
+      });
+
+    const resultadoMercadoPago = new URLSearchParams(window.location.search).get("mercadopago");
+    if (resultadoMercadoPago === "conectado") {
+      setSuccessModal({ abierto: true, mensaje: "Tu cuenta de Mercado Pago quedó conectada." });
+    } else if (resultadoMercadoPago === "error") {
+      setErrorModal({ abierto: true, mensaje: "No se pudo conectar Mercado Pago. Intentá nuevamente." });
+    }
+    if (resultadoMercadoPago) {
+      window.history.replaceState({}, "", window.location.pathname);
+      setTabActiva("Método de cobro");
+    }
+
+    return () => {
+      activo = false;
+    };
+  }, []);
+
   
   useEffect(() => {
     if (!hayCambiosSinGuardar) return;
@@ -221,7 +282,7 @@ function MiVeterinaria() {
 
   const abrirServicio = (indice = null) => {
     const servicio = indice === null
-      ? { nombre: "", categoria: "", precio: "" }
+      ? { nombre: "", categoria: "", descripcion: "", precio: "", duracionMinutos: 30 }
       : { ...formulario.servicios[indice] };
     setModalEdicion({ tipo: "servicio", indice, valores: servicio });
   };
@@ -231,6 +292,16 @@ function MiVeterinaria() {
       ? { nombre: "", especialidad: "", email: "", serviciosIds: [] }
       : { ...formulario.profesionales[indice] };
     setModalEdicion({ tipo: "profesional", indice, valores: profesional });
+  };
+
+  const alternarServicioProfesional = (servicioId) => {
+    const actuales = modalEdicion.valores.serviciosIds || [];
+    actualizarModal(
+      "serviciosIds",
+      actuales.includes(servicioId)
+        ? actuales.filter((id) => id !== servicioId)
+        : [...actuales, servicioId],
+    );
   };
 
   const actualizarModal = (campo, valor) => {
@@ -247,10 +318,14 @@ function MiVeterinaria() {
     let error = "";
 
     if (tipo === "servicio") {
-      if (!valores.nombre.trim() || !valores.categoria) {
-        error = "Completá el nombre y la categoría del servicio.";
+      if (!valores.nombre.trim() || !valores.categoria || !valores.descripcion.trim()) {
+        error = "Completá el nombre, la categoría y la descripción del servicio.";
       } else if (!validarPrecio(valores.precio)) {
         error = "El precio debe ser numérico y mayor a cero.";
+      } else if (!DURACIONES_SERVICIO.some(
+        (opcion) => opcion.value === Number(valores.duracionMinutos),
+      )) {
+        error = "La duración debe ser de 15, 30, 60 o 120 minutos.";
       }
     } else if (!valores.nombre.trim() || !valores.especialidad.trim() || !valores.email.trim()) {
       error = "Completá todos los datos del profesional.";
@@ -269,7 +344,11 @@ function MiVeterinaria() {
 
     const clave = tipo === "servicio" ? "servicios" : "profesionales";
     const normalizado = tipo === "servicio"
-      ? { ...valores, precio: Number(valores.precio) }
+      ? {
+        ...valores,
+        precio: Number(valores.precio),
+        duracionMinutos: Number(valores.duracionMinutos),
+      }
       : { ...valores };
 
     const items = [...formulario[clave]];
@@ -282,10 +361,20 @@ function MiVeterinaria() {
 
     setGuardandoModal(true);
     try {
-      const actualizada = await actualizarMiVeterinaria(payload);
+      const actualizada = tipo === "servicio"
+        ? await actualizarMisServicios(payload.servicios)
+        : await actualizarMisProfesionales(payload.profesionales);
       const normalizada = normalizarVeterinaria(actualizada);
-      setFormulario(normalizada);
-      setFormularioGuardado(normalizada);
+      setFormulario((actual) => ({
+        ...actual,
+        [clave]: normalizada[clave],
+        ...(tipo === "servicio" ? { profesionales: normalizada.profesionales } : {}),
+      }));
+      setFormularioGuardado((actual) => ({
+        ...actual,
+        [clave]: normalizada[clave],
+        ...(tipo === "servicio" ? { profesionales: normalizada.profesionales } : {}),
+      }));
       setModalEdicion(null);
       setSuccessModal({
         abierto: true,
@@ -306,6 +395,24 @@ function MiVeterinaria() {
  
   const confirmarEliminacion = async () => {
     const { tipo, indice, nombre } = confirmacion;
+    if (tipo === "metodo-cobro") {
+      setEliminando(true);
+      try {
+        await desconectarMercadoPago();
+        setMetodoCobro((actual) => ({ ...actual, conectado: false, cuenta: null }));
+        setConfirmacion(null);
+        setSuccessModal({ abierto: true, mensaje: "La cuenta de Mercado Pago se desconectó correctamente." });
+      } catch (errorPeticion) {
+        setConfirmacion(null);
+        setErrorModal({
+          abierto: true,
+          mensaje: obtenerMensajeError(errorPeticion, "No se pudo desconectar Mercado Pago."),
+        });
+      } finally {
+        setEliminando(false);
+      }
+      return;
+    }
     const clave = tipo === "servicio" ? "servicios" : "profesionales";
     const items = formulario[clave].filter((_, posicion) => posicion !== indice);
 
@@ -315,10 +422,20 @@ function MiVeterinaria() {
 
     setEliminando(true);
     try {
-      const actualizada = await actualizarMiVeterinaria(payload);
+      const actualizada = tipo === "servicio"
+        ? await actualizarMisServicios(payload.servicios)
+        : await actualizarMisProfesionales(payload.profesionales);
       const normalizada = normalizarVeterinaria(actualizada);
-      setFormulario(normalizada);
-      setFormularioGuardado(normalizada);
+      setFormulario((actual) => ({
+        ...actual,
+        [clave]: normalizada[clave],
+        ...(tipo === "servicio" ? { profesionales: normalizada.profesionales } : {}),
+      }));
+      setFormularioGuardado((actual) => ({
+        ...actual,
+        [clave]: normalizada[clave],
+        ...(tipo === "servicio" ? { profesionales: normalizada.profesionales } : {}),
+      }));
       setConfirmacion(null);
       setSuccessModal({
         abierto: true,
@@ -363,8 +480,17 @@ function MiVeterinaria() {
       if (!datos.nombre.trim() || !datos.direccion.trim() || !datos.telefono.trim() || !datos.email.trim()) {
         return "Completá los datos generales obligatorios.";
       }
+      if (!validarCUIT(datos.cuit)) return "Ingresá un CUIT válido.";
       if (!validarTelefono(datos.telefono)) return "Ingresá un teléfono válido.";
       if (!validarEmail(datos.email)) return "Ingresá un email institucional válido.";
+      if (datos.sitioWeb) {
+        try {
+          const url = new URL(datos.sitioWeb);
+          if (!["http:", "https:"].includes(url.protocol)) return "Ingresá un sitio web válido.";
+        } catch {
+          return "Ingresá un sitio web válido, incluyendo http:// o https://.";
+        }
+      }
       return "";
     }
 
@@ -379,6 +505,8 @@ function MiVeterinaria() {
       return {
         nombre: formulario.datos.nombre.trim(),
         direccion: formulario.datos.direccion.trim(),
+        razonSocial: formulario.datos.razonSocial.trim(),
+        cuit: formulario.datos.cuit.trim(),
         telefono: formulario.datos.telefono.trim(),
         email: formulario.datos.email.trim(),
         sitioWeb: formulario.datos.sitioWeb.trim(),
@@ -403,10 +531,25 @@ function MiVeterinaria() {
 
     setGuardandoSeccion((actual) => ({ ...actual, [seccion]: true }));
     try {
-      const actualizada = await actualizarMiVeterinaria(payload);
+      const actualizada = seccion === "datos"
+        ? await actualizarMisDatosGenerales(payload)
+        : await actualizarMisHorarios(payload.horarios, payload.urgencias24hs);
       const normalizada = normalizarVeterinaria(actualizada);
-      setFormulario(normalizada);
-      setFormularioGuardado(normalizada);
+      if (seccion === "datos") {
+        setFormulario((actual) => ({ ...actual, datos: normalizada.datos }));
+        setFormularioGuardado((actual) => ({ ...actual, datos: normalizada.datos }));
+      } else {
+        setFormulario((actual) => ({
+          ...actual,
+          diasSeleccionados: normalizada.diasSeleccionados,
+          urgencias24hs: normalizada.urgencias24hs,
+        }));
+        setFormularioGuardado((actual) => ({
+          ...actual,
+          diasSeleccionados: normalizada.diasSeleccionados,
+          urgencias24hs: normalizada.urgencias24hs,
+        }));
+      }
       setSuccessModal({
         abierto: true,
         mensaje: "Los datos de tu veterinaria se actualizaron correctamente.",
@@ -418,6 +561,20 @@ function MiVeterinaria() {
       });
     } finally {
       setGuardandoSeccion((actual) => ({ ...actual, [seccion]: false }));
+    }
+  };
+
+  const conectarMercadoPago = async () => {
+    setProcesandoMetodoCobro(true);
+    setErrorMetodoCobro("");
+    try {
+      const { authorizationUrl } = await iniciarConexionMercadoPago();
+      window.location.assign(authorizationUrl);
+    } catch (error) {
+      setErrorMetodoCobro(
+        obtenerMensajeError(error, "No se pudo iniciar la conexión con Mercado Pago."),
+      );
+      setProcesandoMetodoCobro(false);
     }
   };
 
@@ -503,6 +660,8 @@ function MiVeterinaria() {
                 <Input label="Teléfono *" value={formulario.datos.telefono} onChange={(e) => actualizarDatos("telefono", e.target.value)} />
                 <Input label="Dirección *" value={formulario.datos.direccion} onChange={(e) => actualizarDatos("direccion", e.target.value)} />
                 <Input label="Email institucional *" type="email" value={formulario.datos.email} onChange={(e) => actualizarDatos("email", e.target.value)} />
+                <Input label="Razón social" value={formulario.datos.razonSocial} onChange={(e) => actualizarDatos("razonSocial", e.target.value)} />
+                <Input label="CUIT *" value={formulario.datos.cuit} onChange={(e) => actualizarDatos("cuit", e.target.value)} />
                 <div className={styles.fullWidth}>
                   <Input label="Sitio web" value={formulario.datos.sitioWeb} onChange={(e) => actualizarDatos("sitioWeb", e.target.value)} />
                 </div>
@@ -520,7 +679,12 @@ function MiVeterinaria() {
                 {formulario.servicios.length === 0 && <div className={styles.empty}>No hay servicios cargados.</div>}
                 {formulario.servicios.map((servicio, indice) => (
                   <article className={styles.itemCard} key={servicio._id || `servicio-${indice}`}>
-                    <div className={styles.itemBody}><span className={styles.category}>{servicio.categoria}</span><h3>{servicio.nombre}</h3></div>
+                    <div className={styles.itemBody}>
+                      <span className={styles.category}>{servicio.categoria}</span>
+                      <h3>{servicio.nombre}</h3>
+                      <p>{servicio.descripcion}</p>
+                      <p>{servicio.duracionMinutos} minutos</p>
+                    </div>
                     <strong className={styles.price}>$ {Number(servicio.precio).toLocaleString("es-AR")}</strong>
                     <div className={styles.actions}>
                       <button type="button" aria-label={`Editar ${servicio.nombre}`} onClick={() => abrirServicio(indice)}><IconEdit /></button>
@@ -543,7 +707,19 @@ function MiVeterinaria() {
                 {formulario.profesionales.map((profesional, indice) => (
                   <article className={styles.itemCard} key={profesional._id || `profesional-${indice}`}>
                     <div className={styles.avatar}>{profesional.nombre?.charAt(0).toUpperCase() || "V"}</div>
-                    <div className={styles.itemBody}><span className={styles.category}>{profesional.especialidad}</span><h3>{profesional.nombre}</h3><p>{profesional.email}</p></div>
+                    <div className={styles.itemBody}>
+                      <span className={styles.category}>{profesional.especialidad}</span>
+                      <h3>{profesional.nombre}</h3>
+                      <p>{profesional.email}</p>
+                      <p>
+                        {profesional.serviciosIds?.length
+                          ? formulario.servicios
+                            .filter((servicio) => profesional.serviciosIds.includes(servicio._id))
+                            .map((servicio) => servicio.nombre)
+                            .join(" · ")
+                          : "Sin servicios asociados"}
+                      </p>
+                    </div>
                     <div className={styles.actions}>
                       <button type="button" aria-label={`Editar ${profesional.nombre}`} onClick={() => abrirProfesional(indice)}><IconEdit /></button>
                       <button type="button" aria-label={`Eliminar ${profesional.nombre}`} onClick={() => setConfirmacion({ tipo: "profesional", indice, nombre: profesional.nombre })}><IconTrash /></button>
@@ -593,6 +769,70 @@ function MiVeterinaria() {
               </div>
             </section>
           )}
+
+          {tabActiva === "Método de cobro" && (
+            <section className={styles.panel}>
+              <div className={styles.sectionHeading}>
+                <div>
+                  <h2>Método de cobro</h2>
+                  <p>Conectá la cuenta donde vas a recibir los pagos de las reservas.</p>
+                </div>
+              </div>
+
+              {cargandoMetodoCobro ? (
+                <div className={styles.paymentState} aria-live="polite">
+                  <span className={styles.spinner} />
+                  <p>Cargando configuración de cobro...</p>
+                </div>
+              ) : errorMetodoCobro ? (
+                <div className={styles.paymentError} role="alert">
+                  <strong>No pudimos cargar el método de cobro</strong>
+                  <p>{errorMetodoCobro}</p>
+                  <button type="button" onClick={() => window.location.reload()}>Reintentar</button>
+                </div>
+              ) : (
+                <div className={styles.paymentCard}>
+                  <div className={styles.paymentLogo} aria-hidden="true">MP</div>
+                  <div className={styles.paymentBody}>
+                    <div className={styles.paymentTitle}>
+                      <h3>Mercado Pago</h3>
+                      <span className={metodoCobro?.conectado ? styles.connected : styles.disconnected}>
+                        {metodoCobro?.conectado ? "Conectado" : "Sin conectar"}
+                      </span>
+                    </div>
+                    <p>
+                      {metodoCobro?.conectado
+                        ? `Cuenta ${metodoCobro.cuenta}. Los pagos se acreditarán en esta cuenta.`
+                        : "Autorizá My Pet desde Mercado Pago para recibir cobros de forma segura."}
+                    </p>
+                    <small>
+                      My Pet no muestra ni guarda contraseñas. Las credenciales OAuth se almacenan cifradas en el servidor.
+                    </small>
+                  </div>
+                  <div className={styles.paymentActions}>
+                    <Button
+                      texto={procesandoMetodoCobro
+                        ? "Conectando..."
+                        : metodoCobro?.conectado ? "Reconectar" : "Conectar Mercado Pago"}
+                      variante="primario"
+                      tamaño="mediano"
+                      onClick={conectarMercadoPago}
+                      disabled={procesandoMetodoCobro}
+                    />
+                    {metodoCobro?.conectado && (
+                      <button
+                        className={styles.disconnectButton}
+                        type="button"
+                        onClick={() => setConfirmacion({ tipo: "metodo-cobro", nombre: "Mercado Pago" })}
+                      >
+                        Desconectar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
         </main>
       </div>
 
@@ -605,14 +845,41 @@ function MiVeterinaria() {
               <>
                 <Input label="Nombre *" value={modalEdicion.valores.nombre} onChange={(e) => actualizarModal("nombre", e.target.value)} />
                 <Select label="Categoría *" opciones={categorias} value={modalEdicion.valores.categoria} onChange={(e) => actualizarModal("categoria", e.target.value)} error={errorCategorias} />
+                <label className={styles.textareaField}>
+                  <span>Descripción *</span>
+                  <textarea
+                    value={modalEdicion.valores.descripcion}
+                    onChange={(e) => actualizarModal("descripcion", e.target.value)}
+                    maxLength={500}
+                    rows={3}
+                  />
+                  <small>{modalEdicion.valores.descripcion.length}/500</small>
+                </label>
                 <Input label="Precio *" type="number" value={modalEdicion.valores.precio} onChange={(e) => actualizarModal("precio", e.target.value)} />
+                <Select label="Duración estimada *" opciones={DURACIONES_SERVICIO} value={modalEdicion.valores.duracionMinutos} onChange={(e) => actualizarModal("duracionMinutos", e.target.value)} />
                 {cargandoCategorias && <p className={styles.helper}>Cargando categorías...</p>}
               </>
             ) : (
               <>
                 <Input label="Nombre y apellido *" value={modalEdicion.valores.nombre} onChange={(e) => actualizarModal("nombre", e.target.value)} />
-                <Input label="Especialidad *" value={modalEdicion.valores.especialidad} onChange={(e) => actualizarModal("especialidad", e.target.value)} />
+                <Select label="Especialidad *" opciones={especialidades} value={modalEdicion.valores.especialidad} onChange={(e) => actualizarModal("especialidad", e.target.value)} error={errorEspecialidades} />
                 <Input label="Email *" type="email" value={modalEdicion.valores.email} onChange={(e) => actualizarModal("email", e.target.value)} />
+                <fieldset className={styles.serviceSelector}>
+                  <legend>Servicios que realiza</legend>
+                  {formulario.servicios.length === 0 ? (
+                    <p>Primero cargá al menos un servicio.</p>
+                  ) : formulario.servicios.map((servicio) => (
+                    <label key={servicio._id}>
+                      <input
+                        type="checkbox"
+                        checked={modalEdicion.valores.serviciosIds?.includes(servicio._id) || false}
+                        onChange={() => alternarServicioProfesional(servicio._id)}
+                      />
+                      <span>{servicio.nombre}</span>
+                    </label>
+                  ))}
+                </fieldset>
+                {cargandoEspecialidades && <p className={styles.helper}>Cargando especialidades...</p>}
               </>
             )}
             {modalEdicion.error && <p className={styles.formError}>{modalEdicion.error}</p>}
@@ -623,14 +890,27 @@ function MiVeterinaria() {
                 variante="primario"
                 tamaño="mediano"
                 onClick={guardarModal}
-                disabled={guardandoModal || (modalEdicion.tipo === "servicio" && cargandoCategorias)}
+                disabled={guardandoModal
+                  || (modalEdicion.tipo === "servicio" && cargandoCategorias)
+                  || (modalEdicion.tipo === "profesional" && cargandoEspecialidades)}
               />
             </div>
           </div>
         )}
       </Modal>
 
-      <ConfirmModal abierto={Boolean(confirmacion)} titulo={`Eliminar ${confirmacion?.tipo || "elemento"}`} mensaje={confirmacion ? `¿Querés eliminar “${confirmacion.nombre}”?` : ""} textoConfirmar={eliminando ? "Eliminando..." : "Eliminar"} onConfirm={confirmarEliminacion} onCancel={() => (eliminando ? null : setConfirmacion(null))} />
+      <ConfirmModal
+        abierto={Boolean(confirmacion)}
+        titulo={confirmacion?.tipo === "metodo-cobro" ? "Desconectar Mercado Pago" : `Eliminar ${confirmacion?.tipo || "elemento"}`}
+        mensaje={confirmacion?.tipo === "metodo-cobro"
+          ? "Los tutores no podrán iniciar nuevos pagos hasta que conectes una cuenta nuevamente."
+          : confirmacion ? `¿Querés eliminar “${confirmacion.nombre}”?` : ""}
+        textoConfirmar={eliminando
+          ? (confirmacion?.tipo === "metodo-cobro" ? "Desconectando..." : "Eliminando...")
+          : (confirmacion?.tipo === "metodo-cobro" ? "Desconectar" : "Eliminar")}
+        onConfirm={confirmarEliminacion}
+        onCancel={() => (eliminando ? null : setConfirmacion(null))}
+      />
       <SuccessModal
         abierto={successModal.abierto}
         titulo="¡Listo!"
