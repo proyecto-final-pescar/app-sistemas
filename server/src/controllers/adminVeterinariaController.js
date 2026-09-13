@@ -1,6 +1,8 @@
 import Veterinaria from "../models/Veterinaria.js";
 import Turno from "../models/Turno.js";
 import prisma from "../../prisma/client.js";
+import { enviarEmail } from '../utils/mailer.js';
+import { armarEmailVeterinariaAprobada } from '../templates/emailVeterinariaAprobada.js';
 
 // GET /api/admin/veterinarias
 export const obtenerVeterinariasAdmin = async (req, res) => {
@@ -289,27 +291,49 @@ export const eliminarVeterinariaAdmin = async (req, res) => {
 export const aprobarVeterinaria = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const veterinaria = await Veterinaria.findById(id);
+    if (req.usuario?.rol !== 'ADM' && req.usuario?.rol !== 'admin') {
+      return res.status(403).json({ mensaje: 'No tienes permisos para realizar esta acción' });
+    }
+    
+   const veterinaria = await prisma.veterinaria.findUnique({
+      where: { veterinaria_id: id },
+      include: { usuario: true } 
+    });
 
     if (!veterinaria) {
       return res.status(404).json({ message: "La veterinaria no existe." });
     }
 
-    veterinaria.estado = "activa";
-    await veterinaria.save({ validateModifiedOnly: true });
+  if (veterinaria.estado_veterinaria_id === 'ACT') {
+      return res.status(400).json({ mensaje: 'La veterinaria ya se encuentra activa' });
+    }
+
+    const vetActualizada = await prisma.veterinaria.update({
+      where: { veterinaria_id: id },
+      data: { estado_veterinaria_id: 'ACT' }
+    });
+
+    const destinatario = veterinaria.email || veterinaria.usuario?.email;
+    if (destinatario) {
+      try {
+        const { subject, html } = armarEmailVeterinariaAprobada(vetActualizada.nombre);
+        await enviarEmail({ to: destinatario, subject, html });
+      } catch (mailError) {
+        console.error(`Error enviando email de aprobación a ${destinatario}:`, mailError);
+        // Opcional: Registrar en un servicio de logs (ej. Sentry)
+      }
+    }
 
     return res.status(200).json({
       success: true,
-      data: veterinaria,
+      data: vetActualizada,
     });
   } catch (error) {
-    if (error.name === "CastError") {
-      return res
-        .status(400)
-        .json({ message: "El id de la veterinaria no es válido" });
+    if (error.code === 'P2023') { 
+      return res.status(400).json({ message: "El id de la veterinaria no es válido" });
     }
 
+    console.error('Error al aprobar veterinaria:', error);
     return res.status(500).json({ message: "Error interno del servidor" });
   }
 };
