@@ -116,7 +116,7 @@ export default function MisTurnos() {
                     </span>
                     <span>
                       <FaClock size={12} color="rgba(255,255,255,0.85)" />{" "}
-                      {turnoMasProximo.hora} hs
+                      {turnoMasProximo.hora_inicio} hs
                     </span>
                     <span>
                       <FaHospital size={12} color="rgba(255,255,255,0.85)" />{" "}
@@ -142,7 +142,7 @@ export default function MisTurnos() {
                       onClick={() => setModalCancelar(turnoMasProximo.turno_id)}
                       disabled={cancelando === turnoMasProximo.turno_id}
                     >
-                      {cancelando === turnoMasProximo._id ? "Cancelando..." : "Cancelar"}
+                      {cancelando === turnoMasProximo.turno_id ? "Cancelando..." : "Cancelar"}
                     </button>
                   )}
               </div>
@@ -189,7 +189,7 @@ export default function MisTurnos() {
                     <p className={styles.turnoMeta}>
                       <span>
                         <FaClock size={12} color="#8276ab" />{" "}
-                        {turno.hora} hs
+                        {turno.hora_inicio} hs
                       </span>
                       <span>
                         <FaHospital size={12} color="#8276ab" />{" "}
@@ -216,7 +216,7 @@ export default function MisTurnos() {
                           Ver detalles
                         </button>
 
-                        {turno.estado === "pendiente" && (
+                        {turno.estado_turno_id === "PEN" && (
                           <button className={styles.dropdownItem} onClick={() => { }}>
                             Pagar
                           </button>

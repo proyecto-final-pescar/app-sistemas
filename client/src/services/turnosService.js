@@ -40,9 +40,8 @@ export const obtenerTurnosPorUsuario = async () => {
  */
 export const cancelarTurno = async (turnoId) => {
   const { data } = await api.patch(`/turnos/${turnoId}/cancelar`);
-  return data.data?.turno || data.data;
+  return data.data?.turnoCancelado;
 };
-
 /**
  * Envía la oferta horaria masiva al backend PostgreSQL.
  */

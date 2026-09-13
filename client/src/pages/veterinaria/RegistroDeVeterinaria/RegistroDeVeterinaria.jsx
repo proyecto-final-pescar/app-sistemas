@@ -8,6 +8,7 @@ import PanelDestacado from "../../../components/ui/panel-destacado/PanelDestacad
 import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
 import ErrorModal from "../../../components/ui/error-modal/ErrorModal";
 import styles from "./RegistroDeVeterinaria.module.css";
+import { useAutocompleteDireccion } from "../../../hooks/useAutocompleteDireccion";
 
 import {
   servicioVacio,
@@ -138,6 +139,18 @@ export default function RegistroDeVeterinaria() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
 
+  const {
+    direccion,
+    lat,
+    lng,
+    suggestions,
+    loadingAddress,
+    handleChangeDireccion,
+    handleSelectPlace,
+  } = useAutocompleteDireccion();
+
+  
+
   // Categorías de servicio y especialidades — vienen del backend
   const { categorias, loading: loadingCategorias, error: errorCategorias } = useCategoriasServicio();
   const { especialidades, loading: loadingEspecialidades, error: errorEspecialidades } = useEspecialidades();
@@ -148,16 +161,10 @@ export default function RegistroDeVeterinaria() {
     razonSocial: "",
     cuit: "",
     telefono: "",
-    direccion: "",
-    lat: null,
-    lng: null,
     email: "",
     sitioWeb: "",
   });
-  const [suggestions, setSuggestions] = useState([]);
-  const [loadingAddress, setLoadingAddress] = useState(false);
   const [errorStep1, setErrorStep1] = useState("");
-  const debounceRef = useRef(null);
 
   // Paso 2
   const [servicios, setServicios] = useState([servicioVacio()]);
@@ -179,17 +186,17 @@ export default function RegistroDeVeterinaria() {
 
   // Google Places
   useEffect(() => {
-    if (!form.direccion || form.lat) {
+    if (!direccion || lat) {
       setSuggestions([]);
       return;
     }
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
-      if (form.direccion.length < 4) return;
+      if (direccion.length < 4) return;
       setLoadingAddress(true);
       try {
         const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/places/autocomplete?input=${encodeURIComponent(form.direccion)}`,
+          `${import.meta.env.VITE_API_URL}/places/autocomplete?input=${encodeURIComponent(direccion)}`,
         );
         const data = await res.json();
         setSuggestions(data.predictions || []);
@@ -200,27 +207,7 @@ export default function RegistroDeVeterinaria() {
       }
     }, 350);
     return () => clearTimeout(debounceRef.current);
-  }, [form.direccion]);
-
-  const handleSelectPlace = async (place) => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/places/details?place_id=${place.place_id}`,
-      );
-      const data = await res.json();
-      const location = data.result?.geometry?.location;
-      setForm((f) => ({
-        ...f,
-        direccion: place.description,
-        lat: typeof location?.lat === "number" ? location.lat : null,
-        lng: typeof location?.lng === "number" ? location.lng : null,
-      }));
-    } catch {
-      setForm((f) => ({ ...f, direccion: place.description }));
-    } finally {
-      setSuggestions([]);
-    }
-  };
+  }, [direccion]);
 
   const handleChangeStep1 = (e) => {
     const { name, value } = e.target;
@@ -238,8 +225,8 @@ export default function RegistroDeVeterinaria() {
     if (!form.telefono.trim()) return "El teléfono es requerido.";
     if (!validarTelefono(form.telefono))
       return "El teléfono solo puede contener números.";
-    if (!form.direccion.trim()) return "La dirección es requerida.";
-    if (!validarCoordenadas(form.lat, form.lng))
+    if (!direccion.trim()) return "La dirección es requerida.";
+    if (!validarCoordenadas(lat, lng))
       return "Seleccioná una dirección de la lista para obtener las coordenadas.";
     if (!form.email.trim()) return "El email institucional es requerido.";
     if (!validarEmail(form.email))
@@ -363,10 +350,10 @@ export default function RegistroDeVeterinaria() {
       return;
     }
     if (
-      typeof form.lat !== "number" ||
-      isNaN(form.lat) ||
-      typeof form.lng !== "number" ||
-      isNaN(form.lng)
+      typeof lat !== "number" ||
+      isNaN(lat) ||
+      typeof lng !== "number" ||
+      isNaN(lng)
     ) {
       setErrorStep4(
         "La dirección seleccionada no es válida. Volvé al paso 1 y seleccioná una dirección de la lista.",
@@ -379,13 +366,13 @@ export default function RegistroDeVeterinaria() {
     try {
       const body = {
         nombre: form.nombreClinica,
-        direccion: form.direccion,
+        direccion: direccion,
         razonSocial: form.razonSocial,
         cuit: form.cuit,
         telefono: form.telefono,
         email: form.email,
         sitioWeb: form.sitioWeb,
-        coordenadas: { type: "Point", coordinates: [form.lng, form.lat] },
+        coordenadas: { type: "Point", coordinates: [lng, lat] },
         especialidades: [],
         servicios: servicios.map((s) => ({
           idLocal: s.id,
@@ -535,17 +522,14 @@ export default function RegistroDeVeterinaria() {
                   </span>
                   <input
                     name="direccion"
-                    value={form.direccion}
-                    onChange={handleChangeStep1}
+                    value={direccion}
+                    onChange={(e) => handleChangeDireccion(e.target.value)}
                     placeholder="Av. Rivadavia 1234, Piso 3 Dpto. B"
                     autoComplete="off"
                     className={styles.inputInner}
                   />
-                  {form.lat && (
-                    <span
-                      className={styles.inputIcon}
-                      style={{ color: "#25a36f" }}
-                    >
+                  {lat && (
+                    <span className={styles.inputIcon} style={{ color: "#25a36f" }}>
                       <IconPin />
                     </span>
                   )}

@@ -701,6 +701,32 @@
   line-height: 1;
 }
 
+.suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  background-color: #ffffff;
+  border: 1px solid #ede9fe;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12);
+  overflow: hidden;
+}
+
+.suggestionItem {
+  padding: 11px 16px;
+  font-size: 13px;
+  color: #1f1739;
+  cursor: pointer;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+}
+
 @media (max-width: 767px) {
   .content {
     padding: 88px 16px 32px;

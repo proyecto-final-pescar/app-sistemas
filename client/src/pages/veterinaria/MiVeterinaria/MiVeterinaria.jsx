@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
@@ -10,6 +10,7 @@ import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
 import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
 import ErrorModal from "../../../components/ui/error-modal/ErrorModal";
 import { useCategoriasServicio } from "../../../hooks/useCategoriasServicio";
+import { useAutocompleteDireccion } from "../../../hooks/useAutocompleteDireccion";
 import {
   actualizarMiVeterinaria,
   obtenerMiVeterinaria,
@@ -84,6 +85,8 @@ const normalizarVeterinaria = (veterinaria) => ({
     telefono: veterinaria.telefono || "",
     email: veterinaria.email || "",
     sitioWeb: veterinaria.sitioWeb || "",
+    lat: veterinaria.coordenadas?.coordinates?.[1] ?? null,
+    lng: veterinaria.coordenadas?.coordinates?.[0] ?? null,
   },
   servicios: Array.isArray(veterinaria.servicios)
     ? veterinaria.servicios.map((servicio) => ({
@@ -128,6 +131,18 @@ const construirPayloadProfesionales = (profesionales) => ({
 });
 
 function MiVeterinaria() {
+
+  const {
+    direccion,
+    lat,
+    lng,
+    suggestions,
+    loadingAddress,
+    handleChangeDireccion,
+    handleSelectPlace,
+    resetDireccion,
+  } = useAutocompleteDireccion();
+
   const { categorias, loading: cargandoCategorias, error: errorCategorias } =
     useCategoriasServicio();
   const [tabActiva, setTabActiva] = useState(TABS[0]);
@@ -146,8 +161,6 @@ function MiVeterinaria() {
   const [eliminando, setEliminando] = useState(false);
   const [successModal, setSuccessModal] = useState({ abierto: false, mensaje: "" });
   const [errorModal, setErrorModal] = useState({ abierto: false, mensaje: "" });
-  const [serviciosDropdownAbierto, setServiciosDropdownAbierto] = useState(false);
-  const serviciosDropdownRef = useRef(null);
 
   const cambio = (campo) =>
     formulario && formularioGuardado
@@ -225,17 +238,10 @@ function MiVeterinaria() {
   }, [hayCambiosSinGuardar]);
 
   useEffect(() => {
-    if (!serviciosDropdownAbierto) return;
-
-    const cerrarSiEsAfuera = (evento) => {
-      if (serviciosDropdownRef.current && !serviciosDropdownRef.current.contains(evento.target)) {
-        setServiciosDropdownAbierto(false);
-      }
-    };
-
-    document.addEventListener("mousedown", cerrarSiEsAfuera);
-    return () => document.removeEventListener("mousedown", cerrarSiEsAfuera);
-  }, [serviciosDropdownAbierto]);
+    if (formulario?.datos) {
+      resetDireccion(formulario.datos.direccion, formulario.datos.lat, formulario.datos.lng);
+    }
+  }, [formulario?.datos?.direccion]);
 
   const actualizarDatos = (campo, valor) => {
     setFormulario((actual) => ({
@@ -256,7 +262,6 @@ function MiVeterinaria() {
       ? { nombre: "", especialidad: "", email: "", serviciosIds: [] }
       : { ...formulario.profesionales[indice] };
     setModalEdicion({ tipo: "profesional", indice, valores: profesional });
-    setServiciosDropdownAbierto(false);
   };
 
   const actualizarModal = (campo, valor) => {
@@ -286,6 +291,8 @@ function MiVeterinaria() {
       error = "La especialidad solo puede contener letras.";
     } else if (!validarEmail(valores.email)) {
       error = "Ingresá un email válido para el profesional.";
+    } else if (!(valores.serviciosIds || []).length) {
+      error = "Seleccioná al menos un servicio que brinde este profesional.";
     }
 
     if (error) {
@@ -386,9 +393,10 @@ function MiVeterinaria() {
   const validarSeccion = (seccion) => {
     if (seccion === "datos") {
       const { datos } = formulario;
-      if (!datos.nombre.trim() || !datos.direccion.trim() || !datos.telefono.trim() || !datos.email.trim()) {
+      if (!datos.nombre.trim() || !direccion.trim() || !datos.telefono.trim() || !datos.email.trim()) {
         return "Completá los datos generales obligatorios.";
       }
+      if (!lat || !lng) return "Seleccioná una dirección de la lista para obtener las coordenadas.";
       if (!validarTelefono(datos.telefono)) return "Ingresá un teléfono válido.";
       if (!validarEmail(datos.email)) return "Ingresá un email institucional válido.";
       return "";
@@ -404,10 +412,12 @@ function MiVeterinaria() {
     if (seccion === "datos") {
       return {
         nombre: formulario.datos.nombre.trim(),
-        direccion: formulario.datos.direccion.trim(),
+        direccion: direccion.trim(),
         telefono: formulario.datos.telefono.trim(),
         email: formulario.datos.email.trim(),
         sitioWeb: formulario.datos.sitioWeb.trim(),
+        latitud: lat,
+        longitud: lng,
       };
     }
 
@@ -527,7 +537,25 @@ function MiVeterinaria() {
               <div className={styles.formGrid}>
                 <Input label="Nombre de la clínica *" value={formulario.datos.nombre} onChange={(e) => actualizarDatos("nombre", e.target.value)} />
                 <Input label="Teléfono *" value={formulario.datos.telefono} onChange={(e) => actualizarDatos("telefono", e.target.value)} />
-                <Input label="Dirección *" value={formulario.datos.direccion} onChange={(e) => actualizarDatos("direccion", e.target.value)} />
+                <div style={{ position: "relative" }}>
+                  <Input
+                    label="Dirección *"
+                    value={direccion}
+                    onChange={(e) => handleChangeDireccion(e.target.value)}
+                    placeholder="Av. Rivadavia 1234, Piso 3 Dpto. B"
+                    autoComplete="off"
+                  />
+                  {suggestions.length > 0 && (
+                    <ul className={styles.suggestions}>
+                      {suggestions.map((s) => (
+                        <li key={s.place_id} onClick={() => handleSelectPlace(s)}>
+                          📍 {s.description}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {loadingAddress && <p className={styles.helper}>Buscando dirección...</p>}
+                </div>
                 <Input label="Email institucional *" type="email" value={formulario.datos.email} onChange={(e) => actualizarDatos("email", e.target.value)} />
                 <div className={styles.fullWidth}>
                   <Input label="Sitio web" value={formulario.datos.sitioWeb} onChange={(e) => actualizarDatos("sitioWeb", e.target.value)} />

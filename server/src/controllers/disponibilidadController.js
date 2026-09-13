@@ -28,10 +28,10 @@ export const obtenerDisponibilidad = async (req, res) => {
     }
 
     const [anio, mes, dia] = fecha.split('-').map(Number)
-    const fechaSolicitada = new Date(anio, mes - 1, dia)
+    const fechaSolicitada = new Date(`${fecha}T00:00:00.000Z`)
 
     const hoy = new Date()
-    hoy.setHours(0, 0, 0, 0)
+    hoy.setUTCHours(0, 0, 0, 0)
 
     if (fechaSolicitada < hoy) {
       return res.status(400).json({ message: 'No podés consultar disponibilidad para fechas pasadas' })
@@ -45,8 +45,8 @@ export const obtenerDisponibilidad = async (req, res) => {
       return res.status(404).json({ message: 'El recurso no existe.' })
     }
 
-    const codigoDia = CODIGO_DIA_SEMANA[fechaSolicitada.getDay()]
-    const nombreDia = NOMBRE_DIA[fechaSolicitada.getDay()]
+    const codigoDia = CODIGO_DIA_SEMANA[fechaSolicitada.getUTCDay()]
+    const nombreDia = NOMBRE_DIA[fechaSolicitada.getUTCDay()]
 
     const horarioDelDia = await prisma.horario_veterinaria.findUnique({
       where: {
@@ -67,7 +67,7 @@ export const obtenerDisponibilidad = async (req, res) => {
 
     const filtro = {
       veterinaria_id: veterinariaId,
-      fecha: new Date(`${fecha}T00:00:00`),
+      fecha: new Date(`${fecha}T00:00:00.000Z`),
       estado_turno_id: 'DIS'
     }
     if (servicioId) filtro.servicio_id = servicioId

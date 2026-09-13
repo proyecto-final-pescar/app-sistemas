@@ -77,22 +77,47 @@ export const obtenerTurnos = async (req, res) => {
 
     const filtro = {}
 
-    if (veterinariaId) filtro.veterinaria_id = veterinariaId
-    if (servicioId) filtro.servicio_id = servicioId
-
-    if (usuarioId === 'me') {
+    if (usuarioId) {
+      // Un dueño solo puede pedir sus propios turnos, sin importar qué
+      // usuarioId mande en la query — "me" o su propio id, da igual.
+      if (usuarioId !== 'me' && usuarioId !== req.user.id) {
+        return res.status(403).json({ message: 'No tenés permisos para ver los turnos de otro usuario.' })
+      }
       filtro.mascota = { dueno_id: req.user.id }
-    } else if (usuarioId) {
-      filtro.mascota = { dueno_id: usuarioId }
     }
 
+    if (veterinariaId) {
+      const veterinaria = await prisma.veterinaria.findUnique({
+        where: { veterinaria_id: veterinariaId },
+        select: { usuario_id: true }
+      })
+
+      if (!veterinaria) {
+        return res.status(404).json({ message: 'La veterinaria no existe' })
+      }
+
+      const esDueñoDeLaVeterinaria = veterinaria.usuario_id === req.user.id
+      // Ver horarios DISPONIBLES de cualquier veterinaria es público — así
+      // funciona la grilla de reserva que ve el dueño de una mascota. Ver
+      // cualquier otro estado implica datos de reservas ajenas (mascota,
+      // motivo, notas) y requiere ser el dueño de esa veterinaria.
+      const soloConsultaDisponibilidad = estado === 'DIS' && !estadoDistinto
+
+      if (!esDueñoDeLaVeterinaria && !soloConsultaDisponibilidad) {
+        return res.status(403).json({ message: 'No tenés permisos para ver esos turnos.' })
+      }
+
+      filtro.veterinaria_id = veterinariaId
+    }
+
+    if (servicioId) filtro.servicio_id = servicioId
     if (estadoDistinto) filtro.estado_turno_id = { not: estadoDistinto }
     else if (estado) filtro.estado_turno_id = estado
 
     if (fechaDesde || fechaHasta) {
       filtro.fecha = {}
-      if (fechaDesde) filtro.fecha.gte = new Date(`${fechaDesde}T00:00:00`)
-      if (fechaHasta) filtro.fecha.lte = new Date(`${fechaHasta}T23:59:59`)
+      if (fechaDesde) filtro.fecha.gte = new Date(`${fechaDesde}T00:00:00.000Z`)
+      if (fechaHasta) filtro.fecha.lte = new Date(`${fechaHasta}T23:59:59.999Z`)
     }
 
     const turnos = await prisma.turno.findMany({
@@ -233,6 +258,9 @@ export const reservarTurno = async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 // PATCH /turnos/:id/cancelar
 // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// PATCH /turnos/:id/cancelar
+// ─────────────────────────────────────────────────────────────
 export const cancelarTurno = async (req, res) => {
   try {
     const { id } = req.params
@@ -274,26 +302,50 @@ export const cancelarTurno = async (req, res) => {
       // TODO(pago): pendiente de S15-07 (pagos), todavía no migrado.
     }
 
-    // Opción B: el turno pertenece a UN profesional fijo desde que se creó.
-    // Al cancelar, se libera de vuelta a 'disponible' con ese mismo
-    // profesional — NO se limpia profesional_id (a diferencia de la
-    // versión anterior con candidatos). Coincide con el comportamiento
-    // original de la versión Mongo.
-    const turnoLiberado = await prisma.turno.update({
-      where: { turno_id: id },
-      data: {
-        estado_turno_id: ESTADO.DISPONIBLE,
-        mascota_id: null,
-        motivo: null,
-        notas: null,
-        vence_en: null
+    // Se preserva el turno cancelado como registro de auditoría (queda
+    // intacto: mascota, motivo, notas, fecha, hora) y se libera el
+    // horario creando un turno NUEVO en estado 'disponible' con los
+    // mismos datos de slot. El índice único parcial ix_turno_slot_unico
+    // permite que ambos coexistan porque excluye filas con estado 'CAN'.
+    const [turnoCancelado, turnoLiberado] = await prisma.$transaction(async (tx) => {
+      const cancelado = await tx.turno.update({
+        where: { turno_id: id },
+        data: { estado_turno_id: ESTADO.CANCELADO }
+      })
+
+      const nuevoTurno = await tx.turno.create({
+        data: {
+          veterinaria_id: turno.veterinaria_id,
+          servicio_id: turno.servicio_id,
+          fecha: turno.fecha,
+          hora_inicio: turno.hora_inicio,
+          hora_fin: turno.hora_fin,
+          monto_servicio: turno.monto_servicio,
+          estado_turno_id: ESTADO.DISPONIBLE
+        }
+      })
+
+      if (turno.profesional_id) {
+        await tx.turno_profesional.create({
+          data: { turno_id: nuevoTurno.turno_id, profesional_id: turno.profesional_id }
+        })
+
+        await tx.turno.update({
+          where: { turno_id: nuevoTurno.turno_id },
+          data: { profesional_id: turno.profesional_id }
+        })
       }
+
+      return [cancelado, nuevoTurno]
     })
 
     return res.status(200).json({
       success: true,
       message: 'Turno cancelado y horario liberado correctamente',
-      data: { turno: formatearTurno(turnoLiberado) }
+      data: {
+        turnoCancelado: formatearTurno(turnoCancelado),
+        turnoNuevoDisponible: formatearTurno(turnoLiberado)
+      }
     })
   } catch (error) {
     if (error.code === 'P2023') {
@@ -393,7 +445,7 @@ export const crearOfertaHoraria = async (req, res) => {
           where: {
             veterinaria_id: veterinaria.veterinaria_id,
             profesional_id: profesional.profesional_id,
-            fecha: new Date(slot.fecha),
+            fecha: new Date(`${slot.fecha}T00:00:00.000Z`),
             estado_turno_id: { not: ESTADO.CANCELADO },
             hora_inicio: { lt: horaFinTime },
             hora_fin: { gt: horaInicioTime }
