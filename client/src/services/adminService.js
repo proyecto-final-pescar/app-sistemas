@@ -1,5 +1,20 @@
 import api from "./api";
 
+/* ----------------------- DASHBOARD -------------------------- */
+export const getDashboardMetrics = async () => {
+  const { data } = await api.get("/admin/dashboard/metrics");
+  return data.data;
+};
+
+export const getTurnosDelDia = async ({ fecha, estado } = {}) => {
+  const { data } = await api.get("/admin/dashboard/turnos-del-dia", {
+    params: { fecha, estado },
+  });
+  return data.data;
+};
+
+
+
 /* ----------------------- VETERINARIAS -------------------------- */
 /**
  * Obtiene el detalle de una veterinaria por su ID
@@ -56,11 +71,11 @@ export const obtenerUsuarioPorId = async (id) => {
 /**
  * Obtiene el detalle completo de un turno por su ID.
  */
+
 export const getTurnoAdminById = async (id) => {
-  const response = await api.get(`/turnos/${id}`);
+  const response = await api.get(`/turnos/admin/${id}`); // antes: /turnos/${id}
   return response.data;
 };
-
 /* ----------------------- FORO Y MODERACIÓN -------------------------- */
 /**
  * Elimina una publicación reportada
