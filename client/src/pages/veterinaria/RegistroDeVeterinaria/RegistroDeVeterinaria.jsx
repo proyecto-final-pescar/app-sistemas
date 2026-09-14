@@ -149,8 +149,6 @@ export default function RegistroDeVeterinaria() {
     handleSelectPlace,
   } = useAutocompleteDireccion();
 
-  
-
   // Categorías de servicio y especialidades — vienen del backend
   const { categorias, loading: loadingCategorias, error: errorCategorias } = useCategoriasServicio();
   const { especialidades, loading: loadingEspecialidades, error: errorEspecialidades } = useEspecialidades();
@@ -184,30 +182,7 @@ export default function RegistroDeVeterinaria() {
   const [successModal, setSuccessModal] = useState(false);
   const [errorModal, setErrorModal] = useState({ abierto: false, mensaje: "" });
 
-  // Google Places
-  useEffect(() => {
-    if (!direccion || lat) {
-      setSuggestions([]);
-      return;
-    }
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      if (direccion.length < 4) return;
-      setLoadingAddress(true);
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/places/autocomplete?input=${encodeURIComponent(direccion)}`,
-        );
-        const data = await res.json();
-        setSuggestions(data.predictions || []);
-      } catch {
-        setSuggestions([]);
-      } finally {
-        setLoadingAddress(false);
-      }
-    }, 350);
-    return () => clearTimeout(debounceRef.current);
-  }, [direccion]);
+  
 
   const handleChangeStep1 = (e) => {
     const { name, value } = e.target;
