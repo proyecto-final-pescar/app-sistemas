@@ -225,6 +225,20 @@
   gap: 10px;
 }
 
+/* Mobile: mostrar máximo 3 días + nav */
+@media (max-width: 480px) {
+  .diasGrid {
+    display: none; /* Oculta la grilla grande */
+  }
+  
+  /* Muestra solo 3 días con navegación */
+  .diasGridMobile {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+}
+
 .diaCard {
   display: flex;
   flex-direction: column;
@@ -376,6 +390,10 @@
 .thHora {
   width: 70px;
   min-width: 70px;
+  position: sticky;
+  left: 0;
+  background: white;
+  z-index: 2;
 }
 
 .thDia {
@@ -487,6 +505,10 @@
   text-align: right;
   white-space: nowrap;
   vertical-align: middle;
+  position: sticky;
+  left: 0;
+  background: white;
+  z-index: 1;
 }
 
 .tdBloqueado {
@@ -621,4 +643,108 @@
   font-size: 12px;
   color: #9ca3af;
   padding: 4px;
+}
+
+/* ===== Tablet: 768px ===== */
+@media (max-width: 768px) {
+  .content {
+    margin: 16px 16px 32px;
+    gap: 16px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .fila {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .cardTituloFila {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .leyenda {
+    gap: 10px;
+    font-size: 11px;
+  }
+
+  .navSemanaTop {
+    justify-content: center;
+  }
+
+  .botones {
+    flex-direction: column-reverse;
+  }
+
+  .btnCancelar,
+  .btnGuardar {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ===== Mobile: 375px ===== */
+@media (max-width: 480px) {
+  .content {
+    margin: 12px 12px 24px;
+  }
+
+  .card {
+    padding: 12px;
+    border-radius: 14px;
+    gap: 14px;
+  }
+
+  .cardTitulo {
+    font-size: 14px;
+  }
+
+  /* la grilla sigue con scroll horizontal, pero angostamos columnas */
+  .thHora,
+  .tdHora {
+    width: 52px;
+    min-width: 52px;
+    font-size: 11px;
+    padding-right: 6px;
+  }
+
+  .thDia {
+    min-width: 92px;
+    padding: 10px 4px 8px;
+  }
+
+  .thDiaNombre {
+    font-size: 12px;
+  }
+
+  .thDiaFecha {
+    font-size: 10px;
+  }
+
+  .btnTodoDia {
+    font-size: 10px;
+  }
+
+  .celda,
+  .celdaExistente,
+  .celdaBloqueada {
+    height: 36px;
+    font-size: 11px;
+  }
+
+  .grilla {
+    min-width: 600px; /* antes 700px: bajamos el piso para que se acerque más al viewport real */
+  }
+
+  .filaRecurrencia {
+    flex-wrap: wrap;
+  }
+
+  .resumen {
+    font-size: 12px;
+  }
 }
