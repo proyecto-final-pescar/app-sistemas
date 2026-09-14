@@ -38,6 +38,16 @@ const cumpleAntelacionMinima = (fechaStr, hora) => {
 
 const obtenerToken = () => localStorage.getItem("token");
 
+// Helpers para leer un mismo campo tanto si viene con el shape viejo de
+// Mongo (_id) como con el nuevo de Postgres (turno_id, mascota_id, etc).
+// Se dejan como fallback defensivo hasta confirmar que TODOS los
+// endpoints que consume esta pantalla ya están migrados — ver nota
+// aparte sobre /veterinarias/:id y /mascotas.
+const idDeTurno = (t) => t.turno_id || t._id;
+const idDeMascota = (m) => m.mascota_id || m._id;
+const idDeServicio = (s) => s.servicio_id || s._id;
+const idDeProfesional = (p) => p.profesional_id || p._id;
+
 const NOMBRES_DIAS = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SAB"];
 const NOMBRES_DIAS_COMPLETO = {
   DOM: "domingo",
@@ -81,11 +91,14 @@ const AgendarTurnos = () => {
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  const [turnoCreadoId, setTurnoCreadoId] = useState(null);
   const [procesandoPago, setProcesandoPago] = useState(false);
   const [errorPago, setErrorPago] = useState("");
   const [turnoSeleccionado, setTurnoSeleccionado] = useState(null);
-  const [profesionalSeleccionadoId, setProfesionalSeleccionadoId] = useState("");
+  // Ya no elegimos "profesional" en abstracto: cada opción del slot ES un
+  // turno concreto y distinto (uno por profesional, ya asignado desde que
+  // la veterinaria lo creó). Elegir "profesional" en la UI equivale a
+  // elegir directamente CUÁL de esos turnos concretos se reserva.
+  const [turnoIdSeleccionado, setTurnoIdSeleccionado] = useState("");
   const [mascotaSeleccionadaId, setMascotaSeleccionadaId] = useState("");
   const [notas, setNotas] = useState("");
   const [mascotaConfirmadaNombre, setMascotaConfirmadaNombre] = useState("");
@@ -123,7 +136,7 @@ const AgendarTurnos = () => {
         }
 
         setVeterinaria(resVet.data);
-        setMascotas(Array.isArray(resMascotas) ? resMascotas : []);
+        setMascotas(Array.isArray(resMascotas) ? resMascotas : resMascotas?.data || []);
         setError(null);
       } catch (err) {
         if (cancelado) return;
@@ -141,20 +154,25 @@ const AgendarTurnos = () => {
     };
   }, [veterinariaId]);
 
-  // Lista de categorías únicas extraídas de los servicios
+  // Lista de categorías únicas extraídas de los servicios.
+  // Nota: en Postgres la categoría vive en categoria_servicio (relación),
+  // no como string plano — si /veterinarias/:id ya está migrado, este
+  // campo probablemente venga como s.categoria_servicio.nombre. Se deja
+  // el fallback a s.categoria por si ese endpoint todavía no cambió.
   const categoriasUnicas = useMemo(() => {
     const cats = new Set(["Todas"]);
     (veterinaria?.servicios || []).forEach((s) => {
-      if (s.categoria) cats.add(s.categoria);
+      const categoria = s.categoria_servicio?.nombre || s.categoria;
+      if (categoria) cats.add(categoria);
     });
     return Array.from(cats);
   }, [veterinaria]);
 
-  // Filtrado dinámico por categoría y por búsqueda
   const serviciosFiltrados = useMemo(() => {
     return (veterinaria?.servicios || []).filter((s) => {
+      const categoria = s.categoria_servicio?.nombre || s.categoria;
       const coincideCategoria =
-        categoriaSeleccionada === "Todas" || s.categoria === categoriaSeleccionada;
+        categoriaSeleccionada === "Todas" || categoria === categoriaSeleccionada;
       const coincideBusqueda = s.nombre
         .toLowerCase()
         .includes(busquedaServicio.toLowerCase());
@@ -181,28 +199,35 @@ const AgendarTurnos = () => {
   }, [fechaInicioSemana]);
 
   const servicioElegido = useMemo(
-    () => veterinaria?.servicios?.find((s) => s._id === servicioSeleccionadoId) || null,
+    () => veterinaria?.servicios?.find((s) => idDeServicio(s) === servicioSeleccionadoId) || null,
     [veterinaria, servicioSeleccionadoId]
   );
 
   const mapaProfesionales = useMemo(() => {
     const mapa = {};
     (veterinaria?.profesionales || []).forEach((p) => {
-      mapa[p._id] = p;
+      mapa[idDeProfesional(p)] = p;
     });
     return mapa;
   }, [veterinaria]);
 
+  // Agrupa los turnos por día+hora. Con el modelo nuevo, cada turno de la
+  // lista ya es una reserva concreta y distinta (un profesional fijo por
+  // fila) — si a las 09:00 hay 2 profesionales libres, van a llegar como
+  // 2 turnos separados con la misma fecha/hora, cada uno con su propio
+  // turno_id. Agruparlos acá es lo que permite mostrarlos como "un solo
+  // slot con varias opciones" en la grilla.
   const turnosPorDiaYHora = useMemo(() => {
     const mapa = {};
 
     turnosDisponibles.forEach((turno) => {
       const fechaStr = fechaIdDesdeISO(turno.fecha);
-      if (!cumpleAntelacionMinima(fechaStr, turno.hora)) return;
+      const hora = turno.hora_inicio; // ya viene formateado "HH:MM" por el backend
+      if (!cumpleAntelacionMinima(fechaStr, hora)) return;
 
       if (!mapa[fechaStr]) mapa[fechaStr] = {};
-      if (!mapa[fechaStr][turno.hora]) mapa[fechaStr][turno.hora] = [];
-      mapa[fechaStr][turno.hora].push(turno);
+      if (!mapa[fechaStr][hora]) mapa[fechaStr][hora] = [];
+      mapa[fechaStr][hora].push(turno);
     });
 
     return mapa;
@@ -239,7 +264,7 @@ const AgendarTurnos = () => {
         const params = new URLSearchParams({
           veterinariaId,
           servicioId: servicioSeleccionadoId,
-          estado: "disponible",
+          estado: "DIS", // código real en Postgres — antes era "disponible"
           fechaDesde,
           fechaHasta,
         });
@@ -293,40 +318,44 @@ const AgendarTurnos = () => {
     if (!opciones.length) return;
 
     setTurnoSeleccionado({ dia, hora, opciones });
-    setProfesionalSeleccionadoId(opciones.length === 1 ? opciones[0].profesionalId : "");
+    // Si hay un solo profesional disponible en ese horario, se preselecciona
+    // directo su turno; si hay varios, el dueño elige cuál en el modal.
+    setTurnoIdSeleccionado(opciones.length === 1 ? idDeTurno(opciones[0]) : "");
     setIsConfirmOpen(true);
   };
 
   const handleCloseConfirm = () => {
     setIsConfirmOpen(false);
-    setProfesionalSeleccionadoId("");
+    setTurnoIdSeleccionado("");
     setMascotaSeleccionadaId("");
     setNotas("");
   };
 
   const turnoConcretoElegido = useMemo(() => {
-    if (!turnoSeleccionado || !profesionalSeleccionadoId) return null;
+    if (!turnoSeleccionado || !turnoIdSeleccionado) return null;
     return (
       turnoSeleccionado.opciones.find(
-        (t) => t.profesionalId === profesionalSeleccionadoId
+        (t) => idDeTurno(t) === turnoIdSeleccionado
       ) || null
     );
-  }, [turnoSeleccionado, profesionalSeleccionadoId]);
+  }, [turnoSeleccionado, turnoIdSeleccionado]);
 
+  // Reserva un turno YA EXISTENTE (creado de antemano por la veterinaria
+  // vía crearOfertaHoraria). Ya no se crea un turno nuevo acá — solo se
+  // transiciona de 'disponible' a 'pendiente'. Por eso ya no se manda
+  // fecha/hora/veterinariaId/profesionalId: todo eso ya está fijo en el
+  // turno_id elegido.
   const reservarTurno = async () => {
     const token = obtenerToken();
+    const turnoId = idDeTurno(turnoConcretoElegido);
 
     const payload = {
-      fecha: turnoSeleccionado.dia.fechaStr,
-      hora: turnoSeleccionado.hora,
-      motivo: servicioElegido?.nombre || "",
       mascotaId: mascotaSeleccionadaId,
-      veterinariaId: veterinariaId,
-      profesionalId: profesionalSeleccionadoId,
+      motivo: servicioElegido?.nombre || "",
       notas: notas || undefined,
     };
 
-    const response = await fetch(`${API_URL}/turnos`, {
+    const response = await fetch(`${API_URL}/turnos/${turnoId}/reservar`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -341,11 +370,11 @@ const AgendarTurnos = () => {
       throw new Error(resultado.message || "Error al reservar el turno");
     }
 
-    const mascotaElegida = mascotas.find((m) => m._id === mascotaSeleccionadaId);
+    const mascotaElegida = mascotas.find((m) => idDeMascota(m) === mascotaSeleccionadaId);
     setMascotaConfirmadaNombre(mascotaElegida?.nombre || "tu mascota");
 
     setTurnosDisponibles((prev) =>
-      prev.filter((t) => t._id !== turnoConcretoElegido._id)
+      prev.filter((t) => idDeTurno(t) !== turnoId)
     );
 
     return resultado.data.turno;
@@ -387,11 +416,12 @@ const AgendarTurnos = () => {
       const turnoCreado = await reservarTurno();
       handleCloseConfirm();
 
-      // El turno ya existe: aunque MercadoPago falle, no se pierde.
       setProcesandoPago(true);
 
       try {
-        const respuestaPago = await crearPreferenciaPago(turnoCreado._id);
+        // módulo de pagos todavía no está migrado a Postgres
+        // Cuando se migre pagos, confirmar que este flujo siga funcionando.
+        const respuestaPago = await crearPreferenciaPago(idDeTurno(turnoCreado));
         const initPoint = respuestaPago.data?.init_point;
 
         if (!initPoint) {
@@ -485,12 +515,10 @@ const AgendarTurnos = () => {
 
           {/* CARD PRINCIPAL DE AGENDA */}
           <section className={styles.cardCalendario}>
-            {/* Header de la Card con posición fija */}
             <div className={styles.cardHeader}>
               <div className={styles.filaTituloNav}>
                 <h2 className={styles.tituloCalendario}>¿Qué necesitás?</h2>
 
-                {/* Las flechas siempre están reservadas en la esquina derecha si hay servicio activo */}
                 <div className={styles.navControlesPlaceholder}>
                   {servicioSeleccionadoId && (
                     <div className={styles.navControles}>
@@ -515,7 +543,6 @@ const AgendarTurnos = () => {
                 </div>
               </div>
 
-              {/* Fila separada fija para la Búsqueda */}
               <div className={styles.filaBuscador}>
                 <div className={styles.searchBox}>
                   <Search size={16} className={styles.searchIcon} />
@@ -530,7 +557,6 @@ const AgendarTurnos = () => {
               </div>
             </div>
 
-            {/* BARRA DE CATEGORÍAS */}
             {categoriasUnicas.length > 2 && (
               <div className={styles.categoriasScroll}>
                 {categoriasUnicas.map((cat) => (
@@ -547,7 +573,6 @@ const AgendarTurnos = () => {
               </div>
             )}
 
-            {/* CHIPS DE SERVICIOS */}
             <div className={styles.chipsScrollContainer}>
               {serviciosFiltrados.length === 0 ? (
                 <p className={styles.sinServiciosText}>
@@ -555,14 +580,15 @@ const AgendarTurnos = () => {
                 </p>
               ) : (
                 serviciosFiltrados.map((s) => {
-                  const seleccionado = s._id === servicioSeleccionadoId;
+                  const id = idDeServicio(s);
+                  const seleccionado = id === servicioSeleccionadoId;
                   return (
                     <button
-                      key={s._id}
+                      key={id}
                       type="button"
                       className={`${styles.chipServicio} ${seleccionado ? styles.chipActivo : ""
                         }`}
-                      onClick={() => setServicioSeleccionadoId(s._id)}
+                      onClick={() => setServicioSeleccionadoId(id)}
                     >
                       <span className={styles.chipNombre}>{s.nombre}</span>
                       <span className={styles.chipPrecio}>${s.precio}</span>
@@ -572,7 +598,6 @@ const AgendarTurnos = () => {
               )}
             </div>
 
-            {/* GRILLA DE HORARIOS */}
             {!servicioSeleccionadoId ? (
               <div className={styles.estadoVacio}>
                 <p>Seleccioná un servicio arriba para ver los horarios disponibles esta semana.</p>
@@ -698,15 +723,19 @@ const AgendarTurnos = () => {
                       <Select
                         label="Profesional"
                         placeholder="Seleccioná un profesional"
-                        value={profesionalSeleccionadoId}
-                        onChange={(e) => setProfesionalSeleccionadoId(e.target.value)}
+                        value={turnoIdSeleccionado}
+                        onChange={(e) => setTurnoIdSeleccionado(e.target.value)}
                         opciones={(turnoSeleccionado?.opciones || []).map((turno) => {
-                          const prof = mapaProfesionales[turno.profesionalId];
+                          // El profesional ya viene embebido en el turno
+                          // (turno.profesional), no hace falta cruzarlo
+                          // contra mapaProfesionales — pero se deja el
+                          // fallback por si el shape todavía varía.
+                          const prof = turno.profesional || mapaProfesionales[turno.profesional_id];
                           return {
-                            value: turno.profesionalId,
+                            value: idDeTurno(turno),
                             label: prof?.especialidad
-                              ? `${prof?.nombre || "Profesional"} · ${prof.especialidad}`
-                              : prof?.nombre || "Profesional",
+                              ? `${prof?.nombre || "Profesional"} ${prof?.apellido || ""} · ${prof.especialidad}`
+                              : `${prof?.nombre || "Profesional"} ${prof?.apellido || ""}`.trim(),
                           };
                         })}
                       />
@@ -719,8 +748,8 @@ const AgendarTurnos = () => {
                         value={mascotaSeleccionadaId}
                         onChange={(e) => setMascotaSeleccionadaId(e.target.value)}
                         opciones={mascotas.map((m) => ({
-                          value: m._id,
-                          label: `${m.nombre} · ${m.especie}`,
+                          value: idDeMascota(m),
+                          label: `${m.nombre} · ${m.especie || m.raza?.especie?.nombre || ""}`,
                         }))}
                       />
                     </div>
@@ -738,7 +767,7 @@ const AgendarTurnos = () => {
 
                     {turnoConcretoElegido && (
                       <p className={styles.modalDescripcion}>
-                        Precio del servicio: ${turnoConcretoElegido.montoServicio}
+                        Precio del servicio: ${turnoConcretoElegido.monto_servicio}
                       </p>
                     )}
 

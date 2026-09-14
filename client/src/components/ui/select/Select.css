@@ -5,32 +5,103 @@
 }
 
 .select-label {
-  color: #2b2142;
+  color: var(--color-texto-principal);
   font-size: 14px;
   font-weight: 600;
 }
 
+.select-wrapper {
+  position: relative;
+}
+
 .select-campo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   width: 100%;
   box-sizing: border-box;
   padding: 12px 14px;
-  border: 1px solid #e5ddf8;
+  border: 1px solid var(--color-fondo-claro);
   border-radius: 14px;
-  background-color: #ffffff;
+  background-color: var(--color-blanco);
+  color: var(--color-texto-principal);
   font-size: 14px;
-  font-family: "Inter", sans-serif;
+  font-family: var(--fuente-texto), sans-serif;
+  text-align: left;
   outline: none;
+  cursor: pointer;
   min-height: 56px;
   line-height: 20px;
-  appearance: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.select-placeholder {
-  color: #9ca3af;
+.select-placeholder .select-valor {
+  color: var(--color-texto-secundario);
 }
 
-.select-campo:focus {
-  border-color: #7c3aed;
+.select-valor {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.select-chevron {
+  flex-shrink: 0;
+  color: var(--color-texto-secundario);
+  transition: transform 0.15s ease;
+}
+
+.select-chevron-abierto {
+  transform: rotate(180deg);
+}
+
+.select-campo:focus-visible {
+  border-color: var(--color-primario);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
+}
+
+.select-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 25;
+  max-height: 280px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--color-fondo-claro);
+  border-radius: 16px;
+  background: var(--color-blanco);
+  box-shadow: 0 20px 40px rgba(28, 16, 51, 0.16);
+}
+
+.select-opcion {
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--color-texto-principal);
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.select-opcion:hover {
+  background: var(--color-fondo-claro);
+}
+
+.select-opcion-activa {
+  color: var(--color-primario);
+  background: var(--color-fondo-claro);
+  font-weight: 700;
 }
 
 .select-error {
