@@ -1,6 +1,16 @@
 import Turno from '../models/Turno.js';
 import Veterinaria from '../models/Veterinaria.js';
 
+
+const isValidUUID = (id) => {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+}
+
+const formatearHoraPrisma = (hora) => {
+  if (!hora) return null
+  return hora.toISOString().slice(11, 16)
+}
+
 // 1. Anticipación mínima: no se puede solicitar un turno con menos de esto de antelación.
 const ANTICIPACION_MINIMA_HORAS = 10;
 // 2. Plazo de pago: ventana para pagar online desde que se solicita el turno.
@@ -34,49 +44,193 @@ const horasHastaTurno = (turno) => {
 
 export const obtenerTurnos = async (req, res) => {
   try {
-    const { veterinariaId, usuarioId, estado, estadoDistinto, servicioId, fechaDesde, fechaHasta } = req.query;
+    const {
+      veterinariaId,
+      usuarioId,
+      estado,
+      estadoDistinto,
+      servicioId,
+      fechaDesde,
+      fechaHasta
+    } = req.query
 
     if (!veterinariaId && !usuarioId) {
-      return res.status(400).json({ message: 'Falta veterinariaId o usuarioId' });
+      return res.status(400).json({
+        message: 'Falta veterinariaId o usuarioId'
+      })
     }
 
-    const filtro = {};
+    const where = {}
 
-    if (veterinariaId) filtro.veterinariaId = veterinariaId;
-    if (servicioId) filtro.servicioId = servicioId;
+    if (veterinariaId) {
+      where.veterinaria_id = veterinariaId
+    }
 
-    if (usuarioId === 'me') filtro.usuarioId = req.user.id;
-    else if (usuarioId) filtro.usuarioId = usuarioId;
+    if (servicioId) {
+      where.servicio_id = servicioId
+    }
 
-    if (estadoDistinto) filtro.estado = { $ne: estadoDistinto };
-    else if (estado) filtro.estado = estado;
+    // En Postgres turno ya no tiene usuario_id.
+    // El dueño se obtiene mediante la mascota.
+    if (usuarioId) {
+      where.mascota = {
+        is: {
+          dueno_id:
+            usuarioId === 'me'
+              ? req.user.id
+              : usuarioId
+        }
+      }
+    }
 
-    // Rango de fechas: usado para traer la semana visible en la grilla
+    if (estado) {
+      where.estado_turno = {
+        is: {
+          nombre: {
+            equals: estado,
+            mode: 'insensitive'
+          }
+        }
+      }
+    }
+
+    if (estadoDistinto) {
+      where.NOT = {
+        estado_turno: {
+          is: {
+            nombre: {
+              equals: estadoDistinto,
+              mode: 'insensitive'
+            }
+          }
+        }
+      }
+    }
+
     if (fechaDesde || fechaHasta) {
-      filtro.fecha = {};
-      if (fechaDesde) filtro.fecha.$gte = new Date(`${fechaDesde}T00:00:00`);
-      if (fechaHasta) filtro.fecha.$lte = new Date(`${fechaHasta}T23:59:59`);
+      where.fecha = {}
+
+      if (fechaDesde) {
+        where.fecha.gte = new Date(`${fechaDesde}T00:00:00`)
+      }
+
+      if (fechaHasta) {
+        where.fecha.lte = new Date(`${fechaHasta}T23:59:59`)
+      }
     }
 
-    const turnos = await Turno.find(filtro)
-      .populate('mascotaId', 'nombre especie')
-      .populate('usuarioId', 'name nombre email')
-      .populate('veterinariaId', 'nombre direccion')
-      .sort({ fecha: 1, hora: 1 });
+    const turnos = await prisma.turno.findMany({
+      where,
 
-    res.status(200).json({
+      include: {
+        mascota: {
+          include: {
+            usuario: true,
+            raza: {
+              include: {
+                especie: true
+              }
+            },
+            sexo_mascota: true
+          }
+        },
+
+        veterinaria: true,
+
+        profesional: true,
+
+        servicio: {
+          include: {
+            categoria_servicio: true
+          }
+        },
+
+        estado_turno: true
+      },
+
+      orderBy: [
+        { fecha: 'asc' },
+        { hora_inicio: 'asc' }
+      ]
+    })
+
+    const data = turnos.map((turno) => ({
+      id: turno.turno_id,
+
+      fecha: turno.fecha,
+      hora: formatearHoraPrisma(turno.hora_inicio),
+      horaFin: formatearHoraPrisma(turno.hora_fin),
+
+      motivo: turno.motivo,
+      notas: turno.notas,
+
+      estado: turno.estado_turno?.nombre || null,
+
+      montoServicio:
+        turno.monto_servicio !== null
+          ? Number(turno.monto_servicio)
+          : 0,
+
+      mascota: turno.mascota
+        ? {
+            id: turno.mascota.mascota_id,
+            nombre: turno.mascota.nombre,
+            especie:
+              turno.mascota.raza?.especie?.nombre || null,
+            raza: turno.mascota.raza?.nombre || null,
+            sexo: turno.mascota.sexo_mascota?.nombre || null,
+            fechaNacimiento: turno.mascota.fecha_nacimiento,
+            peso:
+              turno.mascota.peso !== null
+                ? Number(turno.mascota.peso)
+                : null,
+
+            dueno: turno.mascota.usuario
+              ? {
+                  id: turno.mascota.usuario.usuario_id,
+                  nombre: turno.mascota.usuario.nombre,
+                  apellido: turno.mascota.usuario.apellido,
+                  email: turno.mascota.usuario.email
+                }
+              : null
+          }
+        : null,
+
+      profesional: turno.profesional
+        ? {
+            id: turno.profesional.profesional_id,
+            nombre:
+              `${turno.profesional.nombre} ${turno.profesional.apellido}`.trim()
+          }
+        : null,
+
+      veterinaria: {
+        id: turno.veterinaria.veterinaria_id,
+        nombre: turno.veterinaria.nombre
+      },
+
+      servicio: {
+        id: turno.servicio.servicio_id,
+        nombre: turno.servicio.nombre,
+        categoriaServicio:
+          turno.servicio.categoria_servicio?.nombre || null
+      }
+    }))
+
+    return res.status(200).json({
       success: true,
-      data: { turnos }
-    });
-
+      data: {
+        turnos: data
+      }
+    })
   } catch (error) {
-    if (error.name === 'CastError') {
-      return res.status(400).json({ message: 'El id enviado no es válido' });
-    }
-    console.error('Error en obtenerTurnos:', error);
-    res.status(500).json({ message: 'Error interno del servidor' });
+    console.error('Error en obtenerTurnos:', error)
+
+    return res.status(500).json({
+      message: 'Error interno del servidor'
+    })
   }
-};
+}
 
 export const reservarTurno = async (req, res) => {
   try {
@@ -154,36 +308,231 @@ export const reservarTurno = async (req, res) => {
 
 export const obtenerTurnoPorId = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params
 
-    const turno = await Turno.findById(id)
-      .populate('mascotaId', 'nombre especie raza fechaNacimiento sexo peso')
-      .populate('usuarioId', 'name email')
-      .populate('veterinariaId', 'nombre profesionales');
-
-    if (!turno) {
-      return res.status(404).json({ message: 'El recurso no existe.' });
+    if (!isValidUUID(id)) {
+      return res.status(400).json({
+        message: 'El id del turno no es válido'
+      })
     }
 
-    if (turno.usuarioId?.toString() !== req.user.id && req.user.role !== 'administrador') {
-      const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id });
-      if (!veterinaria || turno.veterinariaId?._id?.toString() !== veterinaria._id.toString()) {
-        return res.status(403).json({ message: 'No tenés permisos para ver este turno.' });
+    const turno = await prisma.turno.findUnique({
+      where: {
+        turno_id: id
+      },
+
+      select: {
+        turno_id: true,
+        fecha: true,
+        hora_inicio: true,
+        hora_fin: true,
+        motivo: true,
+        monto_servicio: true,
+        notas: true,
+
+        estado_turno: {
+          select: {
+            estado_turno_id: true,
+            nombre: true
+          }
+        },
+
+        mascota: {
+          select: {
+            mascota_id: true,
+            dueno_id: true,
+            nombre: true,
+            fecha_nacimiento: true,
+            peso: true,
+
+            raza: {
+              select: {
+                raza_id: true,
+                nombre: true,
+
+                especie: {
+                  select: {
+                    especie_id: true,
+                    nombre: true
+                  }
+                }
+              }
+            },
+
+            sexo_mascota: {
+              select: {
+                sexo_mascota_id: true,
+                nombre: true
+              }
+            },
+
+            usuario: {
+              select: {
+                usuario_id: true,
+                nombre: true,
+                apellido: true,
+                email: true
+              }
+            }
+          }
+        },
+
+        profesional: {
+          select: {
+            profesional_id: true,
+            nombre: true,
+            apellido: true,
+            email: true
+          }
+        },
+
+        veterinaria: {
+          select: {
+            veterinaria_id: true,
+            nombre: true,
+            direccion: true,
+            usuario_id: true
+          }
+        },
+
+        servicio: {
+          select: {
+            servicio_id: true,
+            nombre: true,
+            precio: true,
+
+            categoria_servicio: {
+              select: {
+                categoria_servicio_id: true,
+                nombre: true
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (!turno) {
+      return res.status(404).json({
+        message: 'El recurso no existe.'
+      })
+    }
+
+    const rolUsuario = req.user?.rol || req.user?.role
+    const usuarioId = req.user?.id
+
+    const esDueno =
+      turno.mascota?.dueno_id === usuarioId
+
+    const esVeterinaria =
+      turno.veterinaria?.usuario_id === usuarioId
+
+    const esAdministrador =
+      rolUsuario === 'administrador'
+
+    if (!esDueno && !esVeterinaria && !esAdministrador) {
+      return res.status(403).json({
+        message: 'No tenés permisos para ver este turno.'
+      })
+    }
+
+    const data = {
+      id: turno.turno_id,
+
+      fecha: turno.fecha,
+      hora: formatearHoraPrisma(turno.hora_inicio),
+      horaFin: formatearHoraPrisma(turno.hora_fin),
+
+      motivo: turno.motivo || null,
+      notas: turno.notas || null,
+
+      montoServicio:
+        turno.monto_servicio !== null
+          ? Number(turno.monto_servicio)
+          : 0,
+
+      estado: turno.estado_turno?.nombre || null,
+
+      mascota: turno.mascota
+        ? {
+            id: turno.mascota.mascota_id,
+            nombre: turno.mascota.nombre,
+
+            fechaNacimiento:
+              turno.mascota.fecha_nacimiento,
+
+            peso:
+              turno.mascota.peso !== null
+                ? Number(turno.mascota.peso)
+                : null,
+
+            raza: turno.mascota.raza?.nombre || null,
+            especie:
+              turno.mascota.raza?.especie?.nombre || null,
+
+            sexo:
+              turno.mascota.sexo_mascota?.nombre || null,
+
+            dueno: turno.mascota.usuario
+              ? {
+                  id: turno.mascota.usuario.usuario_id,
+                  nombre: turno.mascota.usuario.nombre,
+                  apellido: turno.mascota.usuario.apellido,
+                  email: turno.mascota.usuario.email
+                }
+              : null
+          }
+        : null,
+
+      profesional: turno.profesional
+        ? {
+            id: turno.profesional.profesional_id,
+            nombre:
+              `${turno.profesional.nombre} ${turno.profesional.apellido}`.trim(),
+            email: turno.profesional.email
+          }
+        : null,
+
+      veterinaria: {
+        id: turno.veterinaria.veterinaria_id,
+        nombre: turno.veterinaria.nombre,
+        direccion: turno.veterinaria.direccion
+      },
+
+      servicio: {
+        id: turno.servicio.servicio_id,
+        nombre: turno.servicio.nombre,
+
+        precio:
+          turno.servicio.precio !== null
+            ? Number(turno.servicio.precio)
+            : 0,
+
+        categoriaServicio: turno.servicio.categoria_servicio
+          ? {
+              id:
+                turno.servicio.categoria_servicio
+                  .categoria_servicio_id,
+
+              nombre:
+                turno.servicio.categoria_servicio.nombre
+            }
+          : null
       }
     }
 
-    res.status(200).json({ success: true, data: turno });
-
+    return res.status(200).json({
+      success: true,
+      data
+    })
   } catch (error) {
-    if (error.name === 'CastError') {
-      return res.status(400).json({ message: 'El id del turno no es válido' });
-    }
-    console.error('Error en obtenerTurnoPorId:', error);
-    res.status(500).json({ message: 'Error interno del servidor' });
-  }
-};
+    console.error('Error en obtenerTurnoPorId:', error)
 
-// PATCH /turnos/:id/cancelar (protegido con ownerTurno)
+    return res.status(500).json({
+      message: 'Error interno del servidor'
+    })
+  }
+}
 
 export const cancelarTurno = async (req, res) => {
   try {

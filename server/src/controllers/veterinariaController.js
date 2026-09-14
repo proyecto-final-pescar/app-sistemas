@@ -2,6 +2,7 @@ import Veterinaria from '../models/Veterinaria.js';
 import Turno from "../models/Turno.js";
 import Mascota from "../models/Mascota.js";
 import User from "../models/User.js";
+import prisma from '../../prisma/client.js';
 
 // Estados de Turno que habilitan a considerar a una mascota "paciente" de la veterinaria.
 // Se excluye 'pendiente' (todavía no confirmado, no hay relación real) y
@@ -199,24 +200,90 @@ export const obtenerVeterinariaPorId = async (req, res) => {
 
 // GET /veterinarias/mia: devuelve la veterinaria del usuario logueado
 export const obtenerMiVeterinaria = async (req, res) => {
-    try {
-        const usuarioId = req.user.id;
+  try {
+    const usuarioId = req.user.id;
 
-        const veterinaria = await Veterinaria.findOne({ usuarioId });
+    const veterinaria = await prisma.veterinaria.findUnique({
+      where: {
+        usuario_id: usuarioId
+      },
 
-        if (!veterinaria) {
-            return res.status(404).json({ message: 'No tenés una veterinaria registrada.' });
+      include: {
+        profesional: {
+          where: {
+            active: true
+          },
+
+          include: {
+            especialidad: {
+              select: {
+                nombre: true
+              }
+            }
+          }
         }
+      }
+    });
 
-        res.status(200).json({
-            success: true,
-            data: veterinaria
-        });
-
-    } catch (error) {
-        console.error('Error en GET /veterinarias/mia:', error);
-        res.status(500).json({ message: 'Error interno del servidor' });
+    if (!veterinaria) {
+      return res.status(404).json({
+        message: 'No tenés una veterinaria registrada.'
+      });
     }
+
+    return res.status(200).json({
+      success: true,
+
+      data: {
+        id: veterinaria.veterinaria_id,
+        usuarioId: veterinaria.usuario_id,
+        nombre: veterinaria.nombre,
+        direccion: veterinaria.direccion,
+        razonSocial: veterinaria.razon_social,
+        cuit: veterinaria.cuit,
+        telefono: veterinaria.telefono,
+        email: veterinaria.email,
+        sitioWeb: veterinaria.sitio_web,
+
+        latitud:
+          veterinaria.latitud !== null
+            ? Number(veterinaria.latitud)
+            : null,
+
+        longitud:
+          veterinaria.longitud !== null
+            ? Number(veterinaria.longitud)
+            : null,
+
+        urgencias: veterinaria.urgencias,
+        estadoVeterinariaId:
+          veterinaria.estado_veterinaria_id,
+
+        profesionales: veterinaria.profesional.map(
+          (profesional) => ({
+            id: profesional.profesional_id,
+            nombre: profesional.nombre,
+            apellido: profesional.apellido,
+            email: profesional.email,
+            especialidad:
+              profesional.especialidad?.nombre || null
+          })
+        ),
+
+        createdAt: veterinaria.created_at,
+        updatedAt: veterinaria.updated_at
+      }
+    });
+  } catch (error) {
+    console.error(
+      'Error en GET /veterinarias/mia:',
+      error
+    );
+
+    return res.status(500).json({
+      message: 'Error interno del servidor'
+    });
+  }
 };
 
 // PUT /veterinarias/mia: edita la veterinaria del usuario autenticado
@@ -430,84 +497,188 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
   try {
     const usuarioId = req.user.id;
 
-    const veterinaria = await Veterinaria.findOne({
-      usuarioId,
-      estado: "activa",
+    const veterinaria = await prisma.veterinaria.findUnique({
+      where: {
+        usuario_id: usuarioId
+      },
+      select: {
+        veterinaria_id: true
+      }
     });
 
     if (!veterinaria) {
       return res.status(404).json({
         success: false,
-        message: "No tenés una veterinaria registrada.",
+        message: "No tenés una veterinaria registrada."
       });
     }
 
-    const mascotaIds = await Turno.distinct("mascotaId", {
-      veterinariaId: veterinaria._id,
-      estado: { $in: ESTADOS_TURNO_PACIENTE },
-    });
+    const page = Math.max(
+      parseInt(req.query.page, 10) || 1,
+      1
+    );
 
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(
-      Math.max(parseInt(req.query.limit, 10) || PACIENTES_LIMITE_DEFAULT, 1),
+      Math.max(
+        parseInt(req.query.limit, 10) ||
+          PACIENTES_LIMITE_DEFAULT,
+        1
+      ),
       PACIENTES_LIMITE_MAXIMO
     );
-    const skip = (page - 1) * limit;
 
+    const skip = (page - 1) * limit;
     const busqueda = (req.query.busqueda || "").trim();
 
-    let filtro = { _id: { $in: mascotaIds } };
+    /*
+      Una mascota es paciente de la veterinaria si posee al menos
+      un turno con esta veterinaria en alguno de los estados
+      considerados válidos para pacientes.
+    */
+    const where = {
+      turno: {
+        some: {
+          veterinaria_id: veterinaria.veterinaria_id,
+
+          estado_turno: {
+            is: {
+              nombre: {
+                in: ESTADOS_TURNO_PACIENTE,
+                mode: "insensitive"
+              }
+            }
+          }
+        }
+      }
+    };
 
     if (busqueda) {
-      const regex = new RegExp(escaparRegex(busqueda), "i");
+      where.OR = [
+        {
+          nombre: {
+            contains: busqueda,
+            mode: "insensitive"
+          }
+        },
 
-      const dueñoIds = await User.find({ name: regex }).distinct("_id");
+        {
+          usuario: {
+            is: {
+              nombre: {
+                contains: busqueda,
+                mode: "insensitive"
+              }
+            }
+          }
+        },
 
-      filtro = {
-        ...filtro,
-        $or: [{ nombre: regex }, { dueñoId: { $in: dueñoIds } }],
-      };
+        {
+          usuario: {
+            is: {
+              apellido: {
+                contains: busqueda,
+                mode: "insensitive"
+              }
+            }
+          }
+        }
+      ];
     }
 
     const [pacientes, total] = await Promise.all([
-      Mascota.find(filtro)
-        .select("nombre especie raza fechaNacimiento foto dueñoId")
-        .populate("dueñoId", "name")
-        .sort({ nombre: 1 })
-        .skip(skip)
-        .limit(limit),
-      Mascota.countDocuments(filtro),
+      prisma.mascota.findMany({
+        where,
+
+        select: {
+          mascota_id: true,
+          nombre: true,
+          fecha_nacimiento: true,
+          foto: true,
+
+          raza: {
+            select: {
+              nombre: true,
+
+              especie: {
+                select: {
+                  nombre: true
+                }
+              }
+            }
+          },
+
+          usuario: {
+            select: {
+              usuario_id: true,
+              nombre: true,
+              apellido: true
+            }
+          }
+        },
+
+        orderBy: {
+          nombre: "asc"
+        },
+
+        skip,
+        take: limit
+      }),
+
+      prisma.mascota.count({
+        where
+      })
     ]);
 
     const data = pacientes.map((mascota) => ({
-      id: mascota._id,
+      id: mascota.mascota_id,
       nombre: mascota.nombre,
-      especie: mascota.especie,
-      raza: mascota.raza || "Sin especificar",
-      fechaNacimiento: mascota.fechaNacimiento,
+
+      especie:
+        mascota.raza?.especie?.nombre ||
+        "Sin especificar",
+
+      raza:
+        mascota.raza?.nombre ||
+        "Sin especificar",
+
+      fechaNacimiento: mascota.fecha_nacimiento,
+
       foto: mascota.foto || null,
-      dueño: {
-        id: mascota.dueñoId?._id,
-        nombre: mascota.dueñoId?.name || "Sin información",
-      },
+
+      dueno: mascota.usuario
+        ? {
+            id: mascota.usuario.usuario_id,
+            nombre:
+              `${mascota.usuario.nombre || ""} ${
+                mascota.usuario.apellido || ""
+              }`.trim() || "Sin información"
+          }
+        : null
     }));
 
     return res.status(200).json({
       success: true,
       data,
+
       paginacion: {
         total,
         page,
         limit,
-        totalPaginas: Math.max(Math.ceil(total / limit), 1),
-      },
+        totalPaginas: Math.max(
+          Math.ceil(total / limit),
+          1
+        )
+      }
     });
   } catch (error) {
-    console.error("Error al obtener pacientes:", error);
+    console.error(
+      "Error al obtener pacientes:",
+      error
+    );
 
     return res.status(500).json({
       success: false,
-      message: "No se pudieron obtener los pacientes.",
+      message: "No se pudieron obtener los pacientes."
     });
   }
 };
