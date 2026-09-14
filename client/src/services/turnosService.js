@@ -71,5 +71,9 @@ export const obtenerTurnosPendientesRegistro = async (mascotaId) => {
  */
 export const reservarTurno = async (turnoId, payload) => {
   const { data } = await api.post(`/turnos/${turnoId}/reservar`, payload);
+}
+
+export const pagarEfectivo = async (payload) => {
+  const { data } = await api.post("/pagos/efectivo", payload);
   return data.data?.turno;
 };

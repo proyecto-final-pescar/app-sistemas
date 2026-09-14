@@ -8,6 +8,8 @@ import {
   obtenerTurnosPorVeterinaria,
   reservarTurno as reservarTurnoService,
 } from "../../../services/turnosService";
+import SelectorMetodoPago from "../../../components/pagos/SelectorMetodoPago";
+import { pagarEfectivo } from "../../../services/turnosService"; // o pagosService, según donde lo pongamos
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 
@@ -75,6 +77,8 @@ const AgendarTurnos = () => {
   const [loading, setLoading] = useState(true);
   const [loadingTurnos, setLoadingTurnos] = useState(false);
   const [error, setError] = useState(null);
+  const [isSelectorPagoOpen, setIsSelectorPagoOpen] = useState(false);
+  const [metodoConfirmado, setMetodoConfirmado] = useState(null); // "efectivo" | null
 
   // --- Estados de Selección y Filtro ---
   const [servicioSeleccionadoId, setServicioSeleccionadoId] = useState("");
@@ -375,13 +379,14 @@ const AgendarTurnos = () => {
       return;
     }
 
+  const handlePagarConMercadoPago = async () => {
+    setIsSelectorPagoOpen(false);
     setErrorPago("");
     setProcesandoAccion(true);
 
     try {
       const turnoCreado = await reservarTurno();
       handleCloseConfirm();
-
       setProcesandoPago(true);
 
       try {
@@ -404,6 +409,35 @@ const AgendarTurnos = () => {
       }
     } catch (err) {
       alert(err.response?.data?.message || "Hubo un problema al agendar el turno.");
+    } finally {
+      setProcesandoAccion(false);
+    }
+  };
+
+  const handlePagarEnEfectivo = async () => {
+    setIsSelectorPagoOpen(false);
+    setProcesandoAccion(true);
+
+    try {
+      const turnoId = idDeTurno(turnoConcretoElegido);
+      const payload = {
+        turnoId,
+        mascotaId: mascotaSeleccionadaId,
+        motivo: servicioElegido?.nombre || "",
+        notas: notas || undefined,
+      };
+
+      const turnoConfirmado = await pagarEfectivo(payload);
+
+      const mascotaElegida = mascotas.find((m) => idDeMascota(m) === mascotaSeleccionadaId);
+      setMascotaConfirmadaNombre(mascotaElegida?.nombre || "tu mascota");
+
+      setTurnosDisponibles((prev) => prev.filter((t) => idDeTurno(t) !== turnoId));
+
+      handleCloseConfirm();
+      setIsSuccessOpen(true);
+    } catch (err) {
+      alert(err.response?.data?.message || "Hubo un problema al confirmar el turno en efectivo.");
     } finally {
       setProcesandoAccion(false);
     }
@@ -751,10 +785,20 @@ const AgendarTurnos = () => {
                       <button
                         type="button"
                         className={styles.btnCancelar}
-                        onClick={handlePagarAhora}
+                        onClick={() => {
+                          if (!turnoConcretoElegido) {
+                            setErrorPago("Elegí un profesional para continuar.");
+                            return;
+                          }
+                          if (!mascotaSeleccionadaId) {
+                            setErrorPago("Elegí una mascota para continuar.");
+                            return;
+                          }
+                          setIsSelectorPagoOpen(true);
+                        }}
                         disabled={procesandoAccion}
                       >
-                        {procesandoAccion ? "Procesando..." : "Pagar ahora"}
+                        Pagar ahora
                       </button>
                       <button type="submit" className={styles.btnConfirmar} disabled={procesandoAccion}>
                         {procesandoAccion ? "Procesando..." : "Confirmar turno"}
@@ -783,11 +827,19 @@ const AgendarTurnos = () => {
               textoBoton="Entendido"
               onClose={() => setIsSuccessOpen(false)}
             />
+            <SelectorMetodoPago
+              isOpen={isSelectorPagoOpen}
+              onClose={() => setIsSelectorPagoOpen(false)}
+              onElegirMercadoPago={handlePagarConMercadoPago}
+              onElegirEfectivo={handlePagarEnEfectivo}
+              monto={turnoConcretoElegido?.monto_servicio}
+              procesando={procesandoAccion}
+            />
           </section>
         </main>
       </div>
     </div>
   );
 };
-
+}
 export default AgendarTurnos;

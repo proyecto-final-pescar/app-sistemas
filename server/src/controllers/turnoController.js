@@ -7,7 +7,7 @@ const ANTICIPACION_MINIMA_HORAS = 10
 const PLAZO_PAGO_HORAS = 3          // siempre < ANTICIPACION_MINIMA_HORAS
 const HORAS_LIMITE_CANCELACION = 24 // solo aplica a turnos ya CONFIRMADOS
 
-const ESTADO = {
+export const ESTADO = {
   DISPONIBLE: 'DIS',
   PENDIENTE: 'PEN',
   CONFIRMADO: 'CON',
@@ -15,7 +15,7 @@ const ESTADO = {
   ATENDIDO: 'ATE'
 }
 
-const includeTurnoCompleto = {
+export const includeTurnoCompleto = {
   mascota: { select: { mascota_id: true, nombre: true, raza: { select: { especie: { select: { nombre: true } } } } } },
   veterinaria: { select: { veterinaria_id: true, nombre: true, direccion: true } },
   profesional: { select: { profesional_id: true, nombre: true, apellido: true } },
@@ -26,7 +26,7 @@ const includeTurnoCompleto = {
 // Helpers de fecha/hora
 // ─────────────────────────────────────────────────────────────
 
-const combinarFechaHora = (fecha, horaTime) => {
+export const combinarFechaHora = (fecha, horaTime) => {
   const fechaStr = typeof fecha === 'string' ? fecha.slice(0, 10) : fecha.toISOString().slice(0, 10)
   const [anio, mes, dia] = fechaStr.split('-').map(Number)
 
@@ -40,7 +40,7 @@ const combinarFechaHora = (fecha, horaTime) => {
   return new Date(anio, mes - 1, dia, horas, minutos, 0, 0)
 }
 
-const horasHasta = (fechaHora) => (fechaHora.getTime() - Date.now()) / (1000 * 60 * 60)
+export const horasHasta = (fechaHora) => (fechaHora.getTime() - Date.now()) / (1000 * 60 * 60)
 
 const horaStringATime = (horaStr) => {
   const [h, m] = horaStr.split(':').map(Number)
@@ -56,9 +56,9 @@ const sumarMinutos = (horaTimeUTC, minutos) => {
 // Postgres devuelve columnas `time` como Date ancladas al epoch (UTC).
 // Se formatea a "HH:MM" antes de mandar cualquier respuesta al frontend,
 // que sigue esperando ese formato simple (heredado de la versión Mongo).
-const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
+ export const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
 
-const formatearTurno = (turno) => ({
+export const formatearTurno = (turno) => ({
   ...turno,
   hora_inicio: formatearHora(turno.hora_inicio),
   hora_fin: formatearHora(turno.hora_fin)

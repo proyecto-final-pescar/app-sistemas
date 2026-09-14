@@ -1,0 +1,68 @@
+/* SelectorMetodoPago.module.css */
+
+.contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: var(--fuente-texto);
+}
+
+.titulo {
+  margin: 0;
+  font-family: var(--fuente-titulos);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-texto-principal);
+}
+
+.monto {
+  margin: -8px 0 0;
+  font-size: var(--texto-form-size);
+  color: var(--color-texto-secundario);
+}
+
+.opcion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 1px solid var(--color-fondo-claro);
+  border-radius: 14px;
+  background-color: var(--color-blanco);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background-color 0.15s;
+  font-family: var(--fuente-texto);
+}
+
+.opcion:hover:not(:disabled) {
+  border-color: var(--color-primario);
+  background-color: var(--color-fondo-claro);
+}
+
+.opcion:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.opcionTitulo {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-texto-principal);
+}
+
+.opcionDescripcion {
+  font-size: var(--texto-form-size);
+  line-height: var(--texto-form-line-height);
+  color: var(--color-texto-secundario);
+}
+
+.procesando {
+  margin: 0;
+  text-align: center;
+  font-size: var(--texto-form-size);
+  color: var(--color-primario);
+  font-weight: 500;
+}
