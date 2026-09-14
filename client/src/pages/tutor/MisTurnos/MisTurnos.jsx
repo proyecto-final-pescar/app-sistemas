@@ -6,6 +6,7 @@ import Badge from "../../../components/ui/badge/Badge";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
 import { FaCalendarAlt, FaClock, FaHospital, FaPaw } from "react-icons/fa";
 import { obtenerTurnosPorUsuario, cancelarTurno } from "../../../services/turnosService";
+import { crearPreferenciaPago } from "../../../services/pagosService";
 import {
   filtrarProximos,
   filtrarPasados,
@@ -24,6 +25,7 @@ export default function MisTurnos() {
   const [cancelando, setCancelando] = useState(null);
   const [modalCancelar, setModalCancelar] = useState(null);
   const [menuAbierto, setMenuAbierto] = useState(null);
+  const [pagando, setPagando] = useState(null); // turno_id del turno que se está procesando
 
   useEffect(() => {
     const cargarTurnos = async () => {
@@ -65,6 +67,30 @@ export default function MisTurnos() {
       alert(mensaje);
     } finally {
       setCancelando(null);
+    }
+  };
+
+  const handlePagar = async (turnoId) => {
+    if (pagando) return; // evita doble-click mientras hay una request en curso
+    setMenuAbierto(null);
+    setPagando(turnoId);
+
+    try {
+      const respuesta = await crearPreferenciaPago(turnoId);
+      const initPoint = respuesta?.init_point;
+
+      if (!initPoint) {
+        throw new Error("No se recibió el enlace de MercadoPago.");
+      }
+
+      window.location.href = initPoint;
+    } catch (err) {
+      const mensaje =
+        err.response?.data?.message ||
+        err.message ||
+        "No se pudo iniciar el pago. Intentá de nuevo.";
+      alert(mensaje);
+      setPagando(null);
     }
   };
 
@@ -130,8 +156,12 @@ export default function MisTurnos() {
               <div className={styles.bannerAcciones}>
                 <button className={styles.bannerBtn}>Ver detalles</button>
                 {turnoMasProximo.estado_turno_id === "PEN" && (
-                  <button className={`${styles.bannerBtn} ${styles.bannerBtnPagar}`}>
-                    Pagar
+                  <button
+                    className={`${styles.bannerBtn} ${styles.bannerBtnPagar}`}
+                    onClick={() => handlePagar(turnoMasProximo.turno_id)}
+                    disabled={pagando === turnoMasProximo.turno_id}
+                  >
+                    {pagando === turnoMasProximo.turno_id ? "Procesando..." : "Pagar"}
                   </button>
                 )}
                 {new Date(turnoMasProximo.fecha) > new Date() &&
@@ -217,8 +247,12 @@ export default function MisTurnos() {
                         </button>
 
                         {turno.estado_turno_id === "PEN" && (
-                          <button className={styles.dropdownItem} onClick={() => { }}>
-                            Pagar
+                          <button
+                            className={styles.dropdownItem}
+                            onClick={() => handlePagar(turno.turno_id)}
+                            disabled={pagando === turno.turno_id}
+                          >
+                            {pagando === turno.turno_id ? "Procesando..." : "Pagar"}
                           </button>
                         )}
 

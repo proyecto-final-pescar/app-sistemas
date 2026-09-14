@@ -128,7 +128,7 @@ const monto = Number(turno.monto_servicio);
           mascotaId: turno.mascota_id
         },
         // Comentar para probar en local y descomentar antes de mergear
-        auto_return: 'approved'
+        //auto_return: 'approved'
       }
     });
 

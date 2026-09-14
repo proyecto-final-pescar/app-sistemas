@@ -64,3 +64,12 @@ export const obtenerTurnosPendientesRegistro = async (mascotaId) => {
   const { data } = await api.get(`/historial-clinico/turnos-pendientes/${mascotaId}`);
   return Array.isArray(data?.data) ? data.data : [];
 };
+
+/**
+ * Reserva un turno ya existente (creado por la veterinaria).
+ * Transiciona el turno de DIS a PEN.
+ */
+export const reservarTurno = async (turnoId, payload) => {
+  const { data } = await api.post(`/turnos/${turnoId}/reservar`, payload);
+  return data.data?.turno;
+};
