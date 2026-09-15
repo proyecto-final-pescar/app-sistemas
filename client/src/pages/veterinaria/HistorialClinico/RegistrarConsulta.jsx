@@ -71,7 +71,7 @@ function obtenerNombrePersona(persona) {
   );
 }
 
-function RegistrarConsulta() {
+ function RegistrarConsulta() {
   const { turnoId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -115,42 +115,40 @@ function RegistrarConsulta() {
           return;
         }
 
-        const mascota = turno.mascotaId;
-        const dueno = turno.usuarioId;
-        const veterinaria = turno.veterinariaId;
+        const mascota = turno.mascota;
+        const dueno = mascota?.usuario;
+        const profesional = turno.profesional;
 
-        const profesional = veterinaria?.profesionales?.find(
-          (p) => p._id?.toString() === turno.profesionalId?.toString()
+        setNombreProfesional(
+          profesional ? `${profesional.nombre} ${profesional.apellido}` : "Profesional asignado"
         );
-
-        setNombreProfesional(profesional?.nombre || "Profesional asignado");
 
         setForm((formAnterior) => ({
           ...formAnterior,
-          nombreDueno: dueno?.name || "",
+          nombreDueno: dueno ? `${dueno.nombre} ${dueno.apellido}` : "",
           email: dueno?.email || "",
-          mascotaId: mascota?._id || "",
+          mascotaId: mascota?.mascota_id || "",
           nombreMascota: mascota?.nombre || "",
-          especie: mascota?.especie || "",
-          raza: mascota?.raza || "",
-          edad: mascota?.fechaNacimiento
-            ? convertirFechaParaInput(mascota.fechaNacimiento)
+          especie: mascota?.raza?.especie?.nombre || "",
+          raza: mascota?.raza?.nombre || "",
+          edad: mascota?.fecha_nacimiento
+            ? convertirFechaParaInput(mascota.fecha_nacimiento)
             : "",
-          sexo: mascota?.sexo || "",
+          sexo: mascota?.sexo_mascota?.nombre || "",
           peso: mascota?.peso != null ? String(mascota.peso) : "",
-          profesionalId: turno.profesionalId || "",
+          profesionalId: turno.profesional_id || "",
           fecha: convertirFechaParaInput(turno.fecha),
-          hora: turno.hora || "",
-          categoriaServicio: turno.categoriaServicio || "Consulta",
+          hora: turno.hora_inicio || "",
+          categoriaServicio: turno.servicio?.categoria_servicio?.nombre || "Consulta",
           motivoConsulta: turno.motivo || "",
         }));
 
-        if (!mascota?._id) {
+        if (!mascota?.mascota_id) {
           setErrorApi("El turno no tiene una mascota asociada correctamente.");
           return;
         }
 
-        if (!turno.profesionalId) {
+        if (!turno.profesional_id) {
           setErrorApi("El turno no tiene un profesional asociado.");
         }
       } catch (error) {
@@ -278,12 +276,13 @@ function RegistrarConsulta() {
       return;
     }
 
-    const body = {
+       const body = {
       mascotaId: form.mascotaId,
       profesionalId: form.profesionalId,
-      turnoId, // viene de useParams(); faltaba mandarlo y el backend ahora lo exige
+      turnoId,
       fecha: form.fecha,
       hora: form.hora,
+      categoriaServicio: form.categoriaServicio,
       motivoConsulta: form.motivoConsulta.trim(),
       anotaciones: form.anotaciones.trim(),
       monto: Number(form.monto),
@@ -504,30 +503,13 @@ function RegistrarConsulta() {
                     />
 
                     <div className="registrar-consulta-select-wrapper">
-                      <label className="registrar-consulta-label">
-                        Categoría del servicio
-                      </label>
-
-                      <select
-                        className={`registrar-consulta-select ${errores.categoriaServicio ? "registrar-consulta-select-error" : ""
-                          }`}
-                        value={form.categoriaServicio}
-                        onChange={(event) =>
-                          actualizarCampo("categoriaServicio", event.target.value)
-                        }
-                      >
-                        <option value="">Seleccioná una categoría</option>
-                        <option value="Consulta">Consulta</option>
-                        <option value="Control">Control</option>
-                        <option value="Vacunación">Vacunación</option>
-                        <option value="Cirugía">Cirugía</option>
-                      </select>
-
-                      {errores.categoriaServicio && (
-                        <p className="registrar-consulta-error-text">
-                          {errores.categoriaServicio}
-                        </p>
-                      )}
+                      <Input
+                      label="Categoría del servicio"
+                      value={form.categoriaServicio}
+                      readOnly
+                      disabled
+                      error={errores.categoriaServicio}
+                    />
                     </div>
 
                     <Input

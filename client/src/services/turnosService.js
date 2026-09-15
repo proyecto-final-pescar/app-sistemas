@@ -1,12 +1,9 @@
 import api from "./api";
 
-/**
- * Obtiene los turnos filtrados de una veterinaria.
- * Envía los parámetros en camelCase para alinearse con req.query del backend Prisma.
- */
+
 export const obtenerTurnosPorVeterinaria = async (
   veterinariaId,
-  { servicioId, estado, estadoDistinto, fechaDesde, fechaHasta } = {}
+  { servicioId, estado, estadoDistinto, estados, fechaDesde, fechaHasta } = {}
 ) => {
   // Validación en cliente para evitar peticiones con IDs inválidos o vacíos
   if (!veterinariaId) {
@@ -18,6 +15,7 @@ export const obtenerTurnosPorVeterinaria = async (
   if (servicioId) params.servicioId = servicioId;
   if (estado) params.estado = estado;
   if (estadoDistinto) params.estadoDistinto = estadoDistinto;
+  if (estados) params.estados = estados;
   if (fechaDesde) params.fechaDesde = fechaDesde;
   if (fechaHasta) params.fechaHasta = fechaHasta;
 
