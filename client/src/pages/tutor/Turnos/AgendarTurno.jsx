@@ -3,13 +3,13 @@ import { ArrowLeft, Search } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { crearPreferenciaPago } from "../../../services/pagosService";
 import { getVeterinariaById } from "../../../services/veterinariaService";
-import { obtenerMascotas } from "../../../services/mascotaService"; // ⚠️ confirmar nombre real del archivo (mayúscula/minúscula)
+import { obtenerMascotas } from "../../../services/mascotaService"; // ⚠️ confirmar nombre real del archivo
 import {
   obtenerTurnosPorVeterinaria,
   reservarTurno as reservarTurnoService,
+  pagarEfectivo,
 } from "../../../services/turnosService";
 import SelectorMetodoPago from "../../../components/pagos/SelectorMetodoPago";
-import { pagarEfectivo } from "../../../services/turnosService"; // o pagosService, según donde lo pongamos
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 
@@ -42,10 +42,6 @@ const cumpleAntelacionMinima = (fechaStr, hora) => {
   return fechaHoraTurno >= limiteMinimo;
 };
 
-// Helpers para leer un mismo campo tanto si viene con el shape viejo de
-// Mongo (_id) como con el nuevo de Postgres (turno_id, mascota_id, etc).
-// Se dejan como fallback defensivo hasta confirmar que TODOS los
-// endpoints que consume esta pantalla ya están migrados.
 const idDeTurno = (t) => t.turno_id || t._id;
 const idDeMascota = (m) => m.mascota_id || m._id;
 const idDeServicio = (s) => s.servicio_id || s._id;
@@ -70,17 +66,13 @@ const AgendarTurnos = () => {
   const navigate = useNavigate();
   const { veterinariaId } = useParams();
 
-  // --- Estados del Negocio ---
   const [veterinaria, setVeterinaria] = useState(null);
   const [mascotas, setMascotas] = useState([]);
   const [turnosDisponibles, setTurnosDisponibles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingTurnos, setLoadingTurnos] = useState(false);
   const [error, setError] = useState(null);
-  const [isSelectorPagoOpen, setIsSelectorPagoOpen] = useState(false);
-  const [metodoConfirmado, setMetodoConfirmado] = useState(null); // "efectivo" | null
 
-  // --- Estados de Selección y Filtro ---
   const [servicioSeleccionadoId, setServicioSeleccionadoId] = useState("");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todas");
   const [busquedaServicio, setBusquedaServicio] = useState("");
@@ -95,21 +87,18 @@ const AgendarTurnos = () => {
   });
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isSelectorPagoOpen, setIsSelectorPagoOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  const [procesandoAccion, setProcesandoAccion] = useState(false); // cubre confirmar y pagar: evita doble-submit
+  const [metodoConfirmado, setMetodoConfirmado] = useState(null);
+  const [procesandoAccion, setProcesandoAccion] = useState(false);
   const [procesandoPago, setProcesandoPago] = useState(false);
   const [errorPago, setErrorPago] = useState("");
   const [turnoSeleccionado, setTurnoSeleccionado] = useState(null);
-  // Ya no elegimos "profesional" en abstracto: cada opción del slot ES un
-  // turno concreto y distinto (uno por profesional, ya asignado desde que
-  // la veterinaria lo creó). Elegir "profesional" en la UI equivale a
-  // elegir directamente CUÁL de esos turnos concretos se reserva.
   const [turnoIdSeleccionado, setTurnoIdSeleccionado] = useState("");
   const [mascotaSeleccionadaId, setMascotaSeleccionadaId] = useState("");
   const [notas, setNotas] = useState("");
   const [mascotaConfirmadaNombre, setMascotaConfirmadaNombre] = useState("");
 
-  // Carga inicial
   useEffect(() => {
     let cancelado = false;
 
@@ -146,7 +135,6 @@ const AgendarTurnos = () => {
     };
   }, [veterinariaId]);
 
-  // Lista de categorías únicas extraídas de los servicios.
   const categoriasUnicas = useMemo(() => {
     const cats = new Set(["Todas"]);
     (veterinaria?.servicios || []).forEach((s) => {
@@ -199,16 +187,12 @@ const AgendarTurnos = () => {
     return mapa;
   }, [veterinaria]);
 
-  // Agrupa los turnos por día+hora. Cada turno de la lista ya es una
-  // reserva concreta y distinta (un profesional fijo por fila) — si a
-  // las 09:00 hay 2 profesionales libres, van a llegar como 2 turnos
-  // separados con la misma fecha/hora, cada uno con su propio turno_id.
   const turnosPorDiaYHora = useMemo(() => {
     const mapa = {};
 
     turnosDisponibles.forEach((turno) => {
       const fechaStr = fechaIdDesdeISO(turno.fecha);
-      const hora = turno.hora_inicio; // ya viene formateado "HH:MM" por el backend
+      const hora = turno.hora_inicio;
       if (!cumpleAntelacionMinima(fechaStr, hora)) return;
 
       if (!mapa[fechaStr]) mapa[fechaStr] = {};
@@ -229,7 +213,6 @@ const AgendarTurnos = () => {
     return Array.from(todasLasHoras).sort();
   }, [turnosPorDiaYHora]);
 
-  // Carga de turnos disponibles según servicio y semana
   useEffect(() => {
     let cancelado = false;
 
@@ -295,18 +278,17 @@ const AgendarTurnos = () => {
     if (!opciones.length) return;
 
     setTurnoSeleccionado({ dia, hora, opciones });
-    // Si hay un solo profesional disponible en ese horario, se preselecciona
-    // directo su turno; si hay varios, el dueño elige cuál en el modal.
     setTurnoIdSeleccionado(opciones.length === 1 ? idDeTurno(opciones[0]) : "");
     setIsConfirmOpen(true);
   };
 
   const handleCloseConfirm = () => {
-    if (procesandoAccion) return; // no cerrar mientras hay una request en curso
+    if (procesandoAccion) return;
     setIsConfirmOpen(false);
     setTurnoIdSeleccionado("");
     setMascotaSeleccionadaId("");
     setNotas("");
+    setErrorPago("");
   };
 
   const turnoConcretoElegido = useMemo(() => {
@@ -318,9 +300,6 @@ const AgendarTurnos = () => {
     );
   }, [turnoSeleccionado, turnoIdSeleccionado]);
 
-  // Reserva un turno YA EXISTENTE (creado de antemano por la veterinaria
-  // vía crearOfertaHoraria). Ya no se crea un turno nuevo acá — solo se
-  // transiciona de 'disponible' a 'pendiente'.
   const reservarTurno = async () => {
     const turnoId = idDeTurno(turnoConcretoElegido);
 
@@ -347,37 +326,39 @@ const AgendarTurnos = () => {
     if (procesandoAccion) return;
 
     if (!turnoConcretoElegido) {
-      alert("Elegí un profesional para continuar.");
+      setErrorPago("Elegí un profesional para continuar.");
       return;
     }
     if (!mascotaSeleccionadaId) {
-      alert("Elegí una mascota para continuar.");
+      setErrorPago("Elegí una mascota para continuar.");
       return;
     }
 
     setProcesandoAccion(true);
     try {
+      setMetodoConfirmado(null);
       await reservarTurno();
       handleCloseConfirm();
       setIsSuccessOpen(true);
     } catch (err) {
-      alert(err.response?.data?.message || "Hubo un problema al agendar el turno.");
+      setErrorPago(err.response?.data?.message || "Hubo un problema al agendar el turno.");
     } finally {
       setProcesandoAccion(false);
     }
   };
 
-  const handlePagarAhora = async () => {
-    if (procesandoAccion) return;
-
+  const handleAbrirSelectorPago = () => {
     if (!turnoConcretoElegido) {
-      alert("Elegí un profesional para continuar.");
+      setErrorPago("Elegí un profesional para continuar.");
       return;
     }
     if (!mascotaSeleccionadaId) {
-      alert("Elegí una mascota para continuar.");
+      setErrorPago("Elegí una mascota para continuar.");
       return;
     }
+    setErrorPago("");
+    setIsSelectorPagoOpen(true);
+  };
 
   const handlePagarConMercadoPago = async () => {
     setIsSelectorPagoOpen(false);
@@ -387,6 +368,7 @@ const AgendarTurnos = () => {
     try {
       const turnoCreado = await reservarTurno();
       handleCloseConfirm();
+
       setProcesandoPago(true);
 
       try {
@@ -408,7 +390,7 @@ const AgendarTurnos = () => {
         );
       }
     } catch (err) {
-      alert(err.response?.data?.message || "Hubo un problema al agendar el turno.");
+      setErrorPago(err.response?.data?.message || "Hubo un problema al agendar el turno.");
     } finally {
       setProcesandoAccion(false);
     }
@@ -427,17 +409,20 @@ const AgendarTurnos = () => {
         notas: notas || undefined,
       };
 
-      const turnoConfirmado = await pagarEfectivo(payload);
+      await pagarEfectivo(payload);
 
       const mascotaElegida = mascotas.find((m) => idDeMascota(m) === mascotaSeleccionadaId);
       setMascotaConfirmadaNombre(mascotaElegida?.nombre || "tu mascota");
 
       setTurnosDisponibles((prev) => prev.filter((t) => idDeTurno(t) !== turnoId));
 
+      setMetodoConfirmado("efectivo");
       handleCloseConfirm();
       setIsSuccessOpen(true);
     } catch (err) {
-      alert(err.response?.data?.message || "Hubo un problema al confirmar el turno en efectivo.");
+      setErrorPago(
+        err.response?.data?.message || "Hubo un problema al confirmar el turno en efectivo."
+      );
     } finally {
       setProcesandoAccion(false);
     }
@@ -471,13 +456,8 @@ const AgendarTurnos = () => {
       <div className={styles.pagoLoadingOverlay}>
         <div className={styles.pagoLoadingCard}>
           <div className={styles.pagoSpinner}></div>
-
           <h2>Preparando tu pago...</h2>
-
-          <p>
-            Estamos generando el checkout seguro de MercadoPago.
-          </p>
-
+          <p>Estamos generando el checkout seguro de MercadoPago.</p>
           <span>Te vamos a redirigir automáticamente.</span>
         </div>
       </div>
@@ -770,8 +750,14 @@ const AgendarTurnos = () => {
 
                     <p className={styles.modalDescripcion}>
                       Vas a tener {PLAZO_PAGO_HORAS}hs para pagar este turno antes de
-                      que se libere automáticamente.
+                      que se libere automáticamente (o pagalo ahora en efectivo o por MercadoPago).
                     </p>
+
+                    {errorPago && (
+                      <p className={styles.modalDescripcion} style={{ color: "#ef4444", fontWeight: 600 }}>
+                        {errorPago}
+                      </p>
+                    )}
 
                     <div className={styles.modalAcciones}>
                       <button
@@ -785,20 +771,10 @@ const AgendarTurnos = () => {
                       <button
                         type="button"
                         className={styles.btnCancelar}
-                        onClick={() => {
-                          if (!turnoConcretoElegido) {
-                            setErrorPago("Elegí un profesional para continuar.");
-                            return;
-                          }
-                          if (!mascotaSeleccionadaId) {
-                            setErrorPago("Elegí una mascota para continuar.");
-                            return;
-                          }
-                          setIsSelectorPagoOpen(true);
-                        }}
+                        onClick={handleAbrirSelectorPago}
                         disabled={procesandoAccion}
                       >
-                        Pagar ahora
+                        {procesandoAccion ? "Procesando..." : "Pagar ahora"}
                       </button>
                       <button type="submit" className={styles.btnConfirmar} disabled={procesandoAccion}>
                         {procesandoAccion ? "Procesando..." : "Confirmar turno"}
@@ -808,25 +784,8 @@ const AgendarTurnos = () => {
                 </div>
               </div>
             )}
-            {errorPago && (
-              <div className={styles.modalOverlay}>
-                <div className={styles.modalContainer}>
-                  <p style={{ color: "#ef4444", fontWeight: 600 }}>{errorPago}</p>
-                  <button className={styles.btnConfirmar} onClick={() => setErrorPago("")}>
-                    Entendido
-                  </button>
-                </div>
-              </div>
-            )}
 
-            {/* MODAL ÉXITO */}
-            <SuccessModal
-              abierto={isSuccessOpen}
-              titulo="¡Turno reservado!"
-              mensaje={`Tu turno para ${mascotaConfirmadaNombre || "tu mascota"} quedó reservado. Tenés ${PLAZO_PAGO_HORAS}hs para pagarlo desde "Mis Turnos" o se libera automáticamente.`}
-              textoBoton="Entendido"
-              onClose={() => setIsSuccessOpen(false)}
-            />
+            {/* SELECTOR DE MÉTODO DE PAGO */}
             <SelectorMetodoPago
               isOpen={isSelectorPagoOpen}
               onClose={() => setIsSelectorPagoOpen(false)}
@@ -835,11 +794,24 @@ const AgendarTurnos = () => {
               monto={turnoConcretoElegido?.monto_servicio}
               procesando={procesandoAccion}
             />
+
+            {/* MODAL ÉXITO */}
+            <SuccessModal
+              abierto={isSuccessOpen}
+              titulo={metodoConfirmado === "efectivo" ? "¡Turno confirmado!" : "¡Turno reservado!"}
+              mensaje={
+                metodoConfirmado === "efectivo"
+                  ? `Tu turno para ${mascotaConfirmadaNombre || "tu mascota"} quedó confirmado. Recordá abonar $${turnoConcretoElegido?.monto_servicio || ""} en efectivo en el local.`
+                  : `Tu turno para ${mascotaConfirmadaNombre || "tu mascota"} quedó reservado. Tenés ${PLAZO_PAGO_HORAS}hs para pagarlo desde "Mis Turnos" o se libera automáticamente.`
+              }
+              textoBoton="Entendido"
+              onClose={() => setIsSuccessOpen(false)}
+            />
           </section>
         </main>
       </div>
     </div>
   );
 };
-}
+
 export default AgendarTurnos;

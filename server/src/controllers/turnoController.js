@@ -3,7 +3,7 @@ import prisma from '../../prisma/client.js'
 // ─────────────────────────────────────────────────────────────
 // Reglas de negocio
 // ─────────────────────────────────────────────────────────────
-const ANTICIPACION_MINIMA_HORAS = 10
+export const ANTICIPACION_MINIMA_HORAS = 10
 const PLAZO_PAGO_HORAS = 3          // siempre < ANTICIPACION_MINIMA_HORAS
 const HORAS_LIMITE_CANCELACION = 24 // solo aplica a turnos ya CONFIRMADOS
 

@@ -2,8 +2,6 @@ import { Preference } from 'mercadopago';
 
 import client from '../config/mercadopago.js';
 import prisma from '../../prisma/client.js';
-import Turno from '../models/Turno.js';
-import Pago from '../models/Pago.js';
 
 import {
   ESTADO,
