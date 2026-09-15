@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import {
-  actualizarHistorialClinico,
-  crearHistorialClinico,
-  obtenerEntradaHistorialClinico,
-  obtenerHistorialClinico,
+  actualizarConsulta,
+  crearConsulta,
+  obtenerConsultaPorId,
+  obtenerConsultasDeMascota,
   obtenerTurnosPendientesRegistro,
-  obtenerHistorialesPorTutor
-} from '../controllers/historialClinicoController.js';
+  obtenerConsultasPorTutor
+} from '../controllers/consultaController.js';
 import verifyToken, { authorize } from '../middleware/auth.js';
 import historialAccess from '../middleware/historialAccess.js';
 
@@ -17,7 +17,7 @@ router.get(
   '/historial/tutor', 
   verifyToken, 
   authorize('dueno'), 
-  obtenerHistorialesPorTutor
+  obtenerConsultasPorTutor
 );
 
 // 2. DESPUÉS LAS RUTAS DINÁMICAS
@@ -25,14 +25,14 @@ router.get(
   '/historial/:mascotaId',
   verifyToken,
   historialAccess,
-  obtenerHistorialClinico
+  obtenerConsultasDeMascota
 );
 
 router.get(
   '/historial/entrada/:id',
   verifyToken,
   historialAccess,
-  obtenerEntradaHistorialClinico
+  obtenerConsultaPorId
 );
 
 router.get(
@@ -46,14 +46,14 @@ router.post(
   '/historial-clinico',
   verifyToken,
   authorize('veterinaria'),
-  crearHistorialClinico
+  crearConsulta
 );
 
 router.put(
   '/historial-clinico/:id',
   verifyToken,
   authorize('veterinaria'), 
-  actualizarHistorialClinico
+  actualizarConsulta
 );
 
 export default router;

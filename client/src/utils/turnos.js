@@ -20,20 +20,25 @@ export const obtenerFechaHoraCompleta = (turno) => {
   return fecha;
 };
 
+
 export const filtrarProximos = (turnos) => {
   const ahora = new Date();
   return turnos
     .filter(
-      (t) => t.estado_turno_id !== "CAN" && obtenerFechaHoraCompleta(t) >= ahora,
+      (t) => t.estado_turno_id === "CON" && obtenerFechaHoraCompleta(t) >= ahora,
     )
     .sort((a, b) => obtenerFechaHoraCompleta(a) - obtenerFechaHoraCompleta(b));
 };
+
 
 export const filtrarPasados = (turnos) => {
   const ahora = new Date();
   return turnos
     .filter(
-      (t) => t.estado_turno_id === "CAN" || obtenerFechaHoraCompleta(t) < ahora,
+      (t) =>
+        t.estado_turno_id === "CAN" ||
+        t.estado_turno_id === "ATE" ||
+        obtenerFechaHoraCompleta(t) < ahora,
     )
     .sort((a, b) => obtenerFechaHoraCompleta(b) - obtenerFechaHoraCompleta(a));
 };
