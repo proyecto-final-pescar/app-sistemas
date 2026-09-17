@@ -18,6 +18,17 @@ import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import EmergencyOutlinedIcon from '@mui/icons-material/EmergencyOutlined';
 
 
+const DIAS_SEMANA = [
+  "lunes",
+  "martes",
+  "miercoles",
+  "jueves",
+  "viernes",
+  "sabado",
+  "domingo",
+];
+
+
 function EmptyState({ icon, message }) {
   return (
     <div className="perfil-vet__empty">
@@ -66,8 +77,7 @@ export default function PerfilVeterinaria() {
   const [errorCalificacion, setErrorCalificacion] = useState(null);
 
   const handleReservarTurno = () => {
-   
-      navigate(`/turnos/agendar/${veterinaria._id}`);
+    navigate(`/turnos/agendar/${veterinaria.veterinaria_id}`);
   };
 
   const handleCalificar = async (valor) => {
@@ -155,12 +165,25 @@ export default function PerfilVeterinaria() {
     nombre,
     direccion,
     email,
-    urgencias24hs,
+    urgencias, 
     telefono,
-    profesionales = [],   
-    servicios     = [],   
-    horarios      = [],
+    profesional: profesionales = [],
+    servicio: servicios = [],
+    horario_veterinaria: horarioVeterinaria = [],
   } = veterinaria;
+
+  const urgencias24hs = urgencias;
+
+ 
+  const horariosPorDia = DIAS_SEMANA.map((dia) => {
+    const franja = horarioVeterinaria.find((h) => h.dia_semana?.nombre === dia);
+    return {
+      dia,
+      desde: franja?.hora_desde || null,
+      hasta: franja?.hora_hasta || null,
+    };
+  });
+  const hayHorariosCargados = horarioVeterinaria.length > 0;
 
   return (
     <div className={styles.layout}>
@@ -243,9 +266,9 @@ export default function PerfilVeterinaria() {
               {}
               {profesionales.map((prof) => (
                 <ProfessionalChip
-                  key={prof._id || prof.id}
-                  nombre={prof.nombre}
-                  especialidad={prof.especialidad}
+                  key={prof.profesional_id}
+                  nombre={`${prof.nombre} ${prof.apellido || ""}`.trim()}
+                  especialidad={prof.especialidad?.nombre}
                   email={prof.email}
                 />
               ))}
@@ -266,7 +289,7 @@ export default function PerfilVeterinaria() {
             <table className="perfil-vet__services-table">
               <tbody>
                 {servicios.map((servicio) => (
-                  <tr key={servicio._id || servicio.id}>
+                  <tr key={servicio.servicio_id}>
                     <td>{servicio.nombre}</td>
                     {}
                     <td>{formatPrecio(servicio.precio)}</td>
@@ -288,18 +311,18 @@ export default function PerfilVeterinaria() {
             Horarios de atención
           </h2>
 
-          {horarios && Object.keys(horarios).length > 0 ? (
+          {hayHorariosCargados ? (
             <div className="perfil-vet__schedule-grid">
-              {Object.entries(horarios).map(([dia, h]) => (
+              {horariosPorDia.map(({ dia, desde, hasta }) => (
                 <div key={dia} className="perfil-vet__schedule-row">
                   <span className="perfil-vet__schedule-day">
                     {dia.charAt(0).toUpperCase() + dia.slice(1)}
                   </span>
-                  {(!h?.desde || !h?.hasta) ? (
+                  {(!desde || !hasta) ? (
                     <span className="perfil-vet__schedule-closed">Cerrado</span>
                   ) : (
                     <span className="perfil-vet__schedule-time">
-                      {h.desde} – {h.hasta}
+                      {desde} – {hasta}
                     </span>
                   )}
                 </div>

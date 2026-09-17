@@ -1,14 +1,13 @@
-
-// Un día sin horario cargado (desde/hasta vacíos o undefined) se trata como cerrado.
+// Un día sin horario cargado (sin franja en horario_veterinaria) se trata como cerrado.
 
 const DIAS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
 
-function obtenerHorarioDeHoy(horarios) {
-  if (!horarios) return null;
+function obtenerHorarioDeHoy(horarioVeterinaria) {
+  if (!horarioVeterinaria || horarioVeterinaria.length === 0) return null;
   const diaKey = DIAS[new Date().getDay()];
-  const horario = horarios[diaKey];
-  if (!horario?.desde || !horario?.hasta) return null; // día cerrado / sin cargar
-  return horario;
+  const horario = horarioVeterinaria.find((h) => h.dia_semana?.nombre === diaKey);
+  if (!horario?.hora_desde || !horario?.hora_hasta) return null; // día cerrado / sin cargar
+  return { desde: horario.hora_desde, hasta: horario.hora_hasta };
 }
 
 function horaActualEnMinutos() {
@@ -26,13 +25,13 @@ function horaStringAMinutos(hhmm) {
  * segun el horario del día actual 
  */
 export function calcularEstadoApertura(vet) {
-  const urgencias24 = !!vet?.urgencias24hs;
+  const urgencias24 = !!vet?.urgencias;
 
   if (urgencias24) {
     return { abierta: true, horaCierre: null };
   }
 
-  const horarioHoy = obtenerHorarioDeHoy(vet?.horarios);
+  const horarioHoy = obtenerHorarioDeHoy(vet?.horario_veterinaria);
   if (!horarioHoy) {
     return { abierta: false, horaCierre: null };
   }

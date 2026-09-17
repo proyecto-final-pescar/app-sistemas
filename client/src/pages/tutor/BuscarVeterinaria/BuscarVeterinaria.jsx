@@ -17,8 +17,12 @@ const FILTROS = ["Emergencias", "Vacunación", "Cerca mío"];
 
 function matchFiltro(vet, filtro) {
   if (!filtro) return true;
-  if (filtro === "Emergencias") return !!vet.urgencias24hs;
-  if (filtro === "Vacunación") return !!vet.especialidades?.includes("Vacunación");
+  if (filtro === "Emergencias") return !!vet.urgencias;
+  if (filtro === "Vacunación") {
+    return (vet.servicio || []).some(
+      (s) => s.categoria_servicio?.nombre === "Vacunación"
+    );
+  }
   return true;
 }
 
@@ -55,7 +59,7 @@ const BuscarVeterinaria = () => {
       setLoading(true);
       setError(null);
       const res = await getAllVeterinarias();
-      // getAllVeterinarias devuelve el body completo ({success, data}),
+    
       const lista = Array.isArray(res) ? res : res?.data ?? [];
       setVeterinarias(lista);
     } catch (err) {
@@ -214,11 +218,11 @@ const BuscarVeterinaria = () => {
                   const { abierta, horaCierre } = calcularEstadoApertura(vet);
                   return (
                     <VetCard
-                      key={vet._id}
+                      key={vet.veterinaria_id}
                       vet={{ ...vet, horaCierre }}
                       variante="fila"
                       abierta={abierta}
-                      onVerDetalle={() => handleVerClinica(vet._id)}
+                      onVerDetalle={() => handleVerClinica(vet.veterinaria_id)}
                     />
                   );
                 })}
