@@ -38,7 +38,7 @@ export default function HistorialIndividual() {
       <div className={styles.shell}>
         <Sidebar />
         <div className={styles.main}>
-          <TopBar />
+          <TopBar title="Ficha Médica" />
           <div className={styles.container}>Cargando...</div>
         </div>
       </div>
@@ -50,7 +50,7 @@ export default function HistorialIndividual() {
       <div className={styles.shell}>
         <Sidebar />
         <div className={styles.main}>
-          <TopBar />
+          <TopBar title="Ficha Médica" />
           <div className={styles.container}><p>{error}</p></div>
         </div>
       </div>
@@ -62,7 +62,7 @@ export default function HistorialIndividual() {
       <div className={styles.shell}>
         <Sidebar />
         <div className={styles.main}>
-          <TopBar />
+          <TopBar title="Ficha Médica" />
           <div className={styles.container}>No hay datos</div>
         </div>
       </div>
@@ -116,7 +116,7 @@ export default function HistorialIndividual() {
     <div className={styles.shell}>
       <Sidebar />
       <div className={styles.main}>
-        <TopBar />
+        <TopBar title={`Ficha Médica - ${mascota?.nombre || ''}`} />
         <div className={styles.container}>
           <button
             className={styles.backBtn}
