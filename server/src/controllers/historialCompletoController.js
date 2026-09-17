@@ -1,64 +1,134 @@
-import Mascota from '../models/Mascota.js'
-import FichaMedica from '../models/FichaMedica.js'
-import HistorialClinico from '../models/HistorialClinico.js'
-import Vacuna from '../models/Vacuna.js'
-import Estudio from '../models/Estudio.js'
-import Veterinaria from '../models/Veterinaria.js'
+import prisma from '../../prisma/client.js'
 
-const resolverNombresProfesionales = (items, veterinariasPorId) => {
-  return items.map((item) => {
-    const obj = item.toObject ? item.toObject() : item
-    const veterinaria = veterinariasPorId.get((obj.veterinariaId?._id || obj.veterinariaId)?.toString())
-    const profesional = veterinaria && obj.profesionalId
-      ? veterinaria.profesionales.id(obj.profesionalId)
-      : null
-
-    return {
-      ...obj,
-      profesionalId: profesional
-        ? { _id: profesional._id, nombre: profesional.nombre }
-        : null
-    }
-  })
+const isValidUUID = (id) => {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
 }
 
-const resolverProfesionalHistorial = (items, veterinariasPorId) => {
-  return items.map((item) => {
-    const obj = item.toObject ? item.toObject() : item
-    const idVeterinaria = obj.veterinariaId?._id?.toString() || obj.veterinariaId?.toString()
-    const veterinaria = veterinariasPorId.get(idVeterinaria)
-    const profesional = veterinaria && obj.profesionalId
-      ? veterinaria.profesionales.id(obj.profesionalId)
-      : null
-
-    return {
-      ...obj,
-      profesionalNombre: profesional?.nombre || null
-    }
-  })
+const formatearHora = (hora) => {
+  if (!hora) return null
+  return hora.toISOString().slice(11, 16)
 }
 
 export const obtenerHistorialCompleto = async (req, res) => {
   try {
     const { mascotaId } = req.params
 
-    const [mascota, fichaMedica, historialClinicoRaw, vacunasRaw, estudiosRaw] = await Promise.all([
+    if (!isValidUUID(mascotaId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'El id de la mascota no es válido'
+      })
+    }
 
-      Mascota.findById(mascotaId)
-        .populate('dueñoId', 'name email telefono'),
+    const mascota = await prisma.mascota.findUnique({
+      where: {
+        mascota_id: mascotaId
+      },
 
-      FichaMedica.findOne({ mascotaId }),
+      include: {
+        usuario: {
+          select: {
+            usuario_id: true,
+            nombre: true,
+            apellido: true,
+            email: true,
+            telefono: true
+          }
+        },
 
-      HistorialClinico.find({ mascotaId })
-        .populate('veterinariaId', 'nombre direccion')
-        .sort({ fecha: -1 }),
+        raza: {
+          include: {
+            especie: true
+          }
+        },
 
-      Vacuna.find({ mascotaId })
-        .sort({ fechaAplicada: -1 }),
+        sexo_mascota: true,
 
-      Estudio.find({ mascotaId })
-        .sort({ fecha: -1 })
-    ])
+        ficha_medica: true,
+
+        consulta: {
+          include: {
+            veterinaria: {
+              select: {
+                veterinaria_id: true,
+                nombre: true,
+                direccion: true
+              }
+            },
+
+            profesional: {
+              select: {
+                profesional_id: true,
+                nombre: true,
+                apellido: true
+              }
+            },
+
+            categoria_servicio: {
+              select: {
+                categoria_servicio_id: true,
+                nombre: true
+              }
+            }
+          },
+
+          orderBy: [
+            {
+              fecha: 'desc'
+            },
+            {
+              hora: 'desc'
+            }
+          ]
+        },
+
+        vacuna: {
+          include: {
+            veterinaria: {
+              select: {
+                veterinaria_id: true,
+                nombre: true
+              }
+            },
+
+            profesional: {
+              select: {
+                profesional_id: true,
+                nombre: true,
+                apellido: true
+              }
+            }
+          },
+
+          orderBy: {
+            fecha_aplicada: 'desc'
+          }
+        },
+
+        estudio: {
+          include: {
+            veterinaria: {
+              select: {
+                veterinaria_id: true,
+                nombre: true
+              }
+            },
+
+            profesional: {
+              select: {
+                profesional_id: true,
+                nombre: true,
+                apellido: true
+              }
+            }
+          },
+
+          orderBy: {
+            fecha: 'desc'
+          }
+        }
+      }
+    })
 
     if (!mascota) {
       return res.status(404).json({
@@ -67,39 +137,158 @@ export const obtenerHistorialCompleto = async (req, res) => {
       })
     }
 
-  
-    const idsVeterinarias = [
-      ...new Set([
-        ...historialClinicoRaw.map(h => (h.veterinariaId?._id || h.veterinariaId)?.toString()).filter(Boolean),
-        ...vacunasRaw.map(v => v.veterinariaId?.toString()).filter(Boolean),
-        ...estudiosRaw.map(e => e.veterinariaId?.toString()).filter(Boolean)
-      ])
-    ]
+    const fichaMedica = mascota.ficha_medica
+      ? {
+          id: mascota.ficha_medica.ficha_medica_id,
+          mascotaId: mascota.ficha_medica.mascota_id,
+          colorPelaje: mascota.ficha_medica.color_pelaje,
+          microchip: mascota.ficha_medica.microchip,
+          enfermedadesCronicas:
+            mascota.ficha_medica.enfermedades_cronicas,
+          cirugiasPrevias:
+            mascota.ficha_medica.cirugias_previas,
+          medicamentosHabituales:
+            mascota.ficha_medica.medicamentos_habituales,
+          createdAt: mascota.ficha_medica.created_at,
+          updatedAt: mascota.ficha_medica.updated_at
+        }
+      : null
 
-    const veterinarias = await Veterinaria.find({ _id: { $in: idsVeterinarias } })
-      .select('profesionales')
+    const historialClinico = mascota.consulta.map((consulta) => ({
+      id: consulta.consulta_id,
+      mascotaId: consulta.mascota_id,
 
-    const veterinariasPorId = new Map(
-      veterinarias.map(v => [v._id.toString(), v])
-    )
+      profesionalId: consulta.profesional_id,
+      profesionalNombre: consulta.profesional
+        ? `${consulta.profesional.nombre} ${consulta.profesional.apellido}`.trim()
+        : null,
 
-    const historialClinico = resolverProfesionalHistorial(historialClinicoRaw, veterinariasPorId)
-    const vacunas = resolverNombresProfesionales(vacunasRaw, veterinariasPorId)
-    const estudios = resolverNombresProfesionales(estudiosRaw, veterinariasPorId)
+      veterinariaId: consulta.veterinaria_id,
+
+      veterinaria: {
+        id: consulta.veterinaria.veterinaria_id,
+        nombre: consulta.veterinaria.nombre,
+        direccion: consulta.veterinaria.direccion
+      },
+
+      turnoId: consulta.turno_id,
+
+      fecha: consulta.fecha,
+      hora: formatearHora(consulta.hora),
+
+      categoriaServicio:
+        consulta.categoria_servicio?.nombre || null,
+
+      categoriaServicioId:
+        consulta.categoria_servicio?.categoria_servicio_id || null,
+
+      motivoConsulta: consulta.motivo_consulta,
+      anotaciones: consulta.anotaciones,
+
+      monto:
+        consulta.monto !== null
+          ? Number(consulta.monto)
+          : 0,
+
+      urlPdf: consulta.url_pdf,
+
+      createdAt: consulta.created_at,
+      updatedAt: consulta.updated_at
+    }))
+
+    const vacunas = mascota.vacuna.map((vacuna) => ({
+      id: vacuna.vacuna_id,
+      mascotaId: vacuna.mascota_id,
+
+      profesionalId: vacuna.profesional_id,
+      profesionalNombre: vacuna.profesional
+        ? `${vacuna.profesional.nombre} ${vacuna.profesional.apellido}`.trim()
+        : null,
+
+      veterinariaId: vacuna.veterinaria_id,
+      veterinariaNombre:
+        vacuna.veterinaria?.nombre || null,
+
+      nombre: vacuna.nombre,
+      fechaAplicada: vacuna.fecha_aplicada,
+
+      createdAt: vacuna.created_at,
+      updatedAt: vacuna.updated_at
+    }))
+
+    const estudios = mascota.estudio.map((estudio) => ({
+      id: estudio.estudio_id,
+      mascotaId: estudio.mascota_id,
+
+      profesionalId: estudio.profesional_id,
+      profesionalNombre: estudio.profesional
+        ? `${estudio.profesional.nombre} ${estudio.profesional.apellido}`.trim()
+        : null,
+
+      veterinariaId: estudio.veterinaria_id,
+      veterinariaNombre:
+        estudio.veterinaria?.nombre || null,
+
+      nombre: estudio.nombre,
+      fecha: estudio.fecha,
+      urlArchivo: estudio.url_archivo,
+
+      createdAt: estudio.created_at,
+      updatedAt: estudio.updated_at
+    }))
+
+    const data = {
+      mascota: {
+        id: mascota.mascota_id,
+        nombre: mascota.nombre,
+
+        especie:
+          mascota.raza?.especie?.nombre || null,
+
+        raza:
+          mascota.raza?.nombre || null,
+
+        sexo:
+          mascota.sexo_mascota?.nombre || null,
+
+        fechaNacimiento:
+          mascota.fecha_nacimiento,
+
+        foto: mascota.foto,
+        esCastrado: mascota.es_castrado,
+
+        peso:
+          mascota.peso !== null
+            ? Number(mascota.peso)
+            : null,
+
+        dueno: mascota.usuario
+          ? {
+              id: mascota.usuario.usuario_id,
+              nombre: mascota.usuario.nombre,
+              apellido: mascota.usuario.apellido,
+              email: mascota.usuario.email,
+              telefono: mascota.usuario.telefono
+            }
+          : null
+      },
+
+      fichaMedica,
+      historialClinico,
+      vacunas,
+      estudios
+    }
 
     return res.status(200).json({
       success: true,
-      data: {
-        mascota,
-        fichaMedica,
-        historialClinico,
-        vacunas,
-        estudios
-      }
+      data
     })
-
   } catch (error) {
-    console.error('Error en obtenerHistorialCompleto:', error)
+    console.error(
+      'Error en obtenerHistorialCompleto:',
+      error
+    )
+
     return res.status(500).json({
       success: false,
       message: 'Error interno del servidor'

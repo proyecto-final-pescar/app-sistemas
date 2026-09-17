@@ -26,52 +26,26 @@ const separarNombreApellido = (nombreCompleto) => {
   return { nombre, apellido };
 };
 
-// Traduce la respuesta cruda de Prisma (con catálogos anidados) al shape
-// legible que espera el frontend, compatible con lo que devolvía Mongo.
-const mapearVeterinariaLegible = (veterinaria) => {
+
+const formatearHora = (horaDate) => (horaDate ? new Date(horaDate).toISOString().slice(11, 16) : null);
+
+
+const formatearVeterinaria = (veterinaria) => {
   if (!veterinaria) return veterinaria;
 
-  const horarios = {};
-  for (const horario of veterinaria.horario_veterinaria || []) {
-    const dia = horario.dia_semana?.nombre;
-    if (!dia) continue;
-    horarios[dia] = {
-      desde: new Date(horario.hora_desde).toISOString().slice(11, 16),
-      hasta: new Date(horario.hora_hasta).toISOString().slice(11, 16)
-    };
-  }
-
   return {
-    _id: veterinaria.veterinaria_id,
-    usuarioId: veterinaria.usuario_id,
-    nombre: veterinaria.nombre,
-    direccion: veterinaria.direccion,
-    razonSocial: veterinaria.razon_social,
-    cuit: veterinaria.cuit,
-    telefono: veterinaria.telefono,
-    email: veterinaria.email,
-    sitioWeb: veterinaria.sitio_web,
-    coordenadas: {
-      type: 'Point',
-      coordinates: [Number(veterinaria.longitud), Number(veterinaria.latitud)]
-    },
-    urgencias24hs: veterinaria.urgencias,
-    estado: veterinaria.estado_veterinaria_id,
-    servicios: (veterinaria.servicio || []).map((s) => ({
-      _id: s.servicio_id,
-      categoria: s.categoria_servicio?.nombre,
-      nombre: s.nombre,
+    ...veterinaria,
+    latitud: veterinaria.latitud !== undefined ? Number(veterinaria.latitud) : veterinaria.latitud,
+    longitud: veterinaria.longitud !== undefined ? Number(veterinaria.longitud) : veterinaria.longitud,
+    servicio: (veterinaria.servicio || []).map((s) => ({
+      ...s,
       precio: Number(s.precio)
     })),
-    profesionales: (veterinaria.profesional || []).map((p) => ({
-      _id: p.profesional_id,
-      nombre: p.nombre,
-      apellido: p.apellido,
-      especialidad: p.especialidad?.nombre,
-      email: p.email,
-      servicios: (p.profesional_servicio || []).map((ps) => ps.servicio_id)
-    })),
-    horarios
+    horario_veterinaria: (veterinaria.horario_veterinaria || []).map((h) => ({
+      ...h,
+      hora_desde: formatearHora(h.hora_desde),
+      hora_hasta: formatearHora(h.hora_hasta)
+    }))
   };
 };
 
@@ -108,8 +82,7 @@ const sincronizarProfesionales = async (tx, veterinariaId, profesionalesBody) =>
       profesionalId = nuevoProfesional.profesional_id;
     }
 
-    // Sincronizar servicios: se borra todo y se recrea, igual criterio
-    // que sincronizarHorarios — simple y evita tener que diffear altas/bajas.
+    
     if (profesional.serviciosIds !== undefined) {
       await tx.profesional_servicio.deleteMany({
         where: { profesional_id: profesionalId }
@@ -378,22 +351,18 @@ export const buscarVeterinarias = async (req, res) => {
     `;
 
     const data = veterinarias.map((v) => ({
-      _id: v.veterinaria_id,
+      veterinaria_id: v.veterinaria_id,
       nombre: v.nombre,
       direccion: v.direccion,
       telefono: v.telefono,
       email: v.email,
-      urgencias24hs: v.urgencias,
-      coordenadas: {
-        type: 'Point',
-        coordinates: [Number(v.longitud), Number(v.latitud)]
-      },
-      distanciaMetros: Number(v.distancia_metros)
+      urgencias: v.urgencias,
+      latitud: Number(v.latitud),
+      longitud: Number(v.longitud),
+      distancia_metros: Number(v.distancia_metros)
     }));
 
     return res.status(200).json({ success: true, data });
-
-    //return res.status(200).json({ success: true, data: veterinarias });
   } catch (error) {
     console.error('Error en GET /veterinarias/buscar:', error);
     return res.status(500).json({ message: 'Error interno del servidor' });
@@ -412,7 +381,7 @@ export const obtenerVeterinarias = async (req, res) => {
       }
     });
 
-    res.status(200).json({ success: true, data: veterinarias.map(mapearVeterinariaLegible) });
+    res.status(200).json({ success: true, data: veterinarias.map(formatearVeterinaria) });
   } catch (error) {
     console.error('Error en GET /veterinarias:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
@@ -437,14 +406,13 @@ export const obtenerVeterinariaPorId = async (req, res) => {
       return res.status(404).json({ message: 'El recurso no existe.' });
     }
 
-    res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinaria) });
+    res.status(200).json({ success: true, data: formatearVeterinaria(veterinaria) });
   } catch (error) {
     console.error('Error en GET /veterinarias/:id:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
 
-// GET /veterinarias/mia: devuelve la veterinaria del usuario logueado
 // GET /veterinarias/mia: devuelve la veterinaria del usuario logueado
 export const obtenerMiVeterinaria = async (req, res) => {
   try {
@@ -463,7 +431,7 @@ export const obtenerMiVeterinaria = async (req, res) => {
       return res.status(404).json({ message: 'No tenés una veterinaria registrada.' });
     }
 
-    res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinaria) });
+    res.status(200).json({ success: true, data: formatearVeterinaria(veterinaria) });
   } catch (error) {
     console.error('Error en GET /veterinarias/mia:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
@@ -484,7 +452,7 @@ export const actualizarMiVeterinaria = async (req, res) => {
 
     const veterinariaActualizada = await aplicarActualizacionVeterinaria(veterinaria.veterinaria_id, req.body);
 
-    return res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinariaActualizada) });
+    return res.status(200).json({ success: true, data: formatearVeterinaria(veterinariaActualizada) });
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ message: error.message });
     console.error('Error en PUT /veterinarias/mia:', error);
@@ -562,7 +530,7 @@ export const crearVeterinaria = async (req, res) => {
         });
       }
       serviciosResueltos.push({
-        idLocal: servicio.idLocal, // ← nuevo, se usa solo en memoria, no se persiste
+        idLocal: servicio.idLocal, // ← se usa solo en memoria, no se persiste
         nombre: servicio.nombre,
         precio: servicio.precio,
         categoria_servicio_id: categoriaId
@@ -655,7 +623,7 @@ export const crearVeterinaria = async (req, res) => {
       });
     });
 
-    return res.status(201).json({ success: true, data: mapearVeterinariaLegible(veterinariaCreada) });
+    return res.status(201).json({ success: true, data: formatearVeterinaria(veterinariaCreada) });
   } catch (error) {
     // Violación de constraint único: usuario_id (1 vet por usuario) o cuit
     if (error.code === 'P2002') {
@@ -694,7 +662,7 @@ export const actualizarVeterinaria = async (req, res) => {
 
     const veterinariaActualizada = await aplicarActualizacionVeterinaria(id, req.body);
 
-    return res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinariaActualizada) });
+    return res.status(200).json({ success: true, data: formatearVeterinaria(veterinariaActualizada) });
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ message: error.message });
     if (error.code === 'P2025') return res.status(404).json({ message: 'El recurso no existe.' });
@@ -721,7 +689,11 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
 
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(
-      Math.max(parseInt(req.query.limit, 10) || PACIENTES_LIMITE_DEFAULT, 1),
+      Math.max(
+        parseInt(req.query.limit, 10) ||
+          PACIENTES_LIMITE_DEFAULT,
+        1
+      ),
       PACIENTES_LIMITE_MAXIMO
     );
     const skip = (page - 1) * limit;
@@ -772,22 +744,24 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
     ]);
 
     const data = pacientes.map((mascota) => ({
-      id: mascota.mascota_id,
+      mascota_id: mascota.mascota_id,
       nombre: mascota.nombre,
       raza: mascota.raza?.nombre || 'Sin especificar',
-      fechaNacimiento: mascota.fecha_nacimiento,
+      fecha_nacimiento: mascota.fecha_nacimiento,
       foto: mascota.foto || null,
-      dueño: {
-        id: mascota.usuario?.usuario_id,
-        nombre: mascota.usuario
-          ? `${mascota.usuario.nombre} ${mascota.usuario.apellido}`
-          : 'Sin información'
-      }
+      dueño: mascota.usuario
+        ? {
+          usuario_id: mascota.usuario.usuario_id,
+          nombre: mascota.usuario.nombre,
+          apellido: mascota.usuario.apellido
+        }
+        : null
     }));
 
     return res.status(200).json({
       success: true,
       data,
+
       paginacion: {
         total,
         page,

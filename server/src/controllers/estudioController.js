@@ -1,37 +1,87 @@
-import Estudio from '../models/Estudio.js'
-import Mascota from '../models/Mascota.js'
-import Veterinaria from '../models/Veterinaria.js'
+import prisma from '../../prisma/client.js'
 
-// Resuelve el nombre del profesional para una lista de estudios,
-// agrupando por veterinaria para no repetir consultas.
-const conNombreProfesional = async (estudios) => {
-  const veterinariaIds = [...new Set(estudios.map((e) => e.veterinariaId.toString()))]
-  const veterinarias = await Veterinaria.find({ _id: { $in: veterinariaIds } }).select('profesionales')
-  const mapaVeterinarias = new Map(veterinarias.map((v) => [v._id.toString(), v]))
-
-  return estudios.map((estudio) => {
-    const vet = mapaVeterinarias.get(estudio.veterinariaId.toString())
-    const profesional = vet?.profesionales.id(estudio.profesionalId)
-    return {
-      ...estudio.toObject(),
-      profesionalNombre: profesional?.nombre || null
-    }
-  })
+const isValidUUID = (id) => {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
 }
+
+const relacionesEstudio = {
+  profesional: {
+    select: {
+      profesional_id: true,
+      nombre: true,
+      apellido: true
+    }
+  },
+
+  veterinaria: {
+    select: {
+      veterinaria_id: true,
+      nombre: true
+    }
+  }
+}
+
+const formatearEstudio = (estudio) => ({
+  id: estudio.estudio_id,
+  mascotaId: estudio.mascota_id,
+
+  profesionalId: estudio.profesional_id,
+  profesionalNombre: estudio.profesional
+    ? `${estudio.profesional.nombre} ${estudio.profesional.apellido}`.trim()
+    : null,
+
+  veterinariaId: estudio.veterinaria_id,
+  veterinariaNombre: estudio.veterinaria?.nombre || null,
+
+  nombre: estudio.nombre,
+  fecha: estudio.fecha,
+  urlArchivo: estudio.url_archivo,
+
+  createdAt: estudio.created_at,
+  updatedAt: estudio.updated_at
+})
 
 export const crearEstudio = async (req, res) => {
   try {
-    const { mascotaId, historialClinicoId, nombre, fecha, urlArchivo, profesionalId } = req.body
+    const {
+      mascotaId,
+      nombre,
+      fecha,
+      urlArchivo,
+      profesionalId
+    } = req.body
 
-    if (!mascotaId || !nombre || !fecha || !profesionalId) {
+    if (!mascotaId || !isValidUUID(mascotaId)) {
       return res.status(400).json({
         success: false,
-        message: 'mascotaId, nombre, fecha y profesionalId son requeridos'
+        message: 'La mascota es inválida'
+      })
+    }
+
+    if (!profesionalId || !isValidUUID(profesionalId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'El profesional es inválido'
+      })
+    }
+
+    if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'El nombre del estudio es requerido'
+      })
+    }
+
+    if (!fecha) {
+      return res.status(400).json({
+        success: false,
+        message: 'La fecha es requerida'
       })
     }
 
     const fechaValida = new Date(fecha)
-    if (isNaN(fechaValida.getTime())) {
+
+    if (Number.isNaN(fechaValida.getTime())) {
       return res.status(400).json({
         success: false,
         message: 'La fecha no es válida'
@@ -49,7 +99,15 @@ export const crearEstudio = async (req, res) => {
       }
     }
 
-    const mascota = await Mascota.findById(mascotaId)
+    const mascota = await prisma.mascota.findUnique({
+      where: {
+        mascota_id: mascotaId
+      },
+      select: {
+        mascota_id: true
+      }
+    })
+
     if (!mascota) {
       return res.status(404).json({
         success: false,
@@ -57,7 +115,15 @@ export const crearEstudio = async (req, res) => {
       })
     }
 
-    const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id })
+    const veterinaria = await prisma.veterinaria.findUnique({
+      where: {
+        usuario_id: req.user.id
+      },
+      select: {
+        veterinaria_id: true
+      }
+    })
+
     if (!veterinaria) {
       return res.status(404).json({
         success: false,
@@ -65,7 +131,17 @@ export const crearEstudio = async (req, res) => {
       })
     }
 
-    const profesional = veterinaria.profesionales.id(profesionalId)
+    const profesional = await prisma.profesional.findFirst({
+      where: {
+        profesional_id: profesionalId,
+        veterinaria_id: veterinaria.veterinaria_id,
+        active: true
+      },
+      select: {
+        profesional_id: true
+      }
+    })
+
     if (!profesional) {
       return res.status(404).json({
         success: false,
@@ -73,149 +149,343 @@ export const crearEstudio = async (req, res) => {
       })
     }
 
-    const estudio = new Estudio({
-      mascotaId,
-      dueñoId: mascota.dueñoId,
-      profesionalId: profesional._id,
-      veterinariaId: veterinaria._id,
-      historialClinicoId: historialClinicoId || null,
-      nombre: nombre.trim(),
-      fecha: fechaValida,
-      urlArchivo: urlArchivo?.trim() || null
+    const estudio = await prisma.estudio.create({
+      data: {
+        mascota_id: mascotaId,
+        profesional_id: profesionalId,
+        veterinaria_id: veterinaria.veterinaria_id,
+        nombre: nombre.trim(),
+        fecha: fechaValida,
+        url_archivo: urlArchivo?.trim() || null
+      },
+
+      include: relacionesEstudio
     })
 
-    await estudio.save()
-
-    const [data] = await conNombreProfesional([estudio])
-
-    return res.status(201).json({ success: true, data })
-
+    return res.status(201).json({
+      success: true,
+      data: formatearEstudio(estudio)
+    })
   } catch (error) {
-    if (error.name === 'ValidationError') {
-      const errores = Object.values(error.errors).map((e) => e.message)
-      return res.status(400).json({ success: false, message: 'Error de validación', errores })
-    }
     console.error('Error en crearEstudio:', error)
-    return res.status(500).json({ success: false, message: 'Error interno del servidor' })
+
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    })
   }
 }
 
 export const obtenerEstudiosPorMascota = async (req, res) => {
   try {
     const { mascotaId } = req.params
-    const estudios = await Estudio.find({ mascotaId })
-      .populate('historialClinicoId', 'fecha categoriaServicio')
-      .sort({ fecha: -1 })
 
-    const data = await conNombreProfesional(estudios)
+    if (!isValidUUID(mascotaId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'El id de la mascota no es válido'
+      })
+    }
 
-    return res.status(200).json({ success: true, data })
+    const estudios = await prisma.estudio.findMany({
+      where: {
+        mascota_id: mascotaId
+      },
+
+      include: relacionesEstudio,
+
+      orderBy: {
+        fecha: 'desc'
+      }
+    })
+
+    return res.status(200).json({
+      success: true,
+      data: estudios.map(formatearEstudio)
+    })
   } catch (error) {
     console.error('Error en obtenerEstudiosPorMascota:', error)
-    return res.status(500).json({ success: false, message: 'Error interno del servidor' })
+
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    })
   }
 }
 
 export const obtenerEstudioPorId = async (req, res) => {
   try {
-    const estudio = await Estudio.findById(req.params.id)
-      .populate('mascotaId', 'nombre especie')
-      .populate('historialClinicoId', 'fecha categoriaServicio')
+    const { id } = req.params
 
-    if (!estudio) {
-      return res.status(404).json({ success: false, message: 'Estudio no encontrado' })
+    if (!isValidUUID(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'El id del estudio no es válido'
+      })
     }
 
-    const [data] = await conNombreProfesional([estudio])
+    const estudio = await prisma.estudio.findUnique({
+      where: {
+        estudio_id: id
+      },
 
-    return res.status(200).json({ success: true, data })
+      include: {
+        ...relacionesEstudio,
+
+        mascota: {
+          select: {
+            mascota_id: true,
+            nombre: true,
+
+            raza: {
+              select: {
+                especie: {
+                  select: {
+                    nombre: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (!estudio) {
+      return res.status(404).json({
+        success: false,
+        message: 'Estudio no encontrado'
+      })
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...formatearEstudio(estudio),
+
+        mascota: {
+          id: estudio.mascota.mascota_id,
+          nombre: estudio.mascota.nombre,
+          especie:
+            estudio.mascota.raza?.especie?.nombre || null
+        }
+      }
+    })
   } catch (error) {
     console.error('Error en obtenerEstudioPorId:', error)
-    return res.status(500).json({ success: false, message: 'Error interno del servidor' })
-  }
-}
 
-export const eliminarEstudio = async (req, res) => {
-  try {
-    const estudio = await Estudio.findById(req.params.id)
-    if (!estudio) {
-      return res.status(404).json({ success: false, message: 'Estudio no encontrado' })
-    }
-
-    const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id })
-    if (!veterinaria || estudio.veterinariaId.toString() !== veterinaria._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Solo podés eliminar estudios de tu veterinaria' })
-    }
-
-    await estudio.deleteOne()
-
-    return res.status(200).json({ success: true, message: 'Estudio eliminado correctamente' })
-  } catch (error) {
-    console.error('Error en eliminarEstudio:', error)
-    return res.status(500).json({ success: false, message: 'Error interno del servidor' })
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    })
   }
 }
 
 export const actualizarEstudio = async (req, res) => {
   try {
-    const estudio = await Estudio.findById(req.params.id)
+    const { id } = req.params
+    const { nombre, fecha, urlArchivo, profesionalId } = req.body
+
+    if (!isValidUUID(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'El id del estudio no es válido'
+      })
+    }
+
+    const estudio = await prisma.estudio.findUnique({
+      where: {
+        estudio_id: id
+      }
+    })
+
     if (!estudio) {
-      return res.status(404).json({ success: false, message: 'Estudio no encontrado' })
+      return res.status(404).json({
+        success: false,
+        message: 'Estudio no encontrado'
+      })
     }
 
-    const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id })
-    if (!veterinaria || estudio.veterinariaId.toString() !== veterinaria._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Solo podés editar estudios de tu veterinaria' })
+    const veterinaria = await prisma.veterinaria.findUnique({
+      where: {
+        usuario_id: req.user.id
+      },
+      select: {
+        veterinaria_id: true
+      }
+    })
+
+    if (
+      !veterinaria ||
+      estudio.veterinaria_id !== veterinaria.veterinaria_id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo podés editar estudios de tu veterinaria'
+      })
     }
 
-    const { nombre, fecha, urlArchivo, historialClinicoId, profesionalId } = req.body
+    const dataActualizar = {}
 
     if (nombre !== undefined) {
-      if (!nombre.trim()) {
-        return res.status(400).json({ success: false, message: 'El nombre no puede estar vacío' })
+      if (typeof nombre !== 'string' || !nombre.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'El nombre no puede estar vacío'
+        })
       }
-      estudio.nombre = nombre.trim()
+
+      dataActualizar.nombre = nombre.trim()
     }
 
     if (fecha !== undefined) {
       const fechaValida = new Date(fecha)
-      if (isNaN(fechaValida.getTime())) {
-        return res.status(400).json({ success: false, message: 'La fecha no es válida' })
+
+      if (Number.isNaN(fechaValida.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'La fecha no es válida'
+        })
       }
-      estudio.fecha = fechaValida
+
+      dataActualizar.fecha = fechaValida
     }
 
     if (profesionalId !== undefined) {
-      const profesional = veterinaria.profesionales.id(profesionalId)
-      if (!profesional) {
-        return res.status(404).json({ success: false, message: 'El profesional seleccionado no pertenece a esta veterinaria' })
+      if (!isValidUUID(profesionalId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'El profesional es inválido'
+        })
       }
-      estudio.profesionalId = profesional._id
+
+      const profesional = await prisma.profesional.findFirst({
+        where: {
+          profesional_id: profesionalId,
+          veterinaria_id: veterinaria.veterinaria_id,
+          active: true
+        }
+      })
+
+      if (!profesional) {
+        return res.status(404).json({
+          success: false,
+          message: 'El profesional seleccionado no pertenece a esta veterinaria'
+        })
+      }
+
+      dataActualizar.profesional_id = profesionalId
     }
 
     if (urlArchivo !== undefined) {
-      if (urlArchivo && urlArchivo.trim()) {
+      if (urlArchivo?.trim()) {
         try {
-          new URL(urlArchivo)
+          new URL(urlArchivo.trim())
         } catch {
-          return res.status(400).json({ success: false, message: 'La URL del archivo no es válida' })
+          return res.status(400).json({
+            success: false,
+            message: 'La URL del archivo no es válida'
+          })
         }
-        estudio.urlArchivo = urlArchivo.trim()
+
+        dataActualizar.url_archivo = urlArchivo.trim()
       } else {
-        estudio.urlArchivo = null
+        dataActualizar.url_archivo = null
       }
     }
 
-    if (historialClinicoId !== undefined) estudio.historialClinicoId = historialClinicoId || null
+    if (Object.keys(dataActualizar).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se enviaron campos para actualizar'
+      })
+    }
 
-    await estudio.save()
+    dataActualizar.updated_at = new Date()
 
-    const [data] = await conNombreProfesional([estudio])
+    const estudioActualizado = await prisma.estudio.update({
+      where: {
+        estudio_id: id
+      },
 
-    return res.status(200).json({ success: true, data })
+      data: dataActualizar,
 
+      include: relacionesEstudio
+    })
+
+    return res.status(200).json({
+      success: true,
+      data: formatearEstudio(estudioActualizado)
+    })
   } catch (error) {
     console.error('Error en actualizarEstudio:', error)
-    return res.status(500).json({ success: false, message: 'Error interno del servidor' })
+
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    })
+  }
+}
+
+export const eliminarEstudio = async (req, res) => {
+  try {
+    const { id } = req.params
+
+    if (!isValidUUID(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'El id del estudio no es válido'
+      })
+    }
+
+    const estudio = await prisma.estudio.findUnique({
+      where: {
+        estudio_id: id
+      }
+    })
+
+    if (!estudio) {
+      return res.status(404).json({
+        success: false,
+        message: 'Estudio no encontrado'
+      })
+    }
+
+    const veterinaria = await prisma.veterinaria.findUnique({
+      where: {
+        usuario_id: req.user.id
+      },
+      select: {
+        veterinaria_id: true
+      }
+    })
+
+    if (
+      !veterinaria ||
+      estudio.veterinaria_id !== veterinaria.veterinaria_id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo podés eliminar estudios de tu veterinaria'
+      })
+    }
+
+    await prisma.estudio.delete({
+      where: {
+        estudio_id: id
+      }
+    })
+
+    return res.status(200).json({
+      success: true,
+      message: 'Estudio eliminado correctamente'
+    })
+  } catch (error) {
+    console.error('Error en eliminarEstudio:', error)
+
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor'
+    })
   }
 }

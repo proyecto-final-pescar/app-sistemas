@@ -17,8 +17,33 @@ export const ESTADO = {
   ATENDIDO: 'ATE'
 }
 
+
+export const ESTADOS_VALIDOS = new Set(Object.values(ESTADO))
+
 export const includeTurnoCompleto = {
-  mascota: { select: { mascota_id: true, nombre: true, raza: { select: { especie: { select: { nombre: true } } } } } },
+  mascota: {
+    select: {
+      mascota_id: true,
+      nombre: true,
+      fecha_nacimiento: true,
+      peso: true,
+      raza: {
+        select: {
+          nombre: true,                          
+          especie: { select: { nombre: true } }
+        }
+      },
+      sexo_mascota: { select: { nombre: true } }, 
+      usuario: {
+        select: {
+          usuario_id: true,
+          nombre: true,
+          apellido: true,
+          email: true                              
+        }
+      }
+    }
+  },
   veterinaria: { select: { veterinaria_id: true, nombre: true, direccion: true } },
   profesional: { select: { profesional_id: true, nombre: true, apellido: true } },
   servicio: { select: { servicio_id: true, nombre: true } }
@@ -71,7 +96,7 @@ export const formatearTurno = (turno) => ({
 // ─────────────────────────────────────────────────────────────
 export const obtenerTurnos = async (req, res) => {
   try {
-    const { veterinariaId, usuarioId, estado, estadoDistinto, servicioId, fechaDesde, fechaHasta } = req.query
+    const { veterinariaId, usuarioId, estado, estadoDistinto, estados, servicioId, fechaDesde, fechaHasta } = req.query
 
     if (!veterinariaId && !usuarioId) {
       return res.status(400).json({ message: 'Falta veterinariaId o usuarioId' })
@@ -99,11 +124,8 @@ export const obtenerTurnos = async (req, res) => {
       }
 
       const esDueñoDeLaVeterinaria = veterinaria.usuario_id === req.user.id
-      // Ver horarios DISPONIBLES de cualquier veterinaria es público — así
-      // funciona la grilla de reserva que ve el dueño de una mascota. Ver
-      // cualquier otro estado implica datos de reservas ajenas (mascota,
-      // motivo, notas) y requiere ser el dueño de esa veterinaria.
-      const soloConsultaDisponibilidad = estado === 'DIS' && !estadoDistinto
+      
+      const soloConsultaDisponibilidad = estado === ESTADO.DISPONIBLE && !estadoDistinto && !estados
 
       if (!esDueñoDeLaVeterinaria && !soloConsultaDisponibilidad) {
         return res.status(403).json({ message: 'No tenés permisos para ver esos turnos.' })
@@ -113,8 +135,34 @@ export const obtenerTurnos = async (req, res) => {
     }
 
     if (servicioId) filtro.servicio_id = servicioId
-    if (estadoDistinto) filtro.estado_turno_id = { not: estadoDistinto }
-    else if (estado) filtro.estado_turno_id = estado
+
+   
+    if (estados) {
+      const listaEstados = estados.split(',').map((e) => e.trim()).filter(Boolean)
+      const listaInvalida = listaEstados.filter((e) => !ESTADOS_VALIDOS.has(e))
+
+      if (listaEstados.length === 0 || listaInvalida.length > 0) {
+        return res.status(400).json({
+          message: `Estado(s) inválido(s): ${listaInvalida.join(', ') || '(vacío)'}. Valores permitidos: ${[...ESTADOS_VALIDOS].join(', ')}`
+        })
+      }
+
+      filtro.estado_turno_id = { in: listaEstados }
+    } else if (estadoDistinto) {
+      if (!ESTADOS_VALIDOS.has(estadoDistinto)) {
+        return res.status(400).json({
+          message: `Estado inválido: "${estadoDistinto}". Valores permitidos: ${[...ESTADOS_VALIDOS].join(', ')}`
+        })
+      }
+      filtro.estado_turno_id = { not: estadoDistinto }
+    } else if (estado) {
+      if (!ESTADOS_VALIDOS.has(estado)) {
+        return res.status(400).json({
+          message: `Estado inválido: "${estado}". Valores permitidos: ${[...ESTADOS_VALIDOS].join(', ')}`
+        })
+      }
+      filtro.estado_turno_id = estado
+    }
 
     if (fechaDesde || fechaHasta) {
       filtro.fecha = {}
@@ -178,12 +226,7 @@ export const obtenerTurnoPorId = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────
 // POST /turnos/:id/reservar
-//
-// OPCIÓN B: el profesional queda fijo desde que la veterinaria lo crea
-// (vía crearOfertaHoraria) — cada profesional disponible es un turno
-// propio, no un candidato entre varios. Reservar ya no elige profesional,
-// solo transiciona el turno existente de 'disponible' a 'pendiente'.
-// ─────────────────────────────────────────────────────────────
+
 export const reservarTurno = async (req, res) => {
   try {
     const { turnoId } = req.params
@@ -206,8 +249,7 @@ export const reservarTurno = async (req, res) => {
       return res.status(404).json({ message: 'Veterinaria no disponible' })
     }
 
-    // La mascota tiene que pertenecer a quien está reservando. Como turno
-    // no tiene usuario_id propio, el dueño se deriva de mascota.dueno_id.
+  
     const mascota = await prisma.mascota.findUnique({ where: { mascota_id: mascotaId } })
     if (!mascota || mascota.dueno_id !== req.user.id) {
       return res.status(403).json({ message: 'La mascota no te pertenece' })
@@ -423,13 +465,7 @@ export const liberarTurnosVencidos = async () => {
 
 // ─────────────────────────────────────────────────────────────
 // POST /turnos/oferta — la veterinaria carga horarios disponibles
-//
-// OPCIÓN B: se crea UN turno por cada profesional seleccionado, por
-// slot — cada profesional disponible a esa hora es un turno propio y
-// reservable de forma independiente. El conflicto se detecta ahora por
-// (veterinaria + profesional + fecha + hora), protegido a nivel de base
-// por el índice único parcial ix_turno_slot_unico.
-// ─────────────────────────────────────────────────────────────
+
 export const crearOfertaHoraria = async (req, res) => {
   try {
     const { servicioId, profesionales, slots, duracion } = req.body
