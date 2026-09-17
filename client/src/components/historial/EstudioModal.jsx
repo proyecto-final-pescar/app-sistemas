@@ -19,9 +19,11 @@ const EstudioModal = ({ abierto, estudio, profesionales = [], onClose, onGuardar
   const [guardando, setGuardando] = useState(false);
   const [errorApi, setErrorApi] = useState("");
 
-  const opcionesProfesionales = profesionales.map((p) => ({
-    value: p._id,
-    label: p.especialidad ? `${p.nombre} · ${p.especialidad}` : p.nombre,
+    const opcionesProfesionales = profesionales.map((p) => ({
+   value: p.profesional_id,
+   label: p.especialidad?.nombre
+    ? `${p.nombre} ${p.apellido} · ${p.especialidad.nombre}`
+    : `${p.nombre} ${p.apellido}`,
   }));
 
   const enviar = async (event) => {
@@ -38,7 +40,7 @@ const EstudioModal = ({ abierto, estudio, profesionales = [], onClose, onGuardar
     try {
       const datos = { nombre: form.nombre.trim(), fecha: form.fecha, profesionalId: form.profesionalId };
       if (form.quitarArchivo && !form.archivo) datos.urlArchivo = null;
-      await onGuardar(datos, estudio?._id, form.archivo);
+      await onGuardar(datos, estudio?.id, form.archivo);
       onClose();
     } catch (err) {
       setErrorApi(err.response?.data?.message || "No se pudo guardar el estudio.");

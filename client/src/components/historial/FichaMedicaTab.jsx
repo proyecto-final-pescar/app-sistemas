@@ -93,9 +93,9 @@ const FichaMedicaTab = ({
     setEliminando(true);
     try {
       if (confirmacion.tipo === "vacuna") {
-        await ejecutar(() => onEliminarVacuna(confirmacion.item._id), "La vacuna se eliminó correctamente.");
+        await ejecutar(() => onEliminarVacuna(confirmacion.item.id), "La vacuna se eliminó correctamente.");
       } else {
-        await ejecutar(() => onEliminarEstudio(confirmacion.item._id), "El estudio se eliminó correctamente.");
+        await ejecutar(() => onEliminarEstudio(confirmacion.item.id), "El estudio se eliminó correctamente.");
       }
       setConfirmacion(null);
     } catch {
@@ -166,7 +166,7 @@ const FichaMedicaTab = ({
         ) : (
           <ul className={styles.recordList}>
             {vacunas.map((vacuna) => (
-              <li key={vacuna._id}>
+                <li key={vacuna.id}>
                 <div>
                   <strong>{vacuna.nombre}</strong>
                   <span>Aplicada el {formatearFecha(vacuna.fechaAplicada)}{nombreProfesional(vacuna) ? ` · ${nombreProfesional(vacuna)}` : ""}</span>
@@ -191,7 +191,7 @@ const FichaMedicaTab = ({
         ) : (
           <ul className={styles.recordList}>
             {estudios.map((estudio) => (
-              <li key={estudio._id}>
+              <li key={estudio.id}>
                 <div>
                   <strong>{estudio.nombre}</strong>
                   <span>{formatearFecha(estudio.fecha)}{nombreProfesional(estudio) ? ` · ${nombreProfesional(estudio)}` : ""}</span>

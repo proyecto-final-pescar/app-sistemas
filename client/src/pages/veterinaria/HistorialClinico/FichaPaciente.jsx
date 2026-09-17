@@ -66,7 +66,7 @@ const FichaPaciente = () => {
         setFichaMedica(data.fichaMedica ?? null);
         setVacunas(Array.isArray(data.vacunas) ? data.vacunas : []);
         setEstudios(Array.isArray(data.estudios) ? data.estudios : []);
-        setProfesionales(Array.isArray(veterinaria?.profesionales) ? veterinaria.profesionales : []);
+       setProfesionales(Array.isArray(veterinaria?.profesional) ? veterinaria.profesional : []);
         setTurnosPendientes(turnos);
       } catch (err) {
         if (err.response?.status === 403) {
@@ -101,16 +101,16 @@ const FichaPaciente = () => {
     return coincideTexto && coincideFecha;
   });
 
-  const handleGuardarFichaMedica = async (datos) => {
-    const fichaActualizada = await actualizarFichaMedica(mascotaId, datos);
-    setFichaMedica(fichaActualizada);
-  };
+ const handleGuardarFichaMedica = async (datos) => {
+  const fichaActualizada = await actualizarFichaMedica(mascotaId, datos);
+  setFichaMedica(fichaActualizada);
+};
 
   const handleGuardarVacuna = async (datos, vacunaId) => {
     if (vacunaId) {
       const vacunaActualizada = await actualizarVacuna(vacunaId, datos);
       setVacunas((actuales) => actuales.map((vacuna) => (
-        vacuna._id === vacunaId ? { ...vacuna, ...vacunaActualizada } : vacuna
+        vacuna.id === vacunaId ? { ...vacuna, ...vacunaActualizada } : vacuna
       )));
       return;
     }
@@ -121,7 +121,7 @@ const FichaPaciente = () => {
 
   const handleEliminarVacuna = async (vacunaId) => {
     await eliminarVacuna(vacunaId);
-    setVacunas((actuales) => actuales.filter((vacuna) => vacuna._id !== vacunaId));
+    setVacunas((actuales) => actuales.filter((vacuna) => vacuna.id !== vacunaId));
   };
 
   const handleGuardarEstudio = async (datos, estudioId, archivo) => {
@@ -133,7 +133,7 @@ const FichaPaciente = () => {
     if (estudioId) {
       const estudioActualizado = await actualizarEstudio(estudioId, datosConArchivo);
       setEstudios((actuales) => actuales.map((estudio) => (
-        estudio._id === estudioId ? { ...estudio, ...estudioActualizado } : estudio
+        estudio.id === estudioId ? { ...estudio, ...estudioActualizado } : estudio
       )));
       return;
     }
@@ -144,7 +144,7 @@ const FichaPaciente = () => {
 
   const handleEliminarEstudio = async (estudioId) => {
     await eliminarEstudio(estudioId);
-    setEstudios((actuales) => actuales.filter((estudio) => estudio._id !== estudioId));
+    setEstudios((actuales) => actuales.filter((estudio) => estudio.id !== estudioId));
   };
 
   // Botón "+ Registrar Consulta": según cuantos turnos pendientes haya,
@@ -155,7 +155,7 @@ const FichaPaciente = () => {
     if (turnosPendientes.length === 0) return;
 
     if (turnosPendientes.length === 1) {
-      navigate(`/historial/registrar/${turnosPendientes[0].id}`, {
+      navigate(`/historial/registrar/${turnosPendientes[0].turno_id}`, {
         state: { origen: "ficha", mascotaId },
       });
       return;
@@ -172,8 +172,8 @@ const FichaPaciente = () => {
   };
 
   const nombreMascota = mascota?.nombre ?? "Mascota";
-  const nombreDueno = mascota?.dueñoId?.nombre ?? mascota?.dueñoId?.name ?? "—";
-  const telefonoDueno = mascota?.dueñoId?.telefono ?? "—";
+  const nombreDueno = mascota?.dueno? `${mascota.dueno.nombre} ${mascota.dueno.apellido}`.trim(): "—";
+  const telefonoDueno = mascota?.dueno?.telefono ?? "—";
   const claseError = errorTipo === "acceso" ? styles.estadoSinAcceso : styles.estadoError;
 
   return (
@@ -242,17 +242,17 @@ const FichaPaciente = () => {
 
                   {turnosPendientes.map((turno) => (
                     <button
-                      key={turno.id}
+                      key={turno.turno_id}
                       type="button"
                       className={styles.input}
                       style={{ textAlign: "left", cursor: "pointer" }}
-                      onClick={() => handleSeleccionarTurno(turno.id)}
+                       onClick={() => handleSeleccionarTurno(turno.turno_id)}
                     >
                       <strong>
-                        {new Date(turno.fecha).toLocaleDateString("es-AR")} · {turno.hora}
+                        {new Date(turno.fecha).toLocaleDateString("es-AR")} · {turno.hora_inicio}
                       </strong>
                       <div className={styles.archivoNombre}>
-                        {turno.profesional?.nombre}
+                        {turno.profesional?.nombre} {turno.profesional?.apellido}
                         {turno.motivo ? ` — ${turno.motivo}` : ""}
                       </div>
                     </button>
@@ -322,7 +322,7 @@ const FichaPaciente = () => {
                   ) : (
                     <div className={styles.listaConsultas}>
                       {historialFiltrado.map((entrada) => (
-                        <div key={entrada._id} className={styles.cardConsulta}>
+                         <div key={entrada.id} className={styles.cardConsulta}>
                           <div className={styles.cardIcono}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
