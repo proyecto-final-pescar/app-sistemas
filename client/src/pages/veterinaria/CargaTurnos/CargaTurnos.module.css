@@ -218,25 +218,11 @@
   color: #07A35F;
 }
 
-/* Cards de días */
+/* ===== Grilla de días/horarios: scroll horizontal + indicador ===== */
 .diasGrid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 10px;
-}
-
-/* Mobile: mostrar máximo 3 días + nav */
-@media (max-width: 480px) {
-  .diasGrid {
-    display: none; /* Oculta la grilla grande */
-  }
-  
-  /* Muestra solo 3 días con navegación */
-  .diasGridMobile {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-  }
 }
 
 .diaCard {
@@ -375,8 +361,10 @@
 
 /* Grilla */
 .grillaWrapper {
+  position: relative;
   overflow-x: auto;
   margin-top: 8px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .grilla {
@@ -645,11 +633,22 @@
   padding: 4px;
 }
 
+/* Indicador de scroll horizontal (hint + flecha animada) — solo mobile */
+.scrollHint {
+  display: none;
+}
+
+/* Degradado que marca que hay más días para el lado derecho */
+.grillaFadeDerecha {
+  display: none;
+}
+
 /* ===== Tablet: 768px ===== */
 @media (max-width: 768px) {
   .content {
     margin: 16px 16px 32px;
     gap: 16px;
+    padding-top: 60px; /* compensa el .mobileTopbar fixed (height: 60px) del Sidebar */
   }
 
   .card {
@@ -691,6 +690,7 @@
 @media (max-width: 480px) {
   .content {
     margin: 12px 12px 24px;
+    padding-top: 60px; /* mantener la compensación del topbar fixed en este breakpoint también */
   }
 
   .card {
@@ -746,5 +746,53 @@
 
   .resumen {
     font-size: 12px;
+  }
+
+  /* Hint "Deslizá para ver más días" con flecha animada */
+  .scrollHint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #7c3aed;
+    font-weight: 600;
+    padding: 4px 0 2px;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+
+  .scrollHintOculto {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .scrollHintFlecha {
+    display: inline-block;
+    animation: deslizar 1.2s ease-in-out infinite;
+  }
+
+  @keyframes deslizar {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(4px); }
+  }
+
+  /* Degradado sobre el borde derecho de la tabla: indica que hay más días */
+  .grillaFadeDerecha {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 28px;
+    pointer-events: none;
+    background: linear-gradient(to right, rgba(249, 248, 255, 0), #f9f8ff);
+    opacity: 1;
+    transition: opacity 0.25s ease;
+    z-index: 3;
+  }
+
+  .grillaFadeDerechaOculto {
+    opacity: 0;
   }
 }
