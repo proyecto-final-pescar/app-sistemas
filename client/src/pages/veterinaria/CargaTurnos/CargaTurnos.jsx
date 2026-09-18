@@ -78,6 +78,25 @@ export default function CargaTurnos() {
   const [slotsExistentes, setSlotsExistentes] = useState([]);
   const semanaAjustadaRef = useRef(false);
 
+  // Indicador de scroll horizontal de la grilla (solo mobile)
+  const [scrolleado, setScrolleado] = useState(false);
+  const [alFinal, setAlFinal] = useState(false);
+  const grillaRef = useRef(null);
+
+  const handleScrollGrilla = () => {
+    const el = grillaRef.current;
+    if (!el) return;
+    if (el.scrollLeft > 8) setScrolleado(true);
+    const llegoAlFinal = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+    setAlFinal(llegoAlFinal);
+  };
+
+  // Al cambiar de semana vuelve a haber contenido nuevo: reiniciamos el hint
+  useEffect(() => {
+    setScrolleado(false);
+    setAlFinal(false);
+  }, [semanaOffset]);
+
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
@@ -170,7 +189,6 @@ export default function CargaTurnos() {
   };
 
   // Mapeo flexible de horarios para SQL (horario_veterinaria)
-  // Reemplazar la función obtenerHorarioDia
   const obtenerHorarioDia = (claveDia) => {
     if (!veterinaria?.horarios) return null;
 
@@ -183,7 +201,6 @@ export default function CargaTurnos() {
       hasta: horario.hasta.slice(0, 5),
     };
   };
-
 
   const diasDisponibles = DIAS_MAPA.filter((d, i) => {
     const h = obtenerHorarioDia(d.clave, i);
@@ -600,7 +617,19 @@ export default function CargaTurnos() {
                   </div>
                 </div>
 
-                <div className={styles.grillaWrapper}>
+                {/* Hint de scroll horizontal — visible solo en mobile, se apaga al scrollear */}
+                <p className={`${styles.scrollHint} ${scrolleado ? styles.scrollHintOculto : ""}`}>
+                  Deslizá para ver más días <span className={styles.scrollHintFlecha}>→</span>
+                </p>
+
+                <div
+                  className={styles.grillaWrapper}
+                  ref={grillaRef}
+                  onScroll={handleScrollGrilla}
+                >
+                  <div
+                    className={`${styles.grillaFadeDerecha} ${alFinal ? styles.grillaFadeDerechaOculto : ""}`}
+                  />
                   <table className={styles.grilla}>
                     <thead>
                       <tr>
