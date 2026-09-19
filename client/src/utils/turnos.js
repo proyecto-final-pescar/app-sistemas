@@ -25,7 +25,9 @@ export const filtrarProximos = (turnos) => {
   const ahora = new Date();
   return turnos
     .filter(
-      (t) => t.estado_turno_id === "CON" && obtenerFechaHoraCompleta(t) >= ahora,
+      (t) =>
+        (t.estado_turno_id === "CON" || t.estado_turno_id === "PEN") &&
+        obtenerFechaHoraCompleta(t) >= ahora,
     )
     .sort((a, b) => obtenerFechaHoraCompleta(a) - obtenerFechaHoraCompleta(b));
 };

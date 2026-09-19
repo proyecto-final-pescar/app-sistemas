@@ -4,10 +4,10 @@ import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
 import Badge from "../../../components/ui/badge/Badge";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
+import SuccessModal from "../../../components/ui/success-modal/SuccessModal"; // 1. IMPORTAR SUCCESS MODAL
 import { FaCalendarAlt, FaClock, FaHospital, FaPaw } from "react-icons/fa";
-import { obtenerTurnosPorUsuario, cancelarTurno } from "../../../services/turnosService";
+import { obtenerTurnosPorUsuario, cancelarTurno, pagarEfectivo } from "../../../services/turnosService";
 import { crearPreferenciaPago } from "../../../services/pagosService";
-import { pagarEfectivo } from "../../../services/turnosService"; // sumar a lo que ya importás de ahí
 import SelectorMetodoPago from "../../../components/pagos/SelectorMetodoPago";
 import {
   filtrarProximos,
@@ -27,10 +27,14 @@ export default function MisTurnos() {
   const [cancelando, setCancelando] = useState(null);
   const [modalCancelar, setModalCancelar] = useState(null);
   const [menuAbierto, setMenuAbierto] = useState(null);
-  const [pagando, setPagando] = useState(null); // turno_id del turno que se está procesando
+  const [pagando, setPagando] = useState(null);
   const [turnoParaPagar, setTurnoParaPagar] = useState(null);
   const [errorAccion, setErrorAccion] = useState("");
   const [mensajeCancelacion, setMensajeCancelacion] = useState(null);
+
+  // 2. ESTADOS PARA EL SUCCESS MODAL EN EFECTIVO
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [turnoConfirmadoEfectivo, setTurnoConfirmadoEfectivo] = useState(null);
 
   useEffect(() => {
     const cargarTurnos = async () => {
@@ -113,8 +117,11 @@ export default function MisTurnos() {
     }
   };
 
+  // 3. ACTUALIZAR HANDLER DE PAGO EN EFECTIVO
   const handlePagarEnEfectivo = async () => {
-    const turnoId = turnoParaPagar.turno_id;
+    const turnoSeleccionado = turnoParaPagar;
+    const turnoId = turnoSeleccionado.turno_id;
+    
     setTurnoParaPagar(null);
     if (pagando) return;
     setPagando(turnoId);
@@ -124,6 +131,10 @@ export default function MisTurnos() {
       setTurnos((prev) =>
         prev.map((t) => (t.turno_id === turnoId ? turnoActualizado : t))
       );
+      
+      // Guardar el turno para armar el mensaje e indicar éxito
+      setTurnoConfirmadoEfectivo(turnoSeleccionado);
+      setIsSuccessOpen(true);
     } catch (err) {
       const mensaje =
         err.response?.data?.message || "No se pudo confirmar el pago en efectivo.";
@@ -317,6 +328,7 @@ export default function MisTurnos() {
           </div>
         </div>
       </div>
+
       <SelectorMetodoPago
         isOpen={Boolean(turnoParaPagar)}
         onClose={() => setTurnoParaPagar(null)}
@@ -324,6 +336,18 @@ export default function MisTurnos() {
         onElegirEfectivo={handlePagarEnEfectivo}
         monto={turnoParaPagar?.monto_servicio}
         procesando={pagando !== null}
+      />
+
+      {/* 4. RENDERIZADO DEL SUCCESS MODAL */}
+      <SuccessModal
+        abierto={isSuccessOpen}
+        titulo="¡Turno confirmado!"
+        mensaje={`Tu turno para ${turnoConfirmadoEfectivo?.mascota?.nombre || "tu mascota"} quedó confirmado. Recordá abonar $${turnoConfirmadoEfectivo?.monto_servicio || ""} en efectivo en el local.`}
+        textoBoton="Entendido"
+        onClose={() => {
+          setIsSuccessOpen(false);
+          setTurnoConfirmadoEfectivo(null);
+        }}
       />
 
       {errorAccion && (
