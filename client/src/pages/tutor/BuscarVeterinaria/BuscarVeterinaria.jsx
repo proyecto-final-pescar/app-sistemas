@@ -17,12 +17,8 @@ const FILTROS = ["Emergencias", "Vacunación", "Cerca mío"];
 
 function matchFiltro(vet, filtro) {
   if (!filtro) return true;
-  if (filtro === "Emergencias") return !!vet.urgencias;
-  if (filtro === "Vacunación") {
-    return (vet.servicio || []).some(
-      (s) => s.categoria_servicio?.nombre === "Vacunación"
-    );
-  }
+  if (filtro === "Emergencias") return !!vet.urgencias24hs;
+  if (filtro === "Vacunación") return !!vet.especialidades?.includes("Vacunación");
   return true;
 }
 
@@ -218,11 +214,11 @@ const BuscarVeterinaria = () => {
                   const { abierta, horaCierre } = calcularEstadoApertura(vet);
                   return (
                     <VetCard
-                      key={vet.veterinaria_id}
+                      key={vet._id}
                       vet={{ ...vet, horaCierre }}
                       variante="fila"
                       abierta={abierta}
-                      onVerDetalle={() => handleVerClinica(vet.veterinaria_id)}
+                      onVerDetalle={() => handleVerClinica(vet._id)}
                     />
                   );
                 })}

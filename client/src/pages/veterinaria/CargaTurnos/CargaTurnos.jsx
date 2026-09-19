@@ -30,16 +30,6 @@ const DIAS_MAPA = [
 ];
 
 
-const CLAVE_A_NOMBRE_DIA = {
-  LUN: "lunes",
-  MAR: "martes",
-  MIE: "miercoles",
-  JUE: "jueves",
-  VIE: "viernes",
-  SAB: "sabado",
-  DOM: "domingo",
-};
-
 const obtenerLunesDeSemana = (offset = 0) => {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -92,15 +82,19 @@ export default function CargaTurnos() {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
- 
-  const servicioSeleccionado = veterinaria?.servicio?.find(
+
+  const servicioSeleccionado = veterinaria?.servicios?.find(
     (s) => s.servicio_id === servicioId
   );
   const [duracion, setDuracion] = useState(30);
 
-  const profesionalesDelServicio = veterinaria?.profesional?.filter((p) => {
+  const profesionalesDelServicio = veterinaria?.profesionales?.filter((p) => {
     if (!servicioId) return false;
-    return (p.profesional_servicio || []).some((ps) => ps.servicio_id === servicioId);
+
+    if (Array.isArray(p.servicios)) {
+      return p.servicios.some((s) => (s.servicio_id || s) === servicioId);
+    }
+    return true;
   }) || [];
 
   useEffect(() => {
@@ -118,7 +112,7 @@ export default function CargaTurnos() {
   }, []);
 
   const cargarExistentes = useCallback(async () => {
-    const vetId = veterinaria?.veterinaria_id;
+    const vetId = veterinaria?._id;
     if (!vetId) return;
 
     try {
@@ -139,7 +133,7 @@ export default function CargaTurnos() {
         })
       );
     } catch {
-      
+
     }
   }, [veterinaria]);
 
@@ -167,24 +161,35 @@ export default function CargaTurnos() {
     return fechaSlot < ahora;
   };
 
- 
+  const CLAVE_A_NOMBRE_DIA = {
+    LUN: "lunes",
+    MAR: "martes",
+    MIE: "miercoles",
+    JUE: "jueves",
+    VIE: "viernes",
+    SAB: "sabado",
+    DOM: "domingo",
+  };
+
+  // Mapeo flexible de horarios para SQL (horario_veterinaria)
+  // Reemplazar la función obtenerHorarioDia
+
+
   const obtenerHorarioDia = (claveDia) => {
-    if (!veterinaria?.horario_veterinaria) return null;
+    if (!veterinaria?.horarios) return null;
 
     const nombreDia = CLAVE_A_NOMBRE_DIA[claveDia];
-    const horario = veterinaria.horario_veterinaria.find(
-      (h) => h.dia_semana?.nombre === nombreDia
-    );
-    if (!horario || !horario.hora_desde || !horario.hora_hasta) return null;
+    const horario = veterinaria.horarios[nombreDia];
+    if (!horario || !horario.desde || !horario.hasta) return null;
 
     return {
-      desde: horario.hora_desde,
-      hasta: horario.hora_hasta,
+      desde: horario.desde.slice(0, 5),
+      hasta: horario.hasta.slice(0, 5),
     };
   };
 
-  const diasDisponibles = DIAS_MAPA.filter((d) => {
-    const h = obtenerHorarioDia(d.clave);
+  const diasDisponibles = DIAS_MAPA.filter((d, i) => {
+    const h = obtenerHorarioDia(d.clave, i);
     return h && h.desde && h.hasta;
   }).map((d) => d.clave);
 
@@ -210,21 +215,23 @@ export default function CargaTurnos() {
   }, [veterinaria]);
 
   const obtenerRangoGlobal = () => {
-    if (!veterinaria?.horario_veterinaria?.length) {
-      return { apertura: "08:00", cierre: "18:00" };
-    }
+    if (!veterinaria?.horarios) return { apertura: "08:00", cierre: "18:00" };
     let minApertura = "23:59";
     let maxCierre = "00:00";
 
-    veterinaria.horario_veterinaria.forEach((h) => {
-      if (!h.hora_desde || !h.hora_hasta) return;
-      if (h.hora_desde < minApertura) minApertura = h.hora_desde;
-      if (h.hora_hasta > maxCierre) maxCierre = h.hora_hasta;
+    const lista = Array.isArray(veterinaria.horarios)
+      ? veterinaria.horarios
+      : Object.values(veterinaria.horarios);
+
+    lista.forEach((h) => {
+      const desde = h.hora_desde || h.desde;
+      const hasta = h.hora_hasta || h.hasta;
+      if (!desde || !hasta) return;
+      if (desde < minApertura) minApertura = desde;
+      if (hasta > maxCierre) maxCierre = hasta;
     });
 
-    return minApertura === "23:59"
-      ? { apertura: "08:00", cierre: "18:00" }
-      : { apertura: minApertura, cierre: maxCierre };
+    return minApertura === "23:59" ? { apertura: "08:00", cierre: "18:00" } : { apertura: minApertura, cierre: maxCierre };
   };
 
   const { apertura: aperturaGlobal, cierre: cierreGlobal } = obtenerRangoGlobal();
@@ -251,13 +258,13 @@ export default function CargaTurnos() {
       const inicioExistente = sh * 60 + sm;
       const finExistente = inicioExistente + s.duracion;
 
-      
+
       return inicioExistente < finNuevo && finExistente > inicioNuevo;
     });
   };
 
-  const esCeldaBloqueada = (claveDia, hora) => {
-    const horario = obtenerHorarioDia(claveDia);
+  const esCeldaBloqueada = (claveDia, hora, diaIndex) => {
+    const horario = obtenerHorarioDia(claveDia, diaIndex);
     if (!horario || !horario.desde || !horario.hasta) return true;
 
     const horaMin = hora.slice(0, 5);
@@ -416,7 +423,7 @@ export default function CargaTurnos() {
 
     setGuardando(true);
     try {
-      const vetId = veterinaria?.veterinaria_id;
+      const vetId = veterinaria?._id;
       const result = await crearOfertaHoraria({
         veterinariaId: vetId,
         servicioId,
@@ -490,11 +497,14 @@ export default function CargaTurnos() {
                       }}
                     >
                       <option value="">Seleccioná un servicio...</option>
-                      {veterinaria?.servicio?.map((s) => (
-                        <option key={s.servicio_id} value={s.servicio_id}>
-                          {s.nombre}
-                        </option>
-                      ))}
+                      {veterinaria?.servicios?.map((s) => {
+                        const id = s.servicio_id || s._id;
+                        return (
+                          <option key={id} value={id}>
+                            {s.nombre}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
@@ -508,7 +518,7 @@ export default function CargaTurnos() {
                         <span className={styles.helperTextSuave}>Ningún profesional brinda este servicio todavía.</span>
                       )}
                       {profesionalesDelServicio.map((p) => {
-                        const id = p.profesional_id;
+                        const id = p.profesional_id || p._id;
                         const estaActivo = profesionales.includes(id);
                         return (
                           <button
@@ -629,7 +639,7 @@ export default function CargaTurnos() {
                           <td className={styles.tdHora}>{hora}</td>
                           {DIAS_MAPA.map((diaObj, i) => {
                             const fecha = fechasSemana[i];
-                            const bloqueado = esCeldaBloqueada(diaObj.clave, hora);
+                            const bloqueado = esCeldaBloqueada(diaObj.clave, hora, i);
                             const pasado = esCeldaPasada(fecha, hora);
                             const existente = esCeldaExistente(fecha, hora);
                             const ocupada = esCeldaOcupada(fecha, hora);

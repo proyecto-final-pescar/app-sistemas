@@ -3,7 +3,7 @@ import { ArrowLeft, Search } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { crearPreferenciaPago } from "../../../services/pagosService";
 import { getVeterinariaById } from "../../../services/veterinariaService";
-import { obtenerMascotas } from "../../../services/mascotaService"; 
+import { obtenerMascotas } from "../../../services/mascotaService";
 import {
   obtenerTurnosPorVeterinaria,
   reservarTurno as reservarTurnoService,
@@ -135,10 +135,10 @@ const AgendarTurnos = () => {
     };
   }, [veterinariaId]);
 
- 
+
   const categoriasUnicas = useMemo(() => {
     const cats = new Set(["Todas"]);
-    (veterinaria?.servicio || []).forEach((s) => {
+    (veterinaria?.servicios || []).forEach((s) => {
       const categoria = s.categoria_servicio?.nombre || s.categoria;
       if (categoria) cats.add(categoria);
     });
@@ -146,7 +146,7 @@ const AgendarTurnos = () => {
   }, [veterinaria]);
 
   const serviciosFiltrados = useMemo(() => {
-    return (veterinaria?.servicio || []).filter((s) => {
+    return (veterinaria?.servicios || []).filter((s) => {
       const categoria = s.categoria_servicio?.nombre || s.categoria;
       const coincideCategoria =
         categoriaSeleccionada === "Todas" || categoria === categoriaSeleccionada;
@@ -176,14 +176,14 @@ const AgendarTurnos = () => {
   }, [fechaInicioSemana]);
 
   const servicioElegido = useMemo(
-    () => veterinaria?.servicio?.find((s) => idDeServicio(s) === servicioSeleccionadoId) || null,
+    () => veterinaria?.servicios?.find((s) => idDeServicio(s) === servicioSeleccionadoId) || null,
     [veterinaria, servicioSeleccionadoId]
   );
 
- 
+
   const mapaProfesionales = useMemo(() => {
     const mapa = {};
-    (veterinaria?.profesional || []).forEach((p) => {
+    (veterinaria?.profesionales || []).forEach((p) => {
       mapa[idDeProfesional(p)] = p;
     });
     return mapa;
@@ -709,13 +709,11 @@ const AgendarTurnos = () => {
                         value={turnoIdSeleccionado}
                         onChange={(e) => setTurnoIdSeleccionado(e.target.value)}
                         opciones={(turnoSeleccionado?.opciones || []).map((turno) => {
-                         
-                          const prof = mapaProfesionales[turno.profesional_id] || turno.profesional;
-                          const especialidad = prof?.especialidad?.nombre;
+                          const prof = turno.profesional || mapaProfesionales[turno.profesional_id];
                           return {
                             value: idDeTurno(turno),
-                            label: especialidad
-                              ? `${prof?.nombre || "Profesional"} ${prof?.apellido || ""} · ${especialidad}`
+                            label: prof?.especialidad
+                              ? `${prof?.nombre || "Profesional"} ${prof?.apellido || ""} · ${prof.especialidad?.nombre}`
                               : `${prof?.nombre || "Profesional"} ${prof?.apellido || ""}`.trim(),
                           };
                         })}
