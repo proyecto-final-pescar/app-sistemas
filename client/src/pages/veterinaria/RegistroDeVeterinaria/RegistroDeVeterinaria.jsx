@@ -8,6 +8,7 @@ import PanelDestacado from "../../../components/ui/panel-destacado/PanelDestacad
 import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
 import ErrorModal from "../../../components/ui/error-modal/ErrorModal";
 import styles from "./RegistroDeVeterinaria.module.css";
+import { useAutocompleteDireccion } from "../../../hooks/useAutocompleteDireccion";
 
 import {
   servicioVacio,
@@ -138,6 +139,16 @@ export default function RegistroDeVeterinaria() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
 
+  const {
+    direccion,
+    lat,
+    lng,
+    suggestions,
+    loadingAddress,
+    handleChangeDireccion,
+    handleSelectPlace,
+  } = useAutocompleteDireccion();
+
   // Categorías de servicio y especialidades — vienen del backend
   const { categorias, loading: loadingCategorias, error: errorCategorias } = useCategoriasServicio();
   const { especialidades, loading: loadingEspecialidades, error: errorEspecialidades } = useEspecialidades();
@@ -148,16 +159,10 @@ export default function RegistroDeVeterinaria() {
     razonSocial: "",
     cuit: "",
     telefono: "",
-    direccion: "",
-    lat: null,
-    lng: null,
     email: "",
     sitioWeb: "",
   });
-  const [suggestions, setSuggestions] = useState([]);
-  const [loadingAddress, setLoadingAddress] = useState(false);
   const [errorStep1, setErrorStep1] = useState("");
-  const debounceRef = useRef(null);
 
   // Paso 2
   const [servicios, setServicios] = useState([servicioVacio()]);
@@ -177,47 +182,7 @@ export default function RegistroDeVeterinaria() {
   const [successModal, setSuccessModal] = useState(false);
   const [errorModal, setErrorModal] = useState({ abierto: false, mensaje: "" });
 
-  // Google Places
-  useEffect(() => {
-    if (!form.direccion || form.lat) return undefined;
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      if (form.direccion.length < 4) return;
-      setLoadingAddress(true);
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/places/autocomplete?input=${encodeURIComponent(form.direccion)}`,
-        );
-        const data = await res.json();
-        setSuggestions(data.predictions || []);
-      } catch {
-        setSuggestions([]);
-      } finally {
-        setLoadingAddress(false);
-      }
-    }, 350);
-    return () => clearTimeout(debounceRef.current);
-  }, [form.direccion, form.lat]);
-
-  const handleSelectPlace = async (place) => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/places/details?place_id=${place.place_id}`,
-      );
-      const data = await res.json();
-      const location = data.result?.geometry?.location;
-      setForm((f) => ({
-        ...f,
-        direccion: place.description,
-        lat: typeof location?.lat === "number" ? location.lat : null,
-        lng: typeof location?.lng === "number" ? location.lng : null,
-      }));
-    } catch {
-      setForm((f) => ({ ...f, direccion: place.description }));
-    } finally {
-      setSuggestions([]);
-    }
-  };
+  
 
   const handleChangeStep1 = (e) => {
     const { name, value } = e.target;
@@ -236,8 +201,8 @@ export default function RegistroDeVeterinaria() {
     if (!form.telefono.trim()) return "El teléfono es requerido.";
     if (!validarTelefono(form.telefono))
       return "El teléfono solo puede contener números.";
-    if (!form.direccion.trim()) return "La dirección es requerida.";
-    if (!validarCoordenadas(form.lat, form.lng))
+    if (!direccion.trim()) return "La dirección es requerida.";
+    if (!validarCoordenadas(lat, lng))
       return "Seleccioná una dirección de la lista para obtener las coordenadas.";
     if (!form.email.trim()) return "El email institucional es requerido.";
     if (!validarEmail(form.email))
@@ -284,19 +249,23 @@ export default function RegistroDeVeterinaria() {
     setProfesionales((prev) =>
       prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)),
     );
-  const alternarServicioProfesional = (profesionalIndex, servicioId) =>
+
+  const toggleServicioProfesional = (profIndex, servicioId) => {
     setProfesionales((prev) =>
-      prev.map((profesional, index) => {
-        if (index !== profesionalIndex) return profesional;
-        const serviciosIds = profesional.serviciosIds || [];
+      prev.map((p, idx) => {
+        if (idx !== profIndex) return p;
+        const actuales = p.serviciosIds || [];
+        const yaEsta = actuales.includes(servicioId);
         return {
-          ...profesional,
-          serviciosIds: serviciosIds.includes(servicioId)
-            ? serviciosIds.filter((id) => id !== servicioId)
-            : [...serviciosIds, servicioId],
+          ...p,
+          serviciosIds: yaEsta
+            ? actuales.filter((id) => id !== servicioId)
+            : [...actuales, servicioId],
         };
-      }),
+      })
     );
+  };
+
   const agregarProfesional = () =>
     setProfesionales((prev) => [...prev, profesionalVacio()]);
   const eliminarProfesional = (i) => {
@@ -313,6 +282,8 @@ export default function RegistroDeVeterinaria() {
     if (base) return base;
     if (profesionales.some((p) => !validarEmail(p.email)))
       return "El email de algún profesional no tiene un formato válido.";
+    if (profesionales.some((p) => !(p.serviciosIds || []).length))
+      return "Cada profesional debe brindar al menos un servicio.";
     return "";
   };
   const handleContinuarStep3 = crearHandleContinuar(
@@ -355,10 +326,10 @@ export default function RegistroDeVeterinaria() {
       return;
     }
     if (
-      typeof form.lat !== "number" ||
-      isNaN(form.lat) ||
-      typeof form.lng !== "number" ||
-      isNaN(form.lng)
+      typeof lat !== "number" ||
+      isNaN(lat) ||
+      typeof lng !== "number" ||
+      isNaN(lng)
     ) {
       setErrorStep4(
         "La dirección seleccionada no es válida. Volvé al paso 1 y seleccioná una dirección de la lista.",
@@ -371,13 +342,13 @@ export default function RegistroDeVeterinaria() {
     try {
       const body = {
         nombre: form.nombreClinica,
-        direccion: form.direccion,
+        direccion: direccion,
         razonSocial: form.razonSocial,
         cuit: form.cuit,
         telefono: form.telefono,
         email: form.email,
         sitioWeb: form.sitioWeb,
-        coordenadas: { type: "Point", coordinates: [form.lng, form.lat] },
+        coordenadas: { type: "Point", coordinates: [lng, lat] },
         especialidades: [],
         servicios: servicios.map((s) => ({
           idLocal: s.id,
@@ -529,17 +500,14 @@ export default function RegistroDeVeterinaria() {
                   </span>
                   <input
                     name="direccion"
-                    value={form.direccion}
-                    onChange={handleChangeStep1}
+                    value={direccion}
+                    onChange={(e) => handleChangeDireccion(e.target.value)}
                     placeholder="Av. Rivadavia 1234, Piso 3 Dpto. B"
                     autoComplete="off"
                     className={styles.inputInner}
                   />
-                  {form.lat && (
-                    <span
-                      className={styles.inputIcon}
-                      style={{ color: "#25a36f" }}
-                    >
+                  {lat && (
+                    <span className={styles.inputIcon} style={{ color: "#25a36f" }}>
                       <IconPin />
                     </span>
                   )}
@@ -799,27 +767,35 @@ export default function RegistroDeVeterinaria() {
                         ))}
                       </select>
                     </div>
-                    <fieldset className={styles.selectorServicios}>
-                      <legend>Servicios que realiza (opcional)</legend>
-                      {servicios.filter((servicio) => servicio.nombre.trim()).length === 0 ? (
-                        <p className={styles.helperText}>
-                          Cargá servicios en el paso anterior para poder asignarlos.
-                        </p>
-                      ) : (
-                        servicios
-                          .filter((servicio) => servicio.nombre.trim())
-                          .map((servicio) => (
-                            <label key={servicio.id} className={styles.opcionServicio}>
-                              <input
-                                type="checkbox"
-                                checked={prof.serviciosIds?.includes(servicio.id) || false}
-                                onChange={() => alternarServicioProfesional(index, servicio.id)}
-                              />
-                              <span>{servicio.nombre}</span>
-                            </label>
-                          ))
-                      )}
-                    </fieldset>
+
+                    <div className={styles.field}>
+                      <label className={styles.label}>
+                        Servicios que brinda<span className={styles.req}>*</span>
+                      </label>
+                      <div className={styles.profesionalesGrid}>
+                        {servicios.filter((s) => s.nombre.trim()).length === 0 && (
+                          <span className={styles.helperText}>
+                            Cargá servicios en el paso anterior para poder asignarlos.
+                          </span>
+                        )}
+                        {servicios
+                          .filter((s) => s.nombre.trim())
+                          .map((s) => {
+                            const seleccionado = (prof.serviciosIds || []).includes(s.id);
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                className={`${styles.chipProf} ${seleccionado ? styles.chipProfActivo : ""}`}
+                                onClick={() => toggleServicioProfesional(index, s.id)}
+                              >
+                                {s.nombre}
+                                {seleccionado && <span className={styles.chipX}>×</span>}
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

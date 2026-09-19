@@ -11,6 +11,7 @@ import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
 import ErrorModal from "../../../components/ui/error-modal/ErrorModal";
 import { useCategoriasServicio } from "../../../hooks/useCategoriasServicio";
 import { useEspecialidades } from "../../../hooks/useEspecialidades";
+import { useAutocompleteDireccion } from "../../../hooks/useAutocompleteDireccion";
 import {
   actualizarMisDatosGenerales,
   actualizarMisHorarios,
@@ -100,12 +101,24 @@ const normalizarVeterinaria = (veterinaria) => ({
     telefono: veterinaria.telefono || "",
     email: veterinaria.email || "",
     sitioWeb: veterinaria.sitioWeb || "",
+    lat: veterinaria.coordenadas?.coordinates?.[1] ?? null,
+    lng: veterinaria.coordenadas?.coordinates?.[0] ?? null,
   },
   servicios: Array.isArray(veterinaria.servicios)
-    ? veterinaria.servicios.map((servicio) => ({ ...servicio }))
+    ? veterinaria.servicios.map((servicio) => ({
+      ...servicio,
+      nombre: servicio.nombre ?? "",
+      categoria: servicio.categoria ?? "",
+    }))
     : [],
   profesionales: Array.isArray(veterinaria.profesionales)
-    ? veterinaria.profesionales.map((profesional) => ({ ...profesional }))
+    ? veterinaria.profesionales.map((profesional) => ({
+      ...profesional,
+      nombre: profesional.nombre ?? "",
+      especialidad: profesional.especialidad ?? "",
+      email: profesional.email ?? "",
+      serviciosIds: Array.isArray(profesional.servicios) ? profesional.servicios : [],
+    }))
     : [],
   diasSeleccionados: horariosASeleccionados(veterinaria.horarios),
   urgencias24hs: Boolean(veterinaria.urgencias24hs),
@@ -115,7 +128,7 @@ const normalizarVeterinaria = (veterinaria) => ({
 const construirPayloadServicios = (servicios) => ({
   servicios: servicios.map((servicio) => ({
     ...(servicio._id ? { _id: servicio._id } : {}),
-    nombre: servicio.nombre.trim(),
+    nombre: (servicio.nombre ?? "").trim(),
     categoria: servicio.categoria,
     descripcion: servicio.descripcion.trim(),
     precio: Number(servicio.precio),
@@ -126,9 +139,9 @@ const construirPayloadServicios = (servicios) => ({
 const construirPayloadProfesionales = (profesionales) => ({
   profesionales: profesionales.map((profesional) => ({
     ...(profesional._id ? { _id: profesional._id } : {}),
-    nombre: profesional.nombre.trim(),
-    especialidad: profesional.especialidad.trim(),
-    email: profesional.email.trim(),
+    nombre: (profesional.nombre ?? "").trim(),
+    especialidad: (profesional.especialidad ?? "").trim(),
+    email: (profesional.email ?? "").trim(),
     ...(Array.isArray(profesional.serviciosIds)
       ? { serviciosIds: profesional.serviciosIds }
       : {}),
@@ -136,6 +149,18 @@ const construirPayloadProfesionales = (profesionales) => ({
 });
 
 function MiVeterinaria() {
+
+  const {
+    direccion,
+    lat,
+    lng,
+    suggestions,
+    loadingAddress,
+    handleChangeDireccion,
+    handleSelectPlace,
+    resetDireccion,
+  } = useAutocompleteDireccion();
+
   const { categorias, loading: cargandoCategorias, error: errorCategorias } =
     useCategoriasServicio();
   const {
@@ -273,6 +298,12 @@ function MiVeterinaria() {
     return () => window.removeEventListener("beforeunload", avisar);
   }, [hayCambiosSinGuardar]);
 
+  useEffect(() => {
+    if (formulario?.datos) {
+      resetDireccion(formulario.datos.direccion, formulario.datos.lat, formulario.datos.lng);
+    }
+  }, [formulario?.datos?.direccion]);
+
   const actualizarDatos = (campo, valor) => {
     setFormulario((actual) => ({
       ...actual,
@@ -335,6 +366,8 @@ function MiVeterinaria() {
       error = "La especialidad solo puede contener letras.";
     } else if (!validarEmail(valores.email)) {
       error = "Ingresá un email válido para el profesional.";
+    } else if (!(valores.serviciosIds || []).length) {
+      error = "Seleccioná al menos un servicio que brinde este profesional.";
     }
 
     if (error) {
@@ -392,7 +425,7 @@ function MiVeterinaria() {
     }
   };
 
- 
+
   const confirmarEliminacion = async () => {
     const { tipo, indice, nombre } = confirmacion;
     if (tipo === "metodo-cobro") {
@@ -473,14 +506,15 @@ function MiVeterinaria() {
     }));
   };
 
- 
+
   const validarSeccion = (seccion) => {
     if (seccion === "datos") {
       const { datos } = formulario;
-      if (!datos.nombre.trim() || !datos.direccion.trim() || !datos.telefono.trim() || !datos.email.trim()) {
+      if (!datos.nombre.trim() || !direccion.trim() || !datos.telefono.trim() || !datos.email.trim()) {
         return "Completá los datos generales obligatorios.";
       }
       if (!validarCUIT(datos.cuit)) return "Ingresá un CUIT válido.";
+      if (!lat || !lng) return "Seleccioná una dirección de la lista para obtener las coordenadas.";
       if (!validarTelefono(datos.telefono)) return "Ingresá un teléfono válido.";
       if (!validarEmail(datos.email)) return "Ingresá un email institucional válido.";
       if (datos.sitioWeb) {
@@ -510,10 +544,12 @@ function MiVeterinaria() {
         telefono: formulario.datos.telefono.trim(),
         email: formulario.datos.email.trim(),
         sitioWeb: formulario.datos.sitioWeb.trim(),
+        latitud: lat,
+        longitud: lng,
       };
     }
 
-   
+
     return {
       horarios: construirHorarios(formulario.diasSeleccionados),
       urgencias24hs: formulario.urgencias24hs,
@@ -658,7 +694,25 @@ function MiVeterinaria() {
               <div className={styles.formGrid}>
                 <Input label="Nombre de la clínica *" value={formulario.datos.nombre} onChange={(e) => actualizarDatos("nombre", e.target.value)} />
                 <Input label="Teléfono *" value={formulario.datos.telefono} onChange={(e) => actualizarDatos("telefono", e.target.value)} />
-                <Input label="Dirección *" value={formulario.datos.direccion} onChange={(e) => actualizarDatos("direccion", e.target.value)} />
+                <div style={{ position: "relative" }}>
+                  <Input
+                    label="Dirección *"
+                    value={direccion}
+                    onChange={(e) => handleChangeDireccion(e.target.value)}
+                    placeholder="Av. Rivadavia 1234, Piso 3 Dpto. B"
+                    autoComplete="off"
+                  />
+                  {suggestions.length > 0 && (
+                    <ul className={styles.suggestions}>
+                      {suggestions.map((s) => (
+                        <li key={s.place_id} onClick={() => handleSelectPlace(s)}>
+                          📍 {s.description}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {loadingAddress && <p className={styles.helper}>Buscando dirección...</p>}
+                </div>
                 <Input label="Email institucional *" type="email" value={formulario.datos.email} onChange={(e) => actualizarDatos("email", e.target.value)} />
                 <Input label="Razón social" value={formulario.datos.razonSocial} onChange={(e) => actualizarDatos("razonSocial", e.target.value)} />
                 <Input label="CUIT *" value={formulario.datos.cuit} onChange={(e) => actualizarDatos("cuit", e.target.value)} />
@@ -864,22 +918,38 @@ function MiVeterinaria() {
                 <Input label="Nombre y apellido *" value={modalEdicion.valores.nombre} onChange={(e) => actualizarModal("nombre", e.target.value)} />
                 <Select label="Especialidad *" opciones={especialidades} value={modalEdicion.valores.especialidad} onChange={(e) => actualizarModal("especialidad", e.target.value)} error={errorEspecialidades} />
                 <Input label="Email *" type="email" value={modalEdicion.valores.email} onChange={(e) => actualizarModal("email", e.target.value)} />
-                <fieldset className={styles.serviceSelector}>
-                  <legend>Servicios que realiza</legend>
-                  {formulario.servicios.length === 0 ? (
-                    <p>Primero cargá al menos un servicio.</p>
-                  ) : formulario.servicios.map((servicio) => (
-                    <label key={servicio._id}>
-                      <input
-                        type="checkbox"
-                        checked={modalEdicion.valores.serviciosIds?.includes(servicio._id) || false}
-                        onChange={() => alternarServicioProfesional(servicio._id)}
-                      />
-                      <span>{servicio.nombre}</span>
-                    </label>
-                  ))}
-                </fieldset>
-                {cargandoEspecialidades && <p className={styles.helper}>Cargando especialidades...</p>}
+
+                <div className={styles.field}>
+                  <label className={styles.label}>Servicios que brinda *</label>
+                  <div className={styles.profesionalesGrid}>
+                    {formulario.servicios.length === 0 && (
+                      <span className={styles.helper}>
+                        No hay servicios cargados todavía.
+                      </span>
+                    )}
+                    {formulario.servicios.map((servicio) => {
+                      const servicioId = servicio._id || servicio.servicio_id;
+                      const seleccionado = (modalEdicion.valores.serviciosIds || []).includes(servicioId);
+                      return (
+                        <button
+                          key={servicioId}
+                          type="button"
+                          className={`${styles.chipProf} ${seleccionado ? styles.chipProfActivo : ""}`}
+                          onClick={() => {
+                            const actuales = modalEdicion.valores.serviciosIds || [];
+                            const nuevos = seleccionado
+                              ? actuales.filter((id) => id !== servicioId)
+                              : [...actuales, servicioId];
+                            actualizarModal("serviciosIds", nuevos);
+                          }}
+                        >
+                          {servicio.nombre}
+                          {seleccionado && <span className={styles.chipX}>×</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </>
             )}
             {modalEdicion.error && <p className={styles.formError}>{modalEdicion.error}</p>}

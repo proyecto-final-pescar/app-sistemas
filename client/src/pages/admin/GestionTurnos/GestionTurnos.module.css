@@ -8,11 +8,12 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  padding-top: 60px; /* compensa la barra fija del Sidebar mobile (hamburguesa) */
 }
 
 .content {
   flex: 1;
-  padding: 24px;
+  padding: 16px;
   box-sizing: border-box;
   font-family: 'Inter', sans-serif;
 }
@@ -21,22 +22,22 @@
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
   margin-bottom: 20px;
 }
 
 .statCard {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 18px;
+  gap: 10px;
+  padding: 14px;
   box-sizing: border-box;
 }
 
 .statIcono {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -66,28 +67,27 @@
 
 .statNumero {
   display: block;
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 700;
 }
 
 .statLabel {
   display: block;
-  font-size: 13px;
+  font-size: 12px;
   color: #7c6aa6;
 }
 
 /* ---------- Panel / tabla ---------- */
 
 .panel {
-  padding: 20px;
+  padding: 16px;
   box-sizing: border-box;
 }
 
 .panelHeader {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: stretch;
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -106,6 +106,7 @@
 .filtros {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .inputFecha,
@@ -119,7 +120,8 @@
 }
 
 .inputBusqueda {
-  min-width: 160px;
+  flex: 1;
+  min-width: 140px;
 }
 
 .tabs {
@@ -128,20 +130,23 @@
   background: #f5f3fb;
   padding: 4px;
   border-radius: 999px;
-  width: fit-content;
+  width: 100%;
+  overflow-x: auto;
   margin-bottom: 16px;
 }
 
 .tab {
   border: none;
   background: transparent;
-  padding: 6px 16px;
+  padding: 6px 14px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 500;
   color: #7c6aa6;
   cursor: pointer;
   font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tabActivo {
@@ -151,10 +156,12 @@
 
 .tablaWrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tabla {
   width: 100%;
+  min-width: 560px; /* evita que las columnas se aplasten antes de scrollear */
   border-collapse: collapse;
   font-size: 14px;
 }
@@ -167,6 +174,7 @@
   text-transform: uppercase;
   padding: 10px 12px;
   border-bottom: 1px solid #ede9fe;
+  white-space: nowrap;
 }
 
 .tabla td {
@@ -226,20 +234,49 @@
   cursor: not-allowed;
 }
 
-@media (max-width: 768px) {
+/* ===== 375px+ ===== */
+@media (min-width: 375px) {
+  .statNumero {
+    font-size: 21px;
+  }
+}
+
+/* ===== 768px+ (tablet / desktop) ===== */
+@media (min-width: 768px) {
+  .main {
+    padding-top: 0; /* desktop: el TopBar ya ocupa su propio espacio en el flujo */
+  }
+
+  .content {
+    padding: 24px;
+  }
+
   .stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 
   .panelHeader {
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
   }
 
   .filtros {
-    width: 100%;
+    flex-wrap: nowrap;
   }
 
-  .inputBusqueda {
-    flex: 1;
+  .tabs {
+    width: fit-content;
+  }
+}
+
+/* ===== 1024px+ ===== */
+@media (min-width: 1024px) {
+  .content {
+    padding: 32px;
+  }
+
+  .panel {
+    padding: 20px;
   }
 }

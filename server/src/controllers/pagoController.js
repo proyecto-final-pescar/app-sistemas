@@ -9,6 +9,16 @@ const detalleSeguroError = (error) => ({
   message: error?.message,
   status: error?.status
 });
+import client from '../config/mercadopago.js';
+
+import {
+  ESTADO,
+  ANTICIPACION_MINIMA_HORAS,
+  includeTurnoCompleto,
+  combinarFechaHora,
+  horasHasta,
+  formatearTurno
+} from './turnoController.js';
 
 export const crearPreferenciaPago = async (req, res) => {
   let pagoCreado = null;
@@ -117,7 +127,6 @@ export const obtenerEstadoPago = async (req, res) => {
     if (!pago.turno.mascota || pago.turno.mascota.dueno_id !== req.user.id) {
       return res.status(403).json({ message: 'No tenés permisos para ver este pago' });
     }
-
     return res.status(200).json({
       success: true,
       data: {
@@ -129,5 +138,109 @@ export const obtenerEstadoPago = async (req, res) => {
   } catch (error) {
     console.error('Error en obtenerEstadoPago:', detalleSeguroError(error));
     return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// POST /turnos/:turnoId/pagar-efectivo
+//
+// Cubre dos casos: el turno está DISPONIBLE (se reserva y confirma en
+// el mismo paso) o ya está PENDIENTE (ya reservado, solo falta elegir
+// el método de pago). En ambos casos el turno termina CONFIRMADO y se
+// crea un registro de pago en efectivo, pendiente de cobro en el local.
+// ─────────────────────────────────────────────────────────────
+export const pagarEfectivo = async (req, res) => {
+  try {
+    const { turnoId, mascotaId, motivo, notas } = req.body
+
+    const turno = await prisma.turno.findUnique({
+      where: { turno_id: turnoId },
+      include: { mascota: true, veterinaria: true }
+    })
+
+    if (!turno) {
+      return res.status(404).json({ message: 'El turno no existe' })
+    }
+
+    if (turno.veterinaria.estado_veterinaria_id !== 'ACT') {
+      return res.status(404).json({ message: 'Veterinaria no disponible' })
+    }
+
+    if (![ESTADO.DISPONIBLE, ESTADO.PENDIENTE].includes(turno.estado_turno_id)) {
+      return res.status(400).json({ message: 'Este turno no puede pagarse en efectivo en su estado actual' })
+    }
+
+    if (turno.estado_turno_id === ESTADO.PENDIENTE) {
+      if (turno.mascota?.dueno_id !== req.user.id) {
+        return res.status(403).json({ message: 'La mascota no te pertenece' })
+      }
+    }
+
+    if (turno.estado_turno_id === ESTADO.DISPONIBLE) {
+      if (!mascotaId || !motivo) {
+        return res.status(400).json({ message: 'Faltan datos obligatorios para reservar el turno' })
+      }
+
+      const mascota = await prisma.mascota.findUnique({ where: { mascota_id: mascotaId } })
+      if (!mascota || mascota.dueno_id !== req.user.id) {
+        return res.status(403).json({ message: 'La mascota no te pertenece' })
+      }
+
+      const fechaHoraTurno = combinarFechaHora(turno.fecha, turno.hora_inicio)
+      if (horasHasta(fechaHoraTurno) < ANTICIPACION_MINIMA_HORAS) {
+        return res.status(400).json({
+          message: `Los turnos deben reservarse con al menos ${ANTICIPACION_MINIMA_HORAS}hs de anticipación.`
+        })
+      }
+    }
+
+    const resultado = await prisma.$transaction(async (tx) => {
+      if (turno.estado_turno_id === ESTADO.DISPONIBLE) {
+        const actualizado = await tx.turno.updateMany({
+          where: { turno_id: turnoId, estado_turno_id: ESTADO.DISPONIBLE },
+          data: {
+            estado_turno_id: ESTADO.CONFIRMADO,
+            mascota_id: mascotaId,
+            motivo,
+            notas: notas || null,
+            vence_en: null
+          }
+        })
+        if (actualizado.count === 0) return null
+      } else {
+        await tx.turno.update({
+          where: { turno_id: turnoId },
+          data: { estado_turno_id: ESTADO.CONFIRMADO }
+        })
+      }
+
+      await tx.pago.create({
+        data: {
+          turno_id: turnoId,
+          monto: turno.monto_servicio,
+          metodo_pago_id: 'EFE',
+          estado_pago_id: 'PEN'
+        }
+      })
+
+      return tx.turno.findUnique({
+        where: { turno_id: turnoId },
+        include: includeTurnoCompleto
+      })
+    })
+
+    if (!resultado) {
+      return res.status(409).json({
+        message: 'Este turno ya no está disponible. Por favor elegí otro horario.'
+      })
+    }
+
+    return res.status(200).json({ success: true, data: { turno: formatearTurno(resultado) } })
+  } catch (error) {
+    if (error.code === 'P2023') {
+      return res.status(400).json({ message: 'Alguno de los ids enviados no es válido' })
+    }
+    console.error('Error en pagarEfectivo:', error)
+    return res.status(500).json({ message: 'Error interno del servidor' })
   }
 };
