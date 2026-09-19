@@ -1,7 +1,7 @@
 import { Payment } from 'mercadopago';
+
 import client from '../config/mercadopago.js';
-import Turno from '../models/Turno.js';
-import Pago from '../models/Pago.js';
+import prisma from '../../prisma/client.js';
 
 // Mapeo de estados de MercadoPago a estados del modelo Pago
 const ESTADO_MP_A_PAGO = {
@@ -48,37 +48,82 @@ export const recibirWebhook = async (req, res) => {
         || pagoMP.metadata?.turno_id
         || pagoMP.metadata?.turnoId;
 
-      let pagoExistente = await Pago.findOne({ idPago: String(idPago) });
+      let pagoExistente = await prisma.pago.findUnique({
+        where: {
+          id_pago: String(idPago)
+        }
+      });
 
       if (!pagoExistente && metadataPagoId) {
-        pagoExistente = await Pago.findById(metadataPagoId);
+        pagoExistente = await prisma.pago.findUnique({
+          where: {
+            pago_id: metadataPagoId
+          }
+        });
       }
 
       if (!pagoExistente && turnoId) {
-        pagoExistente = await Pago.findOne({ turnoId }).sort({ createdAt: -1 });
+        pagoExistente = await prisma.pago.findFirst({
+          where: {
+            turno_id: turnoId
+          },
+          orderBy: {
+            created_at: 'desc'
+          }
+        });
       }
 
       if (!pagoExistente) {
         return res.status(404).json({ message: 'No se encontró el pago asociado a la notificación' });
       }
 
-      const metodoPago = METODO_PAGO_MAP[pagoMP.payment_type_id] || null;
-      const pagoGuardado = await Pago.findByIdAndUpdate(
-        pagoExistente._id,
-        {
-          idPago: String(idPago),
-          metodoPago,
-          estado: ESTADO_MP_A_PAGO[pagoMP.status] || 'pendiente',
-          motivoRechazo: pagoMP.status === 'rejected' ? pagoMP.status_detail || null : null,
-          metadata: pagoMP,
-        },
-        { new: true, runValidators: true }
-      );
+    const estadoPagoNombre =
+  ESTADO_MP_A_PAGO[pagoMP.status] || 'pendiente';
+
+const estadoPago = await prisma.estado_pago.findUnique({
+  where: {
+    nombre: estadoPagoNombre
+  }
+});
+
+if (!estadoPago) {
+  throw new Error(
+    `No existe el estado de pago "${estadoPagoNombre}" en PostgreSQL`
+  );
+}
+
+const metodoPagoNombre =
+METODO_PAGO_MAP[pagoMP.payment_type_id] || null;
+
+let metodoPago = null;
+
+if (metodoPagoNombre) {
+  metodoPago = await prisma.metodo_pago.findUnique({
+    where: {
+      nombre: metodoPagoNombre
+    }
+  });
+}
+
+const pagoGuardado = await prisma.pago.update({
+  where: {
+    pago_id: pagoExistente.pago_id
+  },
+  data: {
+    id_pago: String(idPago),
+    metodo_pago_id: metodoPago?.metodo_pago_id ?? null,
+    estado_pago_id: estadoPago.estado_pago_id,
+    motivo_rechazo:
+      pagoMP.status === 'rejected'
+        ? pagoMP.status_detail || null
+        : null
+  }
+});
 
       return res.status(200).json({
         message: `Pago con estado ${pagoMP.status} registrado`,
-        turnoId: pagoGuardado.turnoId,
-        pagoId: pagoGuardado._id,
+        turnoId: pagoGuardado.turno_id,
+        pagoId: pagoGuardado.pago_id,
       });
     }
 
@@ -89,68 +134,137 @@ export const recibirWebhook = async (req, res) => {
     }
 
     // 5. Verificamos que el turno existe
-    const turno = await Turno.findById(turnoId);
+    const turno = await prisma.turno.findUnique({
+      where: {
+        turno_id: turnoId
+      },
+      include: {
+        estado_turno: true
+      }
+    });
+
     if (!turno) {
       return res.status(404).json({ message: 'Turno no encontrado' });
     }
 
-    // 6. Actualizamos el turno a 'confirmado'
-    if (turno.estado !== 'confirmado') {
-      turno.estado = 'confirmado';
-      await turno.save();
+   // 6. Resolvemos los estados necesarios en PostgreSQL
+const estadoConfirmado = await prisma.estado_turno.findUnique({
+  where: {
+    nombre: 'confirmado'
+  }
+});
+
+if (!estadoConfirmado) {
+  throw new Error(
+    'No existe el estado de turno "confirmado" en PostgreSQL'
+  );
+}
+
+const estadoAprobado = await prisma.estado_pago.findUnique({
+  where: {
+    nombre: 'aprobado'
+  }
+});
+
+if (!estadoAprobado) {
+  throw new Error(
+    'No existe el estado de pago "aprobado" en PostgreSQL'
+  );
+}
+
+const metodoPagoNombre =
+  METODO_PAGO_MAP[pagoMP.payment_type_id] || null;
+
+let metodoPago = null;
+
+if (metodoPagoNombre) {
+  metodoPago = await prisma.metodo_pago.findUnique({
+    where: {
+      nombre: metodoPagoNombre
     }
+  });
+}
 
-    // 7. Creamos o actualizamos el documento en la colección Pagos
-    const metodoPago = METODO_PAGO_MAP[pagoMP.payment_type_id] || null;
+// 7. Pago aprobado + confirmación del turno en una única transacción
+const pagoGuardado = await prisma.$transaction(async (tx) => {
+  const pagoExistentePorIdPago = await tx.pago.findUnique({
+    where: {
+      id_pago: String(idPago)
+    },
+    include: {
+      estado_pago: true
+    }
+  });
 
-    // Si esta notificación ya fue procesada antes (MercadoPago puede reenviar
-    // el mismo webhook más de una vez), no hacemos nada más.
-    const pagoExistentePorIdPago = await Pago.findOne({ idPago: String(idPago) });
-    if (pagoExistentePorIdPago?.estado === 'aprobado') {
-      return res.status(200).json({
-        message: 'Notificación ya procesada anteriormente',
-        turnoId,
-        pagoId: pagoExistentePorIdPago._id,
+  if (
+    pagoExistentePorIdPago &&
+    pagoExistentePorIdPago.turno_id !== turno.turno_id
+  ) {
+    throw new Error(
+      'El pago de MercadoPago está asociado a otro turno'
+    );
+  }
+
+  let pagoFinal = pagoExistentePorIdPago;
+
+  if (pagoExistentePorIdPago?.estado_pago?.nombre !== 'aprobado') {
+    const datosPago = {
+      turno_id: turno.turno_id,
+      monto: pagoMP.transaction_amount,
+      id_pago: String(idPago),
+      metodo_pago_id: metodoPago?.metodo_pago_id ?? null,
+      estado_pago_id: estadoAprobado.estado_pago_id,
+      motivo_rechazo: null,
+      fecha_aprobacion: pagoMP.date_approved
+        ? new Date(pagoMP.date_approved)
+        : new Date()
+    };
+
+    if (!pagoFinal) {
+      pagoFinal = await tx.pago.findFirst({
+        where: {
+          turno_id: turno.turno_id,
+          estado_pago_id: 'PEN'
+        },
+        orderBy: {
+          created_at: 'desc'
+        }
       });
     }
 
-    const datosPago = {
-      turnoId: turno._id,
-      userId: turno.usuarioId,
-      monto: pagoMP.transaction_amount,
-      moneda: pagoMP.currency_id || 'ARS',
-      idPago: String(idPago),
-      proveedor: 'mercadopago',
-      metodoPago,
-      estado: 'aprobado',
-      motivoRechazo: null,
-      fechaAprobacion: pagoMP.date_approved ? new Date(pagoMP.date_approved) : new Date(),
-      metadata: pagoMP,
-    };
-
-    // Buscamos el registro pendiente que se creó al iniciar el checkout
-    // (crearPreferenciaPago). Si no existe (caso raro), lo creamos ahora.
-    let pagoGuardado = pagoExistentePorIdPago
-      ? await Pago.findByIdAndUpdate(pagoExistentePorIdPago._id, datosPago, { new: true })
-      : await Pago.findOneAndUpdate(
-        { turnoId: turno._id, estado: 'pendiente' },
-        datosPago,
-        { new: true }
-      );
-
-    if (!pagoGuardado) {
-      pagoGuardado = await Pago.create(datosPago);
+    if (pagoFinal) {
+      pagoFinal = await tx.pago.update({
+        where: {
+          pago_id: pagoFinal.pago_id
+        },
+        data: datosPago
+      });
+    } else {
+      pagoFinal = await tx.pago.create({
+        data: datosPago
+      });
     }
+  }
 
-    // 8. Vinculamos el pago al turno
-    turno.pagoId = pagoGuardado._id;
-    await turno.save();
-
-    return res.status(200).json({
-      message: 'Pago procesado correctamente',
-      turnoId,
-      pagoId: pagoGuardado._id,
+  if (turno.estado_turno.nombre !== 'confirmado') {
+    await tx.turno.update({
+      where: {
+        turno_id: turno.turno_id
+      },
+      data: {
+        estado_turno_id: estadoConfirmado.estado_turno_id
+      }
     });
+  }
+
+  return pagoFinal;
+});
+
+return res.status(200).json({
+  message: 'Pago procesado correctamente',
+  turnoId,
+  pagoId: pagoGuardado.pago_id,
+});
 
   } catch (error) {
     console.error('Error en webhook de MercadoPago:', error);

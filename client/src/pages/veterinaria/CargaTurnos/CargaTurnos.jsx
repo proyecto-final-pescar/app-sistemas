@@ -29,6 +29,7 @@ const DIAS_MAPA = [
   { nombre: "Domingo", clave: "DOM" },
 ];
 
+
 const obtenerLunesDeSemana = (offset = 0) => {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -100,14 +101,15 @@ export default function CargaTurnos() {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
+
   const servicioSeleccionado = veterinaria?.servicios?.find(
     (s) => s.servicio_id === servicioId
   );
   const [duracion, setDuracion] = useState(30);
 
-  // Filtrado adaptado a SQL: busca en la propiedad o array de servicios del profesional
   const profesionalesDelServicio = veterinaria?.profesionales?.filter((p) => {
     if (!servicioId) return false;
+
     if (Array.isArray(p.servicios)) {
       return p.servicios.some((s) => (s.servicio_id || s) === servicioId);
     }
@@ -150,7 +152,7 @@ export default function CargaTurnos() {
         })
       );
     } catch {
-      // silencioso
+
     }
   }, [veterinaria]);
 
@@ -189,6 +191,9 @@ export default function CargaTurnos() {
   };
 
   // Mapeo flexible de horarios para SQL (horario_veterinaria)
+  // Reemplazar la función obtenerHorarioDia
+
+
   const obtenerHorarioDia = (claveDia) => {
     if (!veterinaria?.horarios) return null;
 
@@ -272,7 +277,7 @@ export default function CargaTurnos() {
       const inicioExistente = sh * 60 + sm;
       const finExistente = inicioExistente + s.duracion;
 
-      // Solapamiento de rangos (mismo criterio que en el backend)
+
       return inicioExistente < finNuevo && finExistente > inicioNuevo;
     });
   };
