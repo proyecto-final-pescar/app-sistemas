@@ -15,6 +15,7 @@
 
 .contenido {
   padding: 12px;
+  padding-top: 72px; 
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
@@ -219,6 +220,22 @@
   background: var(--color-primario);
   color: var(--color-blanco);
   border-color: var(--color-primario);
+}
+
+
+@media (max-width: 767px) {
+  .tabsFiltro {
+    flex-direction: row;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+
+  .tabFiltro {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
 }
 
 /* ==================== TURNOS LIST ==================== */
