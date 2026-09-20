@@ -65,7 +65,7 @@ export default function HistorialMedico() {
           obtenerHistorialesTutor()
         ]);
 
-       
+
         setMascotas(Array.isArray(mascotasData) ? mascotasData : []);
         setHistoriales(historialesData.historiales || []);
 
@@ -80,13 +80,13 @@ export default function HistorialMedico() {
   }, []);
 
   const filteredRecords = historiales.filter(record => {
-     const titulo = record.motivo_consulta?.toLowerCase() || '';
-     const veterinaria = record.veterinaria?.nombre?.toLowerCase() || '';
+    const titulo = record.motivo_consulta?.toLowerCase() || '';
+    const veterinaria = record.veterinaria?.nombre?.toLowerCase() || '';
     const busqueda = searchTerm.toLowerCase();
 
     const matchesSearch = titulo.includes(busqueda) || veterinaria.includes(busqueda);
     const matchesPet = selectedPet === 'all' || record.mascota?.mascota_id === selectedPet;
-    
+
     return matchesSearch && matchesPet;
   });
 
@@ -157,17 +157,17 @@ export default function HistorialMedico() {
           ) : (
             <div className="hm-list">
               {currentItems.map(record => {
-                 const mascotaNombre = record.mascota?.nombre || 'Mascota';
-                 const mascotaFoto = mascotas.find(m => m._id === record.mascota?.mascota_id)?.foto;     
+                const mascotaNombre = record.mascota?.nombre || 'Mascota';
+                const mascotaFoto = mascotas.find(m => m._id === record.mascota?.mascota_id)?.foto;
                 const vetNombre = record.veterinaria?.nombre || 'Veterinaria';
-                 const profNombre = record.profesional
-                 ? `${record.profesional.nombre} ${record.profesional.apellido}`
-                 : 'Profesional';
+                const profNombre = record.profesional
+                  ? `${record.profesional.nombre} ${record.profesional.apellido}`
+                  : 'Profesional';
 
                 return (
                   <Card
-                 
-                  key={record.consulta_id}
+
+                    key={record.consulta_id}
                     onClick={() => setSelectedRecord(record)}
                     className="hm-card-pill"
                   >
@@ -182,6 +182,7 @@ export default function HistorialMedico() {
                         <h3 className="hm-card-pill__title">
                           {record.motivo_consulta}
                         </h3>
+                        <ConsultaBadge tipo={CATEGORIA_A_BADGE[record.categoria_servicio?.nombre] || "otro"} />
                       </div>
 
                       <div className="hm-card-pill__meta">
@@ -282,9 +283,9 @@ export default function HistorialMedico() {
                     tamaño="mediano"
                     onClick={() => setSelectedRecord(null)}
                   />
-                  {selectedRecord.urlPdf && (
-                    <a href={selectedRecord.url_pdf} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>                  
-                        <Button
+                  {selectedRecord.url_Pdf && (
+                    <a href={selectedRecord.url_pdf} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                      <Button
                         texto="Descargar PDF"
                         variante="primario"
                         tamaño="mediano"

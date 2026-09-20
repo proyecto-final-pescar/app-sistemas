@@ -932,14 +932,14 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
     ]);
 
     const data = pacientes.map((mascota) => ({
-      id: mascota.mascota_id,
+      mascota_id: mascota.mascota_id,
       nombre: mascota.nombre,
       raza: mascota.raza?.nombre || 'Sin especificar',
        especie: mascota.raza?.especie?.nombre || null,
       fecha_nacimiento: mascota.fecha_nacimiento,
       foto: mascota.foto || null,
       dueño: {
-        id: mascota.usuario?.usuario_id,
+        usuario_id: mascota.usuario?.usuario_id,
         nombre: mascota.usuario
           ? `${mascota.usuario.nombre} ${mascota.usuario.apellido}`
           : 'Sin información'
