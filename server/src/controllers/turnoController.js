@@ -1,13 +1,15 @@
 import prisma from '../../prisma/client.js'
+import client from '../config/mercadopago.js'
+import { PaymentRefund } from 'mercadopago'
 
 // ─────────────────────────────────────────────────────────────
 // Reglas de negocio
 // ─────────────────────────────────────────────────────────────
-const ANTICIPACION_MINIMA_HORAS = 10
+export const ANTICIPACION_MINIMA_HORAS = 10
 const PLAZO_PAGO_HORAS = 3          // siempre < ANTICIPACION_MINIMA_HORAS
 const HORAS_LIMITE_CANCELACION = 24 // solo aplica a turnos ya CONFIRMADOS
 
-const ESTADO = {
+export const ESTADO = {
   DISPONIBLE: 'DIS',
   PENDIENTE: 'PEN',
   CONFIRMADO: 'CON',
@@ -16,9 +18,9 @@ const ESTADO = {
 }
 
 
-const ESTADOS_VALIDOS = new Set(Object.values(ESTADO))
+export const ESTADOS_VALIDOS = new Set(Object.values(ESTADO))
 
-const includeTurnoCompleto = {
+export const includeTurnoCompleto = {
   mascota: {
     select: {
       mascota_id: true,
@@ -51,7 +53,7 @@ const includeTurnoCompleto = {
 // Helpers de fecha/hora
 // ─────────────────────────────────────────────────────────────
 
-const combinarFechaHora = (fecha, horaTime) => {
+export const combinarFechaHora = (fecha, horaTime) => {
   const fechaStr = typeof fecha === 'string' ? fecha.slice(0, 10) : fecha.toISOString().slice(0, 10)
   const [anio, mes, dia] = fechaStr.split('-').map(Number)
 
@@ -65,7 +67,7 @@ const combinarFechaHora = (fecha, horaTime) => {
   return new Date(anio, mes - 1, dia, horas, minutos, 0, 0)
 }
 
-const horasHasta = (fechaHora) => (fechaHora.getTime() - Date.now()) / (1000 * 60 * 60)
+export const horasHasta = (fechaHora) => (fechaHora.getTime() - Date.now()) / (1000 * 60 * 60)
 
 const horaStringATime = (horaStr) => {
   const [h, m] = horaStr.split(':').map(Number)
@@ -81,9 +83,9 @@ const sumarMinutos = (horaTimeUTC, minutos) => {
 // Postgres devuelve columnas `time` como Date ancladas al epoch (UTC).
 // Se formatea a "HH:MM" antes de mandar cualquier respuesta al frontend,
 // que sigue esperando ese formato simple (heredado de la versión Mongo).
-const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
+export const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
 
-const formatearTurno = (turno) => ({
+export const formatearTurno = (turno) => ({
   ...turno,
   hora_inicio: formatearHora(turno.hora_inicio),
   hora_fin: formatearHora(turno.hora_fin)
@@ -328,6 +330,10 @@ export const cancelarTurno = async (req, res) => {
       return res.status(400).json({ message: 'No se puede cancelar un turno ya atendido' })
     }
 
+    let pagoAReembolsar = null
+    let estadoReembolso = null
+    let motivoRechazoReembolso = null
+
     if (turno.estado_turno_id === ESTADO.CONFIRMADO) {
       const fechaHoraTurno = combinarFechaHora(turno.fecha, turno.hora_inicio)
       const horasRestantes = horasHasta(fechaHoraTurno)
@@ -338,7 +344,33 @@ export const cancelarTurno = async (req, res) => {
         })
       }
 
-      // TODO(pago): pendiente de S15-07 (pagos), todavía no migrado.
+      // Reembolso automático: solo si hay un pago realmente APROBADO (cobrado).
+      // Si es efectivo y todavía está en PEN (nunca se cobró en el local),
+      // no hay nada que reembolsar — se cancela sin más.
+      pagoAReembolsar = await prisma.pago.findFirst({
+        where: { turno_id: id, estado_pago_id: 'APR' },
+        orderBy: { created_at: 'desc' }
+      })
+
+      if (pagoAReembolsar) {
+        if (pagoAReembolsar.metodo_pago_id === 'MPG' && pagoAReembolsar.id_pago) {
+          try {
+            const refundClient = new PaymentRefund(client)
+            await refundClient.create({ payment_id: pagoAReembolsar.id_pago })
+            estadoReembolso = 'APR'
+          } catch (errorReembolso) {
+            // No bloqueamos la cancelación del turno por un fallo de MP:
+            // se cancela igual, y el reembolso queda para resolución manual.
+            console.error('Error al reembolsar en MercadoPago:', errorReembolso)
+            estadoReembolso = 'PRO'
+            motivoRechazoReembolso = 'Fallo el reembolso automático en MercadoPago, requiere revisión manual.'
+          }
+        } else {
+          // Efectivo ya cobrado (a futuro, cuando exista "marcar como cobrado"):
+          // no hay integración externa, se asume resuelto en el local.
+          estadoReembolso = 'APR'
+        }
+      }
     }
 
     // Se preserva el turno cancelado como registro de auditoría (queda
@@ -366,6 +398,24 @@ export const cancelarTurno = async (req, res) => {
         }
       })
 
+      if (pagoAReembolsar) {
+        await tx.pago.update({
+          where: { pago_id: pagoAReembolsar.pago_id },
+          data: { estado_pago_id: 'REE' }
+        })
+
+        await tx.pago.create({
+          data: {
+            turno_id: id,
+            monto: pagoAReembolsar.monto,
+            metodo_pago_id: pagoAReembolsar.metodo_pago_id,
+            estado_pago_id: estadoReembolso,
+            reembolso_de_id: pagoAReembolsar.pago_id,
+            motivo_rechazo: motivoRechazoReembolso
+          }
+        })
+      }
+
       return [cancelado, nuevoTurno]
     })
 
@@ -374,7 +424,10 @@ export const cancelarTurno = async (req, res) => {
       message: 'Turno cancelado y horario liberado correctamente',
       data: {
         turnoCancelado: formatearTurno(turnoCancelado),
-        turnoNuevoDisponible: formatearTurno(turnoLiberado)
+        turnoNuevoDisponible: formatearTurno(turnoLiberado),
+        reembolso: pagoAReembolsar
+          ? { monto: Number(pagoAReembolsar.monto), estado: estadoReembolso }
+          : null
       }
     })
   } catch (error) {

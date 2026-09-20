@@ -92,9 +92,10 @@
 }
 
 .tabs {
-  display: inline-flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 4px;
+  width: min(100%, 980px);
   margin: 30px 0 24px;
   padding: 7px;
   border: 1px solid #ede9fe;
@@ -105,7 +106,8 @@
 
 .tab {
   min-height: 44px;
-  padding: 0 22px;
+  min-width: 0;
+  padding: 0 14px;
   border: 0;
   border-radius: 13px;
   background: transparent;
@@ -727,6 +729,213 @@
   align-items: center;
 }
 
+.textareaField {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #4c3d72;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.textareaField textarea {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid #e5ddf8;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #21163d;
+  font: inherit;
+  font-weight: 400;
+  outline: none;
+}
+
+.textareaField textarea:focus {
+  border-color: #7c3aed;
+}
+
+.textareaField small {
+  align-self: flex-end;
+  color: #8276ab;
+  font-weight: 400;
+}
+
+.serviceSelector {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #e5ddf8;
+  border-radius: 12px;
+}
+
+.serviceSelector legend {
+  padding: 0 6px;
+  color: #4c3d72;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.serviceSelector label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #4c3d72;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.serviceSelector input {
+  width: 17px;
+  height: 17px;
+  accent-color: #7c3aed;
+}
+
+.serviceSelector p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #8276ab;
+  font-size: 13px;
+}
+
+.paymentCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid #ede9fe;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(49, 32, 92, 0.05);
+}
+
+.paymentLogo {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  border-radius: 14px;
+  background: #009ee3;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.paymentBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.paymentTitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.paymentTitle h3,
+.paymentBody p {
+  margin: 0;
+}
+
+.paymentBody p {
+  margin-top: 6px;
+  color: #5f5579;
+  font-size: 14px;
+}
+
+.paymentBody small {
+  display: block;
+  margin-top: 6px;
+  color: #8276ab;
+  line-height: 1.45;
+}
+
+.connected,
+.disconnected {
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.connected {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.disconnected {
+  background: #f1f0f5;
+  color: #716985;
+}
+
+.paymentActions {
+  display: flex;
+  align-items: stretch;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.paymentActions :global(.btn-primario) {
+  background: #7c3aed;
+  box-shadow: 0 7px 16px rgba(124, 58, 237, 0.22);
+}
+
+.paymentActions :global(.btn-primario):hover {
+  background: #6d28d9;
+}
+
+.disconnectButton,
+.paymentError button {
+  min-height: 40px;
+  border: 1px solid #fecdd3;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #be123c;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.paymentState,
+.paymentError {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 180px;
+  padding: 24px;
+  border: 1px dashed #d8ccf7;
+  border-radius: 16px;
+  color: #8276ab;
+  text-align: center;
+}
+
+.paymentState .spinner {
+  width: 28px;
+  height: 28px;
+}
+
+.paymentState p,
+.paymentError p {
+  margin: 0;
+}
+
+.paymentError strong {
+  color: #9f1239;
+}
+
+.paymentError button {
+  padding: 0 18px;
+  border-color: #ddd3f8;
+  color: #6d28d9;
+}
+
 @media (max-width: 767px) {
   .content {
     padding: 88px 16px 32px;
@@ -762,6 +971,10 @@
 
   .tab {
     padding: 0 10px;
+  }
+
+  .tab:nth-child(5) {
+    grid-column: 1 / -1;
   }
 
   .panel {
@@ -814,14 +1027,30 @@
     align-items: stretch;
     flex-direction: column;
   }
+
+  .paymentCard {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .paymentActions,
+  .paymentActions :global(.btn),
+  .disconnectButton {
+    width: 100%;
+  }
 }
 
 @media (max-width: 420px) {
-  .tabs {
-    grid-template-columns: 1fr;
+  .tab {
+    padding: 0 7px;
+    font-size: 13px;
   }
 
   .timeFields {
     flex-direction: column;
+  }
+
+  .serviceSelector {
+    grid-template-columns: 1fr;
   }
 }

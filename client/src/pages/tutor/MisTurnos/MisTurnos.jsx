@@ -4,8 +4,11 @@ import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
 import Badge from "../../../components/ui/badge/Badge";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
+import SuccessModal from "../../../components/ui/success-modal/SuccessModal"; // 1. IMPORTAR SUCCESS MODAL
 import { FaCalendarAlt, FaClock, FaHospital, FaPaw } from "react-icons/fa";
-import { obtenerTurnosPorUsuario, cancelarTurno } from "../../../services/turnosService";
+import { obtenerTurnosPorUsuario, cancelarTurno, pagarEfectivo } from "../../../services/turnosService";
+import { crearPreferenciaPago } from "../../../services/pagosService";
+import SelectorMetodoPago from "../../../components/pagos/SelectorMetodoPago";
 import {
   filtrarProximos,
   filtrarPasados,
@@ -24,6 +27,14 @@ export default function MisTurnos() {
   const [cancelando, setCancelando] = useState(null);
   const [modalCancelar, setModalCancelar] = useState(null);
   const [menuAbierto, setMenuAbierto] = useState(null);
+  const [pagando, setPagando] = useState(null);
+  const [turnoParaPagar, setTurnoParaPagar] = useState(null);
+  const [errorAccion, setErrorAccion] = useState("");
+  const [mensajeCancelacion, setMensajeCancelacion] = useState(null);
+
+  // 2. ESTADOS PARA EL SUCCESS MODAL EN EFECTIVO
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [turnoConfirmadoEfectivo, setTurnoConfirmadoEfectivo] = useState(null);
 
   useEffect(() => {
     const cargarTurnos = async () => {
@@ -54,17 +65,82 @@ export default function MisTurnos() {
     setModalCancelar(null);
 
     try {
-      await cancelarTurno(modalCancelar);
+      const { reembolso } = await cancelarTurno(modalCancelar);
       setTurnos((prev) =>
         prev.map((t) =>
           t.turno_id === modalCancelar ? { ...t, estado_turno_id: "CAN" } : t
         )
       );
+
+      if (!reembolso) {
+        setMensajeCancelacion("Turno cancelado correctamente.");
+      } else if (reembolso.estado === "APR") {
+        setMensajeCancelacion(`Turno cancelado. Se reembolsaron $${reembolso.monto} a tu medio de pago.`);
+      } else {
+        setMensajeCancelacion(`Turno cancelado. Tu reembolso de $${reembolso.monto} está siendo procesado.`);
+      }
     } catch (err) {
       const mensaje = err.response?.data?.message || "No se pudo cancelar el turno.";
-      alert(mensaje);
+      setErrorAccion(mensaje);
     } finally {
       setCancelando(null);
+    }
+  };
+
+  const handleAbrirSelectorPago = (turno) => {
+    setMenuAbierto(null);
+    setTurnoParaPagar(turno);
+  };
+
+  const handlePagarConMercadoPago = async () => {
+    const turnoId = turnoParaPagar.turno_id;
+    setTurnoParaPagar(null);
+    if (pagando) return;
+    setPagando(turnoId);
+
+    try {
+      const respuesta = await crearPreferenciaPago(turnoId);
+      const initPoint = respuesta?.init_point;
+
+      if (!initPoint) {
+        throw new Error("No se recibió el enlace de MercadoPago.");
+      }
+
+      window.location.href = initPoint;
+    } catch (err) {
+      const mensaje =
+        err.response?.data?.message ||
+        err.message ||
+        "No se pudo iniciar el pago. Intentá de nuevo.";
+      setErrorAccion(mensaje);
+      setPagando(null);
+    }
+  };
+
+  // 3. ACTUALIZAR HANDLER DE PAGO EN EFECTIVO
+  const handlePagarEnEfectivo = async () => {
+    const turnoSeleccionado = turnoParaPagar;
+    const turnoId = turnoSeleccionado.turno_id;
+    
+    setTurnoParaPagar(null);
+    if (pagando) return;
+    setPagando(turnoId);
+
+    try {
+      const turnoActualizado = await pagarEfectivo({ turnoId });
+      setTurnos((prev) =>
+        prev.map((t) => (t.turno_id === turnoId ? turnoActualizado : t))
+      );
+      
+      // Guardar el turno para armar el mensaje e indicar éxito
+      setTurnoConfirmadoEfectivo(turnoSeleccionado);
+      setIsSuccessOpen(true);
+    } catch (err) {
+      const mensaje =
+        err.response?.data?.message || "No se pudo confirmar el pago en efectivo.";
+      setErrorAccion(mensaje);
+    } finally {
+      setPagando(null);
     }
   };
 
@@ -130,8 +206,12 @@ export default function MisTurnos() {
               <div className={styles.bannerAcciones}>
                 <button className={styles.bannerBtn}>Ver detalles</button>
                 {turnoMasProximo.estado_turno_id === "PEN" && (
-                  <button className={`${styles.bannerBtn} ${styles.bannerBtnPagar}`}>
-                    Pagar
+                  <button
+                    className={`${styles.bannerBtn} ${styles.bannerBtnPagar}`}
+                    onClick={() => handleAbrirSelectorPago(turnoMasProximo)}
+                    disabled={pagando === turnoMasProximo.turno_id}
+                  >
+                    {pagando === turnoMasProximo.turno_id ? "Procesando..." : "Pagar"}
                   </button>
                 )}
                 {new Date(turnoMasProximo.fecha) > new Date() &&
@@ -217,8 +297,12 @@ export default function MisTurnos() {
                         </button>
 
                         {turno.estado_turno_id === "PEN" && (
-                          <button className={styles.dropdownItem} onClick={() => { }}>
-                            Pagar
+                          <button
+                            className={styles.dropdownItem}
+                            onClick={() => handleAbrirSelectorPago(turno)}
+                            disabled={pagando === turno.turno_id}
+                          >
+                            {pagando === turno.turno_id ? "Procesando..." : "Pagar"}
                           </button>
                         )}
 
@@ -244,6 +328,45 @@ export default function MisTurnos() {
           </div>
         </div>
       </div>
+
+      <SelectorMetodoPago
+        isOpen={Boolean(turnoParaPagar)}
+        onClose={() => setTurnoParaPagar(null)}
+        onElegirMercadoPago={handlePagarConMercadoPago}
+        onElegirEfectivo={handlePagarEnEfectivo}
+        monto={turnoParaPagar?.monto_servicio}
+        procesando={pagando !== null}
+      />
+
+      {/* 4. RENDERIZADO DEL SUCCESS MODAL */}
+      <SuccessModal
+        abierto={isSuccessOpen}
+        titulo="¡Turno confirmado!"
+        mensaje={`Tu turno para ${turnoConfirmadoEfectivo?.mascota?.nombre || "tu mascota"} quedó confirmado. Recordá abonar $${turnoConfirmadoEfectivo?.monto_servicio || ""} en efectivo en el local.`}
+        textoBoton="Entendido"
+        onClose={() => {
+          setIsSuccessOpen(false);
+          setTurnoConfirmadoEfectivo(null);
+        }}
+      />
+
+      {errorAccion && (
+        <div className={styles.errorOverlay}>
+          <div className={styles.errorModal}>
+            <p>{errorAccion}</p>
+            <button onClick={() => setErrorAccion("")}>Entendido</button>
+          </div>
+        </div>
+      )}
+      
+      {mensajeCancelacion && (
+        <div className={styles.errorOverlay}>
+          <div className={styles.errorModal}>
+            <p>{mensajeCancelacion}</p>
+            <button onClick={() => setMensajeCancelacion(null)}>Entendido</button>
+          </div>
+        </div>
+      )}
 
       {/* Modal de confirmación de cancelación */}
       <ConfirmModal

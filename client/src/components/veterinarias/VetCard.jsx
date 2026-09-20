@@ -23,6 +23,14 @@ const IconAlert = () => (
   </svg>
 );
 
+
+const obtenerCategoriasServicio = (vet) => {
+  const categorias = (vet.servicio || [])
+    .map((s) => s.categoria_servicio?.nombre)
+    .filter(Boolean);
+  return [...new Set(categorias)];
+};
+
 const VetCard = ({
   vet,
   activa = false,
@@ -33,6 +41,7 @@ const VetCard = ({
   variante = "grid", //  puede estar en la seccion urgencias o al buscar desde el home
 }) => {
   const esSeleccionable = typeof onClick === "function";
+  const categorias = obtenerCategoriasServicio(vet);
 
   if (variante === "fila") {
     return (
@@ -89,7 +98,7 @@ const VetCard = ({
       </div>
 
       {/* distancia + teléfono + urgencias (solo si vienen) */}
-      {(distancia != null || vet.telefono || vet.urgencias24hs) && (
+      {(distancia != null || vet.telefono || vet.urgencias) && (
         <div className={styles.meta}>
           {distancia != null && (
             <span className={styles.metaItem}>
@@ -103,7 +112,7 @@ const VetCard = ({
               {vet.telefono}
             </span>
           )}
-          {vet.urgencias24hs && (
+          {vet.urgencias && (
             <span className={`${styles.metaItem} ${styles.urgencias}`}>
               <IconAlert /> Urgencias 24hs
             </span>
@@ -111,11 +120,11 @@ const VetCard = ({
         </div>
       )}
 
-      {/* Especialidades */}
-      {vet.especialidades?.length > 0 && (
+      
+      {categorias.length > 0 && (
         <div className={styles.tags}>
-          {vet.especialidades.slice(0, 3).map((esp) => (
-            <span key={esp} className={styles.tag}>{esp}</span>
+          {categorias.slice(0, 3).map((cat) => (
+            <span key={cat} className={styles.tag}>{cat}</span>
           ))}
         </div>
       )}
