@@ -494,7 +494,31 @@ export const obtenerVeterinarias = async (req, res) => {
       include: relacionesVeterinaria
     });
 
-    res.status(200).json({ success: true, data: veterinarias.map(mapearVeterinariaLegible) });
+    const ids = veterinarias.map((v) => v.veterinaria_id);
+
+    // Un solo query para todos los ratings del batch, en vez de N+1 contra la vista.
+    const ratings = ids.length > 0
+      ? await prisma.$queryRaw`
+          SELECT veterinaria_id, rating, cantidad_resenias
+          FROM vw_rating_veterinaria
+          WHERE veterinaria_id = ANY(${ids}::uuid[])
+        `
+      : [];
+
+    const ratingsPorId = new Map(
+      ratings.map((r) => [
+        r.veterinaria_id,
+        { rating: Number(r.rating), cantidadResenias: Number(r.cantidad_resenias) }
+      ])
+    );
+
+    const data = veterinarias.map((v) => ({
+      ...mapearVeterinariaLegible(v),
+      rating: ratingsPorId.get(v.veterinaria_id)?.rating ?? null,
+      cantidadResenias: ratingsPorId.get(v.veterinaria_id)?.cantidadResenias ?? 0
+    }));
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     console.error('Error en GET /veterinarias:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
@@ -515,7 +539,19 @@ export const obtenerVeterinariaPorId = async (req, res) => {
       return res.status(404).json({ message: 'El recurso no existe.' });
     }
 
-    res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinaria) });
+    const [agregado] = await prisma.$queryRaw`
+      SELECT rating, cantidad_resenias
+      FROM vw_rating_veterinaria
+      WHERE veterinaria_id = ${id}::uuid
+    `;
+
+    const data = {
+      ...mapearVeterinariaLegible(veterinaria),
+      rating: agregado ? Number(agregado.rating) : null,
+      cantidadResenias: agregado ? Number(agregado.cantidad_resenias) : 0
+    };
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     console.error('Error en GET /veterinarias/:id:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
@@ -536,7 +572,19 @@ export const obtenerMiVeterinaria = async (req, res) => {
       return res.status(404).json({ message: 'No tenés una veterinaria registrada.' });
     }
 
-    res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinaria) });
+    const [agregado] = await prisma.$queryRaw`
+      SELECT rating, cantidad_resenias
+      FROM vw_rating_veterinaria
+      WHERE veterinaria_id = ${veterinaria.veterinaria_id}::uuid
+    `;
+
+    const data = {
+      ...mapearVeterinariaLegible(veterinaria),
+      rating: agregado ? Number(agregado.rating) : null,
+      cantidadResenias: agregado ? Number(agregado.cantidad_resenias) : 0
+    };
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     console.error('Error en GET /veterinarias/mia:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
