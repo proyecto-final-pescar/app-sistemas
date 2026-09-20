@@ -2,6 +2,7 @@
 import prisma from '../../prisma/client.js';
 import { enviarEmail } from '../utils/mailer.js';
 import { armarEmailPublicacionDadaDeBaja } from '../templates/emailPublicacionDadaDeBaja.js';
+import { sanitizeText } from '../utils/sanitizeText.js';
 
 const ESTADOS_PUBLICACION = ['ACT', 'CER'];
 const TIPOS_CONTACTO = ['TEL', 'EML'];
@@ -126,6 +127,15 @@ export const crearPublicacion = async (req, res) => {
   
     const usuarioId = req.user.id; 
     const { foto, nombre, zona, descripcion, fecha, contacto, tipoContacto } = req.body;
+    const nombreSanitizado = sanitizeText(nombre);
+    const descripcionSanitizada = sanitizeText(descripcion);
+    const contactoSanitizado = sanitizeText(contacto);
+
+    if (!descripcionSanitizada || !contactoSanitizado) {
+     return res.status(400).json({
+      message: 'La descripción y el contacto deben contener texto válido'
+    });
+    }
         
     if (!foto || !zona || !descripcion || !fecha || !contacto || !tipoContacto) {
       return res.status(400).json({
@@ -147,7 +157,11 @@ export const crearPublicacion = async (req, res) => {
       return res.status(400).json({ message: 'La fecha ingresada no es válida' });
     }
 
-    const errorLongitud = validarLongitudes({ nombre, descripcion, contacto });
+    const errorLongitud = validarLongitudes({
+      nombre: nombreSanitizado,
+      descripcion: descripcionSanitizada,
+      contacto: contactoSanitizado
+    });
     if (errorLongitud) {
       return res.status(400).json({ message: errorLongitud });
     }
@@ -155,14 +169,13 @@ export const crearPublicacion = async (req, res) => {
     const nuevaPublicacion = await prisma.publicacion.create({
       data: {
         foto,
-        nombre,
+        nombre: nombreSanitizado,
         zona_id: zonaId,
-        descripcion,
+        descripcion: descripcionSanitizada,
         fecha: fechaParseada,
-        contacto,
+        contacto: contactoSanitizado,
         tipo_contacto_id: tipoContacto,
         usuario_id: usuarioId
-        // estado_publicacion_id arranca en 'ACT' por defecto
       },
       include: INCLUDE_PUBLICACION
     });
@@ -195,7 +208,20 @@ export const actualizarPublicacion = async (req, res) => {
 
     const { foto, nombre, zona, descripcion, fecha, contacto, tipoContacto, estado } = req.body;
 
-    const errorLongitud = validarLongitudes({ nombre, descripcion, contacto });
+    const nombreSanitizado =
+      nombre !== undefined ? sanitizeText(nombre) : undefined;
+
+    const descripcionSanitizada =
+      descripcion !== undefined ? sanitizeText(descripcion) : undefined;
+
+    const contactoSanitizado =
+      contacto !== undefined ? sanitizeText(contacto) : undefined;
+
+    const errorLongitud = validarLongitudes({
+      nombre: nombreSanitizado,
+      descripcion: descripcionSanitizada,
+      contacto: contactoSanitizado
+    });
     if (errorLongitud) {
       return res.status(400).json({ message: errorLongitud });
     }
@@ -203,9 +229,9 @@ export const actualizarPublicacion = async (req, res) => {
     const data = {};
 
     if (foto !== undefined) data.foto = foto;
-    if (nombre !== undefined) data.nombre = nombre;
-    if (descripcion !== undefined) data.descripcion = descripcion;
-    if (contacto !== undefined) data.contacto = contacto;
+    if (nombre !== undefined) data.nombre = nombreSanitizado;
+    if (descripcion !== undefined) data.descripcion = descripcionSanitizada;
+    if (contacto !== undefined) data.contacto = contactoSanitizado;
 
     if (zona !== undefined) {
       const zonaId = parseInt(zona, 10);

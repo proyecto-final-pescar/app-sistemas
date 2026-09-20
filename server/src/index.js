@@ -2,12 +2,15 @@ import "dotenv/config";
 
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 
 //import connectDB from "./config/db.js";
 import routes from "./routes/index.js";
 import "./config/mercadopago.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import { iniciarJobsTurnos } from "./jobs/turnoJobs.js";
+import globalRateLimiter from "./middleware/globalRateLimiter.js";
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -43,7 +46,9 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.use(helmet());
 app.use(express.json());
+app.use("/api", globalRateLimiter);
 
 app.use("/api", routes);
 app.use("/api/upload", uploadRoutes);
