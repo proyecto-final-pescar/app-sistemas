@@ -916,7 +916,12 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
           nombre: true,
           fecha_nacimiento: true,
           foto: true,
-          raza: { select: { nombre: true } },
+            raza: {
+           select: {
+             nombre: true,
+             especie: { select: { nombre: true } }
+            }
+           },
           usuario: { select: { usuario_id: true, nombre: true, apellido: true } }
         },
         orderBy: { nombre: 'asc' },
@@ -927,13 +932,14 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
     ]);
 
     const data = pacientes.map((mascota) => ({
-      id: mascota.mascota_id,
+      mascota_id: mascota.mascota_id,
       nombre: mascota.nombre,
       raza: mascota.raza?.nombre || 'Sin especificar',
-      fechaNacimiento: mascota.fecha_nacimiento,
+       especie: mascota.raza?.especie?.nombre || null,
+      fecha_nacimiento: mascota.fecha_nacimiento,
       foto: mascota.foto || null,
       dueño: {
-        id: mascota.usuario?.usuario_id,
+        usuario_id: mascota.usuario?.usuario_id,
         nombre: mascota.usuario
           ? `${mascota.usuario.nombre} ${mascota.usuario.apellido}`
           : 'Sin información'

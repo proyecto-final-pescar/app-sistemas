@@ -208,6 +208,46 @@ const autorizarEntradaHistorial = async (
   return forbidden(res)
 }
 
+// Agregar dentro de historialAccess.js, junto a autorizarEntradaHistorial
+
+const autorizarRecursoPorMascota = (modeloPrisma, idField) => async (req, res, next) => {
+  const { id } = req.params
+
+  if (!isValidUUID(id)) {
+    return res.status(400).json({ message: 'El id no es válido' })
+  }
+
+  const recurso = await modeloPrisma.findUnique({ where: { [idField]: id } })
+
+  if (!recurso) {
+    return res.status(404).json({ message: 'Recurso no encontrado' })
+  }
+
+  const rolUsuario = req.user?.rol || req.user?.role
+  const usuarioId = req.user?.id
+
+  req.recurso = recurso
+
+  if (rolUsuario === 'administrador') return next()
+
+  if (rolUsuario === 'dueno') {
+    const mascota = await prisma.mascota.findUnique({ where: { mascota_id: recurso.mascota_id } })
+    if (!mascota || !sameId(mascota.dueno_id, usuarioId)) return forbidden(res)
+    return next()
+  }
+
+  if (rolUsuario === 'veterinaria') {
+    const veterinaria = await getVeterinariaUsuario(usuarioId)
+    if (!veterinaria || !sameId(recurso.veterinaria_id, veterinaria.veterinaria_id)) return forbidden(res)
+    return next()
+  }
+
+  return forbidden(res)
+}
+
+export const autorizarEstudio = autorizarRecursoPorMascota(prisma.estudio, 'estudio_id')
+export const autorizarVacuna = autorizarRecursoPorMascota(prisma.vacuna, 'vacuna_id')
+
 const historialAccess = async (req, res, next) => {
   try {
     if (req.params.mascotaId) {

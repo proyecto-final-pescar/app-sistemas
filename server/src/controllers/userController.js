@@ -1,6 +1,5 @@
 import User from '../models/User.js';
 import Mascota from '../models/Mascota.js';
-import Veterinaria from '../models/Veterinaria.js';
 import Turno from '../models/Turno.js';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';

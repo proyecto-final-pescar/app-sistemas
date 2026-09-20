@@ -71,12 +71,11 @@ function obtenerNombrePersona(persona) {
   );
 }
 
- function RegistrarConsulta() {
+function RegistrarConsulta() {
   const { turnoId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
- 
   const origenFicha = location.state?.origen === "ficha" && location.state?.mascotaId;
   const rutaVolver = origenFicha ? `/pacientes/${location.state.mascotaId}` : "/agenda";
   const textoVolver = origenFicha ? "← Volver al historial clínico" : "← Volver a la agenda";
@@ -276,7 +275,7 @@ function obtenerNombrePersona(persona) {
       return;
     }
 
-       const body = {
+    const body = {
       mascotaId: form.mascotaId,
       profesionalId: form.profesionalId,
       turnoId,
@@ -299,7 +298,7 @@ function obtenerNombrePersona(persona) {
       // Redirige solo cuando el registro fue exitoso (antes esto estaba
       // en el catch por error y mandaba al usuario a /agenda incluso
       // cuando la consulta NO se había podido registrar).
-      // El destino depende de donde vino el usuario 
+      // El destino depende de donde vino el usuario
       setTimeout(() => navigate(rutaVolver), 1500);
     } catch (error) {
       console.error("Error al registrar la consulta:", error);
@@ -395,180 +394,186 @@ function obtenerNombrePersona(persona) {
             >
               {pasoActual === 1 && (
                 <>
-                  <h2 className="registrar-consulta-section-title">
-                    Datos del dueño
-                  </h2>
+                  <div className="registrar-consulta-section">
+                    <h2 className="registrar-consulta-section-title">
+                      Datos del dueño
+                    </h2>
 
-                  <div className="registrar-consulta-grid">
-                    <Input
-                      label="Nombre"
-                      value={form.nombreDueno}
-                      readOnly
-                      disabled
-                    />
+                    <div className="registrar-consulta-grid">
+                      <Input
+                        label="Nombre"
+                        value={form.nombreDueno}
+                        readOnly
+                        disabled
+                      />
 
-                    <Input
-                      label="Email"
-                      type="email"
-                      value={form.email}
-                      readOnly
-                      disabled
-                    />
+                      <Input
+                        label="Email"
+                        type="email"
+                        value={form.email}
+                        readOnly
+                        disabled
+                      />
+                    </div>
                   </div>
 
-                  <h2 className="registrar-consulta-section-title registrar-consulta-section-title-spaced">
-                    Datos de la mascota
-                  </h2>
+                  <div className="registrar-consulta-section">
+                    <h2 className="registrar-consulta-section-title">
+                      Datos de la mascota
+                    </h2>
 
-                  <div className="registrar-consulta-grid">
-                    <Input
-                      label="Nombre"
-                      value={form.nombreMascota}
-                      readOnly
-                      disabled
-                    />
+                    <div className="registrar-consulta-grid">
+                      <Input
+                        label="Nombre"
+                        value={form.nombreMascota}
+                        readOnly
+                        disabled
+                      />
 
-                    <Input
-                      label="Especie"
-                      value={form.especie}
-                      readOnly
-                      disabled
-                    />
+                      <Input
+                        label="Especie"
+                        value={form.especie}
+                        readOnly
+                        disabled
+                      />
 
-                    <Input
-                      label="Raza"
-                      value={form.raza}
-                      readOnly
-                      disabled
-                    />
+                      <Input
+                        label="Raza"
+                        value={form.raza}
+                        readOnly
+                        disabled
+                      />
 
-                    <Input
-                      label="Fecha de nacimiento / Edad aproximada"
-                      value={form.edad}
-                      readOnly
-                      disabled
-                    />
+                      <Input
+                        label="Fecha de nacimiento / Edad aproximada"
+                        value={form.edad}
+                        readOnly
+                        disabled
+                      />
 
-                    <Input
-                      label="Sexo"
-                      value={form.sexo}
-                      readOnly
-                      disabled
-                    />
+                      <Input
+                        label="Sexo"
+                        value={form.sexo}
+                        readOnly
+                        disabled
+                      />
 
-                    <Input
-                      label="Peso"
-                      value={form.peso}
-                      readOnly
-                      disabled
-                    />
+                      <Input
+                        label="Peso"
+                        value={form.peso}
+                        readOnly
+                        disabled
+                      />
+                    </div>
+
+                    {errores.mascotaId && (
+                      <p className="registrar-consulta-error-text">
+                        {errores.mascotaId}
+                      </p>
+                    )}
+
+                    {errores.profesionalId && (
+                      <p className="registrar-consulta-error-text">
+                        {errores.profesionalId}
+                      </p>
+                    )}
                   </div>
-
-                  {errores.mascotaId && (
-                    <p className="registrar-consulta-error-text">
-                      {errores.mascotaId}
-                    </p>
-                  )}
-
-                  {errores.profesionalId && (
-                    <p className="registrar-consulta-error-text">
-                      {errores.profesionalId}
-                    </p>
-                  )}
                 </>
               )}
 
               {pasoActual === 2 && (
                 <>
-                  <h2 className="registrar-consulta-section-title">
-                    Datos de la consulta
-                  </h2>
+                  <div className="registrar-consulta-section">
+                    <h2 className="registrar-consulta-section-title">
+                      Datos de la consulta
+                    </h2>
 
-                  <div className="registrar-consulta-grid">
-                    <Input
-                      label="Fecha"
-                      type="date"
-                      value={form.fecha}
-                      readOnly
-                      disabled
-                      error={errores.fecha}
-                    />
-
-                    <Input
-                      label="Hora"
-                      value={form.hora}
-                      readOnly
-                      disabled
-                      error={errores.hora}
-                    />
-
-                    <div className="registrar-consulta-select-wrapper">
+                    <div className="registrar-consulta-grid">
                       <Input
-                      label="Categoría del servicio"
-                      value={form.categoriaServicio}
-                      readOnly
-                      disabled
-                      error={errores.categoriaServicio}
-                    />
+                        label="Fecha"
+                        type="date"
+                        value={form.fecha}
+                        readOnly
+                        disabled
+                        error={errores.fecha}
+                      />
+
+                      <Input
+                        label="Hora"
+                        value={form.hora}
+                        readOnly
+                        disabled
+                        error={errores.hora}
+                      />
+
+                      <div className="registrar-consulta-select-wrapper">
+                        <Input
+                          label="Categoría del servicio"
+                          value={form.categoriaServicio}
+                          readOnly
+                          disabled
+                          error={errores.categoriaServicio}
+                        />
+                      </div>
+
+                      <Input
+                        label="Profesional a cargo"
+                        value={nombreProfesional}
+                        readOnly
+                        disabled
+                        error={errores.profesionalId}
+                      />
+
+                      <Input
+                        label="Motivo de consulta"
+                        placeholder="Ej: Vacuna antirrábica anual"
+                        value={form.motivoConsulta}
+                        onChange={(event) =>
+                          actualizarCampo(
+                            "motivoConsulta",
+                            event.target.value
+                          )
+                        }
+                        error={errores.motivoConsulta}
+                      />
+
+                      <Input
+                        label="Monto"
+                        placeholder="$0"
+                        value={formatearMonto(form.monto)}
+                        onChange={(event) =>
+                          actualizarMonto(event.target.value)
+                        }
+                        error={errores.monto}
+                      />
                     </div>
 
-                    <Input
-                      label="Profesional a cargo"
-                      value={nombreProfesional}
-                      readOnly
-                      disabled
-                      error={errores.profesionalId}
-                    />
+                    <div className="registrar-consulta-textarea-wrapper">
+                      <label className="registrar-consulta-label">
+                        Anotaciones
+                      </label>
 
-                    <Input
-                      label="Motivo de consulta"
-                      placeholder="Ej: Vacuna antirrábica anual"
-                      value={form.motivoConsulta}
-                      onChange={(event) =>
-                        actualizarCampo(
-                          "motivoConsulta",
-                          event.target.value
-                        )
-                      }
-                      error={errores.motivoConsulta}
-                    />
+                      <textarea
+                        className={`registrar-consulta-textarea ${errores.anotaciones
+                          ? "registrar-consulta-textarea-error"
+                          : ""
+                          }`}
+                        placeholder="Escribí las anotaciones de la consulta..."
+                        value={form.anotaciones}
+                        onChange={(event) =>
+                          actualizarCampo(
+                            "anotaciones",
+                            event.target.value
+                          )
+                        }
+                      />
 
-                    <Input
-                      label="Monto"
-                      placeholder="$0"
-                      value={formatearMonto(form.monto)}
-                      onChange={(event) =>
-                        actualizarMonto(event.target.value)
-                      }
-                      error={errores.monto}
-                    />
-                  </div>
-
-                  <div className="registrar-consulta-textarea-wrapper">
-                    <label className="registrar-consulta-label">
-                      Anotaciones
-                    </label>
-
-                    <textarea
-                      className={`registrar-consulta-textarea ${errores.anotaciones
-                        ? "registrar-consulta-textarea-error"
-                        : ""
-                        }`}
-                      placeholder="Escribí las anotaciones de la consulta..."
-                      value={form.anotaciones}
-                      onChange={(event) =>
-                        actualizarCampo(
-                          "anotaciones",
-                          event.target.value
-                        )
-                      }
-                    />
-
-                    {errores.anotaciones && (
-                      <p className="registrar-consulta-error-text">
-                        {errores.anotaciones}
-                      </p>
-                    )}
+                      {errores.anotaciones && (
+                        <p className="registrar-consulta-error-text">
+                          {errores.anotaciones}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
