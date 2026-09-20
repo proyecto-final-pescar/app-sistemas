@@ -30,6 +30,17 @@ const DIAS_MAPA = [
 ];
 
 
+const normalizarDia = (dia) =>
+  dia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const esFechaPasada = (fecha) => {
+  const fechaEvaluada = new Date(fecha);
+  fechaEvaluada.setHours(0, 0, 0, 0);
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  return fechaEvaluada < hoy;
+};
+
 const obtenerLunesDeSemana = (offset = 0) => {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -157,6 +168,8 @@ export default function CargaTurnos() {
   }, [veterinaria]);
 
   useEffect(() => {
+    // La función actualiza el estado únicamente después de resolver la petición remota.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarExistentes();
   }, [cargarExistentes, servicioId, profesionales]);
 
@@ -231,6 +244,8 @@ export default function CargaTurnos() {
 
     if (offset > 0) setSemanaOffset(offset);
     semanaAjustadaRef.current = true;
+    // La semana inicial se calcula una sola vez cuando llega la veterinaria.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [veterinaria]);
 
   const obtenerRangoGlobal = () => {
