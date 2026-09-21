@@ -1,161 +1,301 @@
-import mongoose from 'mongoose';
-import HistorialClinico from '../models/HistorialClinico.js';
-import Mascota from '../models/Mascota.js';
-import Veterinaria from '../models/Veterinaria.js';
-import Turno from '../models/Turno.js';
+import prisma from '../../prisma/client.js'
 
-const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+const isValidUUID = (id) => {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+}
 
-const sameId = (left, right) => left?.toString() === right?.toString();
+const sameId = (left, right) => left === right
 
 const forbidden = (res) =>
   res.status(403).json({
     message: 'No tenés permiso para acceder al historial clínico'
-  });
+  })
 
 const getVeterinariaUsuario = async (usuarioId) =>
-  Veterinaria.findOne({ usuarioId }).select('_id');
+  prisma.veterinaria.findUnique({
+    where: {
+      usuario_id: usuarioId
+    },
+    select: {
+      veterinaria_id: true
+    }
+  })
 
 const autorizarHistorialMascota = async (req, res, next, mascotaId) => {
-  if (!isValidObjectId(mascotaId)) {
-    return res.status(400).json({ message: 'El id de la mascota no es válido' });
+  if (!isValidUUID(mascotaId)) {
+    return res.status(400).json({
+      message: 'El id de la mascota no es válido'
+    })
   }
 
-  const mascota = await Mascota.findById(mascotaId);
+  const mascota = await prisma.mascota.findUnique({
+    where: {
+      mascota_id: mascotaId
+    }
+  })
 
   if (!mascota) {
-    return res.status(404).json({ message: 'Mascota no encontrada' });
+    return res.status(404).json({
+      message: 'Mascota no encontrada'
+    })
   }
 
-  const rolUsuario = req.user?.rol || req.user?.role;
-  const usuarioId = req.user?.id;
+  const rolUsuario = req.user?.rol || req.user?.role
+  const usuarioId = req.user?.id
 
-  req.mascota = mascota;
+  req.mascota = mascota
+
   req.historialAccess = {
     tipo: 'historial',
-    mascotaId: mascota._id,
+    mascotaId: mascota.mascota_id,
     rol: rolUsuario
-  };
-
-  if (rolUsuario === 'administrador') {
-    return next();
   }
 
-  if (rolUsuario === 'dueno' && sameId(mascota.dueñoId, usuarioId)) {
-    return next();
+  if (rolUsuario === 'administrador') {
+    return next()
+  }
+
+  if (
+    rolUsuario === 'dueno' &&
+    sameId(mascota.dueno_id, usuarioId)
+  ) {
+    return next()
   }
 
   if (rolUsuario === 'veterinaria') {
-    const veterinaria = await getVeterinariaUsuario(usuarioId);
+    const veterinaria = await getVeterinariaUsuario(usuarioId)
 
     if (!veterinaria) {
-      return forbidden(res);
+      return forbidden(res)
     }
 
-    // Antes solo se permitía el acceso si ya existía un HistorialClinico previo,
-    // lo cual era circular: la ficha se crea recién después de la primera consulta,
-    // así que una mascota con turno pero sin consultas nunca podía acceder.
-    // Ahora también se permite si hay un turno agendado con esta veterinaria,
-    // excluyendo 'pendiente' (todavía no confirmado) y 'cancelado' (no hay
-    // relación real). 'confirmado' y 'atendido' sí otorgan acceso.
-    const [atendioMascota, tieneTurno] = await Promise.all([
-      HistorialClinico.exists({
-        mascotaId: mascota._id,
-        veterinariaId: veterinaria._id
+    /*
+      La veterinaria puede acceder si:
+
+      1. Ya existe una consulta de esa mascota en esa veterinaria.
+      2. O existe un turno relacionado que no esté pendiente ni cancelado.
+    */
+
+    const [consultaExistente, turnosRelacionados] = await Promise.all([
+      prisma.consulta.findFirst({
+        where: {
+          mascota_id: mascota.mascota_id,
+          veterinaria_id: veterinaria.veterinaria_id
+        },
+        select: {
+          consulta_id: true
+        }
       }),
-      Turno.exists({
-        mascotaId: mascota._id,
-        veterinariaId: veterinaria._id,
-        estado: { $nin: ['pendiente', 'cancelado'] }
+
+      prisma.turno.findMany({
+        where: {
+          mascota_id: mascota.mascota_id,
+          veterinaria_id: veterinaria.veterinaria_id
+        },
+        select: {
+          turno_id: true,
+          estado_turno: {
+            select: {
+              nombre: true
+            }
+          }
+        }
       })
-    ]);
+    ])
+
+    const atendioMascota = Boolean(consultaExistente)
+
+    const tieneTurno = turnosRelacionados.some((turno) => {
+      const estado = turno.estado_turno?.nombre?.toLowerCase()
+
+      return estado && !['pendiente', 'cancelado'].includes(estado)
+    })
 
     if (!atendioMascota && !tieneTurno) {
-      return forbidden(res);
+      return forbidden(res)
     }
 
-    req.historialAccess.veterinariaId = veterinaria._id;
-    return next();
+    req.historialAccess.veterinariaId =
+      veterinaria.veterinaria_id
+
+    return next()
   }
 
-  return forbidden(res);
-};
+  return forbidden(res)
+}
 
-const autorizarEntradaHistorial = async (req, res, next, entradaId) => {
-  if (!isValidObjectId(entradaId)) {
-    return res.status(400).json({ message: 'El id de la entrada no es válido' });
+const autorizarEntradaHistorial = async (
+  req,
+  res,
+  next,
+  entradaId
+) => {
+  if (!isValidUUID(entradaId)) {
+    return res.status(400).json({
+      message: 'El id de la entrada no es válido'
+    })
   }
 
-  const entrada = await HistorialClinico.findById(entradaId);
+  const entrada = await prisma.consulta.findUnique({
+    where: {
+      consulta_id: entradaId
+    }
+  })
 
   if (!entrada) {
-    return res.status(404).json({ message: 'Entrada de historial no encontrada' });
+    return res.status(404).json({
+      message: 'Entrada de historial no encontrada'
+    })
   }
 
-  const rolUsuario = req.user?.rol || req.user?.role;
-  const usuarioId = req.user?.id;
+  const rolUsuario = req.user?.rol || req.user?.role
+  const usuarioId = req.user?.id
 
-  req.entradaHistorial = entrada;
+  req.entradaHistorial = entrada
+
   req.historialAccess = {
     tipo: 'entrada',
-    entradaId: entrada._id,
-    mascotaId: entrada.mascotaId,
+    entradaId: entrada.consulta_id,
+    mascotaId: entrada.mascota_id,
     rol: rolUsuario
-  };
+  }
 
   if (rolUsuario === 'administrador') {
-    return next();
+    return next()
   }
 
   if (rolUsuario === 'dueno') {
-    const mascota = await Mascota.findById(entrada.mascotaId);
+    const mascota = await prisma.mascota.findUnique({
+      where: {
+        mascota_id: entrada.mascota_id
+      }
+    })
 
     if (!mascota) {
-      return res.status(404).json({ message: 'Mascota no encontrada' });
+      return res.status(404).json({
+        message: 'Mascota no encontrada'
+      })
     }
 
-    req.mascota = mascota;
+    req.mascota = mascota
 
-    if (sameId(mascota.dueñoId, usuarioId)) {
-      return next();
+    if (sameId(mascota.dueno_id, usuarioId)) {
+      return next()
     }
 
-    return forbidden(res);
+    return forbidden(res)
   }
 
   if (rolUsuario === 'veterinaria') {
-    const veterinaria = await getVeterinariaUsuario(usuarioId);
+    const veterinaria = await getVeterinariaUsuario(usuarioId)
 
-    if (!veterinaria || !sameId(entrada.veterinariaId, veterinaria._id)) {
-      return forbidden(res);
+    if (
+      !veterinaria ||
+      !sameId(
+        entrada.veterinaria_id,
+        veterinaria.veterinaria_id
+      )
+    ) {
+      return forbidden(res)
     }
 
-    req.historialAccess.veterinariaId = veterinaria._id;
-    return next();
+    req.historialAccess.veterinariaId =
+      veterinaria.veterinaria_id
+
+    return next()
   }
 
-  return forbidden(res);
-};
+  return forbidden(res)
+}
+
+// Agregar dentro de historialAccess.js, junto a autorizarEntradaHistorial
+
+const autorizarRecursoPorMascota = (modeloPrisma, idField) => async (req, res, next) => {
+  const { id } = req.params
+
+  if (!isValidUUID(id)) {
+    return res.status(400).json({ message: 'El id no es válido' })
+  }
+
+  const recurso = await modeloPrisma.findUnique({ where: { [idField]: id } })
+
+  if (!recurso) {
+    return res.status(404).json({ message: 'Recurso no encontrado' })
+  }
+
+  const rolUsuario = req.user?.rol || req.user?.role
+  const usuarioId = req.user?.id
+
+  req.recurso = recurso
+
+  if (rolUsuario === 'administrador') return next()
+
+  if (rolUsuario === 'dueno') {
+    const mascota = await prisma.mascota.findUnique({ where: { mascota_id: recurso.mascota_id } })
+    if (!mascota || !sameId(mascota.dueno_id, usuarioId)) return forbidden(res)
+    return next()
+  }
+
+  if (rolUsuario === 'veterinaria') {
+    const veterinaria = await getVeterinariaUsuario(usuarioId)
+    if (!veterinaria || !sameId(recurso.veterinaria_id, veterinaria.veterinaria_id)) return forbidden(res)
+    return next()
+  }
+
+  return forbidden(res)
+}
+
+export const autorizarEstudio = autorizarRecursoPorMascota(prisma.estudio, 'estudio_id')
+export const autorizarVacuna = autorizarRecursoPorMascota(prisma.vacuna, 'vacuna_id')
 
 const historialAccess = async (req, res, next) => {
   try {
     if (req.params.mascotaId) {
-      return autorizarHistorialMascota(req, res, next, req.params.mascotaId);
+      return autorizarHistorialMascota(
+        req,
+        res,
+        next,
+        req.params.mascotaId
+      )
     }
 
-    if (req.params.id && req.path.includes('/entrada/')) {
-      return autorizarEntradaHistorial(req, res, next, req.params.id);
+    if (
+      req.params.id &&
+      req.path.includes('/entrada/')
+    ) {
+      return autorizarEntradaHistorial(
+        req,
+        res,
+        next,
+        req.params.id
+      )
     }
 
-    if (req.params.id && req.path.endsWith('/historial')) {
-      return autorizarHistorialMascota(req, res, next, req.params.id);
+    if (
+      req.params.id &&
+      req.path.endsWith('/historial')
+    ) {
+      return autorizarHistorialMascota(
+        req,
+        res,
+        next,
+        req.params.id
+      )
     }
 
-    return res.status(400).json({ message: 'Parámetros de historial inválidos' });
+    return res.status(400).json({
+      message: 'Parámetros de historial inválidos'
+    })
   } catch (error) {
-    console.error('Error en middleware historialAccess:', error);
-    return res.status(500).json({ message: 'Error interno del servidor' });
-  }
-};
+    console.error(
+      'Error en middleware historialAccess:',
+      error
+    )
 
-export default historialAccess;
+    return res.status(500).json({
+      message: 'Error interno del servidor'
+    })
+  }
+}
+
+export default historialAccess

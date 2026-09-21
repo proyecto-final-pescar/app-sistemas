@@ -1,15 +1,18 @@
-export const servicioVacio = () => ({ 
-  id: crypto.randomUUID(), 
-  categoria: "", 
-  nombre: "", 
-  precio: "" 
+export const servicioVacio = () => ({
+  id: crypto.randomUUID(),
+  categoria: "",
+  nombre: "",
+  descripcion: "",
+  precio: "",
+  duracionMinutos: 30
 });
 
-export const profesionalVacio = () => ({ 
-  id: crypto.randomUUID(), 
-  nombre: "", 
-  email: "", 
-  especialidad: "" 
+export const profesionalVacio = () => ({
+  id: crypto.randomUUID(),
+  nombre: "",
+  email: "",
+  especialidad: "",
+  serviciosIds: []
 });
 
 export const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
@@ -74,10 +77,11 @@ export const construirHorarios = (diasSeleccionados) => {
     Jueves: "jueves", Viernes: "viernes", Sábado: "sabado", Domingo: "domingo",
   };
   const horarios = {};
-  Object.values(mapaDias).forEach((clave) => { horarios[clave] = { desde: "", hasta: "" }; });
   Object.entries(diasSeleccionados).forEach(([dia, horario]) => {
     const clave = mapaDias[dia];
-    if (clave) horarios[clave] = { desde: horario.desde, hasta: horario.hasta };
+    if (clave && horario?.desde && horario?.hasta) {
+      horarios[clave] = { desde: horario.desde, hasta: horario.hasta };
+    }
   });
   return horarios;
 };

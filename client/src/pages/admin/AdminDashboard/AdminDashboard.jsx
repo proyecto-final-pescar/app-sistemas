@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Users, Building2, Calendar, MessageSquare } from 'lucide-react';
 import Sidebar from '../../../components/layout/Sidebar';
 import TopBar from '../../../components/layout/TopBar';
-import api from '../../../services/api';
+import { getDashboardMetrics, getTurnosDelDia } from '../../../services/adminService';
 import styles from './AdminDashboard.module.css';
 import DetallesDeTurnoModal from '../../../components/administrador/detallesDeTurnoModal/detallesDeTurnoModal';
 
@@ -23,6 +23,10 @@ function formatearFechaHoy() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function formatearHora(horaISO) {
+  if (!horaISO) return '--:--';
+  return horaISO.slice(11, 16);
+}
 
 function StatCard({ icono, colorIcono, label, valor, delta, cargando }) {
   return (
@@ -46,7 +50,7 @@ function TurnoRow({ turno, etiquetaFecha, onVerDetalles }) {
     <div className={styles.turnoRow}>
       <div className={styles.turnoHora}>
         <span className={styles.turnoHoraLabel}>{etiquetaFecha}</span>
-        <span className={styles.turnoHoraValor}>{turno.hora}</span>
+        <span className={styles.turnoHoraValor}>{formatearHora(turno.hora_inicio)}</span>
       </div>
 
       <div className={styles.turnoInfo}>
@@ -55,17 +59,20 @@ function TurnoRow({ turno, etiquetaFecha, onVerDetalles }) {
             {turno.estado.toUpperCase()}
           </span>
           <span className={styles.turnoMascota}>
-            {turno.mascotaId?.nombre} ({turno.mascotaId?.especie})
+            {turno.mascota?.nombre}
+            {turno.mascota?.especie ? ` (${turno.mascota.especie})` : ''}
           </span>
         </div>
         <p className={styles.turnoClinica}>
-          {turno.veterinariaId?.nombre} · {turno.usuarioId?.name}
+          {turno.veterinaria?.nombre} · {turno.dueno?.nombre}
         </p>
       </div>
 
       <div className={styles.turnoProfesional}>
         <span className={styles.turnoProfesionalNombre}>
-          {turno.profesional?.nombre ?? 'Sin asignar'}
+          {turno.profesional
+            ? `${turno.profesional.nombre} ${turno.profesional.apellido}`
+            : 'Sin asignar'}
         </span>
         <span className={styles.turnoProfesionalLabel}>Profesional asignado</span>
       </div>
@@ -73,7 +80,7 @@ function TurnoRow({ turno, etiquetaFecha, onVerDetalles }) {
       <button
         className={styles.botonDetalles}
         type="button"
-        onClick={() => onVerDetalles(turno._id)}
+        onClick={() => onVerDetalles(turno.turno_id)}
       >
         Ver detalles
       </button>
@@ -100,11 +107,10 @@ export default function Dashboard() {
     async function cargarMetrics() {
       try {
         setCargandoMetrics(true);
-        const { data } = await api.get('/admin/dashboard/metrics');
-        setMetrics(data.data);
+        const data = await getDashboardMetrics();
+        setMetrics(data);
         setErrorMetrics(null);
       } catch (err) {
-       
         setErrorMetrics('No se pudieron cargar las métricas.');
       } finally {
         setCargandoMetrics(false);
@@ -116,13 +122,10 @@ export default function Dashboard() {
   const cargarTurnos = useCallback(async () => {
     try {
       setCargandoTurnos(true);
-      const { data } = await api.get('/admin/dashboard/turnos-del-dia', {
-        params: { fecha, estado: filtroEstado },
-      });
-      setTurnos(data.data.turnos);
+      const data = await getTurnosDelDia({ fecha, estado: filtroEstado });
+      setTurnos(data.turnos);
       setErrorTurnos(null);
     } catch (err) {
-      
       setErrorTurnos('No se pudieron cargar los turnos.');
     } finally {
       setCargandoTurnos(false);
@@ -137,10 +140,11 @@ export default function Dashboard() {
     if (!busqueda.trim()) return true;
     const texto = busqueda.trim().toLowerCase();
     return (
-      turno.mascotaId?.nombre?.toLowerCase().includes(texto) ||
-      turno.veterinariaId?.nombre?.toLowerCase().includes(texto) ||
-      turno.usuarioId?.name?.toLowerCase().includes(texto) ||
-      turno.profesional?.nombre?.toLowerCase().includes(texto)
+      turno.mascota?.nombre?.toLowerCase().includes(texto) ||
+      turno.veterinaria?.nombre?.toLowerCase().includes(texto) ||
+      turno.dueno?.nombre?.toLowerCase().includes(texto) ||
+      (turno.profesional &&
+        `${turno.profesional.nombre} ${turno.profesional.apellido}`.toLowerCase().includes(texto))
     );
   });
 
@@ -277,7 +281,7 @@ export default function Dashboard() {
               <div className={styles.listaTurnos}>
                 {turnosFiltrados.map((turno) => (
                   <TurnoRow
-                    key={turno._id}
+                    key={turno.turno_id}
                     turno={turno}
                     etiquetaFecha={etiquetaFecha}
                     onVerDetalles={setTurnoSeleccionadoId}
@@ -294,7 +298,7 @@ export default function Dashboard() {
           turnoId={turnoSeleccionadoId}
           onClose={() => setTurnoSeleccionadoId(null)}
           onVerComprobante={(pagoId) => {
-            // hasta que se implementen los pagos 
+            // hasta que se implementen los pagos
             console.log('Ver comprobante del pago:', pagoId);
           }}
         />

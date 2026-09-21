@@ -1,108 +1,87 @@
-import mongoose from 'mongoose';
-import Turno from '../models/Turno.js';
+import prisma from '../../prisma/client.js'
 
-const ESTADOS_ADMIN = ['pendiente', 'confirmado', 'cancelado'];
+
+const ESTADOS_ADMIN_IDS = ['PEN', 'CON', 'CAN']
 
 const ESTADOS_VALIDOS = {
-  Confirmados: 'confirmado',
-  Pendientes: 'pendiente',
-  Cancelados: 'cancelado',
-};
+  Confirmados: 'CON',
+  Pendientes: 'PEN',
+  Cancelados: 'CAN',
+}
 
+
+const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
+
+// GET /turnos/admin
 export const obtenerTurnosAdmin = async (req, res) => {
   try {
-    const { estado, busqueda, fecha, pagina = 1 } = req.query;
-    const LIMITE = 10;
-    const skip = (Number(pagina) - 1) * LIMITE;
+    const { estado, busqueda, fecha, pagina = 1 } = req.query
+    const LIMITE = 10
+    const skip = (Number(pagina) - 1) * LIMITE
 
-    const match = { estado: { $in: ESTADOS_ADMIN } };
-
-    if (estado && ESTADOS_VALIDOS[estado]) {
-      match.estado = ESTADOS_VALIDOS[estado];
+    const where = {
+      estado_turno_id: estado && ESTADOS_VALIDOS[estado]
+        ? ESTADOS_VALIDOS[estado]
+        : { in: ESTADOS_ADMIN_IDS },
     }
 
     if (fecha) {
-      // turno.fecha es Date -> armamos rango de ese día
-      const inicio = new Date(fecha);
-      inicio.setHours(0, 0, 0, 0);
-      const fin = new Date(fecha);
-      fin.setHours(23, 59, 59, 999);
-      match.fecha = { $gte: inicio, $lte: fin };
+  
+      where.fecha = new Date(`${fecha}T00:00:00.000Z`)
     }
 
-    const pipeline = [
-      { $match: match },
-      {
-        $lookup: {
-          from: 'veterinarias',
-          localField: 'veterinariaId',
-          foreignField: '_id',
-          as: 'veterinaria',
-        },
-      },
-      { $unwind: { path: '$veterinaria', preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'usuarioId',
-          foreignField: '_id',
-          as: 'usuario',
-        },
-      },
-      { $unwind: { path: '$usuario', preserveNullAndEmptyArrays: true } },
-    ];
-
     if (busqueda) {
-  pipeline.push({
-    $match: {
-      $or: [
-        { 'veterinaria.nombre': { $regex: busqueda, $options: 'i' } },
-        { 'usuario.name': { $regex: busqueda, $options: 'i' } },
-      ],
-    },
-  });
-}
-    pipeline.push(
-  { $sort: { fecha: -1, hora: -1 } },
-  {
-    $project: {
-      fecha: 1,
-      hora: 1,
-      estado: 1,
-      veterinariaNombre: '$veterinaria.nombre',
-      usuarioNombre: { $ifNull: ['$usuario.name', ''] },
-    },
-  }
-);
+      where.OR = [
+        { veterinaria: { nombre: { contains: busqueda, mode: 'insensitive' } } },
+        { mascota: { usuario: { nombre: { contains: busqueda, mode: 'insensitive' } } } },
+        { mascota: { usuario: { apellido: { contains: busqueda, mode: 'insensitive' } } } },
+      ]
+    }
 
-    const [turnos, totalResult] = await Promise.all([
-      Turno.aggregate([...pipeline, { $skip: skip }, { $limit: LIMITE }]),
-      Turno.aggregate([...pipeline, { $count: 'total' }]),
-    ]);
-
-    const totalResultados = totalResult[0]?.total || 0;
-
-    // Stats del mes actual (siempre pendiente/confirmado/cancelado, sin atendido)
-    const inicioMes = new Date();
-    inicioMes.setDate(1);
-    inicioMes.setHours(0, 0, 0, 0);
-
-    const statsAgg = await Turno.aggregate([
-      {
-        $match: {
-          fecha: { $gte: inicioMes },
-          estado: { $in: ESTADOS_ADMIN },
+    const [turnosRaw, totalResultados, statsAgg] = await Promise.all([
+      prisma.turno.findMany({
+        where,
+        select: {
+          turno_id: true,
+          fecha: true,
+          hora_inicio: true,
+          estado_turno: { select: { nombre: true } },
+          veterinaria: { select: { nombre: true } },
+          mascota: { select: { usuario: { select: { nombre: true, apellido: true } } } },
         },
-      },
-      { $group: { _id: '$estado', count: { $sum: 1 } } },
-    ]);
+        orderBy: [{ fecha: 'desc' }, { hora_inicio: 'desc' }],
+        skip,
+        take: LIMITE,
+      }),
+      prisma.turno.count({ where }),
+
+      prisma.turno.groupBy({
+        by: ['estado_turno_id'],
+        where: {
+          fecha: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) },
+          estado_turno_id: { in: ESTADOS_ADMIN_IDS },
+        },
+        _count: true,
+      }),
+    ])
+
+    const turnos = turnosRaw.map((t) => ({
+      turno_id: t.turno_id,
+      fecha: t.fecha,
+      hora: formatearHora(t.hora_inicio),
+      estado: t.estado_turno.nombre,
+      veterinariaNombre: t.veterinaria?.nombre ?? '',
+      usuarioNombre: t.mascota?.usuario
+        ? `${t.mascota.usuario.nombre} ${t.mascota.usuario.apellido}`.trim()
+        : '',
+    }))
 
     const stats = {
-      confirmados: statsAgg.find((s) => s._id === 'confirmado')?.count || 0,
-      pendientes: statsAgg.find((s) => s._id === 'pendiente')?.count || 0,
-      cancelados: statsAgg.find((s) => s._id === 'cancelado')?.count || 0,
-    };
-    stats.total = stats.confirmados + stats.pendientes + stats.cancelados;
+      confirmados: statsAgg.find((s) => s.estado_turno_id === 'CON')?._count || 0,
+      pendientes: statsAgg.find((s) => s.estado_turno_id === 'PEN')?._count || 0,
+      cancelados: statsAgg.find((s) => s.estado_turno_id === 'CAN')?._count || 0,
+    }
+    stats.total = stats.confirmados + stats.pendientes + stats.cancelados
 
     res.json({
       success: true,
@@ -111,34 +90,84 @@ export const obtenerTurnosAdmin = async (req, res) => {
         stats,
         totalPaginas: Math.max(1, Math.ceil(totalResultados / LIMITE)),
       },
-    });
+    })
   } catch (error) {
-    console.error('Error en getTurnosAdmin:', error);
-    res.status(500).json({ message: 'Error al obtener los turnos' });
+    console.error('Error en obtenerTurnosAdmin:', error)
+    res.status(500).json({ message: 'Error al obtener los turnos' })
   }
-};
+}
 
-// GET /api/turnos/admin/:id  (detalle de solo lectura)
+// GET /turnos/admin/:id  detalle del turno
 export const obtenerTurnoAdminPorId = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: 'ID de turno inválido' });
-    }
-
-    const turno = await Turno.findById(id)
-      .populate('veterinariaId')
-      .populate('mascotaId')
-      .populate('usuarioId', 'nombre apellido email');
+    const turno = await prisma.turno.findUnique({
+      where: { turno_id: id },
+      include: {
+        estado_turno: { select: { nombre: true } },
+        servicio: { select: { servicio_id: true, nombre: true } },
+        veterinaria: { select: { veterinaria_id: true, nombre: true } },
+        profesional: { select: { profesional_id: true, nombre: true, apellido: true } },
+        mascota: {
+          select: {
+            mascota_id: true,
+            nombre: true,
+            foto: true,
+            fecha_nacimiento: true,
+            peso: true,
+            raza: { select: { nombre: true, especie: { select: { nombre: true } } } },
+            sexo_mascota: { select: { nombre: true } },
+            usuario: { select: { usuario_id: true, nombre: true, apellido: true, email: true } },
+          },
+        },
+      
+        pago: { orderBy: { created_at: 'desc' }, take: 1 },
+      },
+    })
 
     if (!turno) {
-      return res.status(404).json({ message: 'Turno no encontrado' });
+      return res.status(404).json({ message: 'Turno no encontrado' })
     }
 
-    res.json({ success: true, data: turno });
+    const turnoFormateado = {
+      turno_id: turno.turno_id,
+      fecha: turno.fecha,
+      hora_inicio: formatearHora(turno.hora_inicio),
+      motivo: turno.motivo,
+      monto: turno.monto_servicio !== null ? Number(turno.monto_servicio) : null,
+      estado: turno.estado_turno.nombre,
+      servicio: turno.servicio,
+      veterinaria: turno.veterinaria,
+      profesional: turno.profesional,
+      mascota: turno.mascota
+        ? {
+            mascota_id: turno.mascota.mascota_id,
+            nombre: turno.mascota.nombre,
+            foto: turno.mascota.foto,
+            fecha_nacimiento: turno.mascota.fecha_nacimiento,
+            peso: turno.mascota.peso,
+            especie: turno.mascota.raza?.especie?.nombre ?? null,
+            raza: turno.mascota.raza?.nombre ?? null,
+            sexo: turno.mascota.sexo_mascota?.nombre ?? null,
+          }
+        : null,
+      dueno: turno.mascota?.usuario
+        ? {
+            usuario_id: turno.mascota.usuario.usuario_id,
+            nombre: `${turno.mascota.usuario.nombre} ${turno.mascota.usuario.apellido}`.trim(),
+            email: turno.mascota.usuario.email,
+          }
+        : null,
+      pago: turno.pago[0] ?? null,
+    }
+
+    res.json({ success: true, data: turnoFormateado })
   } catch (error) {
-    console.error('Error en getTurnoAdminDetalle:', error);
-    res.status(500).json({ message: 'Error al obtener el turno' });
+    if (error.code === 'P2023') {
+      return res.status(400).json({ message: 'ID de turno inválido' })
+    }
+    console.error('Error en obtenerTurnoAdminPorId:', error)
+    res.status(500).json({ message: 'Error al obtener el turno' })
   }
-};
+}

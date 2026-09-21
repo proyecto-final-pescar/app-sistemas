@@ -200,6 +200,23 @@
   max-width: 200px;
 }
 
+.textareaServicio {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background-color: #f0ecfb;
+  padding: 12px;
+  color: #1f1739;
+  font: inherit;
+  outline: none;
+}
+
+.textareaServicio:focus {
+  border-color: #7c3aed;
+}
+
 .precioSimbolo {
   display: grid;
   place-items: center;
@@ -378,6 +395,75 @@
   flex-direction: column;
   gap: 20px;
 }
+
+.selectorServicios {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 12px;
+  border: 1px solid #e5ddf8;
+  border-radius: 10px;
+}
+
+.selectorServicios legend {
+  padding: 0 4px;
+  color: #1f1739;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.opcionServicio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: #1f1739;
+  font-size: 14px;
+}
+
+.opcionServicio input {
+  width: 16px;
+  height: 16px;
+  accent-color: #7c3aed;
+.profesionalesGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.chipProf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #ede9fe;
+  background-color: #f0ecfb;
+  color: #1f1739;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  transition: all 0.15s;
+}
+
+.chipProf:hover {
+  background-color: #e5ddfa;
+}
+
+.chipProfActivo {
+  background-color: #7c3aed;
+  border-color: #7c3aed;
+  color: #ffffff;
+}
+
+.chipX {
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+}
 /* TABLET CHICA */
 @media (min-width: 481px) and (max-width: 767px) {
   .panelWrap {
@@ -531,4 +617,5 @@
   .continuarWrap > button {
     width: 100%;
   }
+}
 }

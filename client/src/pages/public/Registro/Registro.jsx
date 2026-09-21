@@ -9,6 +9,8 @@ import api from "../../../services/api";
 import { reenviarVerificacion } from "../../../services/authService";
 import { useAuth } from "../../../hooks/useAuth.js";
 import { obtenerMensajeError } from "../../../utils/obtenerMensajeError.js";
+import { validateEmail } from "../../../validators/EmailValidator.js";
+import { validatePassword } from "../../../validators/PasswordValidator.js";
 import "./Registro.css";
 
 function Registro() {
@@ -16,6 +18,7 @@ function Registro() {
   const { setUsuario } = useAuth();
   const [rol, setRol] = useState("");
   const [nombre, setNombre] = useState("");
+  const [apellido, setApellido] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmarPassword, setConfirmarPassword] = useState("");
@@ -24,10 +27,6 @@ function Registro() {
   const [errorGeneral, setErrorGeneral] = useState("");
   const [enviando, setEnviando] = useState(false);
 
-  // Se guarda el email con el que se registró para poder mostrarlo en
-  // la pantalla de confirmación y reusarlo si pide reenviar el correo.
-  // Este flujo es solo para el registro con contraseña: una cuenta
-  // creada por Google ya viene con el email verificado por Google.
   const [registroExitoso, setRegistroExitoso] = useState(false);
   const [emailRegistrado, setEmailRegistrado] = useState("");
 
@@ -46,22 +45,32 @@ function Registro() {
       nuevosErrores.nombre = "El nombre es obligatorio";
     }
 
+    if (apellido.trim() === "") {
+      nuevosErrores.apellido = "El apellido es obligatorio";
+    }
+
     if (email.trim() === "") {
       nuevosErrores.email = "El email es obligatorio";
-    } else if (!email.includes("@")) {
-      nuevosErrores.email = "El email debe tener un formato válido";
+    } else {
+      const resultadoEmail = validateEmail(email);
+      if (resultadoEmail !== true) {
+        nuevosErrores.email = resultadoEmail;
+      }
     }
 
     if (password === "") {
       nuevosErrores.password = "La contraseña es obligatoria";
-    } else if (password.length < 8) {
-      nuevosErrores.password = "La contraseña debe tener mínimo 8 caracteres";
-    }
-
-    if (confirmarPassword === "") {
+    } else if (confirmarPassword === "") {
       nuevosErrores.confirmarPassword = "Debes confirmar la contraseña";
-    } else if (confirmarPassword !== password) {
-      nuevosErrores.confirmarPassword = "Las contraseñas deben coincidir";
+    } else {
+      const resultadoPassword = validatePassword(password, confirmarPassword);
+      if (resultadoPassword !== true) {
+        if (resultadoPassword === "Las contraseñas no coinciden.") {
+          nuevosErrores.confirmarPassword = resultadoPassword;
+        } else {
+          nuevosErrores.password = resultadoPassword;
+        }
+      }
     }
 
     setErrores(nuevosErrores);
@@ -85,15 +94,13 @@ function Registro() {
       setEnviando(true);
 
       await api.post("/auth/register", {
-        name: nombre.trim(),
+        nombre: nombre.trim(),
+        apellido: apellido.trim(),
         email: emailNormalizado,
         password,
-        role: rol,
+        rol,
       });
 
-      // Ya no se redirige directo a /login: la cuenta recién creada no
-      // está verificada todavía, así que el login la va a rechazar.
-      // Se muestra una pantalla de confirmación en su lugar.
       setEmailRegistrado(emailNormalizado);
       setRegistroExitoso(true);
     } catch (error) {
@@ -125,13 +132,6 @@ function Registro() {
     }
   }
 
-  // Primer intento de registro con Google: nunca mandamos role acá,
-  // el rol de este formulario (arriba) es solo para el registro con
-  // contraseña. Si la cuenta ya existe, el backend devuelve el usuario
-  // real. Si no existe, responde nuevoUsuario: true y mandamos al
-  // usuario a completar el registro en su propia pantalla. Una cuenta
-  // creada por Google ya llega verificada, por eso este flujo no pasa
-  // por la pantalla de "revisá tu correo".
   const handleGoogleSuccess = async (credentialResponse) => {
     setErrorGeneral("");
     setEnviando(true);
@@ -146,6 +146,7 @@ function Registro() {
           state: {
             googleCredential: credentialResponse.credential,
             nombre: data.nombre,
+            apellido: data.apellido,
             email: data.email,
           },
         });
@@ -161,10 +162,11 @@ function Registro() {
       }
 
       const userData = {
-        id: user.id || user._id,
+        id: user.id,
         email: user.email,
-        nombre: user.name,
-        rol: user.role,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        rol: user.rol,
         fotoUrl: user.fotoUrl || "",
         asistenteVirtual: user.asistenteVirtual || "perro",
       };
@@ -175,7 +177,7 @@ function Registro() {
 
       const userRol = userData.rol;
       if (userRol === "dueno") {
-        navigate("/mascotas", { replace: true });
+        navigate("/home", { replace: true });
         return;
       }
 
@@ -320,6 +322,14 @@ function Registro() {
               value={nombre}
               onChange={(evento) => setNombre(evento.target.value)}
               error={errores.nombre}
+            />
+
+            <Input
+              label="Apellido"
+              placeholder="Gómez"
+              value={apellido}
+              onChange={(evento) => setApellido(evento.target.value)}
+              error={errores.apellido}
             />
 
             <Input

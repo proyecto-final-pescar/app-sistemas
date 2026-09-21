@@ -8,6 +8,7 @@ import PanelDestacado from "../../../components/ui/panel-destacado/PanelDestacad
 import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
 import ErrorModal from "../../../components/ui/error-modal/ErrorModal";
 import styles from "./RegistroDeVeterinaria.module.css";
+import { useAutocompleteDireccion } from "../../../hooks/useAutocompleteDireccion";
 
 import {
   servicioVacio,
@@ -23,7 +24,10 @@ import {
   validarCoordenadas,
   validarHorarios,
 } from "../../../utils/RegistroVeterinarias";
+
 import { useCategoriasServicio } from "../../../hooks/useCategoriasServicio";
+import { useEspecialidades } from "../../../hooks/useEspecialidades";
+
 
 const IconSearch = () => (
   <svg
@@ -135,8 +139,19 @@ export default function RegistroDeVeterinaria() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
 
-  // Categorías de servicio — vienen del backend
+  const {
+    direccion,
+    lat,
+    lng,
+    suggestions,
+    loadingAddress,
+    handleChangeDireccion,
+    handleSelectPlace,
+  } = useAutocompleteDireccion();
+
+  // Categorías de servicio y especialidades — vienen del backend
   const { categorias, loading: loadingCategorias, error: errorCategorias } = useCategoriasServicio();
+  const { especialidades, loading: loadingEspecialidades, error: errorEspecialidades } = useEspecialidades();
 
   // Paso 1
   const [form, setForm] = useState({
@@ -144,16 +159,10 @@ export default function RegistroDeVeterinaria() {
     razonSocial: "",
     cuit: "",
     telefono: "",
-    direccion: "",
-    lat: null,
-    lng: null,
     email: "",
     sitioWeb: "",
   });
-  const [suggestions, setSuggestions] = useState([]);
-  const [loadingAddress, setLoadingAddress] = useState(false);
   const [errorStep1, setErrorStep1] = useState("");
-  const debounceRef = useRef(null);
 
   // Paso 2
   const [servicios, setServicios] = useState([servicioVacio()]);
@@ -173,56 +182,14 @@ export default function RegistroDeVeterinaria() {
   const [successModal, setSuccessModal] = useState(false);
   const [errorModal, setErrorModal] = useState({ abierto: false, mensaje: "" });
 
-  // Google Places
-  useEffect(() => {
-    if (!form.direccion || form.lat) {
-      setSuggestions([]);
-      return;
-    }
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      if (form.direccion.length < 4) return;
-      setLoadingAddress(true);
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_URL}/places/autocomplete?input=${encodeURIComponent(form.direccion)}`,
-        );
-        const data = await res.json();
-        setSuggestions(data.predictions || []);
-      } catch {
-        setSuggestions([]);
-      } finally {
-        setLoadingAddress(false);
-      }
-    }, 350);
-    return () => clearTimeout(debounceRef.current);
-  }, [form.direccion]);
-
-  const handleSelectPlace = async (place) => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/places/details?place_id=${place.place_id}`,
-      );
-      const data = await res.json();
-      const location = data.result?.geometry?.location;
-      setForm((f) => ({
-        ...f,
-        direccion: place.description,
-        lat: typeof location?.lat === "number" ? location.lat : null,
-        lng: typeof location?.lng === "number" ? location.lng : null,
-      }));
-    } catch {
-      setForm((f) => ({ ...f, direccion: place.description }));
-    } finally {
-      setSuggestions([]);
-    }
-  };
+  
 
   const handleChangeStep1 = (e) => {
     const { name, value } = e.target;
-    if (name === "direccion")
+    if (name === "direccion") {
       setForm((f) => ({ ...f, direccion: value, lat: null, lng: null }));
-    else setForm((f) => ({ ...f, [name]: value }));
+      if (!value) setSuggestions([]);
+    } else setForm((f) => ({ ...f, [name]: value }));
   };
 
   const validateStep1 = () => {
@@ -234,8 +201,8 @@ export default function RegistroDeVeterinaria() {
     if (!form.telefono.trim()) return "El teléfono es requerido.";
     if (!validarTelefono(form.telefono))
       return "El teléfono solo puede contener números.";
-    if (!form.direccion.trim()) return "La dirección es requerida.";
-    if (!validarCoordenadas(form.lat, form.lng))
+    if (!direccion.trim()) return "La dirección es requerida.";
+    if (!validarCoordenadas(lat, lng))
       return "Seleccioná una dirección de la lista para obtener las coordenadas.";
     if (!form.email.trim()) return "El email institucional es requerido.";
     if (!validarEmail(form.email))
@@ -263,7 +230,7 @@ export default function RegistroDeVeterinaria() {
   const validateStep2 = () => {
     const base = validarCamposRequeridos(
       servicios,
-      ["categoria", "nombre", "precio"],
+      ["categoria", "nombre", "descripcion", "precio", "duracionMinutos"],
       "Completá todos los campos de cada servicio.",
     );
     if (base) return base;
@@ -282,6 +249,23 @@ export default function RegistroDeVeterinaria() {
     setProfesionales((prev) =>
       prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)),
     );
+
+  const toggleServicioProfesional = (profIndex, servicioId) => {
+    setProfesionales((prev) =>
+      prev.map((p, idx) => {
+        if (idx !== profIndex) return p;
+        const actuales = p.serviciosIds || [];
+        const yaEsta = actuales.includes(servicioId);
+        return {
+          ...p,
+          serviciosIds: yaEsta
+            ? actuales.filter((id) => id !== servicioId)
+            : [...actuales, servicioId],
+        };
+      })
+    );
+  };
+
   const agregarProfesional = () =>
     setProfesionales((prev) => [...prev, profesionalVacio()]);
   const eliminarProfesional = (i) => {
@@ -298,6 +282,8 @@ export default function RegistroDeVeterinaria() {
     if (base) return base;
     if (profesionales.some((p) => !validarEmail(p.email)))
       return "El email de algún profesional no tiene un formato válido.";
+    if (profesionales.some((p) => !(p.serviciosIds || []).length))
+      return "Cada profesional debe brindar al menos un servicio.";
     return "";
   };
   const handleContinuarStep3 = crearHandleContinuar(
@@ -340,10 +326,10 @@ export default function RegistroDeVeterinaria() {
       return;
     }
     if (
-      typeof form.lat !== "number" ||
-      isNaN(form.lat) ||
-      typeof form.lng !== "number" ||
-      isNaN(form.lng)
+      typeof lat !== "number" ||
+      isNaN(lat) ||
+      typeof lng !== "number" ||
+      isNaN(lng)
     ) {
       setErrorStep4(
         "La dirección seleccionada no es válida. Volvé al paso 1 y seleccioná una dirección de la lista.",
@@ -356,23 +342,27 @@ export default function RegistroDeVeterinaria() {
     try {
       const body = {
         nombre: form.nombreClinica,
-        direccion: form.direccion,
+        direccion: direccion,
         razonSocial: form.razonSocial,
         cuit: form.cuit,
         telefono: form.telefono,
         email: form.email,
         sitioWeb: form.sitioWeb,
-        coordenadas: { type: "Point", coordinates: [form.lng, form.lat] },
+        coordenadas: { type: "Point", coordinates: [lng, lat] },
         especialidades: [],
         servicios: servicios.map((s) => ({
+          idLocal: s.id,
           categoria: s.categoria,
           nombre: s.nombre,
+          descripcion: s.descripcion.trim(),
           precio: Number(s.precio),
+          duracionMinutos: Number(s.duracionMinutos),
         })),
         profesionales: profesionales.map((p) => ({
           nombre: p.nombre,
           especialidad: p.especialidad,
           email: p.email,
+          serviciosIds: p.serviciosIds || [],
         })),
         horarios: construirHorarios(diasSeleccionados),
         urgencias24hs: urgencias,
@@ -510,17 +500,14 @@ export default function RegistroDeVeterinaria() {
                   </span>
                   <input
                     name="direccion"
-                    value={form.direccion}
-                    onChange={handleChangeStep1}
+                    value={direccion}
+                    onChange={(e) => handleChangeDireccion(e.target.value)}
                     placeholder="Av. Rivadavia 1234, Piso 3 Dpto. B"
                     autoComplete="off"
                     className={styles.inputInner}
                   />
-                  {form.lat && (
-                    <span
-                      className={styles.inputIcon}
-                      style={{ color: "#25a36f" }}
-                    >
+                  {lat && (
+                    <span className={styles.inputIcon} style={{ color: "#25a36f" }}>
                       <IconPin />
                     </span>
                   )}
@@ -600,6 +587,10 @@ export default function RegistroDeVeterinaria() {
                 <p className={styles.errorMsg}>{errorCategorias}</p>
               )}
 
+              {errorEspecialidades && (
+                <p className={styles.errorMsg}>{errorEspecialidades}</p>
+              )}
+
               <div className={styles.listaItems}>
                 {servicios.map((servicio, index) => (
                   <div key={servicio.id} className={styles.subCard}>
@@ -608,7 +599,7 @@ export default function RegistroDeVeterinaria() {
                         onClick={() => eliminarServicio(index)}
                         className={styles.btnEliminar}
                         title="Eliminar"
-                      ></button>
+                      ><IconTrash /></button>
                     )}
                     {/* se saco la lista duplicada de  categorias ahora las opciones vienen del backend
                          la misma fuente que valida el enum en Veterinaria
@@ -642,6 +633,17 @@ export default function RegistroDeVeterinaria() {
                       placeholder="Ej: Vacuna Antirrábica Anual"
                     />
                     <div className={styles.field}>
+                      <label className={styles.label}>Descripción<span className={styles.req}>*</span></label>
+                      <textarea
+                        value={servicio.descripcion}
+                        onChange={(e) => handleChangeServicio(index, "descripcion", e.target.value)}
+                        maxLength={500}
+                        rows={3}
+                        className={styles.textareaServicio}
+                        placeholder="Contá brevemente qué incluye el servicio"
+                      />
+                    </div>
+                    <div className={styles.field}>
                       <label className={styles.label}>
                         Precio<span className={styles.req}>*</span>
                       </label>
@@ -662,6 +664,21 @@ export default function RegistroDeVeterinaria() {
                           className={styles.precioInput}
                         />
                       </div>
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.label}>
+                        Duración estimada<span className={styles.req}>*</span>
+                      </label>
+                      <select
+                        value={servicio.duracionMinutos}
+                        onChange={(e) => handleChangeServicio(index, "duracionMinutos", Number(e.target.value))}
+                        className={styles.selectHorario}
+                      >
+                        <option value={15}>15 minutos</option>
+                        <option value={30}>30 minutos</option>
+                        <option value={60}>1 hora</option>
+                        <option value={120}>2 horas</option>
+                      </select>
                     </div>
                   </div>
                 ))}
@@ -711,7 +728,7 @@ export default function RegistroDeVeterinaria() {
                         onClick={() => eliminarProfesional(index)}
                         className={styles.btnEliminar}
                         title="Eliminar"
-                      ></button>
+                      ><IconTrash /></button>
                     )}
                     <Input
                       label="Nombre y Apellido *"
@@ -730,18 +747,55 @@ export default function RegistroDeVeterinaria() {
                       }
                       placeholder="juanperez@email.com"
                     />
-                    <Input
-                      label="Especialidad *"
-                      value={prof.especialidad}
-                      onChange={(e) =>
-                        handleChangeProfesional(
-                          index,
-                          "especialidad",
-                          e.target.value,
-                        )
-                      }
-                      placeholder="Ej: Veterinaria general, Cirugía..."
-                    />
+                    <div className={styles.field}>
+                      <label className={styles.label}>
+                        Especialidad<span className={styles.req}>*</span>
+                      </label>
+                      <select
+                        value={prof.especialidad}
+                        onChange={(e) => handleChangeProfesional(index, "especialidad", e.target.value)}
+                        className={styles.selectHorario}
+                        disabled={loadingEspecialidades}
+                      >
+                        <option value="">
+                          {loadingEspecialidades ? "Cargando especialidades..." : "Seleccioná una especialidad"}
+                        </option>
+                        {especialidades.map((especialidad) => (
+                          <option key={especialidad} value={especialidad}>
+                            {especialidad}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.field}>
+                      <label className={styles.label}>
+                        Servicios que brinda<span className={styles.req}>*</span>
+                      </label>
+                      <div className={styles.profesionalesGrid}>
+                        {servicios.filter((s) => s.nombre.trim()).length === 0 && (
+                          <span className={styles.helperText}>
+                            Cargá servicios en el paso anterior para poder asignarlos.
+                          </span>
+                        )}
+                        {servicios
+                          .filter((s) => s.nombre.trim())
+                          .map((s) => {
+                            const seleccionado = (prof.serviciosIds || []).includes(s.id);
+                            return (
+                              <button
+                                key={s.id}
+                                type="button"
+                                className={`${styles.chipProf} ${seleccionado ? styles.chipProfActivo : ""}`}
+                                onClick={() => toggleServicioProfesional(index, s.id)}
+                              >
+                                {s.nombre}
+                                {seleccionado && <span className={styles.chipX}>×</span>}
+                              </button>
+                            );
+                          })}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

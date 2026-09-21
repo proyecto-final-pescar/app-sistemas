@@ -4,8 +4,11 @@ import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
 import Badge from "../../../components/ui/badge/Badge";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
+import SuccessModal from "../../../components/ui/success-modal/SuccessModal"; // 1. IMPORTAR SUCCESS MODAL
 import { FaCalendarAlt, FaClock, FaHospital, FaPaw } from "react-icons/fa";
-import { obtenerTurnosPorUsuario, cancelarTurno } from "../../../services/turnosService";
+import { obtenerTurnosPorUsuario, cancelarTurno, pagarEfectivo } from "../../../services/turnosService";
+import { crearPreferenciaPago } from "../../../services/pagosService";
+import SelectorMetodoPago from "../../../components/pagos/SelectorMetodoPago";
 import {
   filtrarProximos,
   filtrarPasados,
@@ -24,6 +27,14 @@ export default function MisTurnos() {
   const [cancelando, setCancelando] = useState(null);
   const [modalCancelar, setModalCancelar] = useState(null);
   const [menuAbierto, setMenuAbierto] = useState(null);
+  const [pagando, setPagando] = useState(null);
+  const [turnoParaPagar, setTurnoParaPagar] = useState(null);
+  const [errorAccion, setErrorAccion] = useState("");
+  const [mensajeCancelacion, setMensajeCancelacion] = useState(null);
+
+  // 2. ESTADOS PARA EL SUCCESS MODAL EN EFECTIVO
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [turnoConfirmadoEfectivo, setTurnoConfirmadoEfectivo] = useState(null);
 
   useEffect(() => {
     const cargarTurnos = async () => {
@@ -54,17 +65,82 @@ export default function MisTurnos() {
     setModalCancelar(null);
 
     try {
-      await cancelarTurno(modalCancelar);
+      const { reembolso } = await cancelarTurno(modalCancelar);
       setTurnos((prev) =>
         prev.map((t) =>
-          t._id === modalCancelar ? { ...t, estado: "cancelado" } : t
+          t.turno_id === modalCancelar ? { ...t, estado_turno_id: "CAN" } : t
         )
       );
+
+      if (!reembolso) {
+        setMensajeCancelacion("Turno cancelado correctamente.");
+      } else if (reembolso.estado === "APR") {
+        setMensajeCancelacion(`Turno cancelado. Se reembolsaron $${reembolso.monto} a tu medio de pago.`);
+      } else {
+        setMensajeCancelacion(`Turno cancelado. Tu reembolso de $${reembolso.monto} está siendo procesado.`);
+      }
     } catch (err) {
       const mensaje = err.response?.data?.message || "No se pudo cancelar el turno.";
-      alert(mensaje);
+      setErrorAccion(mensaje);
     } finally {
       setCancelando(null);
+    }
+  };
+
+  const handleAbrirSelectorPago = (turno) => {
+    setMenuAbierto(null);
+    setTurnoParaPagar(turno);
+  };
+
+  const handlePagarConMercadoPago = async () => {
+    const turnoId = turnoParaPagar.turno_id;
+    setTurnoParaPagar(null);
+    if (pagando) return;
+    setPagando(turnoId);
+
+    try {
+      const respuesta = await crearPreferenciaPago(turnoId);
+      const initPoint = respuesta?.init_point;
+
+      if (!initPoint) {
+        throw new Error("No se recibió el enlace de MercadoPago.");
+      }
+
+      window.location.href = initPoint;
+    } catch (err) {
+      const mensaje =
+        err.response?.data?.message ||
+        err.message ||
+        "No se pudo iniciar el pago. Intentá de nuevo.";
+      setErrorAccion(mensaje);
+      setPagando(null);
+    }
+  };
+
+  // 3. ACTUALIZAR HANDLER DE PAGO EN EFECTIVO
+  const handlePagarEnEfectivo = async () => {
+    const turnoSeleccionado = turnoParaPagar;
+    const turnoId = turnoSeleccionado.turno_id;
+    
+    setTurnoParaPagar(null);
+    if (pagando) return;
+    setPagando(turnoId);
+
+    try {
+      const turnoActualizado = await pagarEfectivo({ turnoId });
+      setTurnos((prev) =>
+        prev.map((t) => (t.turno_id === turnoId ? turnoActualizado : t))
+      );
+      
+      // Guardar el turno para armar el mensaje e indicar éxito
+      setTurnoConfirmadoEfectivo(turnoSeleccionado);
+      setIsSuccessOpen(true);
+    } catch (err) {
+      const mensaje =
+        err.response?.data?.message || "No se pudo confirmar el pago en efectivo.";
+      setErrorAccion(mensaje);
+    } finally {
+      setPagando(null);
     }
   };
 
@@ -107,7 +183,7 @@ export default function MisTurnos() {
                 <div>
                   <p className={styles.bannerLabel}>Próximo turno</p>
                   <p className={styles.bannerTitulo}>
-                    {turnoMasProximo.motivo} · {turnoMasProximo.mascotaId?.nombre || "Mascota"}
+                    {turnoMasProximo.motivo} · {turnoMasProximo.mascota?.nombre || "Mascota"}
                   </p>
                   <p className={styles.bannerMeta}>
                     <span>
@@ -116,11 +192,11 @@ export default function MisTurnos() {
                     </span>
                     <span>
                       <FaClock size={12} color="rgba(255,255,255,0.85)" />{" "}
-                      {turnoMasProximo.hora} hs
+                      {turnoMasProximo.hora_inicio} hs
                     </span>
                     <span>
                       <FaHospital size={12} color="rgba(255,255,255,0.85)" />{" "}
-                      {turnoMasProximo.veterinariaId?.nombre || "Veterinaria"}
+                      {turnoMasProximo.veterinaria?.nombre || "Veterinaria"}
                     </span>
                   </p>
                 </div>
@@ -129,20 +205,24 @@ export default function MisTurnos() {
               {/* Botones del banner */}
               <div className={styles.bannerAcciones}>
                 <button className={styles.bannerBtn}>Ver detalles</button>
-                {turnoMasProximo.estado === "pendiente" && (
-                  <button className={`${styles.bannerBtn} ${styles.bannerBtnPagar}`}>
-                    Pagar
+                {turnoMasProximo.estado_turno_id === "PEN" && (
+                  <button
+                    className={`${styles.bannerBtn} ${styles.bannerBtnPagar}`}
+                    onClick={() => handleAbrirSelectorPago(turnoMasProximo)}
+                    disabled={pagando === turnoMasProximo.turno_id}
+                  >
+                    {pagando === turnoMasProximo.turno_id ? "Procesando..." : "Pagar"}
                   </button>
                 )}
                 {new Date(turnoMasProximo.fecha) > new Date() &&
-                  turnoMasProximo.estado !== "cancelado" &&
-                  turnoMasProximo.estado !== "atendido" && (
+                  turnoMasProximo.estado_turno_id !== "CAN" &&
+                  turnoMasProximo.estado_turno_id !== "ATE" && (
                     <button
                       className={`${styles.bannerBtn} ${styles.bannerBtnCancelar}`}
-                      onClick={() => setModalCancelar(turnoMasProximo._id)}
-                      disabled={cancelando === turnoMasProximo._id}
+                      onClick={() => setModalCancelar(turnoMasProximo.turno_id)}
+                      disabled={cancelando === turnoMasProximo.turno_id}
                     >
-                      {cancelando === turnoMasProximo._id ? "Cancelando..." : "Cancelar"}
+                      {cancelando === turnoMasProximo.turno_id ? "Cancelando..." : "Cancelar"}
                     </button>
                   )}
               </div>
@@ -166,12 +246,12 @@ export default function MisTurnos() {
 
             {!loading && !error && listaVisible.map((turno) => {
               const { dia, mes } = formatearDiaMes(turno.fecha);
-              const badge = ESTADO_BADGE[turno.estado];
+              const badge = ESTADO_BADGE[turno.estado_turno_id];
               const esFuturo = new Date(turno.fecha) > new Date();
-              const puedeCancelar = esFuturo && turno.estado !== "cancelado" && turno.estado !== "atendido";
+              const puedeCancelar = esFuturo && turno.estado_turno_id !== "CAN" && turno.estado_turno_id !== "ATE";
 
               return (
-                <div key={turno._id} className={styles.turnoRow}>
+                <div key={turno.turno_id} className={styles.turnoRow}>
                   <div className={styles.fechaBox}>
                     <span className={styles.fechaDia}>{dia}</span>
                     <span className={styles.fechaMes}>{mes}</span>
@@ -182,24 +262,19 @@ export default function MisTurnos() {
                       {badge && <Badge texto={badge.texto} variante={badge.variante} />}
                       <span className={styles.turnoMascota}>
                         <FaPaw size={12} color="#6b7280" />{" "}
-                        {turno.mascotaId?.nombre || "Mascota"}
+                        {turno.mascota?.nombre || "Mascota"}
                       </span>
                     </div>
                     <p className={styles.turnoMotivo}>{turno.motivo}</p>
                     <p className={styles.turnoMeta}>
                       <span>
                         <FaClock size={12} color="#8276ab" />{" "}
-                        {turno.hora} hs
+                        {turno.hora_inicio} hs
                       </span>
                       <span>
                         <FaHospital size={12} color="#8276ab" />{" "}
-                        {turno.veterinariaId?.nombre || "Veterinaria"}
-                        {(() => {
-                          const prof = turno.veterinariaId?.profesionales?.find(
-                            p => p._id.toString() === turno.profesionalId?.toString()
-                          );
-                          return prof ? ` · ${prof.nombre}` : "";
-                        })()}
+                        {turno.veterinaria?.nombre || "Veterinaria"}
+                        {turno.profesional ? ` · ${turno.profesional.nombre}` : ""}
                       </span>
                     </p>
                   </div>
@@ -209,21 +284,25 @@ export default function MisTurnos() {
                       className={styles.menuBtn}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setMenuAbierto(menuAbierto === turno._id ? null : turno._id);
+                        setMenuAbierto(menuAbierto === turno.turno_id ? null : turno.turno_id);
                       }}
                     >
                       ⋮
                     </button>
 
-                    {menuAbierto === turno._id && (
+                    {menuAbierto === turno.turno_id && (
                       <div className={styles.dropdown}>
-                        <button className={styles.dropdownItem} onClick={() => {}}>
+                        <button className={styles.dropdownItem} onClick={() => { }}>
                           Ver detalles
                         </button>
 
-                        {turno.estado === "pendiente" && (
-                          <button className={styles.dropdownItem} onClick={() => {}}>
-                            Pagar
+                        {turno.estado_turno_id === "PEN" && (
+                          <button
+                            className={styles.dropdownItem}
+                            onClick={() => handleAbrirSelectorPago(turno)}
+                            disabled={pagando === turno.turno_id}
+                          >
+                            {pagando === turno.turno_id ? "Procesando..." : "Pagar"}
                           </button>
                         )}
 
@@ -233,11 +312,11 @@ export default function MisTurnos() {
                             style={{ color: "#ef4444" }}
                             onClick={() => {
                               setMenuAbierto(null);
-                              setModalCancelar(turno._id);
+                              setModalCancelar(turno.turno_id);
                             }}
-                            disabled={cancelando === turno._id}
+                            disabled={cancelando === turno.turno_id}
                           >
-                            {cancelando === turno._id ? "Cancelando..." : "Cancelar"}
+                            {cancelando === turno.turno_id ? "Cancelando..." : "Cancelar"}
                           </button>
                         )}
                       </div>
@@ -249,6 +328,45 @@ export default function MisTurnos() {
           </div>
         </div>
       </div>
+
+      <SelectorMetodoPago
+        isOpen={Boolean(turnoParaPagar)}
+        onClose={() => setTurnoParaPagar(null)}
+        onElegirMercadoPago={handlePagarConMercadoPago}
+        onElegirEfectivo={handlePagarEnEfectivo}
+        monto={turnoParaPagar?.monto_servicio}
+        procesando={pagando !== null}
+      />
+
+      {/* 4. RENDERIZADO DEL SUCCESS MODAL */}
+      <SuccessModal
+        abierto={isSuccessOpen}
+        titulo="¡Turno confirmado!"
+        mensaje={`Tu turno para ${turnoConfirmadoEfectivo?.mascota?.nombre || "tu mascota"} quedó confirmado. Recordá abonar $${turnoConfirmadoEfectivo?.monto_servicio || ""} en efectivo en el local.`}
+        textoBoton="Entendido"
+        onClose={() => {
+          setIsSuccessOpen(false);
+          setTurnoConfirmadoEfectivo(null);
+        }}
+      />
+
+      {errorAccion && (
+        <div className={styles.errorOverlay}>
+          <div className={styles.errorModal}>
+            <p>{errorAccion}</p>
+            <button onClick={() => setErrorAccion("")}>Entendido</button>
+          </div>
+        </div>
+      )}
+      
+      {mensajeCancelacion && (
+        <div className={styles.errorOverlay}>
+          <div className={styles.errorModal}>
+            <p>{mensajeCancelacion}</p>
+            <button onClick={() => setMensajeCancelacion(null)}>Entendido</button>
+          </div>
+        </div>
+      )}
 
       {/* Modal de confirmación de cancelación */}
       <ConfirmModal
