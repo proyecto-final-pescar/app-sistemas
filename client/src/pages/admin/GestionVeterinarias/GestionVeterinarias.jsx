@@ -33,11 +33,11 @@ const GestionVeterinarias = () => {
   const [paginaPendientes, setPaginaPendientes] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [vetARechazar, setVetARechazar] = useState(null); 
-  const [vetAAprobar, setVetAAprobar] = useState(null); 
+  const [vetARechazar, setVetARechazar] = useState(null);
+  const [vetAAprobar, setVetAAprobar] = useState(null);
   const [isAprobando, setIsAprobando] = useState(false);
-  const [vetIdDetalle, setVetIdDetalle] = useState(null); 
-  const [vetACambiarEstado, setVetACambiarEstado] = useState(null); 
+  const [vetIdDetalle, setVetIdDetalle] = useState(null);
+  const [vetACambiarEstado, setVetACambiarEstado] = useState(null);
   const [isCambiandoEstado, setIsCambiandoEstado] = useState(false);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ const GestionVeterinarias = () => {
         const respuesta = await getVeterinariasAdmin();
         const todas = respuesta.data ?? [];
 
-        setVeterinarias(todas.filter((v) => v.estado === "activa"));
+        setVeterinarias(todas.filter((v) => v.estado === "activa" || v.estado === "suspendida"));
         setPendientes(todas.filter((v) => v.estado === "pendiente"));
       } catch (err) {
         console.error("Error al cargar veterinarias:", err.response?.data || err.message);

@@ -73,7 +73,9 @@ function DetallesDeTurnoModal({ turnoId, onClose, onVerComprobante }) {
     ? `${turno.profesional.nombre} ${turno.profesional.apellido}`
     : "No especificado";
 
-  const montoFormateado = turno?.monto ? `$${turno.monto}` : "Consultar";
+  const montoFormateado = turno?.monto != null
+    ? turno.monto.toLocaleString("es-AR", { style: "currency", currency: "ARS" })
+    : "Consultar";
 
   return (
     <div className={styles.overlay} onClick={onClose}>

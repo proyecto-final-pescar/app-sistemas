@@ -135,7 +135,7 @@ export const obtenerTurnoAdminPorId = async (req, res) => {
       fecha: turno.fecha,
       hora_inicio: formatearHora(turno.hora_inicio),
       motivo: turno.motivo,
-      monto: turno.monto_servicio,
+      monto: turno.monto_servicio !== null ? Number(turno.monto_servicio) : null,
       estado: turno.estado_turno.nombre,
       servicio: turno.servicio,
       veterinaria: turno.veterinaria,
