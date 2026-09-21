@@ -46,12 +46,6 @@ const CLAVES_DIAS = {
 };
 
 const TABS = ["Datos generales", "Servicios", "Profesionales", "Horarios", "Método de cobro"];
-const DURACIONES_SERVICIO = [
-  { value: 15, label: "15 minutos" },
-  { value: 30, label: "30 minutos" },
-  { value: 60, label: "1 hora" },
-  { value: 120, label: "2 horas" },
-];
 
 
 const REGEX_SOLO_LETRAS = /^[a-zA-ZÀ-ÖØ-öø-ÿ\u00f1\u00d1\s'.-]+$/;
@@ -117,7 +111,7 @@ const normalizarVeterinaria = (veterinaria) => ({
       nombre: profesional.nombre ?? "",
       especialidad: profesional.especialidad ?? "",
       email: profesional.email ?? "",
-      serviciosIds: Array.isArray(profesional.servicios) ? profesional.servicios : [],
+      serviciosIds: Array.isArray(profesional.serviciosIds) ? profesional.serviciosIds : [],
     }))
     : [],
   diasSeleccionados: horariosASeleccionados(veterinaria.horarios),
@@ -130,9 +124,7 @@ const construirPayloadServicios = (servicios) => ({
     ...(servicio._id ? { _id: servicio._id } : {}),
     nombre: (servicio.nombre ?? "").trim(),
     categoria: servicio.categoria,
-    descripcion: servicio.descripcion.trim(),
     precio: Number(servicio.precio),
-    duracionMinutos: Number(servicio.duracionMinutos),
   })),
 });
 
@@ -313,7 +305,7 @@ function MiVeterinaria() {
 
   const abrirServicio = (indice = null) => {
     const servicio = indice === null
-      ? { nombre: "", categoria: "", descripcion: "", precio: "", duracionMinutos: 30 }
+      ? { nombre: "", categoria: "", precio: "" }
       : { ...formulario.servicios[indice] };
     setModalEdicion({ tipo: "servicio", indice, valores: servicio });
   };
@@ -349,14 +341,10 @@ function MiVeterinaria() {
     let error = "";
 
     if (tipo === "servicio") {
-      if (!valores.nombre.trim() || !valores.categoria || !valores.descripcion.trim()) {
-        error = "Completá el nombre, la categoría y la descripción del servicio.";
+      if (!valores.nombre.trim() || !valores.categoria) {
+        error = "Completá el nombre y la categoría del servicio.";
       } else if (!validarPrecio(valores.precio)) {
         error = "El precio debe ser numérico y mayor a cero.";
-      } else if (!DURACIONES_SERVICIO.some(
-        (opcion) => opcion.value === Number(valores.duracionMinutos),
-      )) {
-        error = "La duración debe ser de 15, 30, 60 o 120 minutos.";
       }
     } else if (!valores.nombre.trim() || !valores.especialidad.trim() || !valores.email.trim()) {
       error = "Completá todos los datos del profesional.";
@@ -377,11 +365,7 @@ function MiVeterinaria() {
 
     const clave = tipo === "servicio" ? "servicios" : "profesionales";
     const normalizado = tipo === "servicio"
-      ? {
-        ...valores,
-        precio: Number(valores.precio),
-        duracionMinutos: Number(valores.duracionMinutos),
-      }
+      ? { ...valores, precio: Number(valores.precio) }
       : { ...valores };
 
     const items = [...formulario[clave]];
@@ -736,8 +720,6 @@ function MiVeterinaria() {
                     <div className={styles.itemBody}>
                       <span className={styles.category}>{servicio.categoria}</span>
                       <h3>{servicio.nombre}</h3>
-                      <p>{servicio.descripcion}</p>
-                      <p>{servicio.duracionMinutos} minutos</p>
                     </div>
                     <strong className={styles.price}>$ {Number(servicio.precio).toLocaleString("es-AR")}</strong>
                     <div className={styles.actions}>
@@ -899,18 +881,7 @@ function MiVeterinaria() {
               <>
                 <Input label="Nombre *" value={modalEdicion.valores.nombre} onChange={(e) => actualizarModal("nombre", e.target.value)} />
                 <Select label="Categoría *" opciones={categorias} value={modalEdicion.valores.categoria} onChange={(e) => actualizarModal("categoria", e.target.value)} error={errorCategorias} />
-                <label className={styles.textareaField}>
-                  <span>Descripción *</span>
-                  <textarea
-                    value={modalEdicion.valores.descripcion}
-                    onChange={(e) => actualizarModal("descripcion", e.target.value)}
-                    maxLength={500}
-                    rows={3}
-                  />
-                  <small>{modalEdicion.valores.descripcion.length}/500</small>
-                </label>
                 <Input label="Precio *" type="number" value={modalEdicion.valores.precio} onChange={(e) => actualizarModal("precio", e.target.value)} />
-                <Select label="Duración estimada *" opciones={DURACIONES_SERVICIO} value={modalEdicion.valores.duracionMinutos} onChange={(e) => actualizarModal("duracionMinutos", e.target.value)} />
                 {cargandoCategorias && <p className={styles.helper}>Cargando categorías...</p>}
               </>
             ) : (

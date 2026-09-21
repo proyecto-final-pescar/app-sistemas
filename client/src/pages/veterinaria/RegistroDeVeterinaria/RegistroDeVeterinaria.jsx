@@ -230,7 +230,7 @@ export default function RegistroDeVeterinaria() {
   const validateStep2 = () => {
     const base = validarCamposRequeridos(
       servicios,
-      ["categoria", "nombre", "descripcion", "precio", "duracionMinutos"],
+      ["categoria", "nombre", "precio"],
       "Completá todos los campos de cada servicio.",
     );
     if (base) return base;
@@ -354,9 +354,7 @@ export default function RegistroDeVeterinaria() {
           idLocal: s.id,
           categoria: s.categoria,
           nombre: s.nombre,
-          descripcion: s.descripcion.trim(),
           precio: Number(s.precio),
-          duracionMinutos: Number(s.duracionMinutos),
         })),
         profesionales: profesionales.map((p) => ({
           nombre: p.nombre,
@@ -633,17 +631,6 @@ export default function RegistroDeVeterinaria() {
                       placeholder="Ej: Vacuna Antirrábica Anual"
                     />
                     <div className={styles.field}>
-                      <label className={styles.label}>Descripción<span className={styles.req}>*</span></label>
-                      <textarea
-                        value={servicio.descripcion}
-                        onChange={(e) => handleChangeServicio(index, "descripcion", e.target.value)}
-                        maxLength={500}
-                        rows={3}
-                        className={styles.textareaServicio}
-                        placeholder="Contá brevemente qué incluye el servicio"
-                      />
-                    </div>
-                    <div className={styles.field}>
                       <label className={styles.label}>
                         Precio<span className={styles.req}>*</span>
                       </label>
@@ -664,21 +651,6 @@ export default function RegistroDeVeterinaria() {
                           className={styles.precioInput}
                         />
                       </div>
-                    </div>
-                    <div className={styles.field}>
-                      <label className={styles.label}>
-                        Duración estimada<span className={styles.req}>*</span>
-                      </label>
-                      <select
-                        value={servicio.duracionMinutos}
-                        onChange={(e) => handleChangeServicio(index, "duracionMinutos", Number(e.target.value))}
-                        className={styles.selectHorario}
-                      >
-                        <option value={15}>15 minutos</option>
-                        <option value={30}>30 minutos</option>
-                        <option value={60}>1 hora</option>
-                        <option value={120}>2 horas</option>
-                      </select>
                     </div>
                   </div>
                 ))}
