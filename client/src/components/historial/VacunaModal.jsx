@@ -18,8 +18,10 @@ const VacunaModal = ({ abierto, vacuna, profesionales = [], onClose, onGuardar }
   const [errorApi, setErrorApi] = useState("");
 
   const opcionesProfesionales = profesionales.map((p) => ({
-    value: p._id,
-    label: p.especialidad ? `${p.nombre} · ${p.especialidad}` : p.nombre,
+   value: p.profesional_id,
+   label: p.especialidad?.nombre
+     ? `${p.nombre} ${p.apellido} · ${p.especialidad.nombre}`
+     : `${p.nombre} ${p.apellido}`,
   }));
 
   const enviar = async (event) => {
@@ -36,7 +38,7 @@ const VacunaModal = ({ abierto, vacuna, profesionales = [], onClose, onGuardar }
     try {
       await onGuardar(
         { nombre: form.nombre.trim(), fechaAplicada: form.fechaAplicada, profesionalId: form.profesionalId },
-        vacuna?._id
+        vacuna?.id
       );
       onClose();
     } catch (err) {

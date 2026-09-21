@@ -29,6 +29,18 @@ const DIAS_MAPA = [
   { nombre: "Domingo", clave: "DOM" },
 ];
 
+
+const normalizarDia = (dia) =>
+  dia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const esFechaPasada = (fecha) => {
+  const fechaEvaluada = new Date(fecha);
+  fechaEvaluada.setHours(0, 0, 0, 0);
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  return fechaEvaluada < hoy;
+};
+
 const obtenerLunesDeSemana = (offset = 0) => {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
@@ -78,17 +90,37 @@ export default function CargaTurnos() {
   const [slotsExistentes, setSlotsExistentes] = useState([]);
   const semanaAjustadaRef = useRef(false);
 
+  // Indicador de scroll horizontal de la grilla (solo mobile)
+  const [scrolleado, setScrolleado] = useState(false);
+  const [alFinal, setAlFinal] = useState(false);
+  const grillaRef = useRef(null);
+
+  const handleScrollGrilla = () => {
+    const el = grillaRef.current;
+    if (!el) return;
+    if (el.scrollLeft > 8) setScrolleado(true);
+    const llegoAlFinal = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+    setAlFinal(llegoAlFinal);
+  };
+
+  // Al cambiar de semana vuelve a haber contenido nuevo: reiniciamos el hint
+  useEffect(() => {
+    setScrolleado(false);
+    setAlFinal(false);
+  }, [semanaOffset]);
+
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
+
 
   const servicioSeleccionado = veterinaria?.servicios?.find(
     (s) => s.servicio_id === servicioId
   );
   const [duracion, setDuracion] = useState(30);
 
-  // Filtrado adaptado a SQL: busca en la propiedad o array de servicios del profesional
   const profesionalesDelServicio = veterinaria?.profesionales?.filter((p) => {
     if (!servicioId) return false;
+
     if (Array.isArray(p.servicios)) {
       return p.servicios.some((s) => (s.servicio_id || s) === servicioId);
     }
@@ -131,11 +163,13 @@ export default function CargaTurnos() {
         })
       );
     } catch {
-      // silencioso
+
     }
   }, [veterinaria]);
 
   useEffect(() => {
+    // La función actualiza el estado únicamente después de resolver la petición remota.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarExistentes();
   }, [cargarExistentes, servicioId, profesionales]);
 
@@ -171,6 +205,8 @@ export default function CargaTurnos() {
 
   // Mapeo flexible de horarios para SQL (horario_veterinaria)
   // Reemplazar la función obtenerHorarioDia
+
+
   const obtenerHorarioDia = (claveDia) => {
     if (!veterinaria?.horarios) return null;
 
@@ -183,7 +219,6 @@ export default function CargaTurnos() {
       hasta: horario.hasta.slice(0, 5),
     };
   };
-
 
   const diasDisponibles = DIAS_MAPA.filter((d, i) => {
     const h = obtenerHorarioDia(d.clave, i);
@@ -209,6 +244,8 @@ export default function CargaTurnos() {
 
     if (offset > 0) setSemanaOffset(offset);
     semanaAjustadaRef.current = true;
+    // La semana inicial se calcula una sola vez cuando llega la veterinaria.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [veterinaria]);
 
   const obtenerRangoGlobal = () => {
@@ -255,7 +292,7 @@ export default function CargaTurnos() {
       const inicioExistente = sh * 60 + sm;
       const finExistente = inicioExistente + s.duracion;
 
-      // Solapamiento de rangos (mismo criterio que en el backend)
+
       return inicioExistente < finNuevo && finExistente > inicioNuevo;
     });
   };
@@ -600,7 +637,19 @@ export default function CargaTurnos() {
                   </div>
                 </div>
 
-                <div className={styles.grillaWrapper}>
+                {/* Hint de scroll horizontal — visible solo en mobile, se apaga al scrollear */}
+                <p className={`${styles.scrollHint} ${scrolleado ? styles.scrollHintOculto : ""}`}>
+                  Deslizá para ver más días <span className={styles.scrollHintFlecha}>→</span>
+                </p>
+
+                <div
+                  className={styles.grillaWrapper}
+                  ref={grillaRef}
+                  onScroll={handleScrollGrilla}
+                >
+                  <div
+                    className={`${styles.grillaFadeDerecha} ${alFinal ? styles.grillaFadeDerechaOculto : ""}`}
+                  />
                   <table className={styles.grilla}>
                     <thead>
                       <tr>

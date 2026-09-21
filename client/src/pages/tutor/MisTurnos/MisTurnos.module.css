@@ -257,3 +257,53 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+.errorOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(28, 16, 51, 0.3);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.errorModal {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 380px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(28, 16, 51, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.errorModal p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #1c1033;
+  line-height: 1.4;
+}
+
+.errorModal button {
+  align-self: center;
+  padding: 0.65rem 1.75rem;
+  border: none;
+  border-radius: 999px;
+  background-color: #7c3aed;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.errorModal button:hover {
+  background-color: #6d28d9;
+}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PawPrint, Calendar, Clock, User } from "lucide-react";
 
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
@@ -36,11 +37,14 @@ export default function CitasAgendadas() {
       try {
         const veterinaria = await obtenerMiVeterinaria();
 
-        if (!veterinaria?._id) {
+        if (!veterinaria?.veterinaria_id) {
           throw new Error("No se encontró la veterinaria del usuario.");
         }
 
-        const data = await obtenerTurnosPorVeterinaria(veterinaria._id, { estadoDistinto: "disponible" });
+        // CON = confirmado, CAN = cancelado, ATE = atendido.
+        // Se excluyen a propósito DIS (disponible, sin tutor asignado)
+        // y PEN (pendiente de pago).
+        const data = await obtenerTurnosPorVeterinaria(veterinaria.veterinaria_id, { estados: "CON,CAN,ATE" });
 
         setTurnos(Array.isArray(data) ? data : []);
       } catch (err) {
@@ -60,7 +64,7 @@ export default function CitasAgendadas() {
   }, []);
 
   const irARegistrarConsulta = (turno) => {
-    const turnoId = turno?._id || turno?.id;
+    const turnoId = turno?.turno_id;
 
     if (!turnoId) {
       setError("No se pudo identificar el turno seleccionado.");
@@ -73,7 +77,6 @@ export default function CitasAgendadas() {
   const proximos = filtrarProximos(turnos);
   const pasados = filtrarPasados(turnos);
   const turnoMasProximo = obtenerTurnoMasProximo(turnos);
-
 
   const listaVisible = tab === "proximos" ? proximos : pasados;
 
@@ -106,26 +109,30 @@ export default function CitasAgendadas() {
           {turnoMasProximo && (
             <div className={styles.banner}>
               <div className={styles.bannerInfo}>
-                <div className={styles.bannerIcon}>🐾</div>
+                <PawPrint className={styles.bannerIcon} size={28} />
 
                 <div>
                   <p className={styles.bannerLabel}>Próximo turno</p>
 
                   <p className={styles.bannerTitulo}>
                     {turnoMasProximo.motivo || "Consulta"} ·{" "}
-                    {turnoMasProximo.mascotaId?.nombre || "Mascota"}
+                    {turnoMasProximo.mascota?.nombre || "Mascota"}
                   </p>
 
                   <p className={styles.bannerMeta}>
-                    <span>📅 {formatearFechaLarga(turnoMasProximo.fecha)}</span>
-
-                    <span>🕒 {turnoMasProximo.hora || "Sin horario"} hs</span>
+                    <span>
+                      <Calendar size={14} /> {formatearFechaLarga(turnoMasProximo.fecha)}
+                    </span>
 
                     <span>
-                      👤{" "}
-                      {turnoMasProximo.usuarioId?.name ||
-                        turnoMasProximo.usuarioId?.nombre ||
-                        "Tutor"}
+                      <Clock size={14} /> {turnoMasProximo.hora_inicio || "Sin horario"} hs
+                    </span>
+
+                    <span>
+                      <User size={14} />{" "}
+                      {turnoMasProximo.mascota?.usuario?.nombre
+                        ? `${turnoMasProximo.mascota.usuario.nombre} ${turnoMasProximo.mascota.usuario.apellido || ""}`.trim()
+                        : "Tutor"}
                     </span>
                   </p>
                 </div>
@@ -145,7 +152,9 @@ export default function CitasAgendadas() {
             <div className={styles.cardHeader}>
               {listaVisible.length} turno
               {listaVisible.length !== 1 ? "s" : ""}{" "}
-              {tab === "proximos" ? "programados" : "registrados"}
+              {tab === "proximos"
+                ? listaVisible.length !== 1 ? "programados" : "programado"
+                : listaVisible.length !== 1 ? "registrados" : "registrado"}
             </div>
 
             {loading && (
@@ -165,10 +174,10 @@ export default function CitasAgendadas() {
               !error &&
               listaVisible.map((turno) => {
                 const { dia, mes } = formatearDiaMes(turno.fecha);
-                const badge = ESTADO_BADGE[turno.estado];
+                const badge = ESTADO_BADGE[turno.estado_turno_id];
 
                 return (
-                  <div key={turno._id || turno.id} className={styles.turnoRow}>
+                  <div key={turno.turno_id} className={styles.turnoRow}>
                     <div className={styles.fechaBox}>
                       <span className={styles.fechaDia}>{dia}</span>
 
@@ -185,7 +194,7 @@ export default function CitasAgendadas() {
                         )}
 
                         <span className={styles.turnoMascota}>
-                          🐾 {turno.mascotaId?.nombre || "Mascota"}
+                          <PawPrint size={14} /> {turno.mascota?.nombre || "Mascota"}
                         </span>
                       </div>
 
@@ -194,13 +203,15 @@ export default function CitasAgendadas() {
                       </p>
 
                       <p className={styles.turnoMeta}>
-                        <span>🕒 {turno.hora || "Sin horario"} hs</span>
+                        <span>
+                          <Clock size={14} /> {turno.hora_inicio || "Sin horario"} hs
+                        </span>
 
                         <span>
-                          👤{" "}
-                          {turno.usuarioId?.name ||
-                            turno.usuarioId?.nombre ||
-                            "Tutor"}
+                          <User size={14} />{" "}
+                          {turno.mascota?.usuario?.nombre
+                            ? `${turno.mascota.usuario.nombre} ${turno.mascota.usuario.apellido || ""}`.trim()
+                            : "Tutor"}
                         </span>
                       </p>
                     </div>

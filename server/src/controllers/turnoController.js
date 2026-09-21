@@ -1,13 +1,15 @@
 import prisma from '../../prisma/client.js'
+import client from '../config/mercadopago.js'
+import { PaymentRefund } from 'mercadopago'
 
 // ─────────────────────────────────────────────────────────────
 // Reglas de negocio
 // ─────────────────────────────────────────────────────────────
-const ANTICIPACION_MINIMA_HORAS = 10
+export const ANTICIPACION_MINIMA_HORAS = 10
 const PLAZO_PAGO_HORAS = 3          // siempre < ANTICIPACION_MINIMA_HORAS
 const HORAS_LIMITE_CANCELACION = 24 // solo aplica a turnos ya CONFIRMADOS
 
-const ESTADO = {
+export const ESTADO = {
   DISPONIBLE: 'DIS',
   PENDIENTE: 'PEN',
   CONFIRMADO: 'CON',
@@ -15,18 +17,49 @@ const ESTADO = {
   ATENDIDO: 'ATE'
 }
 
-const includeTurnoCompleto = {
-  mascota: { select: { mascota_id: true, nombre: true, raza: { select: { especie: { select: { nombre: true } } } } } },
+
+export const ESTADOS_VALIDOS = new Set(Object.values(ESTADO))
+
+export const includeTurnoCompleto = {
+  mascota: {
+    select: {
+      mascota_id: true,
+      nombre: true,
+      fecha_nacimiento: true,
+      peso: true,
+      raza: {
+        select: {
+          nombre: true,
+          especie: { select: { nombre: true } }
+        }
+      },
+      sexo_mascota: { select: { nombre: true } },
+      usuario: {
+        select: {
+          usuario_id: true,
+          nombre: true,
+          apellido: true,
+          email: true
+        }
+      }
+    }
+  },
   veterinaria: { select: { veterinaria_id: true, nombre: true, direccion: true } },
   profesional: { select: { profesional_id: true, nombre: true, apellido: true } },
-  servicio: { select: { servicio_id: true, nombre: true } }
+  servicio: {
+    select: {
+      servicio_id: true,
+      nombre: true,
+      categoria_servicio: { select: { nombre: true } }
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
 // Helpers de fecha/hora
 // ─────────────────────────────────────────────────────────────
 
-const combinarFechaHora = (fecha, horaTime) => {
+export const combinarFechaHora = (fecha, horaTime) => {
   const fechaStr = typeof fecha === 'string' ? fecha.slice(0, 10) : fecha.toISOString().slice(0, 10)
   const [anio, mes, dia] = fechaStr.split('-').map(Number)
 
@@ -40,7 +73,7 @@ const combinarFechaHora = (fecha, horaTime) => {
   return new Date(anio, mes - 1, dia, horas, minutos, 0, 0)
 }
 
-const horasHasta = (fechaHora) => (fechaHora.getTime() - Date.now()) / (1000 * 60 * 60)
+export const horasHasta = (fechaHora) => (fechaHora.getTime() - Date.now()) / (1000 * 60 * 60)
 
 const horaStringATime = (horaStr) => {
   const [h, m] = horaStr.split(':').map(Number)
@@ -56,9 +89,9 @@ const sumarMinutos = (horaTimeUTC, minutos) => {
 // Postgres devuelve columnas `time` como Date ancladas al epoch (UTC).
 // Se formatea a "HH:MM" antes de mandar cualquier respuesta al frontend,
 // que sigue esperando ese formato simple (heredado de la versión Mongo).
-const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
+export const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
 
-const formatearTurno = (turno) => ({
+export const formatearTurno = (turno) => ({
   ...turno,
   hora_inicio: formatearHora(turno.hora_inicio),
   hora_fin: formatearHora(turno.hora_fin)
@@ -69,7 +102,7 @@ const formatearTurno = (turno) => ({
 // ─────────────────────────────────────────────────────────────
 export const obtenerTurnos = async (req, res) => {
   try {
-    const { veterinariaId, usuarioId, estado, estadoDistinto, servicioId, fechaDesde, fechaHasta } = req.query
+    const { veterinariaId, usuarioId, estado, estadoDistinto, estados, servicioId, fechaDesde, fechaHasta } = req.query
 
     if (!veterinariaId && !usuarioId) {
       return res.status(400).json({ message: 'Falta veterinariaId o usuarioId' })
@@ -97,11 +130,8 @@ export const obtenerTurnos = async (req, res) => {
       }
 
       const esDueñoDeLaVeterinaria = veterinaria.usuario_id === req.user.id
-      // Ver horarios DISPONIBLES de cualquier veterinaria es público — así
-      // funciona la grilla de reserva que ve el dueño de una mascota. Ver
-      // cualquier otro estado implica datos de reservas ajenas (mascota,
-      // motivo, notas) y requiere ser el dueño de esa veterinaria.
-      const soloConsultaDisponibilidad = estado === 'DIS' && !estadoDistinto
+
+      const soloConsultaDisponibilidad = estado === ESTADO.DISPONIBLE && !estadoDistinto && !estados
 
       if (!esDueñoDeLaVeterinaria && !soloConsultaDisponibilidad) {
         return res.status(403).json({ message: 'No tenés permisos para ver esos turnos.' })
@@ -111,8 +141,34 @@ export const obtenerTurnos = async (req, res) => {
     }
 
     if (servicioId) filtro.servicio_id = servicioId
-    if (estadoDistinto) filtro.estado_turno_id = { not: estadoDistinto }
-    else if (estado) filtro.estado_turno_id = estado
+
+
+    if (estados) {
+      const listaEstados = estados.split(',').map((e) => e.trim()).filter(Boolean)
+      const listaInvalida = listaEstados.filter((e) => !ESTADOS_VALIDOS.has(e))
+
+      if (listaEstados.length === 0 || listaInvalida.length > 0) {
+        return res.status(400).json({
+          message: `Estado(s) inválido(s): ${listaInvalida.join(', ') || '(vacío)'}. Valores permitidos: ${[...ESTADOS_VALIDOS].join(', ')}`
+        })
+      }
+
+      filtro.estado_turno_id = { in: listaEstados }
+    } else if (estadoDistinto) {
+      if (!ESTADOS_VALIDOS.has(estadoDistinto)) {
+        return res.status(400).json({
+          message: `Estado inválido: "${estadoDistinto}". Valores permitidos: ${[...ESTADOS_VALIDOS].join(', ')}`
+        })
+      }
+      filtro.estado_turno_id = { not: estadoDistinto }
+    } else if (estado) {
+      if (!ESTADOS_VALIDOS.has(estado)) {
+        return res.status(400).json({
+          message: `Estado inválido: "${estado}". Valores permitidos: ${[...ESTADOS_VALIDOS].join(', ')}`
+        })
+      }
+      filtro.estado_turno_id = estado
+    }
 
     if (fechaDesde || fechaHasta) {
       filtro.fecha = {}
@@ -176,12 +232,7 @@ export const obtenerTurnoPorId = async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────
 // POST /turnos/:id/reservar
-//
-// OPCIÓN B: el profesional queda fijo desde que la veterinaria lo crea
-// (vía crearOfertaHoraria) — cada profesional disponible es un turno
-// propio, no un candidato entre varios. Reservar ya no elige profesional,
-// solo transiciona el turno existente de 'disponible' a 'pendiente'.
-// ─────────────────────────────────────────────────────────────
+
 export const reservarTurno = async (req, res) => {
   try {
     const { turnoId } = req.params
@@ -204,8 +255,7 @@ export const reservarTurno = async (req, res) => {
       return res.status(404).json({ message: 'Veterinaria no disponible' })
     }
 
-    // La mascota tiene que pertenecer a quien está reservando. Como turno
-    // no tiene usuario_id propio, el dueño se deriva de mascota.dueno_id.
+
     const mascota = await prisma.mascota.findUnique({ where: { mascota_id: mascotaId } })
     if (!mascota || mascota.dueno_id !== req.user.id) {
       return res.status(403).json({ message: 'La mascota no te pertenece' })
@@ -286,6 +336,10 @@ export const cancelarTurno = async (req, res) => {
       return res.status(400).json({ message: 'No se puede cancelar un turno ya atendido' })
     }
 
+    let pagoAReembolsar = null
+    let estadoReembolso = null
+    let motivoRechazoReembolso = null
+
     if (turno.estado_turno_id === ESTADO.CONFIRMADO) {
       const fechaHoraTurno = combinarFechaHora(turno.fecha, turno.hora_inicio)
       const horasRestantes = horasHasta(fechaHoraTurno)
@@ -296,7 +350,33 @@ export const cancelarTurno = async (req, res) => {
         })
       }
 
-      // TODO(pago): pendiente de S15-07 (pagos), todavía no migrado.
+      // Reembolso automático: solo si hay un pago realmente APROBADO (cobrado).
+      // Si es efectivo y todavía está en PEN (nunca se cobró en el local),
+      // no hay nada que reembolsar — se cancela sin más.
+      pagoAReembolsar = await prisma.pago.findFirst({
+        where: { turno_id: id, estado_pago_id: 'APR' },
+        orderBy: { created_at: 'desc' }
+      })
+
+      if (pagoAReembolsar) {
+        if (pagoAReembolsar.metodo_pago_id === 'MPG' && pagoAReembolsar.id_pago) {
+          try {
+            const refundClient = new PaymentRefund(client)
+            await refundClient.create({ payment_id: pagoAReembolsar.id_pago })
+            estadoReembolso = 'APR'
+          } catch (errorReembolso) {
+            // No bloqueamos la cancelación del turno por un fallo de MP:
+            // se cancela igual, y el reembolso queda para resolución manual.
+            console.error('Error al reembolsar en MercadoPago:', errorReembolso)
+            estadoReembolso = 'PRO'
+            motivoRechazoReembolso = 'Fallo el reembolso automático en MercadoPago, requiere revisión manual.'
+          }
+        } else {
+          // Efectivo ya cobrado (a futuro, cuando exista "marcar como cobrado"):
+          // no hay integración externa, se asume resuelto en el local.
+          estadoReembolso = 'APR'
+        }
+      }
     }
 
     // Se preserva el turno cancelado como registro de auditoría (queda
@@ -324,6 +404,24 @@ export const cancelarTurno = async (req, res) => {
         }
       })
 
+      if (pagoAReembolsar) {
+        await tx.pago.update({
+          where: { pago_id: pagoAReembolsar.pago_id },
+          data: { estado_pago_id: 'REE' }
+        })
+
+        await tx.pago.create({
+          data: {
+            turno_id: id,
+            monto: pagoAReembolsar.monto,
+            metodo_pago_id: pagoAReembolsar.metodo_pago_id,
+            estado_pago_id: estadoReembolso,
+            reembolso_de_id: pagoAReembolsar.pago_id,
+            motivo_rechazo: motivoRechazoReembolso
+          }
+        })
+      }
+
       return [cancelado, nuevoTurno]
     })
 
@@ -332,7 +430,10 @@ export const cancelarTurno = async (req, res) => {
       message: 'Turno cancelado y horario liberado correctamente',
       data: {
         turnoCancelado: formatearTurno(turnoCancelado),
-        turnoNuevoDisponible: formatearTurno(turnoLiberado)
+        turnoNuevoDisponible: formatearTurno(turnoLiberado),
+        reembolso: pagoAReembolsar
+          ? { monto: Number(pagoAReembolsar.monto), estado: estadoReembolso }
+          : null
       }
     })
   } catch (error) {
@@ -370,13 +471,7 @@ export const liberarTurnosVencidos = async () => {
 
 // ─────────────────────────────────────────────────────────────
 // POST /turnos/oferta — la veterinaria carga horarios disponibles
-//
-// OPCIÓN B: se crea UN turno por cada profesional seleccionado, por
-// slot — cada profesional disponible a esa hora es un turno propio y
-// reservable de forma independiente. El conflicto se detecta ahora por
-// (veterinaria + profesional + fecha + hora), protegido a nivel de base
-// por el índice único parcial ix_turno_slot_unico.
-// ─────────────────────────────────────────────────────────────
+
 export const crearOfertaHoraria = async (req, res) => {
   try {
     const { servicioId, profesionales, slots, duracion } = req.body

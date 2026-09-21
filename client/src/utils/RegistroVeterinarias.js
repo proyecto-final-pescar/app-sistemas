@@ -2,14 +2,17 @@ export const servicioVacio = () => ({
   id: crypto.randomUUID(),
   categoria: "",
   nombre: "",
-  precio: ""
+  descripcion: "",
+  precio: "",
+  duracionMinutos: 30
 });
 
 export const profesionalVacio = () => ({
   id: crypto.randomUUID(),
   nombre: "",
   email: "",
-  especialidad: ""
+  especialidad: "",
+  serviciosIds: []
 });
 
 export const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];

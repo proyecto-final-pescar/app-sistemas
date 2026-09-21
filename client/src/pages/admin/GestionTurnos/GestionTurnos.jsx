@@ -64,7 +64,7 @@ export default function GestionTurnos() {
 
   return (
     <div className={styles.page}>
-      <Sidebar role="administrador" activeItem="Turnos" />
+      <Sidebar role="administrador" activeItem="Turnos" title="Turnos" />
 
       <div className={styles.main}>
         <TopBar

@@ -1,160 +1,175 @@
-import { Payment } from 'mercadopago';
-import client from '../config/mercadopago.js';
-import Turno from '../models/Turno.js';
-import Pago from '../models/Pago.js';
+import {
+  InvalidWebhookSignatureError,
+  Payment,
+  WebhookSignatureValidator
+} from 'mercadopago';
 
-// Mapeo de estados de MercadoPago a estados del modelo Pago
+import prisma from '../../prisma/client.js';
+import { obtenerClienteMercadoPago } from '../services/mercadoPagoOAuthService.js';
+
 const ESTADO_MP_A_PAGO = {
   approved: 'aprobado',
   rejected: 'rechazado',
   cancelled: 'cancelado',
   refunded: 'reembolsado',
   pending: 'pendiente',
-  in_process: 'en_proceso',
+  in_process: 'en_proceso'
 };
 
-// Mapeo de payment_type_id de MP a metodoPago del modelo
 const METODO_PAGO_MAP = {
   credit_card: 'tarjeta_credito',
   debit_card: 'tarjeta_debito',
   ticket: 'efectivo',
   bank_transfer: 'transferencia',
-  account_money: 'billetera_virtual',
+  account_money: 'billetera_virtual'
 };
 
-// POST /api/pagos/webhook
+const obtenerIdNotificacion = (req) =>
+  req.body?.data?.id || req.query?.['data.id'] || req.query?.id;
+
+const validarFirma = (req) => {
+  const secret = process.env.MP_WEBHOOK_SECRET?.trim();
+  if (!secret) {
+    const error = new Error('Falta configurar MP_WEBHOOK_SECRET.');
+    error.code = 'MP_CONFIG_ERROR';
+    throw error;
+  }
+
+  const dataId = req.query?.['data.id'];
+  const xSignature = req.get('x-signature');
+  const xRequestId = req.get('x-request-id');
+  if (!dataId || !xSignature || !xRequestId) return false;
+
+  try {
+    WebhookSignatureValidator.validate({
+      xSignature,
+      xRequestId,
+      dataId,
+      secret,
+      toleranceSeconds: 300
+    });
+    return true;
+  } catch (error) {
+    if (error instanceof InvalidWebhookSignatureError) return false;
+    throw error;
+  }
+};
+
+const detalleSeguroError = (error) => ({
+  code: error?.code,
+  message: error?.message,
+  status: error?.status
+});
+
 export const recibirWebhook = async (req, res) => {
   try {
-    const { type, data } = req.body;
+    if (!validarFirma(req)) {
+      return res.status(401).json({ message: 'Firma de webhook inválida' });
+    }
 
-    // 1. Solo procesamos eventos de tipo 'payment'
-    if (type !== 'payment') {
+    const tipo = req.body?.type || req.query?.type || req.query?.topic;
+    if (tipo && tipo !== 'payment') {
       return res.status(200).json({ message: 'Evento ignorado' });
     }
 
-    const idPago = data?.id;
-    if (!idPago) {
-      return res.status(400).json({ message: 'Falta el id del pago' });
+    const veterinariaId = req.query.veterinariaId;
+    const idPagoMercadoPago = obtenerIdNotificacion(req);
+    if (!veterinariaId || !idPagoMercadoPago) {
+      return res.status(400).json({ message: 'Notificación incompleta' });
     }
 
-    // 2. Consultamos los detalles completos del pago usando el SDK
-    const paymentClient = new Payment(client);
-    const pagoMP = await paymentClient.get({ id: idPago });
+    const cliente = await obtenerClienteMercadoPago(veterinariaId);
+    const pagoMP = await new Payment(cliente).get({ id: idPagoMercadoPago });
+    const turnoId = pagoMP.external_reference || pagoMP.metadata?.turno_id;
+    const pagoId = pagoMP.metadata?.pago_id;
+    const veterinariaMetadata = pagoMP.metadata?.veterinaria_id;
+    if (!turnoId || !pagoId || String(veterinariaMetadata) !== String(veterinariaId)) {
+      return res.status(400).json({ message: 'El pago no tiene metadatos válidos' });
+    }
 
-    // 3. Solo procesamos pagos aprobados
-    if (pagoMP.status !== 'approved') {
-      const metadataPagoId = pagoMP.metadata?.pago_id || pagoMP.metadata?.pagoId;
-      const turnoId = pagoMP.external_reference
-        || pagoMP.metadata?.turno_id
-        || pagoMP.metadata?.turnoId;
+    const turno = await prisma.turno.findFirst({
+      where: { turno_id: turnoId, veterinaria_id: veterinariaId },
+      include: { estado_turno: true }
+    });
+    if (!turno) return res.status(404).json({ message: 'Turno no encontrado' });
 
-      let pagoExistente = await Pago.findOne({ idPago: String(idPago) });
+    const [pagoPorProveedor, pagoPorMetadata] = await Promise.all([
+      prisma.pago.findUnique({ where: { id_pago: String(idPagoMercadoPago) } }),
+      prisma.pago.findFirst({ where: { pago_id: pagoId, turno_id: turno.turno_id } })
+    ]);
+    if (pagoPorProveedor && pagoPorProveedor.pago_id !== pagoId) {
+      return res.status(409).json({ message: 'El pago externo ya está asociado a otro registro' });
+    }
+    if (pagoPorProveedor && pagoPorMetadata && pagoPorProveedor.pago_id !== pagoPorMetadata.pago_id) {
+      return res.status(409).json({ message: 'Los identificadores de pago son inconsistentes' });
+    }
+    const pago = pagoPorProveedor || pagoPorMetadata;
+    if (!pago) return res.status(404).json({ message: 'Pago local no encontrado' });
 
-      if (!pagoExistente && metadataPagoId) {
-        pagoExistente = await Pago.findById(metadataPagoId);
-      }
+    const montoRecibido = Number(pagoMP.transaction_amount);
+    if (pagoMP.currency_id !== 'ARS' || Math.abs(montoRecibido - Number(pago.monto)) > 0.009) {
+      console.error('Webhook rechazado por importe o moneda inconsistente.', {
+        pagoId: pago.pago_id,
+        turnoId: turno.turno_id
+      });
+      return res.status(400).json({ message: 'Importe o moneda inconsistente' });
+    }
 
-      if (!pagoExistente && turnoId) {
-        pagoExistente = await Pago.findOne({ turnoId }).sort({ createdAt: -1 });
-      }
+    const nombreEstadoPago = ESTADO_MP_A_PAGO[pagoMP.status] || 'pendiente';
+    const [estadoPago, metodoPago, estadoConfirmado] = await Promise.all([
+      prisma.estado_pago.findUnique({ where: { nombre: nombreEstadoPago } }),
+      METODO_PAGO_MAP[pagoMP.payment_type_id]
+        ? prisma.metodo_pago.findUnique({ where: { nombre: METODO_PAGO_MAP[pagoMP.payment_type_id] } })
+        : null,
+      pagoMP.status === 'approved'
+        ? prisma.estado_turno.findUnique({ where: { nombre: 'confirmado' } })
+        : null
+    ]);
+    if (!estadoPago || (pagoMP.status === 'approved' && !estadoConfirmado)) {
+      throw new Error('Faltan estados requeridos en los catálogos de PostgreSQL.');
+    }
 
-      if (!pagoExistente) {
-        return res.status(404).json({ message: 'No se encontró el pago asociado a la notificación' });
-      }
-
-      const metodoPago = METODO_PAGO_MAP[pagoMP.payment_type_id] || null;
-      const pagoGuardado = await Pago.findByIdAndUpdate(
-        pagoExistente._id,
-        {
-          idPago: String(idPago),
-          metodoPago,
-          estado: ESTADO_MP_A_PAGO[pagoMP.status] || 'pendiente',
-          motivoRechazo: pagoMP.status === 'rejected' ? pagoMP.status_detail || null : null,
-          metadata: pagoMP,
+    const pagoGuardado = await prisma.$transaction(async (tx) => {
+      const resultadoActualizacion = await tx.pago.updateMany({
+        where: {
+          pago_id: pago.pago_id,
+          OR: [{ id_pago: null }, { id_pago: String(idPagoMercadoPago) }]
         },
-        { new: true, runValidators: true }
-      );
-
-      return res.status(200).json({
-        message: `Pago con estado ${pagoMP.status} registrado`,
-        turnoId: pagoGuardado.turnoId,
-        pagoId: pagoGuardado._id,
+        data: {
+          id_pago: String(idPagoMercadoPago),
+          metodo_pago_id: metodoPago?.metodo_pago_id || null,
+          estado_pago_id: estadoPago.estado_pago_id,
+          motivo_rechazo: pagoMP.status === 'rejected' ? pagoMP.status_detail || null : null,
+          fecha_aprobacion: pagoMP.status === 'approved'
+            ? new Date(pagoMP.date_approved || Date.now())
+            : null
+        }
       });
-    }
+      if (resultadoActualizacion.count !== 1) {
+        const error = new Error('El pago local ya fue reclamado por otro pago externo.');
+        error.code = 'PAYMENT_ID_CONFLICT';
+        throw error;
+      }
 
-    // 4. Obtenemos el turnoId desde external_reference
-    const turnoId = pagoMP.external_reference;
-    if (!turnoId) {
-      return res.status(400).json({ message: 'No se encontró external_reference en el pago' });
-    }
-
-    // 5. Verificamos que el turno existe
-    const turno = await Turno.findById(turnoId);
-    if (!turno) {
-      return res.status(404).json({ message: 'Turno no encontrado' });
-    }
-
-    // 6. Actualizamos el turno a 'confirmado'
-    if (turno.estado !== 'confirmado') {
-      turno.estado = 'confirmado';
-      await turno.save();
-    }
-
-    // 7. Creamos o actualizamos el documento en la colección Pagos
-    const metodoPago = METODO_PAGO_MAP[pagoMP.payment_type_id] || null;
-
-    // Si esta notificación ya fue procesada antes (MercadoPago puede reenviar
-    // el mismo webhook más de una vez), no hacemos nada más.
-    const pagoExistentePorIdPago = await Pago.findOne({ idPago: String(idPago) });
-    if (pagoExistentePorIdPago?.estado === 'aprobado') {
-      return res.status(200).json({
-        message: 'Notificación ya procesada anteriormente',
-        turnoId,
-        pagoId: pagoExistentePorIdPago._id,
-      });
-    }
-
-    const datosPago = {
-      turnoId: turno._id,
-      userId: turno.usuarioId,
-      monto: pagoMP.transaction_amount,
-      moneda: pagoMP.currency_id || 'ARS',
-      idPago: String(idPago),
-      proveedor: 'mercadopago',
-      metodoPago,
-      estado: 'aprobado',
-      motivoRechazo: null,
-      fechaAprobacion: pagoMP.date_approved ? new Date(pagoMP.date_approved) : new Date(),
-      metadata: pagoMP,
-    };
-
-    // Buscamos el registro pendiente que se creó al iniciar el checkout
-    // (crearPreferenciaPago). Si no existe (caso raro), lo creamos ahora.
-    let pagoGuardado = pagoExistentePorIdPago
-      ? await Pago.findByIdAndUpdate(pagoExistentePorIdPago._id, datosPago, { new: true })
-      : await Pago.findOneAndUpdate(
-        { turnoId: turno._id, estado: 'pendiente' },
-        datosPago,
-        { new: true }
-      );
-
-    if (!pagoGuardado) {
-      pagoGuardado = await Pago.create(datosPago);
-    }
-
-    // 8. Vinculamos el pago al turno
-    turno.pagoId = pagoGuardado._id;
-    await turno.save();
-
-    return res.status(200).json({
-      message: 'Pago procesado correctamente',
-      turnoId,
-      pagoId: pagoGuardado._id,
+      if (pagoMP.status === 'approved' && turno.estado_turno.nombre !== 'confirmado') {
+        await tx.turno.update({
+          where: { turno_id: turno.turno_id },
+          data: { estado_turno_id: estadoConfirmado.estado_turno_id, vence_en: null }
+        });
+      }
+      return tx.pago.findUnique({ where: { pago_id: pago.pago_id } });
     });
 
+    return res.status(200).json({
+      message: `Pago con estado ${pagoMP.status} registrado`,
+      turnoId: turno.turno_id,
+      pagoId: pagoGuardado.pago_id
+    });
   } catch (error) {
-    console.error('Error en webhook de MercadoPago:', error);
-    // Devolvemos 200 igual para que MP no reintente indefinidamente
-    return res.status(200).json({ message: 'Error interno procesado' });
+    console.error('Error en webhook de Mercado Pago:', detalleSeguroError(error));
+    const status = error.code === 'MP_CONFIG_ERROR'
+      ? 503
+      : error.code === 'PAYMENT_ID_CONFLICT' ? 409 : 500;
+    return res.status(status).json({ message: 'No se pudo procesar el webhook' });
   }
 };

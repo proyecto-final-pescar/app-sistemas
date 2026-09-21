@@ -1,12 +1,9 @@
 import api from "./api";
 
-/**
- * Obtiene los turnos filtrados de una veterinaria.
- * Envía los parámetros en camelCase para alinearse con req.query del backend Prisma.
- */
+
 export const obtenerTurnosPorVeterinaria = async (
   veterinariaId,
-  { servicioId, estado, estadoDistinto, fechaDesde, fechaHasta } = {}
+  { servicioId, estado, estadoDistinto, estados, fechaDesde, fechaHasta } = {}
 ) => {
   // Validación en cliente para evitar peticiones con IDs inválidos o vacíos
   if (!veterinariaId) {
@@ -18,6 +15,7 @@ export const obtenerTurnosPorVeterinaria = async (
   if (servicioId) params.servicioId = servicioId;
   if (estado) params.estado = estado;
   if (estadoDistinto) params.estadoDistinto = estadoDistinto;
+  if (estados) params.estados = estados;
   if (fechaDesde) params.fechaDesde = fechaDesde;
   if (fechaHasta) params.fechaHasta = fechaHasta;
 
@@ -40,7 +38,10 @@ export const obtenerTurnosPorUsuario = async () => {
  */
 export const cancelarTurno = async (turnoId) => {
   const { data } = await api.patch(`/turnos/${turnoId}/cancelar`);
-  return data.data?.turnoCancelado;
+  return {
+    turno: data.data?.turnoCancelado,
+    reembolso: data.data?.reembolso,
+  };
 };
 /**
  * Envía la oferta horaria masiva al backend PostgreSQL.
@@ -63,4 +64,18 @@ export const crearOfertaHoraria = async (oferta) => {
 export const obtenerTurnosPendientesRegistro = async (mascotaId) => {
   const { data } = await api.get(`/historial-clinico/turnos-pendientes/${mascotaId}`);
   return Array.isArray(data?.data) ? data.data : [];
+};
+
+/**
+ * Reserva un turno ya existente (creado por la veterinaria).
+ * Transiciona el turno de DIS a PEN.
+ */
+export const reservarTurno = async (turnoId, payload) => {
+  const { data } = await api.post(`/turnos/${turnoId}/reservar`, payload);
+  return data.data?.turno;
+};
+
+export const pagarEfectivo = async (payload) => {
+  const { data } = await api.post("/pagos/efectivo", payload);
+  return data.data?.turno;
 };

@@ -17,8 +17,7 @@ const obtenerEmojiEspecie = (especie = "") => {
 
   if (valor.includes("perro") || valor.includes("canino")) return "🐶";
   if (valor.includes("gato") || valor.includes("felino")) return "🐱";
-  if (valor.includes("conejo")) return "🐰";
-  if (valor.includes("ave") || valor.includes("pájaro")) return "🐦";
+  
 
   return "🐾";
 };
@@ -137,7 +136,7 @@ function Pacientes() {
             <>
               <section className={styles.grid}>
                 {pacientes.map((paciente) => (
-                  <article key={paciente.id} className={styles.card}>
+                  <article key={paciente.mascota_id} className={styles.card}>
                     <div className={styles.avatar}>
                       {paciente.foto ? (
                         <img
@@ -155,23 +154,29 @@ function Pacientes() {
                       <h2>{paciente.nombre}</h2>
 
                       <div className={styles.petData}>
-                        <span>{paciente.especie}</span>
-                        <span>•</span>
+                        {paciente.especie && (
+                          <>
+                            <span>{paciente.especie}</span>
+                            <span>•</span>
+                          </>
+                        )}
                         <span>{paciente.raza}</span>
                         <span>•</span>
-                        <span>{formatearEdad(paciente.fechaNacimiento)}</span>
+                        <span>{formatearEdad(paciente.fecha_nacimiento)}</span>
                       </div>
 
                       <div className={styles.owner}>
                         <span>Dueño/a</span>
-                        <strong>{paciente.dueño?.nombre}</strong>
+                        <strong>
+                          {paciente.dueño?.nombre} {paciente.dueño?.apellido}
+                        </strong>
                       </div>
                     </div>
 
                     <button
                       type="button"
                       className={styles.verFichaButton}
-                      onClick={() => navigate(`/pacientes/${paciente.id}`)}
+                      onClick={() => navigate(`/pacientes/${paciente.mascota_id}`)}
                     >
                       Ver ficha
                     </button>

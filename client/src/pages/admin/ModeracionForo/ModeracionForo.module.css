@@ -10,13 +10,16 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  min-width: 0;
+  padding-top: 60px; /* compensa la barra fija del Sidebar mobile (hamburguesa) */
 }
 
 .content {
-  margin: 24px 32px 40px;
+  margin: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-sizing: border-box;
 }
 
 /* Filtros */
@@ -36,17 +39,53 @@
   font-weight: 500;
 }
 
+.select {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid #ede9fe;
+  background: white;
+  font-size: 16px; /* evita zoom en iOS */
+  color: #1f1739;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  cursor: pointer;
+}
+
+.select:focus {
+  border-color: #7c3aed;
+}
+
+.inputZona {
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid #ede9fe;
+  background: white;
+  font-size: 16px; /* evita zoom en iOS */
+  color: #1f1739;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  flex: 1;
+  min-width: 140px;
+  box-sizing: border-box;
+}
+
+.inputZona:focus {
+  border-color: #7c3aed;
+}
+
 /* Tabla */
 .tablaWrapper {
   background: white;
   border-radius: 16px;
   border: 1px solid #ede9fe;
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
 }
 
 .tabla {
   width: 100%;
+  min-width: 640px; /* evita que las 7 columnas se aplasten antes de scrollear */
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -165,12 +204,6 @@
   border-color: #c4b5fd;
 }
 
-.btnIcono:hover {
-  background: #f5f3ff;
-  color: #7c3aed;
-  border-color: #c4b5fd;
-}
-
 .btnIconoBaja:hover {
   background: #fee2e2;
   color: #ef4444;
@@ -184,6 +217,7 @@
   justify-content: flex-end;
   gap: 4px;
   padding-top: 4px;
+  flex-wrap: wrap;
 }
 
 .btnPag {
@@ -212,4 +246,22 @@
 
 .btnPagActivo:hover {
   background: #6d28d9;
+}
+
+/* ===== 768px+ (tablet / desktop) ===== */
+@media (min-width: 768px) {
+  .main {
+    padding-top: 0; /* desktop: el TopBar ya ocupa su propio espacio en el flujo */
+  }
+
+  .content {
+    margin: 24px 32px 40px;
+  }
+}
+
+/* ===== 1024px+ ===== */
+@media (min-width: 1024px) {
+  .content {
+    margin: 24px 40px 40px;
+  }
 }
