@@ -1,5 +1,10 @@
+/* ==========================================================================
+   ESTILOS BASE (MOBILE FIRST - desde 320px / 375px)
+   ========================================================================== */
+
 .shell {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background-color: var(--color-blanco);
 }
@@ -8,49 +13,84 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  position: relative;
 }
 
 .container {
-  padding: 2rem;
+  /* Añadimos padding-top suficiente para despejar el TopBar fijo */
+  padding: calc(4.5rem + 10px) 1rem 2rem 1rem;
   background: var(--color-blanco);
   color: #1f2937;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Botón Volver */
+.backBtn {
+  background: transparent;
+  border: none;
+  color: var(--color-primario, #7c3aed);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  margin-bottom: 0.75rem;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.backBtn:hover {
+  opacity: 0.8;
+  transform: translateX(-3px);
+}
+
+/* Header */
+.header {
+  margin-bottom: 1.25rem;
 }
 
 .header h1 {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 600;
-  margin: 0 0 0.25rem 0;
+  line-height: 1.3;
+  margin: 0 0 0.35rem 0;
   color: #1f2937;
+  word-break: break-word;
 }
 
 .header p {
   font-size: 0.875rem;
   color: #9ca3af;
-  margin: 0 0 1.5rem 0;
+  margin: 0;
 }
 
+/* Mascota Card */
 .mascotaCard {
   background: var(--color-blanco);
   border-radius: 1rem;
-  padding: 1.5rem;
+  padding: 1rem;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
   border: 1px solid #e5e7eb;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .mascotaInfo {
   display: flex;
-  gap: 1rem;
+  gap: 0.85rem;
   align-items: flex-start;
-  flex: 1;
+  width: 100%;
 }
 
 .mascotaAvatar {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: #e9d5ff;
   color: var(--color-primario);
@@ -63,15 +103,19 @@
 }
 
 .mascotaAvatarFoto {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
 }
 
+.mascotaDetails {
+  flex: 1;
+}
+
 .mascotaDetails h2 {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 600;
   color: #1f2937;
   margin: 0 0 0.15rem 0;
@@ -80,17 +124,47 @@
 .mascotaDetails p {
   font-size: 0.8125rem;
   color: #6b7280;
-  margin: 0 0 0.35rem 0;
+  margin: 0 0 0.5rem 0;
 }
 
 .badges {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
+.responsable {
+  text-align: left;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 0.85rem;
+}
+
+.responsableLabel {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.15rem 0;
+}
+
+.responsableName {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 0.1rem 0;
+}
+
+.responsablePhone {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Tarjetitas Información */
 .cardsGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1fr;
   gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
@@ -112,10 +186,11 @@
 }
 
 .cardValue {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: #1f2937;
   margin: 0 0 0.25rem 0;
+  word-break: break-word;
 }
 
 .cardLabel {
@@ -124,18 +199,19 @@
   margin: 0;
 }
 
+/* Contenido Principal y Secciones */
 .contentGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .section {
   background: #f3f0ff;
   border-radius: 0.75rem;
   border: 1px solid #e9d5ff;
-  padding: 1.5rem;
+  padding: 1.25rem;
 }
 
 .section h2 {
@@ -165,22 +241,30 @@
   font-size: 0.9375rem;
   color: #1f2937;
   margin: 0;
+  word-break: break-word;
 }
 
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Vacunas */
+.vacunasTable {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
 
 .vacunaRow {
-  display: grid;
-  grid-template-columns: 1.5fr 1.5fr 1fr;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  border-radius: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
   background: var(--color-blanco);
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.vacunaRow:last-child {
-  margin-bottom: 0;
 }
 
 .vacunaNombre {
@@ -190,38 +274,30 @@
 
 .vacunaFecha {
   color: #6b7280;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
 }
 
 .vacunaVet {
   color: #6b7280;
-  font-size: 0.9375rem;
-  text-align: right;
+  font-size: 0.875rem;
+  text-align: left;
 }
 
-.emptyState {
-  padding: 2rem;
-  text-align: center;
-  color: #9ca3af;
-  background: #f9fafb;
-  border-radius: 0.75rem;
-}
-
+/* Estudios */
 .estudios {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.75rem;
-  /* el fondo/borde ahora vive en .section */
 }
 
 .estudioCard {
   background: var(--color-blanco);
-  padding: 1rem 1.25rem;
-  border-radius: 1.25rem;
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
 }
 
 .estudioCard h3 {
@@ -244,72 +320,127 @@
   text-decoration: none;
   font-weight: 600;
   white-space: nowrap;
-  padding: 0.3rem 0.75rem;
+  padding: 0.35rem 0.75rem;
   border-radius: 999px;
   transition: background 0.15s;
+  align-self: flex-start;
 }
 
 .verResultado:hover {
   background: #ddd6fe;
 }
 
-.rightColumn {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.responsable {
-  text-align: right;
-}
-
-.responsableLabel {
-  font-size: 0.6rem;
-  font-weight: 700;
+.emptyState {
+  padding: 1.5rem;
+  text-align: center;
   color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0 0 0.15rem 0;
+  background: #f9fafb;
+  border-radius: 0.75rem;
 }
 
-.responsableName {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 0.1rem 0;
+
+/* ==========================================================================
+   MEDIA QUERY 1: TABLET (min-width: 768px)
+   ========================================================================== */
+@media (min-width: 768px) {
+  .shell {
+    flex-direction: row;
+  }
+
+  .container {
+    padding: 1.5rem;
+  }
+
+  .header h1 {
+    font-size: 1.4rem;
+  }
+
+  .mascotaCard {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem;
+  }
+
+  .responsable {
+    text-align: right;
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .cardsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cardValue {
+    font-size: 1.25rem;
+  }
+
+  .vacunaRow {
+    display: grid;
+    grid-template-columns: 1.5fr 1.5fr 1fr;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-radius: 1.25rem;
+  }
+
+  .vacunaVet {
+    text-align: right;
+  }
+
+  .estudioCard {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-radius: 1.25rem;
+  }
+
+  .verResultado {
+    align-self: auto;
+  }
 }
 
-.responsablePhone {
-  font-size: 0.7rem;
-  color: #9ca3af;
-  margin: 0;
-}
 
-/* Botón Volver */
-.backBtn {
-  background: transparent;
-  border: none;
-  color: var(--color-primario, #7c3aed);
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0;
-  margin-bottom: 1rem;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
+/* ==========================================================================
+   MEDIA QUERY 2: DESKTOP (min-width: 1024px)
+   ========================================================================== */
+@media (min-width: 1024px) {
+  .container {
+    padding: 2rem;
+  }
 
-.backBtn:hover {
-  opacity: 0.8;
-  transform: translateX(-3px);
-}
+  .header h1 {
+    font-size: 1.5rem;
+  }
 
-/* Ajuste opcional para reducir el margen del título si lo ves muy separado */
-.header h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0 0 0.25rem 0;
-  color: #1f2937;
+  .header p {
+    margin-bottom: 1.5rem;
+  }
+
+  .mascotaCard {
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .cardsGrid {
+    grid-template-columns: repeat(4, 1fr);
+    margin-bottom: 2rem;
+  }
+
+  .contentGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .section {
+    padding: 1.5rem;
+  }
+
+  .rightColumn {
+    gap: 2rem;
+  }
 }
