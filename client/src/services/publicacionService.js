@@ -2,11 +2,11 @@ import api from "./api";
 
 const normalizarRespuesta = (response) => response.data?.data || response.data || [];
 
-export const obtenerPublicaciones = async ({ zona, estado } = {}) => {
+export const obtenerPublicaciones = async ({ zonaId, estado } = {}) => {
   const params = {};
 
-  if (zona && zona !== "Todas") {
-    params.zona = zona;
+  if (zonaId) {
+    params.zonaId = zonaId;
   }
 
   if (estado && estado !== "todas") {

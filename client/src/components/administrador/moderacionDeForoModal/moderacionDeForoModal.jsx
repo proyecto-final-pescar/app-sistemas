@@ -10,6 +10,16 @@ import {
 } from "../../../services/adminService";
 import styles from "./moderacionDeForoModal.module.css";
 
+
+const LABELS_MOTIVO = {
+  INA: "Contenido inapropiado",
+  FAL: "Información falsa",
+  SPM: "Spam",
+  ENC: "Mascota ya encontrada",
+  DUP: "Publicación duplicada",
+  OTR: "Otro",
+};
+
 function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
   const [banearDueno, setBanearDueno] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -18,53 +28,53 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
   const [loadingReportes, setLoadingReportes] = useState(true);
   const [imagenAmpliada, setImagenAmpliada] = useState(false);
 
-  const id = publicacion?._id || publicacion?.id;
+  const id = publicacion?.publicacion_id;
   const nombreMascota = publicacion?.nombre || publicacion?.nombreMascota;
   const titulo = nombreMascota
     ? `Buscando a ${nombreMascota}${publicacion?.especie ? ` (${publicacion.especie})` : ""}`
     : publicacion?.titulo || "Publicación de mascota";
 
-  const fechaPublicacion = publicacion?.createdAt
-    ? new Date(publicacion.createdAt).toLocaleDateString("es-AR")
+  const fechaPublicacion = publicacion?.created_at
+    ? new Date(publicacion.created_at).toLocaleDateString("es-AR")
     : publicacion?.fechaPublicacion || "Fecha no especificada";
 
-  // Extraemos el ID del usuario
+  
   const usuarioIdRaw =
-    publicacion?.usuarioId?._id ||
-    publicacion?.usuarioId ||
-    publicacion?.autor?.id;
+    publicacion?.usuario?.usuario_id || publicacion?.autor?.id;
 
-  // Si `usuarioId` venía populado usamos esos datos, si no, usamos los traídos del fetch `datosUsuario`
+
+  const contactoPublicacion = publicacion?.contacto || null;
+  const esContactoTelefono = publicacion?.tipo_contacto_id === "TEL";
+  const esContactoEmail = publicacion?.tipo_contacto_id === "EML";
+
+  
   const autor = {
     id: usuarioIdRaw,
     nombre:
       datosUsuario?.nombre ||
-      publicacion?.usuarioId?.nombre ||
+      publicacion?.usuario?.nombre ||
       publicacion?.contactoNombre ||
       publicacion?.autor?.nombre ||
       "Usuario",
-    apellido: datosUsuario?.apellido || publicacion?.usuarioId?.apellido || "",
+    apellido: datosUsuario?.apellido || publicacion?.usuario?.apellido || "",
+    
     telefono:
+      (esContactoTelefono && contactoPublicacion) ||
       datosUsuario?.telefono ||
-      publicacion?.contactoTelefono ||
-      publicacion?.autor?.telefono ||
       "Sin teléfono",
+    
     email:
+      (esContactoEmail && contactoPublicacion) ||
       datosUsuario?.email ||
-      publicacion?.usuarioId?.email ||
+      publicacion?.usuario?.email ||
       publicacion?.autor?.email ||
       "Sin email",
   };
 
-  // Efecto para obtener la información del usuario si solo tenemos su ID
+  
   useEffect(() => {
     const cargarDatosUsuario = async () => {
-      // Si el ID existe pero no tenemos el objeto usuario con nombre
-      if (
-        usuarioIdRaw &&
-        typeof usuarioIdRaw === "string" &&
-        !publicacion?.usuarioId?.nombre
-      ) {
+      if (usuarioIdRaw && typeof usuarioIdRaw === "string") {
         try {
           const res = await obtenerUsuarioPorId(usuarioIdRaw);
           setDatosUsuario(res.data || res);
@@ -75,8 +85,7 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
     };
 
     cargarDatosUsuario();
-  }, [usuarioIdRaw, publicacion]);
-
+  }, [usuarioIdRaw]);
 
   useEffect(() => {
     const cargarReportes = async () => {
@@ -101,7 +110,9 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
 
   const descripcion = publicacion?.descripcion || "";
   const ubicacion =
-    publicacion?.zona || publicacion?.ubicacion || "Ubicación no especificada";
+    publicacion?.zona?.nombre ||
+    publicacion?.ubicacion ||
+    "Ubicación no especificada";
   const imagen = publicacion?.imagen || publicacion?.foto || "/placeholder-pet.png";
 
   useEffect(() => {
@@ -292,15 +303,13 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
               </p>
             ) : (
               <div className={styles.listaReportes}>
-                {reportes.map((reporte, index) => (
+                {reportes.map((reporte) => (
                   <div
-                    key={reporte._id || index}
+                    key={reporte.reporte_id}
                     className={styles.tarjetaReporte}
                   >
                     <span className={styles.tipoReporte}>
-                      {reporte.motivo
-                        ? reporte.motivo.replace("_", " ")
-                        : "REPORTADO"}
+                      {LABELS_MOTIVO[reporte.motivo_reporte_id] || "REPORTADO"}
                     </span>
                     <p className={styles.motivoReporte}>
                       {reporte.descripcion || "Sin descripción adicional."}

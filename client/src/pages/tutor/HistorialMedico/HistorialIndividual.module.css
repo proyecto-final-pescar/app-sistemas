@@ -79,6 +79,8 @@
   margin-bottom: 1.5rem;
   border: 1px solid #e5e7eb;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .mascotaInfo {
@@ -131,6 +133,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .responsable {
@@ -175,6 +178,7 @@
   padding: 0.875rem;
   text-align: left;
   border: 1px solid #e9d5ff;
+  min-width: 0;
 }
 
 .cardIcon {
@@ -288,6 +292,7 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.75rem;
+ 
 }
 
 .estudioCard {
@@ -330,9 +335,26 @@
   background: #ddd6fe;
 }
 
+
 .emptyState {
   padding: 1.5rem;
   text-align: center;
+}
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  min-width: 0;
+}
+
+.responsable {
+  text-align: right;
+}
+
+.responsableLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+
   color: #9ca3af;
   background: #f9fafb;
   border-radius: 0.75rem;

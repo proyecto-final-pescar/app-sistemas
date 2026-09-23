@@ -10,7 +10,7 @@ import Modal from "../../../components/layout/modal/Modal";
 import {
   obtenerMascotas,
   eliminarMascota,
-} from "../../../services/MascotaService";
+} from "../../../services/mascotaService";
 import styles from "../../../styles/MisMascotas.module.css";
 
 const MisMascotas = () => {

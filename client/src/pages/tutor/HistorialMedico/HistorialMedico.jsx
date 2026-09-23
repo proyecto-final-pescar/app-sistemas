@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { obtenerMascotas } from "../../../services/MascotaService";
+import { obtenerMascotas } from "../../../services/mascotaService";
 import { obtenerHistorialesTutor } from "../../../services/historialService";
 import Button from "../../../components/ui/button/Button.jsx";
 import ConsultaBadge from "../../../components/historial/ConsultaBadge";
@@ -65,11 +65,11 @@ export default function HistorialMedico() {
           obtenerHistorialesTutor()
         ]);
 
-        setMascotas(mascotasData.data || mascotasData || []);
+
+        setMascotas(Array.isArray(mascotasData) ? mascotasData : []);
         setHistoriales(historialesData.historiales || []);
 
       } catch (err) {
-        console.error("Error al cargar el historial:", err);
         setError("Ocurrió un error al cargar los datos. Intentá de nuevo.");
       } finally {
         setLoading(false);
@@ -80,12 +80,12 @@ export default function HistorialMedico() {
   }, []);
 
   const filteredRecords = historiales.filter(record => {
-    const titulo = record.motivoConsulta?.toLowerCase() || '';
-    const veterinaria = record.veterinariaId?.nombre?.toLowerCase() || '';
+    const titulo = record.motivo_consulta?.toLowerCase() || '';
+    const veterinaria = record.veterinaria?.nombre?.toLowerCase() || '';
     const busqueda = searchTerm.toLowerCase();
 
     const matchesSearch = titulo.includes(busqueda) || veterinaria.includes(busqueda);
-    const matchesPet = selectedPet === 'all' || record.mascotaId?._id === selectedPet;
+    const matchesPet = selectedPet === 'all' || record.mascota?.mascota_id === selectedPet;
 
     return matchesSearch && matchesPet;
   });
@@ -157,23 +157,17 @@ export default function HistorialMedico() {
           ) : (
             <div className="hm-list">
               {currentItems.map(record => {
-                const mascotaNombre = record.mascotaId?.nombre || 'Mascota';
-                const mascotaFoto = mascotas.find(m => m._id === record.mascotaId?._id)?.foto;
-                const vetNombre = record.veterinariaId?.nombre || 'Veterinaria';
-
-                let profNombre = 'Profesional';
-                if (record.veterinariaId?.profesionales && record.profesionalId) {
-                  const profesionalEncontrado = record.veterinariaId.profesionales.find(
-                    (prof) => String(prof._id) === String(record.profesionalId)
-                  );
-                  if (profesionalEncontrado) {
-                    profNombre = profesionalEncontrado.nombre;
-                  }
-                }
+                const mascotaNombre = record.mascota?.nombre || 'Mascota';
+                const mascotaFoto = mascotas.find(m => m._id === record.mascota?.mascota_id)?.foto;
+                const vetNombre = record.veterinaria?.nombre || 'Veterinaria';
+                const profNombre = record.profesional
+                  ? `${record.profesional.nombre} ${record.profesional.apellido}`
+                  : 'Profesional';
 
                 return (
                   <Card
-                    key={record._id}
+
+                    key={record.consulta_id}
                     onClick={() => setSelectedRecord(record)}
                     className="hm-card-pill"
                   >
@@ -186,8 +180,9 @@ export default function HistorialMedico() {
                     <div className="hm-card-pill__content">
                       <div className="hm-card-pill__header">
                         <h3 className="hm-card-pill__title">
-                          {record.motivoConsulta}
+                          {record.motivo_consulta}
                         </h3>
+                        <ConsultaBadge tipo={CATEGORIA_A_BADGE[record.categoria_servicio?.nombre] || "otro"} />
                       </div>
 
                       <div className="hm-card-pill__meta">
@@ -269,7 +264,7 @@ export default function HistorialMedico() {
                   <div className="hm-modal-clean__field">
                     <label>Servicio / Motivo</label>
                     <div className="hm-modal-clean__input-mock">
-                      {selectedRecord.motivoConsulta}
+                      {selectedRecord.motivo_consulta}
                     </div>
                   </div>
 
@@ -288,8 +283,8 @@ export default function HistorialMedico() {
                     tamaño="mediano"
                     onClick={() => setSelectedRecord(null)}
                   />
-                  {selectedRecord.urlPdf && (
-                    <a href={selectedRecord.urlPdf} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                  {selectedRecord.url_Pdf && (
+                    <a href={selectedRecord.url_pdf} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
                       <Button
                         texto="Descargar PDF"
                         variante="primario"

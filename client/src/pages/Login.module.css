@@ -427,6 +427,35 @@
   }
 }
 
+
+.avisoInactiva {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  border: 1px solid #fac7ce;
+  border-radius: 16px;
+  padding: 12px 14px;
+  color: #a31d34;
+  background-color: #fff1f4;
+  font-size: 13px;
+  line-height: 19px;
+  font-weight: 400;
+  letter-spacing: -0.15px;
+}
+
+@media (min-width: 768px) {
+  .avisoInactiva {
+    font-size: 14px;
+    line-height: 20px;
+  }
+}
+
+.avisoInactivaIcono {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
 /* ========== BUTTON ========== */
 .button {
   width: 100%;

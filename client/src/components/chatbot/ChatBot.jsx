@@ -50,7 +50,7 @@ export default function ChatBot({ notificacionesNuevas = 0 }) {
   // Preferencia guardada por el usuario en Configuración > Asistente
   // virtual (PerfilUsuario.jsx). Default 'perro' 
   const tipoBot = usuario?.asistenteVirtual || 'perro';
-  const nombreBot = tipoBot === 'gato' ? 'Mimi' : 'Max';
+  const nombreBot = tipoBot === 'gato' ? 'Luna' : 'Firu';
 
  
   const [posicion, setPosicion] = useState(null);

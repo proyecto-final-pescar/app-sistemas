@@ -8,7 +8,7 @@ import veterinariasRouter from './veterinarias.js';
 import adminVeterinariasRouter from './adminVeterinariaRoutes.js';
 import disponibilidadRouter from './disponibilidad.js';
 import placesRouter from './places.js';
-import historialClinicoRouter from './historialClinico.js';
+import consultaRouter from './consulta.js';
 import vacunasRouter from './vacuna.routes.js'; 
 import estudiosRouter from './estudio.routes.js';
 import fichaMedicaRouter from './fichaMedica.routes.js'; 
@@ -22,6 +22,7 @@ import pagosRouter from './pagos.js';
 import botRouter from './bot.js';
 import notificacionesRoutes from './notificaciones.js';
 import constantesRouter from './constantesRoutes.js';
+import zonaRoutes from './zonaRoutes.js'
 
 const router = Router()
 
@@ -34,7 +35,7 @@ router.use('/veterinarias', veterinariasRouter);
 router.use('/admin/veterinarias', adminVeterinariasRouter);
 router.use('/disponibilidad', disponibilidadRouter);
 router.use('/places', placesRouter);
-router.use('/', historialClinicoRouter);
+router.use('/', consultaRouter);
 router.use('/', vacunasRouter); 
 router.use('/', estudiosRouter); 
 router.use('/', fichaMedicaRouter); 
@@ -48,6 +49,6 @@ router.use('/pagos', pagosRouter);
 router.use('/bot', botRouter);
 router.use('/notificaciones', notificacionesRoutes);
 router.use('/constantes', constantesRouter);
-
+router.use('/zonas', zonaRoutes);
 
 export default router;

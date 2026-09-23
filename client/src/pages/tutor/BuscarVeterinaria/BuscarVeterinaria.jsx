@@ -55,7 +55,7 @@ const BuscarVeterinaria = () => {
       setLoading(true);
       setError(null);
       const res = await getAllVeterinarias();
-      // getAllVeterinarias devuelve el body completo ({success, data}),
+    
       const lista = Array.isArray(res) ? res : res?.data ?? [];
       setVeterinarias(lista);
     } catch (err) {
