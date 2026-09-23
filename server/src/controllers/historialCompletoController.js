@@ -38,12 +38,32 @@ const resolverProfesionalHistorial = (items, veterinariasPorId) => {
   })
 }
 
+import mongoose from 'mongoose'
+
 export const obtenerHistorialCompleto = async (req, res) => {
   try {
     const { mascotaId } = req.params
 
-    const [mascota, fichaMedica, historialClinicoRaw, vacunasRaw, estudiosRaw] = await Promise.all([
+    if (!mascotaId || !mongoose.Types.ObjectId.isValid(mascotaId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'El ID de la mascota proporcionado no es válido'
+      })
+    }
 
+    let limit = 20
+    if (req.query.limit !== undefined) {
+      const parsedLimit = parseInt(req.query.limit, 10)
+      if (isNaN(parsedLimit) || parsedLimit <= 0 || parsedLimit > 100) {
+        return res.status(400).json({
+          success: false,
+          message: 'El parámetro "limit" debe ser un número entero entre 1 y 100'
+        })
+      }
+      limit = parsedLimit
+    }
+
+    const [mascota, fichaMedica, historialClinicoRaw, vacunasRaw, estudiosRaw] = await Promise.all([
       Mascota.findById(mascotaId)
         .populate('dueñoId', 'name email telefono'),
 
@@ -51,13 +71,16 @@ export const obtenerHistorialCompleto = async (req, res) => {
 
       HistorialClinico.find({ mascotaId })
         .populate('veterinariaId', 'nombre direccion')
-        .sort({ fecha: -1 }),
+        .sort({ fecha: -1 })
+        .limit(limit),
 
       Vacuna.find({ mascotaId })
-        .sort({ fechaAplicada: -1 }),
+        .sort({ fechaAplicada: -1 })
+        .limit(limit),
 
       Estudio.find({ mascotaId })
         .sort({ fecha: -1 })
+        .limit(limit)
     ])
 
     if (!mascota) {
@@ -67,7 +90,6 @@ export const obtenerHistorialCompleto = async (req, res) => {
       })
     }
 
-  
     const idsVeterinarias = [
       ...new Set([
         ...historialClinicoRaw.map(h => (h.veterinariaId?._id || h.veterinariaId)?.toString()).filter(Boolean),
