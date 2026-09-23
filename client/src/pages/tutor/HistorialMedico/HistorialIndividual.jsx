@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import api from '../../../services/api'
 import Sidebar from '../../../components/layout/Sidebar'
 import TopBar from '../../../components/layout/TopBar'
@@ -10,28 +10,107 @@ export default function HistorialIndividual() {
   const { mascotaId } = useParams()
   const navigate = useNavigate()
 
+  // Estados generales
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Estados independientes de Vacunas
+  const [vacunas, setVacunas] = useState([])
+  const [pageVacunas, setPageVacunas] = useState(1)
+  const [hasMoreVacunas, setHasMoreVacunas] = useState(true)
+  const [loadingVacunas, setLoadingVacunas] = useState(false)
+
+  // Estados independientes de Estudios
+  const [estudios, setEstudios] = useState([])
+  const [pageEstudios, setPageEstudios] = useState(1)
+  const [hasMoreEstudios, setHasMoreEstudios] = useState(true)
+  const [loadingEstudios, setLoadingEstudios] = useState(false)
+
+  // Carga inicial (Page 1 de todo)
   useEffect(() => {
-    const fetchHistorial = async () => {
+    const fetchInicial = async () => {
       try {
-        const response = await api.get(`/historial-completo/${mascotaId}`)
+        setLoading(true)
+        const response = await api.get(`/historial-completo/${mascotaId}?pageVacunas=1&limitVacunas=10&pageEstudios=1&limitEstudios=10`)
         if (response.data.success) {
-          setData(response.data.data)
-          setLoading(false)
-          console.log(response.data.data)
+          const resData = response.data.data
+          setData(resData)
+          setVacunas(resData.vacunas || [])
+          setEstudios(resData.estudios || [])
+          
+          if (resData.pagination) {
+            setHasMoreVacunas(resData.pagination.vacunas?.hasMore ?? false)
+            setHasMoreEstudios(resData.pagination.estudios?.hasMore ?? false)
+          }
         }
       } catch (err) {
         console.error('Error:', err)
         setError(err.response?.data?.message || 'Error al cargar la ficha')
+      } finally {
         setLoading(false)
       }
     }
 
-    fetchHistorial()
+    if (mascotaId) fetchInicial()
   }, [mascotaId])
+
+  // Subconsulta al backend: traer siguiente página de Vacunas
+  const cargarMasVacunas = async () => {
+    if (loadingVacunas || !hasMoreVacunas) return
+    try {
+      setLoadingVacunas(true)
+      const nextPage = pageVacunas + 1
+      const response = await api.get(`/historial-completo/${mascotaId}?pageVacunas=${nextPage}&limitVacunas=10`)
+      if (response.data.success) {
+        const nuevasVacunas = response.data.data.vacunas || []
+        // Concatena las nuevas al final manteniendo el orden descendente
+        setVacunas(prev => [...prev, ...nuevasVacunas])
+        setPageVacunas(nextPage)
+        setHasMoreVacunas(response.data.data.pagination?.vacunas?.hasMore ?? false)
+      }
+    } catch (err) {
+      console.error('Error al paginar vacunas:', err)
+    } finally {
+      setLoadingVacunas(false)
+    }
+  }
+
+  // Subconsulta al backend: traer siguiente página de Estudios
+  const cargarMasEstudios = async () => {
+    if (loadingEstudios || !hasMoreEstudios) return
+    try {
+      setLoadingEstudios(true)
+      const nextPage = pageEstudios + 1
+      const response = await api.get(`/historial-completo/${mascotaId}?pageEstudios=${nextPage}&limitEstudios=10`)
+      if (response.data.success) {
+        const nuevosEstudios = response.data.data.estudios || []
+        // Concatena los nuevos al final
+        setEstudios(prev => [...prev, ...nuevosEstudios])
+        setPageEstudios(nextPage)
+        setHasMoreEstudios(response.data.data.pagination?.estudios?.hasMore ?? false)
+      }
+    } catch (err) {
+      console.error('Error al paginar estudios:', err)
+    } finally {
+      setLoadingEstudios(false)
+    }
+  }
+
+  // Detectores de scroll cuando llega al fondo del contenedor
+  const handleScrollVacunas = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
+    if (scrollHeight - scrollTop - clientHeight < 25) {
+      cargarMasVacunas()
+    }
+  }
+
+  const handleScrollEstudios = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
+    if (scrollHeight - scrollTop - clientHeight < 25) {
+      cargarMasEstudios()
+    }
+  }
 
   if (loading) {
     return (
@@ -69,7 +148,7 @@ export default function HistorialIndividual() {
     )
   }
 
-  const { mascota, fichaMedica, historialClinico, vacunas, estudios } = data
+  const { mascota, fichaMedica, historialClinico } = data
 
   const calcularEdad = () => {
     if (!mascota?.fechaNacimiento) return 'N/A'
@@ -113,19 +192,17 @@ export default function HistorialIndividual() {
       <div className={styles.main}>
         <TopBar />
         <div className={styles.container}>
-          <button
-            className={styles.backBtn}
-            onClick={() => navigate(-1)}
-          >
+          <button className={styles.backBtn} onClick={() => navigate(-1)}>
             ← Volver
           </button>
+
           {/* Header */}
           <div className={styles.header}>
             <h1>Ficha Médica - {mascota?.nombre}</h1>
             <p>Tutor: {mascota?.dueñoId?.name || 'No registrado'}</p>
           </div>
 
-          {/* mascota*/}
+          {/* Mascota Card */}
           <div className={styles.mascotaCard}>
             <div className={styles.mascotaInfo}>
               {mascota?.foto ? (
@@ -156,7 +233,7 @@ export default function HistorialIndividual() {
             </div>
           </div>
 
-          {/*tarjetitas informacion */}
+          {/* Tarjetitas información (Tus SVGs originales) */}
           <div className={styles.cardsGrid}>
             <div className={styles.card}>
               <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -173,7 +250,7 @@ export default function HistorialIndividual() {
             <div className={styles.card}>
               <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" />
-                <path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1" />
+                <path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2.5-2 4-2 2-1 2-1" />
                 <path d="M2 21h20" />
                 <path d="M7 8v3" />
                 <path d="M12 8v3" />
@@ -195,7 +272,7 @@ export default function HistorialIndividual() {
                 <path d="M8 11h.01" />
                 <path d="M8 16h.01" />
               </svg>
-              <p className={styles.cardValue}>{(historialClinico?.length || 0) + (vacunas?.length || 0) + (estudios?.length || 0)}</p>
+              <p className={styles.cardValue}>{(historialClinico?.length || 0) + vacunas.length + estudios.length}</p>
               <p className={styles.cardLabel}>Consultas Totales</p>
             </div>
 
@@ -248,20 +325,23 @@ export default function HistorialIndividual() {
               </div>
             </section>
 
-            {/* Vacunacion y Estudios */}
+            {/* Vacunación y Estudios con Scroll Infinito y subconsultas */}
             <div className={styles.rightColumn}>
               {/* Vacunas */}
               <section className={styles.section}>
                 <h2>Registro de Vacunación</h2>
                 {vacunas && vacunas.length > 0 ? (
-                  <div className={styles.vacunasTable}>
-                    {vacunas.map((vacuna, idx) => (
-                      <div key={idx} className={styles.vacunaRow}>
-                        <span className={styles.vacunaNombre}>{vacuna.nombre}</span>
-                        <span className={styles.vacunaFecha}>Aplicada: {formatearFecha(vacuna.fechaAplicada)}</span>
-                        <span className={styles.vacunaVet}>{vacuna.profesionalId?.nombre || 'N/A'}</span>
-                      </div>
-                    ))}
+                  <div className={styles.scrollList} onScroll={handleScrollVacunas}>
+                    <div className={styles.vacunasTable}>
+                      {vacunas.map((vacuna, idx) => (
+                        <div key={vacuna._id || idx} className={styles.vacunaRow}>
+                          <span className={styles.vacunaNombre}>{vacuna.nombre}</span>
+                          <span className={styles.vacunaFecha}>Aplicada: {formatearFecha(vacuna.fechaAplicada)}</span>
+                          <span className={styles.vacunaVet}>{vacuna.profesionalNombre || vacuna.profesionalId?.nombre || 'N/A'}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {loadingVacunas && <p className={styles.cargandoMas}>Cargando más vacunas...</p>}
                   </div>
                 ) : (
                   <p className={styles.emptyState}>Todavía no hay vacunas registradas.</p>
@@ -272,23 +352,26 @@ export default function HistorialIndividual() {
               <section className={styles.section}>
                 <h2>Estudios</h2>
                 {estudios && estudios.length > 0 ? (
-                  <div className={styles.estudios}>
-                    {estudios.map((estudio, idx) => (
-                      <div key={idx} className={styles.estudioCard}>
-                        <h3>{estudio.nombre}</h3>
-                        <p>{formatearFecha(estudio.fecha)} · {estudio.profesionalId?.nombre || 'N/A'}</p>
-                        {estudio.urlArchivo && (
-                          <a
-                            href={estudio.urlArchivo}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.verResultado}
-                          >
-                            Ver resultado
-                          </a>
-                        )}
-                      </div>
-                    ))}
+                  <div className={styles.scrollList} onScroll={handleScrollEstudios}>
+                    <div className={styles.estudios}>
+                      {estudios.map((estudio, idx) => (
+                        <div key={estudio._id || idx} className={styles.estudioCard}>
+                          <h3>{estudio.nombre || estudio.titulo}</h3>
+                          <p>{formatearFecha(estudio.fecha)} · {estudio.profesionalNombre || estudio.profesionalId?.nombre || 'N/A'}</p>
+                          {(estudio.urlArchivo || estudio.archivoUrl) && (
+                            <a
+                              href={estudio.urlArchivo || estudio.archivoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={styles.verResultado}
+                            >
+                              Ver resultado
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {loadingEstudios && <p className={styles.cargandoMas}>Cargando más estudios...</p>}
                   </div>
                 ) : (
                   <p className={styles.emptyState}>Todavía no hay estudios registrados.</p>

@@ -338,7 +338,21 @@
   border-radius: 0.75rem;
 }
 
+/* Contenedor con altura fija para permitir el scroll infinito de a 10 */
+.scrollList {
+  max-height: 270px;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
 
+.cargandoMas {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--color-primario, #7c3aed);
+  padding: 0.5rem 0;
+  font-weight: 500;
+  margin: 0;
+}
 /* ==========================================================================
    MEDIA QUERY 1: TABLET (min-width: 768px)
    ========================================================================== */
@@ -431,7 +445,7 @@
 
   .contentGrid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 2fr;
     gap: 2rem;
     margin-bottom: 2rem;
   }

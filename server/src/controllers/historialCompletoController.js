@@ -45,51 +45,37 @@ export const obtenerHistorialCompleto = async (req, res) => {
     const { mascotaId } = req.params
 
     if (!mascotaId || !mongoose.Types.ObjectId.isValid(mascotaId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'El ID de la mascota proporcionado no es válido'
-      })
+      return res.status(400).json({ success: false, message: 'ID no válido' })
     }
 
-    let limit = 20
-    if (req.query.limit !== undefined) {
-      const parsedLimit = parseInt(req.query.limit, 10)
-      if (isNaN(parsedLimit) || parsedLimit <= 0 || parsedLimit > 100) {
-        return res.status(400).json({
-          success: false,
-          message: 'El parámetro "limit" debe ser un número entero entre 1 y 100'
-        })
-      }
-      limit = parsedLimit
-    }
+    // Leemos páginas y límites independientes por query params
+    const limitVacunas = parseInt(req.query.limitVacunas, 10) || 10
+    const pageVacunas = parseInt(req.query.pageVacunas, 10) || 1
+    const skipVacunas = (pageVacunas - 1) * limitVacunas
 
-    const [mascota, fichaMedica, historialClinicoRaw, vacunasRaw, estudiosRaw] = await Promise.all([
-      Mascota.findById(mascotaId)
-        .populate('dueñoId', 'name email telefono'),
+    const limitEstudios = parseInt(req.query.limitEstudios, 10) || 10
+    const pageEstudios = parseInt(req.query.pageEstudios, 10) || 1
+    const skipEstudios = (pageEstudios - 1) * limitEstudios
 
+    const [mascota, fichaMedica, historialClinicoRaw, vacunasRaw, estudiosRaw, totalVacunas, totalEstudios] = await Promise.all([
+      Mascota.findById(mascotaId).populate('dueñoId', 'name email telefono'),
       FichaMedica.findOne({ mascotaId }),
+      HistorialClinico.find({ mascotaId }).populate('veterinariaId', 'nombre direccion').sort({ fecha: -1 }),
 
-      HistorialClinico.find({ mascotaId })
-        .populate('veterinariaId', 'nombre direccion')
-        .sort({ fecha: -1 })
-        .limit(limit),
+      // Ordenados por fecha descendente (más nuevo primero) + paginación:
+      Vacuna.find({ mascotaId }).sort({ fechaAplicada: -1 }).skip(skipVacunas).limit(limitVacunas),
+      Estudio.find({ mascotaId }).sort({ fecha: -1 }).skip(skipEstudios).limit(limitEstudios),
 
-      Vacuna.find({ mascotaId })
-        .sort({ fechaAplicada: -1 })
-        .limit(limit),
-
-      Estudio.find({ mascotaId })
-        .sort({ fecha: -1 })
-        .limit(limit)
+      // Conteo total para que el front sepa si hay más o ya llegó al final
+      Vacuna.countDocuments({ mascotaId }),
+      Estudio.countDocuments({ mascotaId })
     ])
 
     if (!mascota) {
-      return res.status(404).json({
-        success: false,
-        message: 'Mascota no encontrada'
-      })
+      return res.status(404).json({ success: false, message: 'Mascota no encontrada' })
     }
 
+    // Cruce de profesionales (lo que ya tenías)
     const idsVeterinarias = [
       ...new Set([
         ...historialClinicoRaw.map(h => (h.veterinariaId?._id || h.veterinariaId)?.toString()).filter(Boolean),
@@ -98,12 +84,8 @@ export const obtenerHistorialCompleto = async (req, res) => {
       ])
     ]
 
-    const veterinarias = await Veterinaria.find({ _id: { $in: idsVeterinarias } })
-      .select('profesionales')
-
-    const veterinariasPorId = new Map(
-      veterinarias.map(v => [v._id.toString(), v])
-    )
+    const veterinarias = await Veterinaria.find({ _id: { $in: idsVeterinarias } }).select('profesionales')
+    const veterinariasPorId = new Map(veterinarias.map(v => [v._id.toString(), v]))
 
     const historialClinico = resolverProfesionalHistorial(historialClinicoRaw, veterinariasPorId)
     const vacunas = resolverNombresProfesionales(vacunasRaw, veterinariasPorId)
@@ -116,15 +98,23 @@ export const obtenerHistorialCompleto = async (req, res) => {
         fichaMedica,
         historialClinico,
         vacunas,
-        estudios
+        estudios,
+        pagination: {
+          vacunas: {
+            page: pageVacunas,
+            hasMore: skipVacunas + vacunas.length < totalVacunas,
+            total: totalVacunas
+          },
+          estudios: {
+            page: pageEstudios,
+            hasMore: skipEstudios + estudios.length < totalEstudios,
+            total: totalEstudios
+          }
+        }
       }
     })
-
   } catch (error) {
-    console.error('Error en obtenerHistorialCompleto:', error)
-    return res.status(500).json({
-      success: false,
-      message: 'Error interno del servidor'
-    })
+    console.error(error)
+    return res.status(500).json({ success: false, message: 'Error interno del servidor' })
   }
 }
