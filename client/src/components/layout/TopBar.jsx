@@ -1,7 +1,7 @@
 import { useAuth } from "../../hooks/useAuth";
 import NotificationBell from "../notifications/NotificationBell";
 
-const TopBar = ({ title = "Dashboard" }) => {
+const TopBar = ({ title = "Historial Clínico" }) => {
   const fechaHoy = new Date().toLocaleDateString("es-AR", {
     weekday: "long",
     day: "numeric",

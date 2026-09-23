@@ -4,7 +4,6 @@ import api from '../../../services/api'
 import Sidebar from '../../../components/layout/Sidebar'
 import TopBar from '../../../components/layout/TopBar'
 import Badge from '../../../components/ui/badge/Badge'
-import Button from '../../../components/ui/button/Button'
 import styles from './HistorialIndividual.module.css'
 
 export default function HistorialIndividual() {
@@ -22,6 +21,7 @@ export default function HistorialIndividual() {
         if (response.data.success) {
           setData(response.data.data)
           setLoading(false)
+          console.log(response.data.data)
         }
       } catch (err) {
         console.error('Error:', err)

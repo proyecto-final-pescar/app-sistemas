@@ -151,7 +151,7 @@ const SidebarContenido = ({ onClose }) => {
   );
 };
 
-const Sidebar = ({ title = "" }) => {
+const Sidebar = ({ title = "Historial Clínico" }) => {
   const [mobileAbierto, setMobileAbierto] = useState(false);
   const location = useLocation();
 
