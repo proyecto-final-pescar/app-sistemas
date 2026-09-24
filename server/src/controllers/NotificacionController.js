@@ -1,22 +1,30 @@
 // server/src/controllers/NotificacionController.js
 import prisma from '../../prisma/client.js';
+import { agregarConexion, quitarConexion } from '../services/sseService.js';
+import { mapearNotificacionLegible } from '../services/notificacionService.js';
 
-// Traduce la fila cruda de Prisma (con tipo_notificacion anidado) al shape
-// legible que espera el frontend, compatible con lo que devolvía Mongo.
-const mapearNotificacionLegible = (notificacion) => {
-  if (!notificacion) return notificacion;
+// GET /notificaciones/stream
+export const suscribirse = (req, res) => {
+  const usuarioId = req.user.id
 
-  return {
-    _id: notificacion.notificacion_id,
-    usuarioId: notificacion.usuario_id,
-    tipo: notificacion.tipo_notificacion?.nombre,
-    mensaje: notificacion.mensaje,
-    leida: notificacion.leida,
-    link: notificacion.link,
-    createdAt: notificacion.created_at,
-    updatedAt: notificacion.updated_at
-  };
-};
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  })
+  res.flushHeaders()
+  res.write('retry: 5000\n\n')
+
+  agregarConexion(usuarioId, res)
+
+  const latido = setInterval(() => res.write(': ping\n\n'), 25000)
+
+  req.on('close', () => {
+    clearInterval(latido)
+    quitarConexion(usuarioId, res)
+  })
+}
 
 // GET /notificaciones
 export const obtenerNotificaciones = async (req, res) => {

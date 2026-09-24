@@ -13,10 +13,10 @@ import {
 } from "lucide-react";
 
 import {
-  obtenerNotificaciones,
   marcarNotificacionComoLeida,
   marcarTodasLasNotificacionesComoLeidas,
 } from "../../services/notificacionService";
+import { useNotificaciones } from "../../context/NotificacionesContext";
 
 import styles from "./NotificationBell.module.css";
 
@@ -60,29 +60,18 @@ const NotificationBell = () => {
   const containerRef = useRef(null);
 
   const [abierto, setAbierto] = useState(false);
-  const [notificaciones, setNotificaciones] = useState([]);
-  const [cargando, setCargando] = useState(true);
+
+ 
+  const {
+    notificaciones,
+    cargando,
+    cargar,
+    marcarLeidaLocal,
+    marcarTodasLeidasLocal,
+    setNotificaciones,
+  } = useNotificaciones();
 
   const noLeidas = notificaciones.filter((item) => !item.leida).length;
-
-  useEffect(() => {
-    let activo = true;
-
-    obtenerNotificaciones()
-      .then((data) => {
-        if (activo) setNotificaciones(data);
-      })
-      .catch((error) => {
-        console.error("Error al cargar notificaciones:", error);
-      })
-      .finally(() => {
-        if (activo) setCargando(false);
-      });
-
-    return () => {
-      activo = false;
-    };
-  }, []);
 
   useEffect(() => {
     const cerrarAlHacerClickAfuera = (evento) => {
@@ -101,13 +90,16 @@ const NotificationBell = () => {
   }, []);
 
   const handleAbrirCampana = () => {
-    setAbierto((prev) => !prev);
+    setAbierto((prev) => {
+      if (!prev) cargar(); // refresca al abrir
+      return !prev;
+    });
   };
 
   const handleMarcarTodas = async () => {
     // Optimista: actualiza la UI antes de esperar la respuesta del servidor.
     const previas = notificaciones;
-    setNotificaciones((actual) => actual.map((item) => ({ ...item, leida: true })));
+    marcarTodasLeidasLocal();
 
     try {
       await marcarTodasLasNotificacionesComoLeidas();
@@ -120,11 +112,7 @@ const NotificationBell = () => {
   const handleNotificacion = async (notificacion) => {
     if (!notificacion.leida) {
       const previas = notificaciones;
-      setNotificaciones((actual) =>
-        actual.map((item) =>
-          item._id === notificacion._id ? { ...item, leida: true } : item
-        )
-      );
+      marcarLeidaLocal(notificacion._id);
 
       try {
         await marcarNotificacionComoLeida(notificacion._id);

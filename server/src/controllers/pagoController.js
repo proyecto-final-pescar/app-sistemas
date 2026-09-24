@@ -12,6 +12,12 @@ import {
   formatearTurno
 } from './turnoController.js';
 
+import {
+  crearNotificacion,
+  formatearFechaTurno,
+  TIPO
+} from '../services/notificacionService.js';
+
 export const crearPreferenciaPago = async (req, res) => {
   let pagoCreado = null;
 
@@ -98,10 +104,12 @@ export const crearPreferenciaPago = async (req, res) => {
       });
     }
 
+    // El tutor eligió MercadoPago: el pago pendiente ya se registra con ese método.
     pagoCreado = await prisma.pago.create({
       data: {
         turno_id: turno.turno_id,
         monto,
+        metodo_pago_id: 'MPG',
         estado_pago_id: 'PEN'
       }
     });
@@ -215,7 +223,7 @@ export const obtenerEstadoPago = async (req, res) => {
     });
 
   } catch (error) {
-    if (error.name === 'CastError') {
+    if (error.code === 'P2023') {
       return res.status(400).json({ message: 'El turnoId no es válido' });
     }
     console.error('Error en obtenerEstadoPago:', error);
@@ -316,6 +324,17 @@ export const pagarEfectivo = async (req, res) => {
         message: 'Este turno ya no está disponible. Por favor elegí otro horario.'
       })
     }
+
+    // Notificacion al tutor: turno confirmado, con pago en efectivo 
+    const cuando = formatearFechaTurno(turno.fecha, turno.hora_inicio)
+    const monto = Number(turno.monto_servicio).toLocaleString('es-AR')
+
+    await crearNotificacion({
+      usuarioId: req.user.id,
+      tipo: TIPO.TURNO_CONFIRMADO,
+      mensaje: `Tu turno en ${turno.veterinaria.nombre} para ${resultado.mascota.nombre} del ${cuando} quedó confirmado. Abonás $${monto} en el local.`,
+      link: `/mis-turnos`
+    })
 
     return res.status(200).json({ success: true, data: { turno: formatearTurno(resultado) } })
   } catch (error) {
