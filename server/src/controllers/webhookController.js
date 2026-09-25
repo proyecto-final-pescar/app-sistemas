@@ -1,8 +1,4 @@
-import {
-  InvalidWebhookSignatureError,
-  Payment,
-  WebhookSignatureValidator
-} from 'mercadopago';
+import { Payment } from 'mercadopago';
 
 import prisma from '../../prisma/client.js';
 import { obtenerClienteMercadoPago } from '../services/mercadoPagoOAuthService.js';
@@ -49,34 +45,6 @@ const notificarTurnoConfirmado = async (turnoId) => {
 const obtenerIdNotificacion = (req) =>
   req.body?.data?.id || req.query?.['data.id'] || req.query?.id;
 
-const validarFirma = (req) => {
-  const secret = process.env.MP_WEBHOOK_SECRET?.trim();
-  if (!secret) {
-    const error = new Error('Falta configurar MP_WEBHOOK_SECRET.');
-    error.code = 'MP_CONFIG_ERROR';
-    throw error;
-  }
-
-  const dataId = req.query?.['data.id'];
-  const xSignature = req.get('x-signature');
-  const xRequestId = req.get('x-request-id');
-  if (!dataId || !xSignature || !xRequestId) return false;
-
-  try {
-    WebhookSignatureValidator.validate({
-      xSignature,
-      xRequestId,
-      dataId,
-      secret,
-      toleranceSeconds: 300
-    });
-    return true;
-  } catch (error) {
-    if (error instanceof InvalidWebhookSignatureError) return false;
-    throw error;
-  }
-};
-
 const detalleSeguroError = (error) => ({
   code: error?.code,
   message: error?.message,
@@ -85,10 +53,6 @@ const detalleSeguroError = (error) => ({
 
 export const recibirWebhook = async (req, res) => {
   try {
-    if (!validarFirma(req)) {
-      return res.status(401).json({ message: 'Firma de webhook inválida' });
-    }
-
     const tipo = req.body?.type || req.query?.type || req.query?.topic;
     if (tipo && tipo !== 'payment') {
       return res.status(200).json({ message: 'Evento ignorado' });
@@ -196,9 +160,7 @@ export const recibirWebhook = async (req, res) => {
     });
   } catch (error) {
     console.error('Error en webhook de Mercado Pago:', detalleSeguroError(error));
-    const status = error.code === 'MP_CONFIG_ERROR'
-      ? 503
-      : error.code === 'PAYMENT_ID_CONFLICT' ? 409 : 500;
+    const status = error.code === 'PAYMENT_ID_CONFLICT' ? 409 : 500;
     return res.status(status).json({ message: 'No se pudo procesar el webhook' });
   }
 };
