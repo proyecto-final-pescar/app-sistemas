@@ -186,9 +186,10 @@ export default function RegistroDeVeterinaria() {
 
   const handleChangeStep1 = (e) => {
     const { name, value } = e.target;
-    if (name === "direccion")
+    if (name === "direccion") {
       setForm((f) => ({ ...f, direccion: value, lat: null, lng: null }));
-    else setForm((f) => ({ ...f, [name]: value }));
+      if (!value) setSuggestions([]);
+    } else setForm((f) => ({ ...f, [name]: value }));
   };
 
   const validateStep1 = () => {
@@ -596,7 +597,7 @@ export default function RegistroDeVeterinaria() {
                         onClick={() => eliminarServicio(index)}
                         className={styles.btnEliminar}
                         title="Eliminar"
-                      ></button>
+                      ><IconTrash /></button>
                     )}
                     {/* se saco la lista duplicada de  categorias ahora las opciones vienen del backend
                          la misma fuente que valida el enum en Veterinaria
@@ -699,7 +700,7 @@ export default function RegistroDeVeterinaria() {
                         onClick={() => eliminarProfesional(index)}
                         className={styles.btnEliminar}
                         title="Eliminar"
-                      ></button>
+                      ><IconTrash /></button>
                     )}
                     <Input
                       label="Nombre y Apellido *"

@@ -32,24 +32,30 @@ export const includeTurnoCompleto = {
       peso: true,
       raza: {
         select: {
-          nombre: true,                          
+          nombre: true,
           especie: { select: { nombre: true } }
         }
       },
-      sexo_mascota: { select: { nombre: true } }, 
+      sexo_mascota: { select: { nombre: true } },
       usuario: {
         select: {
           usuario_id: true,
           nombre: true,
           apellido: true,
-          email: true                              
+          email: true
         }
       }
     }
   },
   veterinaria: { select: { veterinaria_id: true, nombre: true, direccion: true } },
   profesional: { select: { profesional_id: true, nombre: true, apellido: true } },
-  servicio: { select: { servicio_id: true, nombre: true } }
+  servicio: {
+    select: {
+      servicio_id: true,
+      nombre: true,
+      categoria_servicio: { select: { nombre: true } }
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -127,7 +133,7 @@ export const obtenerTurnos = async (req, res) => {
       }
 
       const esDueñoDeLaVeterinaria = veterinaria.usuario_id === req.user.id
-      
+
       const soloConsultaDisponibilidad = estado === ESTADO.DISPONIBLE && !estadoDistinto && !estados
 
       if (!esDueñoDeLaVeterinaria && !soloConsultaDisponibilidad) {
@@ -139,7 +145,7 @@ export const obtenerTurnos = async (req, res) => {
 
     if (servicioId) filtro.servicio_id = servicioId
 
-   
+
     if (estados) {
       const listaEstados = estados.split(',').map((e) => e.trim()).filter(Boolean)
       const listaInvalida = listaEstados.filter((e) => !ESTADOS_VALIDOS.has(e))
@@ -252,7 +258,7 @@ export const reservarTurno = async (req, res) => {
       return res.status(404).json({ message: 'Veterinaria no disponible' })
     }
 
-  
+
     const mascota = await prisma.mascota.findUnique({ where: { mascota_id: mascotaId } })
     if (!mascota || mascota.dueno_id !== req.user.id) {
       return res.status(403).json({ message: 'La mascota no te pertenece' })

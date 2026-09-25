@@ -2,13 +2,23 @@ import { useEffect, useState } from "react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import ModeracionDeForoModal from "../../../components/administrador/moderacionDeForoModal/moderacionDeForoModal";
+import Select from "../../../components/ui/select/Select";
 import {
     obtenerPublicacionesConReportes
 } from "../../../services/publicacionesService";
+import { obtenerZonas } from "../../../services/zonaService";
 import styles from "./ModeracionForo.module.css";
+
+const OPCIONES_REPORTES = [
+    { value: "", label: "Todos" },
+    { value: "1-5", label: "1 a 5 reportes" },
+    { value: "6-10", label: "6 a 10 reportes" },
+    { value: "10+", label: "Más de 10 reportes" },
+];
 
 export default function ModeracionForo() {
     const [publicaciones, setPublicaciones] = useState([]);
+    const [zonas, setZonas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [filtroZona, setFiltroZona] = useState("");
@@ -30,9 +40,27 @@ export default function ModeracionForo() {
         }
     };
 
+    const cargarZonas = async () => {
+        try {
+            const data = await obtenerZonas();
+            setZonas(data);
+        } catch (err) {
+            console.error("Error al cargar las zonas:", err);
+        }
+    };
+
     useEffect(() => {
         cargar();
+        cargarZonas();
     }, []);
+
+    const opcionesZona = [
+        { value: "", label: "Todas las zonas" },
+        ...zonas.map((zona) => ({
+            value: zona.zona_id,
+            label: zona.nombre,
+        })),
+    ];
 
     // Filtros aplicados en el cliente
     const publicacionesFiltradas = publicaciones.filter((item) => {
@@ -40,7 +68,7 @@ export default function ModeracionForo() {
         if (!pub) return false;
 
         const coincideZona = filtroZona
-            ? pub.zona?.toLowerCase().includes(filtroZona.toLowerCase())
+            ? String(pub.zona?.zona_id) === String(filtroZona)
             : true;
 
         const coincideReportes = (() => {
@@ -92,22 +120,17 @@ export default function ModeracionForo() {
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
                             Filtrar por:
                         </span>
-                        <select
-                            className={styles.select}
+                        <Select
+                            placeholder="Reportes"
+                            opciones={OPCIONES_REPORTES}
                             value={filtroReportes}
-                            onChange={(e) => { setFiltroReportes(e.target.value); setPaginaActual(1); }} // cambiado
-                        >
-                            <option value="">Reportes</option>
-                            <option value="1-5">1 a 5 reportes</option>
-                            <option value="6-10">6 a 10 reportes</option>
-                            <option value="10+">Más de 10 reportes</option>
-                        </select>
-                        <input
-                            type="text"
-                            placeholder="Zona (Ej. Palermo)"
-                            className={styles.inputZona}
+                            onChange={(e) => { setFiltroReportes(e.target.value); setPaginaActual(1); }}
+                        />
+                        <Select
+                            placeholder="Zona"
+                            opciones={opcionesZona}
                             value={filtroZona}
-                            onChange={(e) => { setFiltroZona(e.target.value); setPaginaActual(1); }} // cambiado
+                            onChange={(e) => { setFiltroZona(e.target.value); setPaginaActual(1); }}
                         />
                     </div>
 
@@ -147,9 +170,12 @@ export default function ModeracionForo() {
                                 )}
                                 {!loading && !error && publicacionesPaginadas.map((item) => {
                                     const pub = item.publicacion;
-                                    const fecha = pub?.createdAt
-                                        ? new Date(pub.createdAt).toLocaleDateString("es-AR")
+                                    const fecha = pub?.created_at
+                                        ? new Date(pub.created_at).toLocaleDateString("es-AR")
                                         : "-";
+                                    const nombreCreador = [pub?.usuario?.nombre, pub?.usuario?.apellido]
+                                        .filter(Boolean)
+                                        .join(" ") || "Usuario";
 
                                     return (
                                         <tr key={item.publicacionId}>
@@ -167,12 +193,9 @@ export default function ModeracionForo() {
                                             <td className={styles.nombreCell}>
                                                 {pub?.nombre || "Sin nombre"}
                                             </td>
-                                            <td>{pub?.zona || "-"}</td>
+                                            <td>{pub?.zona?.nombre || "-"}</td>
                                             <td className={styles.creadorCell}>
-                                                {pub?.usuarioId?.name || "Usuario"}<br />
-                                                <span className={styles.creadorId}>
-                                                    (OW-{pub?.usuarioId?._id?.toString().slice(-3).toUpperCase()})
-                                                </span>
+                                                {nombreCreador}
                                             </td>
                                             <td>
                                                 <span className={styles.badgeReportes}>

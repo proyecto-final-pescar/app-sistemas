@@ -4,6 +4,7 @@ import { Eye } from "lucide-react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import DetallesDeDuenoModal from "../../../components/administrador/detallesDeDuenoModal/detallesDeDuenoModal";
+import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
 
 import {
   actualizarEstadoUsuario,
@@ -51,6 +52,7 @@ function GestionUsuarios() {
   
  
   const [duenoSeleccionadoId, setDuenoSeleccionadoId] = useState(null);
+  const [usuarioParaConfirmar, setUsuarioParaConfirmar] = useState(null);
 
   // NOTA 
   // Si hay contenido en los filtros avanzados de Nombre o Email, el buscador
@@ -89,16 +91,21 @@ function GestionUsuarios() {
         signal: controlador.signal,
       });
 
+      
+      if (controladorActualRef.current !== controlador) return;
+
       setUsuarios(respuesta.data || []);
       setTotalPaginas(respuesta.pagination?.totalPages || 1);
     } catch (errorPeticion) {
-      
       if (
         errorPeticion.name === "CanceledError" ||
         errorPeticion.code === "ERR_CANCELED"
       ) {
         return;
       }
+
+      
+      if (controladorActualRef.current !== controlador) return;
 
       console.error("Error al cargar usuarios:", errorPeticion);
 
@@ -108,25 +115,48 @@ function GestionUsuarios() {
           "No se pudieron cargar los usuarios. Intentá nuevamente."
       );
     } finally {
-      setCargando(false);
+      
+      if (controladorActualRef.current === controlador) {
+        setCargando(false);
+      }
     }
   }, [filtrosAplicados, paginaActual]);
 
   
   useEffect(() => {
+    const filtrosEnVivo = {
+      busqueda,
+      filtroNombre,
+      filtroEmail,
+      filtroTelefono,
+      filtroEstado,
+    };
+
+   
+    //  para evitar  fetch duplicado innecesario
+    const sinCambios =
+      filtrosEnVivo.busqueda === filtrosAplicados.busqueda &&
+      filtrosEnVivo.filtroNombre === filtrosAplicados.filtroNombre &&
+      filtrosEnVivo.filtroEmail === filtrosAplicados.filtroEmail &&
+      filtrosEnVivo.filtroTelefono === filtrosAplicados.filtroTelefono &&
+      filtrosEnVivo.filtroEstado === filtrosAplicados.filtroEstado;
+
+    if (sinCambios) return;
+
     const temporizador = setTimeout(() => {
-      setFiltrosAplicados({
-        busqueda,
-        filtroNombre,
-        filtroEmail,
-        filtroTelefono,
-        filtroEstado,
-      });
+      setFiltrosAplicados(filtrosEnVivo);
       setPaginaActual(1);
     }, 400);
 
     return () => clearTimeout(temporizador);
-  }, [busqueda, filtroNombre, filtroEmail, filtroTelefono, filtroEstado]);
+  }, [
+    busqueda,
+    filtroNombre,
+    filtroEmail,
+    filtroTelefono,
+    filtroEstado,
+    filtrosAplicados,
+  ]);
 
   
   useEffect(() => {
@@ -137,24 +167,35 @@ function GestionUsuarios() {
     };
   }, [cargarUsuarios]);
 
-  const cambiarEstado = async (usuario) => {
-    const nuevoEstado = !usuario.active;
+  const ejecutarCambioEstado = async (usuario) => {
+    const estadoAnterior = usuario.active;
+    const nuevoEstado = !estadoAnterior;
 
     setUsuarioActualizando(usuario.id);
     setError("");
 
+    
+    setUsuarios((usuariosActuales) =>
+      usuariosActuales.map((usuarioActual) =>
+        usuarioActual.id === usuario.id
+          ? { ...usuarioActual, active: nuevoEstado }
+          : usuarioActual
+      )
+    );
+
     try {
       await actualizarEstadoUsuario(usuario.id, nuevoEstado);
+    } catch (errorPeticion) {
+      console.error("Error al actualizar usuario:", errorPeticion);
 
+      
       setUsuarios((usuariosActuales) =>
         usuariosActuales.map((usuarioActual) =>
           usuarioActual.id === usuario.id
-            ? { ...usuarioActual, active: nuevoEstado }
+            ? { ...usuarioActual, active: estadoAnterior }
             : usuarioActual
         )
       );
-    } catch (errorPeticion) {
-      console.error("Error al actualizar usuario:", errorPeticion);
 
       setError(
         errorPeticion.response?.data?.message ||
@@ -163,6 +204,18 @@ function GestionUsuarios() {
     } finally {
       setUsuarioActualizando(null);
     }
+  };
+
+  const pedirConfirmacionCambioEstado = (usuario) => {
+    
+    if (usuarioActualizando === usuario.id) return;
+    setUsuarioParaConfirmar(usuario);
+  };
+
+  const confirmarCambioEstado = async () => {
+    if (!usuarioParaConfirmar) return;
+    await ejecutarCambioEstado(usuarioParaConfirmar);
+    setUsuarioParaConfirmar(null);
   };
 
   const irPaginaAnterior = () => {
@@ -328,7 +381,7 @@ function GestionUsuarios() {
                               className={`${styles.toggle} ${
                                 usuario.active ? styles.toggleActive : ""
                               }`}
-                              onClick={() => cambiarEstado(usuario)}
+                              onClick={() => pedirConfirmacionCambioEstado(usuario)}
                               disabled={usuarioActualizando === usuario.id}
                               aria-label={
                                 usuario.active
@@ -413,6 +466,35 @@ function GestionUsuarios() {
       <DetallesDeDuenoModal
         duenoId={duenoSeleccionadoId}
         onClose={() => setDuenoSeleccionadoId(null)}
+      />
+
+      <ConfirmModal
+        abierto={Boolean(usuarioParaConfirmar)}
+        titulo={
+          usuarioParaConfirmar?.active
+            ? "¿Desactivar esta cuenta?"
+            : "¿Activar esta cuenta?"
+        }
+        mensaje={
+          usuarioParaConfirmar && (
+            <>
+              {usuarioParaConfirmar.active
+                ? "El dueño no va a poder iniciar sesión hasta que se reactive la cuenta."
+                : "El dueño va a poder volver a iniciar sesión con normalidad."}
+              <br />
+              <strong>{usuarioParaConfirmar.nombre}</strong> (
+              {usuarioParaConfirmar.email})
+            </>
+          )
+        }
+        textoConfirmar={usuarioParaConfirmar?.active ? "Desactivar" : "Activar"}
+        textoConfirmando={
+          usuarioParaConfirmar?.active ? "Desactivando…" : "Activando…"
+        }
+        varianteConfirmar={usuarioParaConfirmar?.active ? "peligro" : "primario"}
+        onConfirm={confirmarCambioEstado}
+        onCancel={() => setUsuarioParaConfirmar(null)}
+        confirmando={usuarioActualizando === usuarioParaConfirmar?.id}
       />
     </div>
   );

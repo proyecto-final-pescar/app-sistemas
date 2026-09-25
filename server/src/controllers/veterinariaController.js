@@ -16,7 +16,6 @@ const REGEX_SOLO_LETRAS = /^[a-zA-ZÀ-ÖØ-öø-ÿ\u00f1\u00d1\s'.-]+$/;
 const REGEX_CUIT = /^\d{2}-?\d{8}-?\d$/;
 const REGEX_TELEFONO = /^[0-9+\s()-]{6,20}$/;
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const DURACIONES_SERVICIO = new Set([15, 30, 60, 120]);
 const esTextoValido = (texto) => REGEX_SOLO_LETRAS.test((texto || "").trim());
 
 const relacionesVeterinaria = {
@@ -85,9 +84,7 @@ const mapearVeterinariaLegible = (veterinaria) => {
       _id: s.servicio_id,
       categoria: s.categoria_servicio?.nombre,
       nombre: s.nombre,
-      descripcion: s.descripcion,
-      precio: Number(s.precio),
-      duracionMinutos: s.duracion_minutos
+      precio: Number(s.precio)
     })),
     profesionales: (veterinaria.profesional || []).map((p) => ({
       _id: p.profesional_id,
@@ -203,9 +200,7 @@ const sincronizarServicios = async (tx, veterinariaId, serviciosBody) => {
         where: { servicio_id: servicio.servicio_id },
         data: {
           nombre: servicio.nombre,
-          descripcion: servicio.descripcion,
           precio: servicio.precio,
-          duracion_minutos: servicio.duracionMinutos,
           categoria_servicio_id: categoriaId
         }
       });
@@ -214,9 +209,7 @@ const sincronizarServicios = async (tx, veterinariaId, serviciosBody) => {
         data: {
           veterinaria_id: veterinariaId,
           nombre: servicio.nombre,
-          descripcion: servicio.descripcion,
           precio: servicio.precio,
-          duracion_minutos: servicio.duracionMinutos,
           categoria_servicio_id: categoriaId
         }
       });
@@ -322,7 +315,7 @@ const aplicarActualizacionVeterinaria = async (veterinariaId, body) => {
       where: { veterinaria_id: veterinariaId },
       include: relacionesVeterinaria
     });
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 };
 
 const validarDatosGenerales = (body) => {
@@ -384,22 +377,14 @@ const validarServicios = (servicios) => {
   for (const servicio of servicios) {
     const nombre = (servicio?.nombre || '').trim();
     const categoria = (servicio?.categoria || '').trim();
-    const descripcion = (servicio?.descripcion || '').trim();
 
-    if (!nombre || !categoria || !descripcion || servicio?.precio === undefined || servicio?.precio === null || servicio?.precio === '') {
-      return 'El nombre, la categoría, la descripción y el precio de cada servicio son obligatorios.';
+    if (!nombre || !categoria || servicio?.precio === undefined || servicio?.precio === null || servicio?.precio === '') {
+      return 'El nombre, la categoría y el precio de cada servicio son obligatorios.';
     }
-
-    if (descripcion.length > 500) return 'La descripción del servicio no puede superar los 500 caracteres.';
 
     const precio = Number(servicio.precio);
     if (Number.isNaN(precio) || precio <= 0) {
       return `El precio "${servicio.precio}" del servicio "${nombre}" debe ser un número mayor a 0.`;
-    }
-
-    const duracion = Number(servicio.duracionMinutos);
-    if (!DURACIONES_SERVICIO.has(duracion)) {
-      return `La duración del servicio "${nombre}" debe ser de 15, 30, 60 o 120 minutos.`;
     }
   }
 
@@ -494,7 +479,31 @@ export const obtenerVeterinarias = async (req, res) => {
       include: relacionesVeterinaria
     });
 
-    res.status(200).json({ success: true, data: veterinarias.map(mapearVeterinariaLegible) });
+    const ids = veterinarias.map((v) => v.veterinaria_id);
+
+    // Un solo query para todos los ratings del batch, en vez de N+1 contra la vista.
+    const ratings = ids.length > 0
+      ? await prisma.$queryRaw`
+          SELECT veterinaria_id, rating, cantidad_resenias
+          FROM vw_rating_veterinaria
+          WHERE veterinaria_id = ANY(${ids}::uuid[])
+        `
+      : [];
+
+    const ratingsPorId = new Map(
+      ratings.map((r) => [
+        r.veterinaria_id,
+        { rating: Number(r.rating), cantidadResenias: Number(r.cantidad_resenias) }
+      ])
+    );
+
+    const data = veterinarias.map((v) => ({
+      ...mapearVeterinariaLegible(v),
+      rating: ratingsPorId.get(v.veterinaria_id)?.rating ?? null,
+      cantidadResenias: ratingsPorId.get(v.veterinaria_id)?.cantidadResenias ?? 0
+    }));
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     console.error('Error en GET /veterinarias:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
@@ -515,7 +524,19 @@ export const obtenerVeterinariaPorId = async (req, res) => {
       return res.status(404).json({ message: 'El recurso no existe.' });
     }
 
-    res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinaria) });
+    const [agregado] = await prisma.$queryRaw`
+      SELECT rating, cantidad_resenias
+      FROM vw_rating_veterinaria
+      WHERE veterinaria_id = ${id}::uuid
+    `;
+
+    const data = {
+      ...mapearVeterinariaLegible(veterinaria),
+      rating: agregado ? Number(agregado.rating) : null,
+      cantidadResenias: agregado ? Number(agregado.cantidad_resenias) : 0
+    };
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     console.error('Error en GET /veterinarias/:id:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
@@ -536,7 +557,19 @@ export const obtenerMiVeterinaria = async (req, res) => {
       return res.status(404).json({ message: 'No tenés una veterinaria registrada.' });
     }
 
-    res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinaria) });
+    const [agregado] = await prisma.$queryRaw`
+      SELECT rating, cantidad_resenias
+      FROM vw_rating_veterinaria
+      WHERE veterinaria_id = ${veterinaria.veterinaria_id}::uuid
+    `;
+
+    const data = {
+      ...mapearVeterinariaLegible(veterinaria),
+      rating: agregado ? Number(agregado.rating) : null,
+      cantidadResenias: agregado ? Number(agregado.cantidad_resenias) : 0
+    };
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     console.error('Error en GET /veterinarias/mia:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
@@ -723,9 +756,7 @@ export const crearVeterinaria = async (req, res) => {
       serviciosResueltos.push({
         idLocal,
         nombre: servicio.nombre,
-        descripcion: servicio.descripcion,
         precio: servicio.precio,
-        duracion_minutos: servicio.duracionMinutos,
         categoria_servicio_id: categoriaId
       });
     }
@@ -916,7 +947,12 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
           nombre: true,
           fecha_nacimiento: true,
           foto: true,
-          raza: { select: { nombre: true } },
+            raza: {
+           select: {
+             nombre: true,
+             especie: { select: { nombre: true } }
+            }
+           },
           usuario: { select: { usuario_id: true, nombre: true, apellido: true } }
         },
         orderBy: { nombre: 'asc' },
@@ -927,13 +963,14 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
     ]);
 
     const data = pacientes.map((mascota) => ({
-      id: mascota.mascota_id,
+      mascota_id: mascota.mascota_id,
       nombre: mascota.nombre,
       raza: mascota.raza?.nombre || 'Sin especificar',
-      fechaNacimiento: mascota.fecha_nacimiento,
+       especie: mascota.raza?.especie?.nombre || null,
+      fecha_nacimiento: mascota.fecha_nacimiento,
       foto: mascota.foto || null,
       dueño: {
-        id: mascota.usuario?.usuario_id,
+        usuario_id: mascota.usuario?.usuario_id,
         nombre: mascota.usuario
           ? `${mascota.usuario.nombre} ${mascota.usuario.apellido}`
           : 'Sin información'
