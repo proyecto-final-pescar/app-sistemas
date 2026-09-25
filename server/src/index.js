@@ -15,13 +15,8 @@ import globalRateLimiter from "./middleware/globalRateLimiter.js";
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Render no conecta a los usuarios directo con nuestro servidor: primero
-// pasa por un intermediario (proxy) de Render. Sin esta línea, nuestro
-// servidor pensaría que TODOS los usuarios tienen la misma IP (la del
-// intermediario), en vez de la IP real de cada uno.
-// esto hace que express  en la ip que pasa render,
-// para que cosas como el límite de mensajes del bot funcionen por
-// persona y no se mezclen entre todos los usuarios.
+// Render usa un proxy: sin esto, todos los usuarios comparten la misma IP
+// y el rate limiting no funciona por persona.
 app.set("trust proxy", 1);
 
 const allowedOrigins = new Set([
@@ -45,8 +40,8 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 
-app.use(cors(corsOptions));
 app.use(helmet());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use("/api", globalRateLimiter);
 

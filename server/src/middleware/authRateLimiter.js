@@ -1,31 +1,30 @@
 import { rateLimit } from 'express-rate-limit';
 
-export const loginRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    mensaje: 'Demasiados intentos de inicio de sesión. Intentá nuevamente más tarde.'
-  }
+const crearLimiter = ({ windowMs, limit, message, ...extra }) =>
+  rateLimit({
+    windowMs,
+    limit,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message },
+    ...extra
+  });
+
+export const loginRateLimiter = crearLimiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: true, // solo cuentan los intentos fallidos
+  message: 'Demasiados intentos de inicio de sesión. Intentá nuevamente más tarde.'
 });
 
-export const registerRateLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hora
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    mensaje: 'Demasiados intentos de registro. Intentá nuevamente más tarde.'
-  }
+export const registerRateLimiter = crearLimiter({
+  windowMs: 60 * 60 * 1000,
+  limit: 20,
+  message: 'Demasiados intentos de registro. Intentá nuevamente más tarde.'
 });
 
-export const passwordRecoveryRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    mensaje: 'Demasiadas solicitudes. Intentá nuevamente más tarde.'
-  }
+export const passwordRecoveryRateLimiter = crearLimiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  message: 'Demasiadas solicitudes. Intentá nuevamente más tarde.'
 });

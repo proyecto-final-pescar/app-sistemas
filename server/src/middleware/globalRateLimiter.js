@@ -5,7 +5,7 @@ const MAX_REQUESTS_POR_VENTANA = 300;
 
 const globalRateLimiter = rateLimit({
   windowMs: VENTANA_MS,
-  max: MAX_REQUESTS_POR_VENTANA,
+  limit: MAX_REQUESTS_POR_VENTANA,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

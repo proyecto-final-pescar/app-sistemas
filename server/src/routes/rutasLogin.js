@@ -21,6 +21,7 @@ router.post(
   resetPassword
 );
 
-router.post('/google', googleAuth);
+
+router.post('/google', loginRateLimiter, googleAuth);
 
 export default router
