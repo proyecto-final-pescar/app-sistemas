@@ -1,13 +1,12 @@
-//migradooo
 import prisma from '../../prisma/client.js';
 import { enviarEmail } from '../utils/mailer.js';
 import { armarEmailPublicacionDadaDeBaja } from '../templates/emailPublicacionDadaDeBaja.js';
+import { sanitizeText } from '../utils/sanitizeText.js';
 
 const ESTADOS_PUBLICACION = ['ACT', 'CER'];
 const TIPOS_CONTACTO = ['TEL', 'EML'];
 const LIMITES = { nombre: 100, descripcion: 5000, contacto: 150 };
 const UMBRAL_OCULTAMIENTO_REPORTES = 2;
-
 
 const esIdInvalido = (error) =>
   error.code === 'P2023' ||
@@ -21,6 +20,7 @@ const validarLongitudes = (campos) => {
   }
   return null;
 };
+
 // Devuelve los ids de publicaciones con >= UMBRAL_OCULTAMIENTO_REPORTES reportes pendientes
 const obtenerIdsOcultosPorReportes = async () => {
   const grupos = await prisma.reporte.groupBy({
@@ -40,8 +40,7 @@ const INCLUDE_PUBLICACION = {
   zona: { select: { zona_id: true, nombre: true } }
 };
 
-// GET /publicaciones: devuelve todas las publicaciones 
-
+// GET /publicaciones: devuelve todas las publicaciones
 export const obtenerPublicaciones = async (req, res) => {
   try {
     const { zonaId, estado } = req.query;
@@ -65,9 +64,8 @@ export const obtenerPublicaciones = async (req, res) => {
       filtros.estado_publicacion_id = estado;
     }
 
-    // Oculta del listado las publicaciones con demasiados reportes pendientes (+2)
-    //el dueño sigue viendo las suyas aunque esten ocultas
-    // para el resto de los usuarios.
+    // Oculta del listado las publicaciones con demasiados reportes pendientes (+2).
+    // El dueño sigue viendo las suyas aunque estén ocultas para el resto.
     let idsOcultos = [];
 
     if (!esAdmin) {
@@ -94,9 +92,11 @@ export const obtenerPublicaciones = async (req, res) => {
 
     res.status(200).json({ success: true, data: publicaciones });
   } catch (error) {
+    console.error('Error en obtenerPublicaciones:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
+
 // GET /publicaciones/:id: devuelve el detalle de una publicación
 export const obtenerPublicacionPorId = async (req, res) => {
   try {
@@ -116,6 +116,7 @@ export const obtenerPublicacionPorId = async (req, res) => {
     if (esIdInvalido(error)) {
       return res.status(400).json({ message: 'El id de la publicación no es válido' });
     }
+    console.error('Error en obtenerPublicacionPorId:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
@@ -123,13 +124,24 @@ export const obtenerPublicacionPorId = async (req, res) => {
 // POST /publicaciones: crea una nueva publicación
 export const crearPublicacion = async (req, res) => {
   try {
-  
-    const usuarioId = req.user.id; 
+    const usuarioId = req.user.id;
     const { foto, nombre, zona, descripcion, fecha, contacto, tipoContacto } = req.body;
-        
+
     if (!foto || !zona || !descripcion || !fecha || !contacto || !tipoContacto) {
       return res.status(400).json({
         message: 'Los campos foto, zona, descripción, fecha, contacto y tipoContacto son requeridos'
+      });
+    }
+      if ([nombre, descripcion, contacto].some((v) => v !== undefined && typeof v !== 'string')) {
+      return res.status(400).json({ message: 'Los campos de texto no son válidos' });
+    }
+    const nombreSanitizado = sanitizeText(nombre);
+    const descripcionSanitizada = sanitizeText(descripcion);
+    const contactoSanitizado = sanitizeText(contacto);
+
+    if (!descripcionSanitizada || !contactoSanitizado) {
+      return res.status(400).json({
+        message: 'La descripción y el contacto deben contener texto válido'
       });
     }
 
@@ -147,7 +159,11 @@ export const crearPublicacion = async (req, res) => {
       return res.status(400).json({ message: 'La fecha ingresada no es válida' });
     }
 
-    const errorLongitud = validarLongitudes({ nombre, descripcion, contacto });
+    const errorLongitud = validarLongitudes({
+      nombre: nombreSanitizado,
+      descripcion: descripcionSanitizada,
+      contacto: contactoSanitizado
+    });
     if (errorLongitud) {
       return res.status(400).json({ message: errorLongitud });
     }
@@ -155,14 +171,13 @@ export const crearPublicacion = async (req, res) => {
     const nuevaPublicacion = await prisma.publicacion.create({
       data: {
         foto,
-        nombre,
+        nombre: nombreSanitizado,
         zona_id: zonaId,
-        descripcion,
+        descripcion: descripcionSanitizada,
         fecha: fechaParseada,
-        contacto,
+        contacto: contactoSanitizado,
         tipo_contacto_id: tipoContacto,
         usuario_id: usuarioId
-        // estado_publicacion_id arranca en 'ACT' por defecto
       },
       include: INCLUDE_PUBLICACION
     });
@@ -172,6 +187,7 @@ export const crearPublicacion = async (req, res) => {
     if (error.code === 'P2003') {
       return res.status(400).json({ message: 'La zona indicada no existe' });
     }
+    console.error('Error en crearPublicacion:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
@@ -180,7 +196,7 @@ export const crearPublicacion = async (req, res) => {
 export const actualizarPublicacion = async (req, res) => {
   try {
     const { id } = req.params;
-   const usuarioId = req.user.id;
+    const usuarioId = req.user.id;
     const esAdmin = req.user.rol === 'administrador';
 
     const publicacion = await prisma.publicacion.findUnique({ where: { publicacion_id: id } });
@@ -194,8 +210,28 @@ export const actualizarPublicacion = async (req, res) => {
     }
 
     const { foto, nombre, zona, descripcion, fecha, contacto, tipoContacto, estado } = req.body;
+    if ([nombre, descripcion, contacto].some((v) => v !== undefined && typeof v !== 'string')) {
+      return res.status(400).json({ message: 'Los campos de texto no son válidos' });
+    }
 
-    const errorLongitud = validarLongitudes({ nombre, descripcion, contacto });
+    const nombreSanitizado = nombre !== undefined ? sanitizeText(nombre) : undefined;
+    const descripcionSanitizada = descripcion !== undefined ? sanitizeText(descripcion) : undefined;
+    const contactoSanitizado = contacto !== undefined ? sanitizeText(contacto) : undefined;
+
+    if (
+      (descripcion !== undefined && !descripcionSanitizada) ||
+      (contacto !== undefined && !contactoSanitizado)
+    ) {
+      return res.status(400).json({
+        message: 'La descripción y el contacto deben contener texto válido'
+      });
+    }
+
+    const errorLongitud = validarLongitudes({
+      nombre: nombreSanitizado,
+      descripcion: descripcionSanitizada,
+      contacto: contactoSanitizado
+    });
     if (errorLongitud) {
       return res.status(400).json({ message: errorLongitud });
     }
@@ -203,9 +239,9 @@ export const actualizarPublicacion = async (req, res) => {
     const data = {};
 
     if (foto !== undefined) data.foto = foto;
-    if (nombre !== undefined) data.nombre = nombre;
-    if (descripcion !== undefined) data.descripcion = descripcion;
-    if (contacto !== undefined) data.contacto = contacto;
+    if (nombre !== undefined) data.nombre = nombreSanitizado;
+    if (descripcion !== undefined) data.descripcion = descripcionSanitizada;
+    if (contacto !== undefined) data.contacto = contactoSanitizado;
 
     if (zona !== undefined) {
       const zonaId = parseInt(zona, 10);
@@ -251,7 +287,7 @@ export const actualizarPublicacion = async (req, res) => {
     if (esIdInvalido(error)) {
       return res.status(400).json({ message: 'El id de la publicación no es válido' });
     }
-    
+    console.error('Error en actualizarPublicacion:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
@@ -260,7 +296,7 @@ export const actualizarPublicacion = async (req, res) => {
 export const cambiarEstado = async (req, res) => {
   try {
     const { id } = req.params;
-   const usuarioId = req.user.id;
+    const usuarioId = req.user.id;
     const esAdmin = req.user.rol === 'administrador';
     const { estado } = req.body;
 
@@ -289,7 +325,7 @@ export const cambiarEstado = async (req, res) => {
     if (esIdInvalido(error)) {
       return res.status(400).json({ message: 'El id de la publicación no es válido' });
     }
-   
+    console.error('Error en cambiarEstado:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
@@ -318,9 +354,8 @@ export const eliminarPublicacion = async (req, res) => {
 
     const esBajaPorModeracion = esAdmin && !esPropietario;
 
-  
-    // No se puede borrar la publicacion si tiene reportes relacionados (fk), asi que se
-    // eliminan junto con la publicación dentro de una transaccion
+    // No se puede borrar la publicación si tiene reportes relacionados (FK), así que se
+    // eliminan junto con la publicación dentro de una transacción
     const reportesPendientes = esBajaPorModeracion
       ? await prisma.reporte.findMany({
           where: { publicacion_id: id, estado_reporte_id: 'PEN' },
@@ -349,6 +384,7 @@ export const eliminarPublicacion = async (req, res) => {
     if (esIdInvalido(error)) {
       return res.status(400).json({ message: 'El id de la publicación no es válido' });
     }
+    console.error('Error en eliminarPublicacion:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
