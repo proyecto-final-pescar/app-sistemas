@@ -1,10 +1,8 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import PropTypes from "prop-types";
 import Button from "../button/Button";
 import styles from "./ConfirmModal.module.css";
-
-/**
- * Modal de confirmacion genérico.*/
 
 const ConfirmModal = ({
     abierto,
@@ -18,7 +16,6 @@ const ConfirmModal = ({
     onCancel,
     confirmando = false,
 }) => {
-    // Cerrar con la tecla Escape, por accesibilidad.
     useEffect(() => {
         if (!abierto) return;
         const handleKeyDown = (e) => {
@@ -30,7 +27,7 @@ const ConfirmModal = ({
 
     if (!abierto) return null;
 
-    return (
+    return createPortal(
         <div
             className={styles.overlay}
             onClick={onCancel}
@@ -68,7 +65,8 @@ const ConfirmModal = ({
                     />
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

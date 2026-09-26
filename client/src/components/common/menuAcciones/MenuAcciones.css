@@ -1,0 +1,128 @@
+.menuAcciones {
+  --ma-primario: #6d28d9;
+  --ma-texto: #1c1033;
+  --ma-borde: #e4dbfb;
+  --ma-fondo-hover: #f5f2fd;
+  --ma-peligro: #dc2626;
+  --ma-peligro-hover: #fef2f2;
+
+  position: relative;
+  display: inline-flex;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+.menuAcciones__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--ma-borde);
+  border-radius: 50%;
+  color: var(--ma-texto);
+  background: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.menuAcciones__trigger:hover {
+  background: var(--ma-fondo-hover);
+  border-color: #d8cbf7;
+}
+
+.menuAcciones__trigger:active {
+  transform: scale(0.92);
+}
+
+.menuAcciones__trigger--activo {
+  border-color: var(--ma-primario);
+  background: var(--ma-fondo-hover);
+  color: var(--ma-primario);
+}
+
+.menuAcciones__panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 20;
+  transform-origin: top right;
+
+  display: flex;
+  flex-direction: column;
+  min-width: 168px;
+  padding: 6px;
+  overflow: visible;
+
+  border: 1px solid rgba(228, 219, 251, 0.8);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 20px rgba(28, 16, 51, 0.1), 0 2px 6px rgba(28, 16, 51, 0.06);
+
+  animation: menuAccionesAparecer 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Triangulito que conecta visualmente el panel con el botón circular */
+.menuAcciones__panel::before {
+  content: "";
+  position: absolute;
+  top: -5px;
+  right: 12px;
+  width: 10px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.98);
+  border-top: 1px solid rgba(228, 219, 251, 0.8);
+  border-left: 1px solid rgba(228, 219, 251, 0.8);
+  border-radius: 2px 0 0 0;
+  transform: rotate(45deg);
+}
+
+@keyframes menuAccionesAparecer {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.menuAcciones__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ma-texto);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.menuAcciones__item:hover:not(:disabled) {
+  background: var(--ma-fondo-hover);
+}
+
+.menuAcciones__item:disabled {
+  color: #b9b0cf;
+  cursor: not-allowed;
+}
+
+.menuAcciones__item--peligro {
+  color: var(--ma-peligro);
+}
+
+.menuAcciones__item--peligro:hover:not(:disabled) {
+  background: var(--ma-peligro-hover);
+}
+
+.menuAcciones__item svg {
+  flex-shrink: 0;
+}

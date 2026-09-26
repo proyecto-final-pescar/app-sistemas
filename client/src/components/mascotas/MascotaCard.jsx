@@ -1,32 +1,11 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
+import { Pencil, Trash2, PawPrint } from "lucide-react";
 import Button from "../ui/button/Button";
 import ConfirmModal from "../ui/confirm-modal/ConfirmModal";
+import MenuAcciones from "../common/menuAcciones/MenuAcciones";
 import { formatearEdad } from "../../utils/EdadMascota";
 import styles from "../../styles/MisMascotas.module.css";
-
-
-
-const ESPECIE_EMOJI = {
-    gato: "🐱",
-    perro: "🐶",
-    conejo: "🐰",
-    ave: "🐦",
-    pájaro: "🐦",
-    hamster: "🐹",
-    hámster: "🐹",
-    tortuga: "🐢",
-    pez: "🐠",
-    reptil: "🦎",
-    iguana: "🦎",
-    caballo: "🐴",
-    cerdo: "🐷",
-    cobayo: "🐹",
-    cuyo: "🐹",
-    serpiente: "🐍",
-    hurón: "🐾",
-};
-const EMOJI_GENERICO = "🐾";
 
 const MascotaCard = ({ mascota, onView, onEdit, onDelete, eliminando = false }) => {
     const {
@@ -42,8 +21,6 @@ const MascotaCard = ({ mascota, onView, onEdit, onDelete, eliminando = false }) 
     } = mascota;
 
     const [modalAbierto, setModalAbierto] = useState(false);
-
-    const emoji = ESPECIE_EMOJI[especie?.toLowerCase()] || EMOJI_GENERICO;
 
     const handleDeleteClick = () => {
         setModalAbierto(true);
@@ -72,15 +49,36 @@ const MascotaCard = ({ mascota, onView, onEdit, onDelete, eliminando = false }) 
     className={styles.cardImagePlaceholder}
     style={{ display: foto ? "none" : "flex" }}
 >
-    <span style={{ fontSize: 48 }}>{emoji}</span>
+    <PawPrint size={40} color="#a78bfa" strokeWidth={1.75} />
 </div>
                 <div className={styles.cardImageOverlay}>
-                    <span className={styles.petName}>
-                        <span aria-hidden="true">{emoji}</span> {nombre}
-                    </span>
+                    <span className={styles.petName}>{nombre}</span>
                     <span className={styles.petBreed}>
                         {especie} · {raza}
                     </span>
+                </div>
+
+                <div className={styles.cardMenu}>
+                    <MenuAcciones
+                        ariaLabel={`Más acciones para ${nombre}`}
+                        opciones={[
+                            {
+                                id: "editar",
+                                label: "Editar",
+                                icon: Pencil,
+                                onClick: () => onEdit(_id),
+                            },
+                            {
+                                id: "eliminar",
+                                label: "Eliminar",
+                                labelDisabled: "Eliminando…",
+                                icon: Trash2,
+                                variante: "peligro",
+                                disabled: eliminando,
+                                onClick: handleDeleteClick,
+                            },
+                        ]}
+                    />
                 </div>
             </div>
 
@@ -101,21 +99,6 @@ const MascotaCard = ({ mascota, onView, onEdit, onDelete, eliminando = false }) 
                         tamaño="chico"
                         onClick={() => onView(_id)}
                     />
-                    <div className={styles.actionsSecundarias}>
-                        <Button
-                        texto="Editar"
-                        variante="secundario"
-                        tamaño="chico"
-                        onClick={() => onEdit(_id)}
-                        />
-                        <Button
-                        texto="Eliminar"
-                        variante="peligro-borde"
-                        tamaño="chico"
-                        onClick={handleDeleteClick}
-                        disabled={eliminando}
-                        />
-                    </div>
                     </div>
                 </div>
 
