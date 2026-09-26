@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./components/PrivateRoute";
+import { NotificacionesProvider } from "./context/NotificacionesContext";
 
 import CitasAgendadas from "./pages/veterinaria/CitasAgendadas/CitasAgendadas";
 import RegistrarConsulta from "./pages/veterinaria/HistorialClinico/RegistrarConsulta";
@@ -44,6 +45,7 @@ import CompletarRegistroGoogle from "./pages/public/CompletarRegistroGoogle/Comp
 
 function App() {
   return (
+    <NotificacionesProvider>
     <BrowserRouter>
       <Routes>
         <Route
@@ -108,6 +110,7 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
+    </NotificacionesProvider>
   );
 }
 
