@@ -85,6 +85,9 @@ export const enviarRecordatoriosTurnos = async () => {
           year: 'numeric'
         })
 
+        // Si el email falla se revierte el flag para reintentarlo en la
+        // próxima pasada, pero la notificación in-app se crea igual (con
+        // control de duplicados más abajo) para no dejar al tutor sin aviso.
         try {
           await sendRecordatorioTurnoEmail({
             to: mascota.usuario.email,
@@ -97,6 +100,11 @@ export const enviarRecordatoriosTurnos = async () => {
           })
         } catch (errorEnvio) {
           
+          console.error(
+            `No se pudo enviar el email de recordatorio del turno ${turno.turno_id}:`,
+            errorEnvio
+          )
+          // Reintento en la próxima pasada del cron.
           await prisma.turno
             .update({
               where: { turno_id: turno.turno_id },
@@ -105,16 +113,29 @@ export const enviarRecordatoriosTurnos = async () => {
             .catch((errorRevertir) => {
               console.error('No se pudo revertir recordatorio_enviado:', errorRevertir)
             })
-          throw errorEnvio
         }
 
         
-        await crearNotificacion({
-          usuarioId: mascota.dueno_id,
-          tipo: TIPO.TURNO_RECORDATORIO,
-          mensaje: `Recordatorio: tenés turno para ${mascota.nombre} en ${veterinaria.nombre} el ${formatearFechaTurno(turno.fecha, turno.hora_inicio)}.`,
-          link: `/mis-turnos`
+        // El mensaje es determinístico por turno, así que si el email falló
+        // y esta pasada es un reintento, no se duplica el aviso en la campana.
+        const mensajeRecordatorio = `Recordatorio: tenés turno para ${mascota.nombre} en ${veterinaria.nombre} el ${formatearFechaTurno(turno.fecha, turno.hora_inicio)}.`
+
+        const yaNotificado = await prisma.notificacion.findFirst({
+          where: {
+            usuario_id: mascota.dueno_id,
+            tipo_notificacion_id: TIPO.TURNO_RECORDATORIO,
+            mensaje: mensajeRecordatorio
+          }
         })
+
+        if (!yaNotificado) {
+          await crearNotificacion({
+            usuarioId: mascota.dueno_id,
+            tipo: TIPO.TURNO_RECORDATORIO,
+            mensaje: mensajeRecordatorio,
+            link: `/mis-turnos`
+          })
+        }
       } catch (error) {
         console.error(
           `Error al enviar recordatorio del turno ${turno.turno_id}:`,

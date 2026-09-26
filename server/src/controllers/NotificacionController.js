@@ -18,7 +18,14 @@ export const suscribirse = (req, res) => {
 
   agregarConexion(usuarioId, res)
 
-  const latido = setInterval(() => res.write(': ping\n\n'), 25000)
+  const latido = setInterval(() => {
+    try {
+      res.write(': ping\n\n')
+    } catch (error) {
+      clearInterval(latido)
+      quitarConexion(usuarioId, res)
+    }
+  }, 25000)
 
   req.on('close', () => {
     clearInterval(latido)
