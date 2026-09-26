@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
@@ -119,9 +120,10 @@ const mostrarExito = (mensaje) => {
                   }`}
             </p>
                 <Button
-                texto="+ Agregar Mascota"
+                texto="Agregar Mascota"
                 variante="primario"
                 tamaño="mediano"
+                icon={Plus}
                  onClick={abrirModalNuevaMascota}
               />
           </div>
@@ -173,26 +175,28 @@ const mostrarExito = (mensaje) => {
         </main>
 
 
-        {modalAbierto && (
-          <Modal
-            isOpen={modalAbierto}
-            onClose={() => setModalAbierto(false)}
-          >
-            <FormularioMascota
-              mascotaInicial={mascotaSeleccionada}
-              onCancelar={() => setModalAbierto(false)}
-              onGuardado={() => {
-                setModalAbierto(false);
-                cargarMascotas();
-                 mostrarExito(                                    
-                  mascotaSeleccionada
-                    ? "¡Mascota actualizada correctamente!"
-                    : "¡Mascota agregada correctamente!"
-                );
+          {modalAbierto && (
+            <Modal
+              isOpen={modalAbierto}
+              onClose={() => setModalAbierto(false)}
+              size="lg"
+              sinPadding
+            >
+              <FormularioMascota
+                mascotaInicial={mascotaSeleccionada}
+                onCancelar={() => setModalAbierto(false)}
+                onGuardado={() => {
+                  setModalAbierto(false);
+                  cargarMascotas();
+                  mostrarExito(
+                    mascotaSeleccionada
+                      ? "¡Mascota actualizada correctamente!"
+                      : "¡Mascota agregada correctamente!"
+                  );
                 }}
-            />
-          </Modal>
-        )}
+              />
+            </Modal>
+          )}
       </div> 
     </div>  
   );
