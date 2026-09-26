@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { obtenerMascotas } from "../../../services/MascotaService";
+import { obtenerMascotas } from "../../../services/mascotaService";
 import { obtenerHistorialesTutor } from "../../../services/historialService";
 import Button from "../../../components/ui/button/Button.jsx";
 import ConsultaBadge from "../../../components/historial/ConsultaBadge";

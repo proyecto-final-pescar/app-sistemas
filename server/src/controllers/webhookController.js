@@ -2,6 +2,12 @@ import { Payment } from 'mercadopago';
 
 import prisma from '../../prisma/client.js';
 import { obtenerClienteMercadoPago } from '../services/mercadoPagoOAuthService.js';
+import {
+  crearNotificacion,
+  obtenerContextoTurno,
+  formatearFechaTurno,
+  TIPO,
+} from '../services/notificacionService.js';
 
 const ESTADO_MP_A_PAGO = {
   approved: 'aprobado',
@@ -18,6 +24,22 @@ const METODO_PAGO_MAP = {
   ticket: 'efectivo',
   bank_transfer: 'transferencia',
   account_money: 'billetera_virtual'
+};
+
+const notificarTurnoConfirmado = async (turnoId) => {
+  try {
+    const ctx = await obtenerContextoTurno(turnoId);
+    if (!ctx?.mascota) return;
+
+    await crearNotificacion({
+      usuarioId: ctx.mascota.dueno_id,
+      tipo: TIPO.TURNO_CONFIRMADO,
+      mensaje: `¡Pago aprobado! Tu turno en ${ctx.veterinaria.nombre} del ${formatearFechaTurno(ctx.fecha, ctx.hora_inicio)} para ${ctx.mascota.nombre} quedó confirmado.`,
+      link: `/mis-turnos`,
+    });
+  } catch (error) {
+    console.error('Error al notificar turno confirmado:', error);
+  }
 };
 
 const obtenerIdNotificacion = (req) =>
@@ -93,6 +115,8 @@ export const recibirWebhook = async (req, res) => {
       throw new Error('Faltan estados requeridos en los catálogos de PostgreSQL.');
     }
 
+    const turnoYaConfirmado = turno.estado_turno.nombre === 'confirmado';
+
     const pagoGuardado = await prisma.$transaction(async (tx) => {
       const resultadoActualizacion = await tx.pago.updateMany({
         where: {
@@ -123,6 +147,11 @@ export const recibirWebhook = async (req, res) => {
       }
       return tx.pago.findUnique({ where: { pago_id: pago.pago_id } });
     });
+
+    // Aviso al tutor (después de la transacción, para no notificar algo que falló)
+    if (pagoMP.status === 'approved' && !turnoYaConfirmado) {
+      await notificarTurnoConfirmado(turno.turno_id);
+    }
 
     return res.status(200).json({
       message: `Pago con estado ${pagoMP.status} registrado`,

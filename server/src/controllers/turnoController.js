@@ -1,6 +1,9 @@
 import prisma from '../../prisma/client.js'
 import client from '../config/mercadopago.js'
 import { PaymentRefund } from 'mercadopago'
+import {
+  crearNotificacion, formatearFechaTurno, TIPO,
+} from '../services/notificacionService.js'
 
 // ─────────────────────────────────────────────────────────────
 // Reglas de negocio
@@ -270,8 +273,7 @@ export const reservarTurno = async (req, res) => {
 
     const venceEn = new Date(Date.now() + PLAZO_PAGO_HORAS * 60 * 60 * 1000)
 
-    // Compare-and-swap: reemplaza al findOneAndUpdate condicional de Mongo.
-    // profesional_id NO se toca acá — ya viene fijo desde la creación.
+   
     const resultado = await prisma.$transaction(async (tx) => {
       const actualizado = await tx.turno.updateMany({
         where: { turno_id: turnoId, estado_turno_id: ESTADO.DISPONIBLE },
@@ -295,6 +297,16 @@ export const reservarTurno = async (req, res) => {
       })
     }
 
+    const cuando = formatearFechaTurno(turno.fecha, turno.hora_inicio)
+
+    await crearNotificacion({
+      usuarioId: req.user.id,
+      tipo: TIPO.TURNO_PENDIENTE_PAGO,
+      mensaje: `Reservaste un turno para ${mascota.nombre} el ${cuando}. Tenés ${PLAZO_PAGO_HORAS} hs para confirmarlo eligiendo cómo pagar, o el horario se libera.`,
+      link: `/mis-turnos`
+    })
+
+
     return res.status(200).json({ success: true, data: { turno: formatearTurno(resultado) } })
   } catch (error) {
     if (error.code === 'P2023') {
@@ -314,7 +326,7 @@ export const cancelarTurno = async (req, res) => {
 
     const turno = await prisma.turno.findUnique({
       where: { turno_id: id },
-      include: { mascota: true, veterinaria: true }
+      include: { mascota: true }
     })
 
     if (!turno) {
@@ -322,9 +334,8 @@ export const cancelarTurno = async (req, res) => {
     }
 
     const esDueño = turno.mascota?.dueno_id === req.user.id
-    const esVeterinaria = turno.veterinaria.usuario_id === req.user.id
 
-    if (!esDueño && !esVeterinaria) {
+    if (!esDueño) {
       return res.status(403).json({ message: 'No tenés permisos para cancelar este turno.' })
     }
 
@@ -423,6 +434,24 @@ export const cancelarTurno = async (req, res) => {
       }
 
       return [cancelado, nuevoTurno]
+    })
+
+    const cuando = formatearFechaTurno(turno.fecha, turno.hora_inicio)
+
+    let mensaje = `Cancelaste el turno de ${turno.mascota.nombre} del ${cuando}.`
+
+    if (pagoAReembolsar) {
+      const monto = Number(pagoAReembolsar.monto).toLocaleString('es-AR')
+      mensaje += estadoReembolso === 'APR'
+        ? ` Te reembolsamos $${monto}.`
+        : ` Tu reembolso de $${monto} está en revisión.`
+    }
+
+    await crearNotificacion({
+      usuarioId: req.user.id,
+      tipo: TIPO.SISTEMA,
+      mensaje,
+      link: `/mis-turnos`
     })
 
     return res.status(200).json({

@@ -16,7 +16,6 @@ const REGEX_SOLO_LETRAS = /^[a-zA-ZÀ-ÖØ-öø-ÿ\u00f1\u00d1\s'.-]+$/;
 const REGEX_CUIT = /^\d{2}-?\d{8}-?\d$/;
 const REGEX_TELEFONO = /^[0-9+\s()-]{6,20}$/;
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const DURACIONES_SERVICIO = new Set([15, 30, 60, 120]);
 const esTextoValido = (texto) => REGEX_SOLO_LETRAS.test((texto || "").trim());
 
 const relacionesVeterinaria = {
@@ -85,9 +84,7 @@ const mapearVeterinariaLegible = (veterinaria) => {
       _id: s.servicio_id,
       categoria: s.categoria_servicio?.nombre,
       nombre: s.nombre,
-      descripcion: s.descripcion,
-      precio: Number(s.precio),
-      duracionMinutos: s.duracion_minutos
+      precio: Number(s.precio)
     })),
     profesionales: (veterinaria.profesional || []).map((p) => ({
       _id: p.profesional_id,
@@ -203,9 +200,7 @@ const sincronizarServicios = async (tx, veterinariaId, serviciosBody) => {
         where: { servicio_id: servicio.servicio_id },
         data: {
           nombre: servicio.nombre,
-          descripcion: servicio.descripcion,
           precio: servicio.precio,
-          duracion_minutos: servicio.duracionMinutos,
           categoria_servicio_id: categoriaId
         }
       });
@@ -214,9 +209,7 @@ const sincronizarServicios = async (tx, veterinariaId, serviciosBody) => {
         data: {
           veterinaria_id: veterinariaId,
           nombre: servicio.nombre,
-          descripcion: servicio.descripcion,
           precio: servicio.precio,
-          duracion_minutos: servicio.duracionMinutos,
           categoria_servicio_id: categoriaId
         }
       });
@@ -322,7 +315,7 @@ const aplicarActualizacionVeterinaria = async (veterinariaId, body) => {
       where: { veterinaria_id: veterinariaId },
       include: relacionesVeterinaria
     });
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 };
 
 const validarDatosGenerales = (body) => {
@@ -384,22 +377,14 @@ const validarServicios = (servicios) => {
   for (const servicio of servicios) {
     const nombre = (servicio?.nombre || '').trim();
     const categoria = (servicio?.categoria || '').trim();
-    const descripcion = (servicio?.descripcion || '').trim();
 
-    if (!nombre || !categoria || !descripcion || servicio?.precio === undefined || servicio?.precio === null || servicio?.precio === '') {
-      return 'El nombre, la categoría, la descripción y el precio de cada servicio son obligatorios.';
+    if (!nombre || !categoria || servicio?.precio === undefined || servicio?.precio === null || servicio?.precio === '') {
+      return 'El nombre, la categoría y el precio de cada servicio son obligatorios.';
     }
-
-    if (descripcion.length > 500) return 'La descripción del servicio no puede superar los 500 caracteres.';
 
     const precio = Number(servicio.precio);
     if (Number.isNaN(precio) || precio <= 0) {
       return `El precio "${servicio.precio}" del servicio "${nombre}" debe ser un número mayor a 0.`;
-    }
-
-    const duracion = Number(servicio.duracionMinutos);
-    if (!DURACIONES_SERVICIO.has(duracion)) {
-      return `La duración del servicio "${nombre}" debe ser de 15, 30, 60 o 120 minutos.`;
     }
   }
 
@@ -771,9 +756,7 @@ export const crearVeterinaria = async (req, res) => {
       serviciosResueltos.push({
         idLocal,
         nombre: servicio.nombre,
-        descripcion: servicio.descripcion,
         precio: servicio.precio,
-        duracion_minutos: servicio.duracionMinutos,
         categoria_servicio_id: categoriaId
       });
     }

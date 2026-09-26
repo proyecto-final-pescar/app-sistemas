@@ -20,6 +20,12 @@ import {
   formatearTurno
 } from './turnoController.js';
 
+import {
+  crearNotificacion,
+  formatearFechaTurno,
+  TIPO
+} from '../services/notificacionService.js';
+
 export const crearPreferenciaPago = async (req, res) => {
   let pagoCreado = null;
 
@@ -234,6 +240,17 @@ export const pagarEfectivo = async (req, res) => {
         message: 'Este turno ya no está disponible. Por favor elegí otro horario.'
       })
     }
+
+    // Notificacion al tutor: turno confirmado, con pago en efectivo
+    const cuando = formatearFechaTurno(turno.fecha, turno.hora_inicio)
+    const monto = Number(turno.monto_servicio).toLocaleString('es-AR')
+
+    await crearNotificacion({
+      usuarioId: req.user.id,
+      tipo: TIPO.TURNO_CONFIRMADO,
+      mensaje: `Tu turno en ${turno.veterinaria.nombre} para ${resultado.mascota.nombre} del ${cuando} quedó confirmado. Abonás $${monto} en el local.`,
+      link: `/mis-turnos`
+    })
 
     return res.status(200).json({ success: true, data: { turno: formatearTurno(resultado) } })
   } catch (error) {

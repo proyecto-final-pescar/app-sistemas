@@ -2,9 +2,7 @@ export const servicioVacio = () => ({
   id: crypto.randomUUID(),
   categoria: "",
   nombre: "",
-  descripcion: "",
   precio: "",
-  duracionMinutos: 30
 });
 
 export const profesionalVacio = () => ({
