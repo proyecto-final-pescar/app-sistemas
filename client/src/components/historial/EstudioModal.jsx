@@ -6,6 +6,7 @@ import Button from "../ui/button/Button";
 import styles from "./FichaMedicaTab.module.css";
 
 const fechaParaInput = (fecha) => fecha ? new Date(fecha).toISOString().slice(0, 10) : "";
+const obtenerFechaHoy = () => new Date().toISOString().slice(0, 10);
 
 const EstudioModal = ({ abierto, estudio, profesionales = [], onClose, onGuardar }) => {
   const [form, setForm] = useState(() => ({
@@ -19,16 +20,34 @@ const EstudioModal = ({ abierto, estudio, profesionales = [], onClose, onGuardar
   const [guardando, setGuardando] = useState(false);
   const [errorApi, setErrorApi] = useState("");
 
-    const opcionesProfesionales = profesionales.map((p) => ({
-   value: p.profesional_id,
-   label: p.especialidad?.nombre
-    ? `${p.nombre} ${p.apellido} · ${p.especialidad.nombre}`
-    : `${p.nombre} ${p.apellido}`,
-  }));
+ const opcionesProfesionales = profesionales.map((p) => {
+  const nombreCompleto = [p.nombre, p.apellido].filter(Boolean).join(" ");
+  const especialidad = p.especialidad?.nombre ? ` · ${p.especialidad.nombre}` : "";
+
+  return {
+    value: p.profesional_id,
+    label: `${nombreCompleto}${especialidad}`,
+  };
+});
 
   const enviar = async (event) => {
     event.preventDefault();
-    const nuevosErrores = {};
+  const nuevosErrores = {};
+  const hoy = obtenerFechaHoy();
+
+  if (!form.nombre.trim()) nuevosErrores.nombre = "El nombre es obligatorio.";
+  
+  if (!form.fecha) {
+    nuevosErrores.fecha = "La fecha es obligatoria.";
+  } else if (form.fecha > hoy) { // 👈 Validación contra fecha futura
+    nuevosErrores.fecha = "La fecha no puede ser futura.";
+  }
+
+  if (!form.profesionalId) nuevosErrores.profesionalId = "Seleccioná el profesional que realizó el estudio.";
+  
+  setErrores(nuevosErrores);
+  if (Object.keys(nuevosErrores).length) return;
+    event.preventDefault();
     if (!form.nombre.trim()) nuevosErrores.nombre = "El nombre es obligatorio.";
     if (!form.fecha) nuevosErrores.fecha = "La fecha es obligatoria.";
     if (!form.profesionalId) nuevosErrores.profesionalId = "Seleccioná el profesional que realizó el estudio.";
@@ -57,7 +76,7 @@ const EstudioModal = ({ abierto, estudio, profesionales = [], onClose, onGuardar
           <p className={styles.modalSubtitle}>Podés adjuntar una imagen de hasta 5 MB.</p>
         </div>
         <Input label="Nombre del estudio" value={form.nombre} onChange={(e) => setForm((actual) => ({ ...actual, nombre: e.target.value }))} error={errores.nombre} />
-        <Input label="Fecha" type="date" value={form.fecha} onChange={(e) => setForm((actual) => ({ ...actual, fecha: e.target.value }))} error={errores.fecha} />
+        <Input label="Fecha" type="date" max={obtenerFechaHoy()} value={form.fecha} onChange={(e) => setForm((actual) => ({ ...actual, fecha: e.target.value }))} error={errores.fecha} />
         <Select
           label="Profesional"
           opciones={opcionesProfesionales}

@@ -20,10 +20,10 @@ export const ESTADO = {
   ATENDIDO: 'ATE'
 }
 
-
 export const ESTADOS_VALIDOS = new Set(Object.values(ESTADO))
 
 export const includeTurnoCompleto = {
+
   mascota: {
     select: {
       mascota_id: true,
@@ -94,11 +94,44 @@ const sumarMinutos = (horaTimeUTC, minutos) => {
 // que sigue esperando ese formato simple (heredado de la versión Mongo).
 export const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
 
-export const formatearTurno = (turno) => ({
-  ...turno,
-  hora_inicio: formatearHora(turno.hora_inicio),
-  hora_fin: formatearHora(turno.hora_fin)
-})
+export const formatearTurno = (turno) => {
+  const horaInicioFormateada = formatearHora(turno.hora_inicio)
+
+  return {
+    ...turno,
+    hora_inicio: horaInicioFormateada,
+    hora_fin: formatearHora(turno.hora_fin),
+
+    _id: turno.turno_id,
+    hora: horaInicioFormateada,
+    estado: turno.estado_turno_id,
+    mascotaId: turno.mascota
+      ? {
+          _id: turno.mascota.mascota_id,
+          nombre: turno.mascota.nombre,
+          especie: turno.mascota.raza?.especie?.nombre || null,
+          raza: turno.mascota.raza?.nombre || null,
+          sexo: turno.mascota.sexo_mascota?.nombre || null,
+          peso: turno.mascota.peso != null ? Number(turno.mascota.peso) : null,
+          fechaNacimiento: turno.mascota.fecha_nacimiento
+        }
+      : null,
+    usuarioId: turno.mascota?.usuario
+      ? {
+          _id: turno.mascota.usuario.usuario_id,
+          name: `${turno.mascota.usuario.nombre} ${turno.mascota.usuario.apellido}`,
+          nombre: `${turno.mascota.usuario.nombre} ${turno.mascota.usuario.apellido}`,
+          email: turno.mascota.usuario.email
+        }
+      : null,
+    profesionalId: turno.profesional
+      ? {
+          _id: turno.profesional.profesional_id,
+          nombre: `${turno.profesional.nombre} ${turno.profesional.apellido}`
+        }
+      : null
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 // GET /turnos

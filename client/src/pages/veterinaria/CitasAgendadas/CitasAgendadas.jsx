@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PawPrint, Calendar, Clock, User } from "lucide-react";
 
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
@@ -21,6 +20,8 @@ import {
 
 import styles from "./CitasAgendadas.module.css";
 
+const TURNOS_POR_PAGINA = 10;
+
 export default function CitasAgendadas() {
   const navigate = useNavigate();
 
@@ -28,6 +29,8 @@ export default function CitasAgendadas() {
   const [tab, setTab] = useState("proximos");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [busquedaTutor, setBusquedaTutor] = useState("");
+  const [paginaActual, setPaginaActual] = useState(1);
 
   useEffect(() => {
     const cargarTurnos = async () => {
@@ -37,14 +40,11 @@ export default function CitasAgendadas() {
       try {
         const veterinaria = await obtenerMiVeterinaria();
 
-        if (!veterinaria?.veterinaria_id) {
+        if (!veterinaria?._id) {
           throw new Error("No se encontró la veterinaria del usuario.");
         }
 
-        // CON = confirmado, CAN = cancelado, ATE = atendido.
-        // Se excluyen a propósito DIS (disponible, sin tutor asignado)
-        // y PEN (pendiente de pago).
-        const data = await obtenerTurnosPorVeterinaria(veterinaria.veterinaria_id, { estados: "CON,CAN,ATE" });
+        const data = await obtenerTurnosPorVeterinaria(veterinaria._id, { estadoDistinto: "DIS" });
 
         setTurnos(Array.isArray(data) ? data : []);
       } catch (err) {
@@ -63,8 +63,12 @@ export default function CitasAgendadas() {
     cargarTurnos();
   }, []);
 
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [tab, busquedaTutor]);
+
   const irARegistrarConsulta = (turno) => {
-    const turnoId = turno?.turno_id;
+    const turnoId = turno?._id || turno?.id;
 
     if (!turnoId) {
       setError("No se pudo identificar el turno seleccionado.");
@@ -78,61 +82,89 @@ export default function CitasAgendadas() {
   const pasados = filtrarPasados(turnos);
   const turnoMasProximo = obtenerTurnoMasProximo(turnos);
 
-  const listaVisible = tab === "proximos" ? proximos : pasados;
+  const filtrarPorTutor = (listaTurnos) => {
+    if (!busquedaTutor.trim()) return listaTurnos;
+
+    const texto = busquedaTutor.trim().toLowerCase();
+
+    return listaTurnos.filter((turno) => {
+      const nombreTutor = (
+        turno.usuarioId?.name || turno.usuarioId?.nombre || ""
+      ).toLowerCase();
+
+      return nombreTutor.includes(texto);
+    });
+  };
+
+  const listaVisible = filtrarPorTutor(tab === "proximos" ? proximos : pasados);
+
+  const totalPaginas = Math.max(Math.ceil(listaVisible.length / TURNOS_POR_PAGINA), 1);
+  const inicio = (paginaActual - 1) * TURNOS_POR_PAGINA;
+  const listaPagina = listaVisible.slice(inicio, inicio + TURNOS_POR_PAGINA);
 
   return (
     <div className={styles.shell}>
-      <Sidebar role="veterinaria" activeItem="Turnos" title="Turnos veterinaria" />
+      <Sidebar role="veterinaria" activeItem="Turnos" title="Agenda" />
 
       <div className={styles.main}>
-        <TopBar title="Turnos veterinaria" notifications={2} />
+        <TopBar title="Agenda" notifications={2} />
 
         <div className={styles.content}>
-          <div className={styles.tabs}>
-            <Button
-              type="button"
-              texto="Próximos"
-              variante={tab === "proximos" ? "primario" : "secundario"}
-              tamaño="chico"
-              onClick={() => setTab("proximos")}
-            />
+          <div className={styles.tabsRow}>
+            <div className={styles.tabs}>
+              <Button
+                type="button"
+                texto="Próximos"
+                variante={tab === "proximos" ? "primario" : "secundario"}
+                tamaño="chico"
+                onClick={() => setTab("proximos")}
+              />
 
-            <Button
-              type="button"
-              texto="Pasados"
-              variante={tab === "pasados" ? "primario" : "secundario"}
-              tamaño="chico"
-              onClick={() => setTab("pasados")}
+              <Button
+                type="button"
+                texto="Pasados"
+                variante={tab === "pasados" ? "primario" : "secundario"}
+                tamaño="chico"
+                onClick={() => setTab("pasados")}
+              />
+            </div>
+
+            <input
+              type="text"
+              placeholder="Filtrar por nombre del tutor..."
+              value={busquedaTutor}
+              onChange={(e) => setBusquedaTutor(e.target.value)}
+              className={styles.inputBusqueda}
             />
           </div>
 
           {turnoMasProximo && (
             <div className={styles.banner}>
               <div className={styles.bannerInfo}>
-                <PawPrint className={styles.bannerIcon} size={28} />
+                <div className={styles.bannerIcon}>🐾</div>
 
                 <div>
                   <p className={styles.bannerLabel}>Próximo turno</p>
 
                   <p className={styles.bannerTitulo}>
                     {turnoMasProximo.motivo || "Consulta"} ·{" "}
-                    {turnoMasProximo.mascota?.nombre || "Mascota"}
+                    {turnoMasProximo.mascotaId?.nombre || "Mascota"}
                   </p>
 
                   <p className={styles.bannerMeta}>
+                    <span>📅 {formatearFechaLarga(turnoMasProximo.fecha)}</span>
+
+                    <span>🕒 {turnoMasProximo.hora || "Sin horario"} hs</span>
+
                     <span>
-                      <Calendar size={14} /> {formatearFechaLarga(turnoMasProximo.fecha)}
+                      👤{" "}
+                      {turnoMasProximo.usuarioId?.name ||
+                        turnoMasProximo.usuarioId?.nombre ||
+                        "Tutor"}
                     </span>
 
                     <span>
-                      <Clock size={14} /> {turnoMasProximo.hora_inicio || "Sin horario"} hs
-                    </span>
-
-                    <span>
-                      <User size={14} />{" "}
-                      {turnoMasProximo.mascota?.usuario?.nombre
-                        ? `${turnoMasProximo.mascota.usuario.nombre} ${turnoMasProximo.mascota.usuario.apellido || ""}`.trim()
-                        : "Tutor"}
+                      🩺 {turnoMasProximo.profesionalId?.nombre || "Sin asignar"}
                     </span>
                   </p>
                 </div>
@@ -152,9 +184,7 @@ export default function CitasAgendadas() {
             <div className={styles.cardHeader}>
               {listaVisible.length} turno
               {listaVisible.length !== 1 ? "s" : ""}{" "}
-              {tab === "proximos"
-                ? listaVisible.length !== 1 ? "programados" : "programado"
-                : listaVisible.length !== 1 ? "registrados" : "registrado"}
+              {tab === "proximos" ? "programados" : "registrados"}
             </div>
 
             {loading && (
@@ -172,12 +202,12 @@ export default function CitasAgendadas() {
 
             {!loading &&
               !error &&
-              listaVisible.map((turno) => {
+              listaPagina.map((turno) => {
                 const { dia, mes } = formatearDiaMes(turno.fecha);
-                const badge = ESTADO_BADGE[turno.estado_turno_id];
+                const badge = ESTADO_BADGE[turno.estado];
 
                 return (
-                  <div key={turno.turno_id} className={styles.turnoRow}>
+                  <div key={turno._id || turno.id} className={styles.turnoRow}>
                     <div className={styles.fechaBox}>
                       <span className={styles.fechaDia}>{dia}</span>
 
@@ -194,7 +224,7 @@ export default function CitasAgendadas() {
                         )}
 
                         <span className={styles.turnoMascota}>
-                          <PawPrint size={14} /> {turno.mascota?.nombre || "Mascota"}
+                          🐾 {turno.mascotaId?.nombre || "Mascota"}
                         </span>
                       </div>
 
@@ -203,15 +233,17 @@ export default function CitasAgendadas() {
                       </p>
 
                       <p className={styles.turnoMeta}>
+                        <span>🕒 {turno.hora || "Sin horario"} hs</span>
+
                         <span>
-                          <Clock size={14} /> {turno.hora_inicio || "Sin horario"} hs
+                          👤{" "}
+                          {turno.usuarioId?.name ||
+                            turno.usuarioId?.nombre ||
+                            "Tutor"}
                         </span>
 
                         <span>
-                          <User size={14} />{" "}
-                          {turno.mascota?.usuario?.nombre
-                            ? `${turno.mascota.usuario.nombre} ${turno.mascota.usuario.apellido || ""}`.trim()
-                            : "Tutor"}
+                          🩺 {turno.profesionalId?.nombre || "Sin asignar"}
                         </span>
                       </p>
                     </div>
@@ -228,6 +260,32 @@ export default function CitasAgendadas() {
                   </div>
                 );
               })}
+
+            {!loading && !error && totalPaginas > 1 && (
+              <div className={styles.paginacion}>
+                <Button
+                  type="button"
+                  texto="← Anterior"
+                  variante="secundario"
+                  tamaño="chico"
+                  disabled={paginaActual === 1}
+                  onClick={() => setPaginaActual((p) => Math.max(p - 1, 1))}
+                />
+
+                <span className={styles.paginaInfo}>
+                  Página {paginaActual} de {totalPaginas}
+                </span>
+
+                <Button
+                  type="button"
+                  texto="Siguiente →"
+                  variante="secundario"
+                  tamaño="chico"
+                  disabled={paginaActual === totalPaginas}
+                  onClick={() => setPaginaActual((p) => Math.min(p + 1, totalPaginas))}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

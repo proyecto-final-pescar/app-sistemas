@@ -34,10 +34,10 @@ const DatoPermanente = ({ etiqueta, valor }) => (
 const FichaMedicaTab = ({
   mascota,
   fichaMedica,
-  historial,
-  vacunas,
-  estudios,
-  profesionales,
+  historial = [],
+  vacunas = [],
+  estudios = [],
+  profesionales = [],
   onGuardarFicha,
   onGuardarVacuna,
   onEliminarVacuna,
@@ -166,7 +166,7 @@ const FichaMedicaTab = ({
         ) : (
           <ul className={styles.recordList}>
             {vacunas.map((vacuna) => (
-                <li key={vacuna.id}>
+              <li key={vacuna.id}>
                 <div>
                   <strong>{vacuna.nombre}</strong>
                   <span>Aplicada el {formatearFecha(vacuna.fechaAplicada)}{nombreProfesional(vacuna) ? ` · ${nombreProfesional(vacuna)}` : ""}</span>
@@ -190,23 +190,26 @@ const FichaMedicaTab = ({
           <div className={styles.emptyState}>No hay estudios registrados para este paciente.</div>
         ) : (
           <ul className={styles.recordList}>
-            {estudios.map((estudio) => (
-              <li key={estudio.id}>
-                <div>
-                  <strong>{estudio.nombre}</strong>
-                  <span>{formatearFecha(estudio.fecha)}{nombreProfesional(estudio) ? ` · ${nombreProfesional(estudio)}` : ""}</span>
-                </div>
-                <div className={styles.rowActions}>
-                  {estudio.urlArchivo ? (
-                    <a href={estudio.urlArchivo} target="_blank" rel="noreferrer"><FileText size={16} /> Ver resultado</a>
-                  ) : (
-                    <Badge texto="Sin adjunto" variante="pendiente" />
-                  )}
-                  <button type="button" onClick={() => setEstudioSeleccionado(estudio)} aria-label={`Editar ${estudio.nombre}`}><Pencil size={18} /></button>
-                  <button type="button" onClick={() => setConfirmacion({ tipo: "estudio", item: estudio })} aria-label={`Eliminar ${estudio.nombre}`}><Trash2 size={18} /></button>
-                </div>
-              </li>
-            ))}
+            {estudios.map((estudio) => {
+              const urlArchivo = estudio.urlArchivo || estudio.url_archivo || estudio.archivoUrl || estudio.url;
+              return (
+                <li key={estudio.id}>
+                  <div>
+                    <strong>{estudio.nombre}</strong>
+                    <span>{formatearFecha(estudio.fecha)}{nombreProfesional(estudio) ? ` · ${nombreProfesional(estudio)}` : ""}</span>
+                  </div>
+                  <div className={styles.rowActions}>
+                    {urlArchivo ? (
+                      <a href={urlArchivo} target="_blank" rel="noreferrer"><FileText size={16} /> Ver resultado</a>
+                    ) : (
+                      <Badge texto="Sin adjunto" variante="pendiente" />
+                    )}
+                    <button type="button" onClick={() => setEstudioSeleccionado(estudio)} aria-label={`Editar ${estudio.nombre}`}><Pencil size={18} /></button>
+                    <button type="button" onClick={() => setConfirmacion({ tipo: "estudio", item: estudio })} aria-label={`Eliminar ${estudio.nombre}`}><Trash2 size={18} /></button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>

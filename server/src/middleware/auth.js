@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
 
 const verifyToken = (req, res, next) => {
+  res.set('Cache-Control', 'no-store')
   const authHeader = req.headers.authorization
 
   if (!authHeader) {
