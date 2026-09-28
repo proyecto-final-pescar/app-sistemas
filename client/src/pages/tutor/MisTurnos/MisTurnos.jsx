@@ -4,8 +4,9 @@ import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
 import Badge from "../../../components/ui/badge/Badge";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
+import DetalleTurnoModal from "../../../components/ui/detalle-turno-modal/DetalleTurnoModal";
 import SuccessModal from "../../../components/ui/success-modal/SuccessModal"; // 1. IMPORTAR SUCCESS MODAL
-import { FaCalendarAlt, FaClock, FaHospital, FaPaw } from "react-icons/fa";
+import { FaCalendarAlt, FaClock, FaHospital, FaPaw, FaUserMd } from "react-icons/fa";
 import { obtenerTurnosPorUsuario, cancelarTurno, pagarEfectivo } from "../../../services/turnosService";
 import { crearPreferenciaPago } from "../../../services/pagosService";
 import SelectorMetodoPago from "../../../components/pagos/SelectorMetodoPago";
@@ -31,6 +32,7 @@ export default function MisTurnos() {
   const [turnoParaPagar, setTurnoParaPagar] = useState(null);
   const [errorAccion, setErrorAccion] = useState("");
   const [mensajeCancelacion, setMensajeCancelacion] = useState(null);
+  const [turnoDetalle, setTurnoDetalle] = useState(null);
 
   // 2. ESTADOS PARA EL SUCCESS MODAL EN EFECTIVO
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
@@ -149,6 +151,13 @@ export default function MisTurnos() {
   const turnoMasProximo = obtenerTurnoMasProximo(turnos);
   const listaVisible = tab === "proximos" ? proximos : pasados;
 
+  // Un PEN con el plazo vencido ya no se puede pagar (el cron lo libera):
+  // se oculta la acción en vez de ofrecer algo que el backend va a rechazar.
+  const pagoVencido = (turno) =>
+    turno?.estado_turno_id === "PEN" &&
+    turno?.vence_en &&
+    new Date(turno.vence_en) <= new Date();
+
   return (
     <div className={styles.shell}>
       <Sidebar role="tutor" activeItem="Turnos" title="Mis turnos" />
@@ -204,8 +213,13 @@ export default function MisTurnos() {
 
               {/* Botones del banner */}
               <div className={styles.bannerAcciones}>
-                <button className={styles.bannerBtn}>Ver detalles</button>
-                {turnoMasProximo.estado_turno_id === "PEN" && (
+                <button
+                  className={styles.bannerBtn}
+                  onClick={() => setTurnoDetalle(turnoMasProximo)}
+                >
+                  Ver detalles
+                </button>
+                {turnoMasProximo.estado_turno_id === "PEN" && !pagoVencido(turnoMasProximo) && (
                   <button
                     className={`${styles.bannerBtn} ${styles.bannerBtnPagar}`}
                     onClick={() => handleAbrirSelectorPago(turnoMasProximo)}
@@ -274,8 +288,13 @@ export default function MisTurnos() {
                       <span>
                         <FaHospital size={12} color="#8276ab" />{" "}
                         {turno.veterinaria?.nombre || "Veterinaria"}
-                        {turno.profesional ? ` · ${turno.profesional.nombre}` : ""}
                       </span>
+                      {turno.profesional && (
+                        <span>
+                          <FaUserMd size={12} color="#8276ab" />{" "}
+                          {`${turno.profesional.nombre} ${turno.profesional.apellido || ""}`.trim()}
+                        </span>
+                      )}
                     </p>
                   </div>
 
@@ -292,11 +311,17 @@ export default function MisTurnos() {
 
                     {menuAbierto === turno.turno_id && (
                       <div className={styles.dropdown}>
-                        <button className={styles.dropdownItem} onClick={() => { }}>
+                        <button
+                          className={styles.dropdownItem}
+                          onClick={() => {
+                            setMenuAbierto(null);
+                            setTurnoDetalle(turno);
+                          }}
+                        >
                           Ver detalles
                         </button>
 
-                        {turno.estado_turno_id === "PEN" && (
+                        {turno.estado_turno_id === "PEN" && !pagoVencido(turno) && (
                           <button
                             className={styles.dropdownItem}
                             onClick={() => handleAbrirSelectorPago(turno)}
@@ -348,6 +373,14 @@ export default function MisTurnos() {
           setIsSuccessOpen(false);
           setTurnoConfirmadoEfectivo(null);
         }}
+      />
+
+      {/* Modal de detalle del turno */}
+      <DetalleTurnoModal
+        key={turnoDetalle?.turno_id || "cerrado"}
+        abierto={turnoDetalle !== null}
+        turno={turnoDetalle}
+        onClose={() => setTurnoDetalle(null)}
       />
 
       {errorAccion && (

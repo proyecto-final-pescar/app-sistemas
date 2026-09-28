@@ -9,7 +9,7 @@ import {
 // Reglas de negocio
 // ─────────────────────────────────────────────────────────────
 export const ANTICIPACION_MINIMA_HORAS = 10
-const PLAZO_PAGO_HORAS = 3          // siempre < ANTICIPACION_MINIMA_HORAS
+export const PLAZO_PAGO_HORAS = 3          // siempre < ANTICIPACION_MINIMA_HORAS
 const HORAS_LIMITE_CANCELACION = 24 // solo aplica a turnos ya CONFIRMADOS
 
 export const ESTADO = {
@@ -352,22 +352,28 @@ export const cancelarTurno = async (req, res) => {
     let motivoRechazoReembolso = null
 
     if (turno.estado_turno_id === ESTADO.CONFIRMADO) {
-      const fechaHoraTurno = combinarFechaHora(turno.fecha, turno.hora_inicio)
-      const horasRestantes = horasHasta(fechaHoraTurno)
+      // Solo hay cobro real si existe un pago APROBADO. Sin cobro (p. ej.
+      // efectivo pendiente de cobro en el local) se cancela con la misma
+      // flexibilidad que un pendiente: no hay dinero que devolver.
+      pagoAReembolsar = await prisma.pago.findFirst({
+        where: { turno_id: id, estado_pago_id: 'APR' },
+        orderBy: { created_at: 'desc' }
+      })
 
-      if (horasRestantes < HORAS_LIMITE_CANCELACION) {
-        return res.status(400).json({
-          message: `Solo se puede cancelar un turno confirmado hasta ${HORAS_LIMITE_CANCELACION}hs antes. Faltan ${horasRestantes.toFixed(1)}hs`
-        })
+      if (pagoAReembolsar) {
+        const fechaHoraTurno = combinarFechaHora(turno.fecha, turno.hora_inicio)
+        const horasRestantes = horasHasta(fechaHoraTurno)
+
+        if (horasRestantes < HORAS_LIMITE_CANCELACION) {
+          return res.status(400).json({
+            message: `Solo se puede cancelar un turno confirmado hasta ${HORAS_LIMITE_CANCELACION}hs antes. Faltan ${horasRestantes.toFixed(1)}hs`
+          })
+        }
       }
 
       // Reembolso automático: solo si hay un pago realmente APROBADO (cobrado).
       // Si es efectivo y todavía está en PEN (nunca se cobró en el local),
       // no hay nada que reembolsar — se cancela sin más.
-      pagoAReembolsar = await prisma.pago.findFirst({
-        where: { turno_id: id, estado_pago_id: 'APR' },
-        orderBy: { created_at: 'desc' }
-      })
 
       if (pagoAReembolsar) {
         if (pagoAReembolsar.metodo_pago_id === 'MPG' && pagoAReembolsar.id_pago) {
