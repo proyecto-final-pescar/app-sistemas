@@ -18,7 +18,7 @@ const ESTADO_MP_A_PAGO = {
   in_process: 'en_proceso'
 };
 
-const METODO_PAGO_MAP = {
+export const METODO_PAGO_MAP = {
   credit_card: 'tarjeta_credito',
   debit_card: 'tarjeta_debito',
   ticket: 'efectivo',
