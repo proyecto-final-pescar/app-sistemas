@@ -42,6 +42,9 @@ import PagoFallido from "./pages/tutor/Pagos/PagoFallido";
 
 import CompletarRegistroGoogle from "./pages/public/CompletarRegistroGoogle/CompletarRegistroGoogle";  
 
+import Terms from "./pages/legal/Terms";
+import Privacy from "./pages/legal/Privacy";
+
 
 function App() {
   return (
@@ -80,6 +83,8 @@ function App() {
         <Route path="/pacientes" element={<PrivateRoute allowedRoles={["veterinaria"]}><Pacientes /></PrivateRoute>}/>
         <Route path="/historial/registrar/:turnoId"element={<PrivateRoute allowedRoles={["veterinaria"]}><RegistrarConsulta /></PrivateRoute>}/>
        
+        <Route path="/terminos" element={<Terms />} />
+        <Route path="/privacidad" element={<Privacy />} />
        
        
         <Route

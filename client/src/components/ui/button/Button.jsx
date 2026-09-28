@@ -1,6 +1,6 @@
 import './Button.css';
 
-function Button({ type = "button", texto, variante, tamaño, onClick, disabled = false, icon: Icon }) {
+function Button({ type = "button", texto, variante = "primario", tamaño = "mediano", onClick, disabled = false, icon: Icon = null }) {
   return (
     <button
       type={type}

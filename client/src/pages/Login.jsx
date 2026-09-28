@@ -316,9 +316,11 @@ function Login() {
           </a>
         </p>
 
-        <button type="button" aria-label="Ayuda" className={styles.helpButton}>
+            {/* <AyudaFlotante
+            <button type="button" aria-label="Ayuda" className={styles.helpButton}>
           ?
-        </button>
+        </button> /> */}
+        
       </main>
     </GoogleOAuthProvider>
   );
