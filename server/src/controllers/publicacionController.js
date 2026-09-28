@@ -35,13 +35,30 @@ const obtenerIdsOcultosPorReportes = async () => {
   return grupos.map((g) => g.publicacion_id);
 };
 
+// Usado en las rutas autenticadas (listar, crear, actualizar, cambiar estado):
+// incluye el email del usuario porque el propio dueño o un admin pueden
+// necesitarlo en esos contextos.
 const INCLUDE_PUBLICACION = {
   usuario: { select: { usuario_id: true, nombre: true, apellido: true, email: true } },
   zona: { select: { zona_id: true, nombre: true } }
 };
 
+<<<<<<< HEAD
 // GET /publicaciones: devuelve todas las publicaciones 
 
+=======
+// SEC-M03: usado específicamente en la ruta pública (obtenerPublicacionPorId,
+// sin verifyToken). Es igual a INCLUDE_PUBLICACION pero sin el email del
+// usuario — cualquier visitante anónimo puede pedir este detalle, y el email
+// de la cuenta no es el dato de contacto que el usuario eligió mostrar (para
+// eso ya existe el campo "contacto", con su tipoContacto TEL/EML).
+const INCLUDE_PUBLICACION_PUBLICO = {
+  usuario: { select: { usuario_id: true, nombre: true, apellido: true } },
+  zona: { select: { zona_id: true, nombre: true } }
+};
+
+// GET /publicaciones: devuelve todas las publicaciones
+>>>>>>> 059ba67 (fix: SEC-M03 (email expuesto en publicación pública) y SEC-06 (fallback hardcodeado de JWT_SECRET))
 export const obtenerPublicaciones = async (req, res) => {
   try {
     const { zonaId, estado } = req.query;
@@ -97,14 +114,19 @@ export const obtenerPublicaciones = async (req, res) => {
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
+<<<<<<< HEAD
 // GET /publicaciones/:id: devuelve el detalle de una publicación
+=======
+
+// GET /publicaciones/:id: devuelve el detalle de una publicación (ruta pública, sin login)
+>>>>>>> 059ba67 (fix: SEC-M03 (email expuesto en publicación pública) y SEC-06 (fallback hardcodeado de JWT_SECRET))
 export const obtenerPublicacionPorId = async (req, res) => {
   try {
     const { id } = req.params;
 
     const publicacion = await prisma.publicacion.findUnique({
       where: { publicacion_id: id },
-      include: INCLUDE_PUBLICACION
+      include: INCLUDE_PUBLICACION_PUBLICO
     });
 
     if (!publicacion) {
