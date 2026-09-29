@@ -37,21 +37,20 @@ function Login() {
     }
 
     if (rol === "veterinaria") {
-      try {
-        const miVeterinaria = await obtenerMiVeterinaria();
-        const tienePerfilCompletado = Boolean(
-          miVeterinaria?._id || miVeterinaria?.nombre,
-        );
-        if (tienePerfilCompletado) {
-          navigate("/home-veterinaria", { replace: true });
-        } else {
-          navigate("/registro-veterinaria", { replace: true });
-        }
-      } catch (vetError) {
-        navigate("/registro-veterinaria", { replace: true });
-      }
-      return;
+  try {
+    const miVeterinaria = await obtenerMiVeterinaria();
+    if (!miVeterinaria?._id) {
+      navigate("/registro-veterinaria", { replace: true });
+    } else if (miVeterinaria.estado === "ACT") {
+      navigate("/home-veterinaria", { replace: true });
+    } else {
+      navigate("/veterinaria-pendiente", { replace: true });
     }
+  } catch {
+    navigate("/registro-veterinaria", { replace: true });
+  }
+  return;
+}
 
     if (rol === "administrador") {
       navigate("/dashboard", { replace: true });
