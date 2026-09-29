@@ -440,7 +440,7 @@ function Foro() {
                 ariaLabel="Filtrar por zona"
                 opciones={[
                   { value: "todas", label: "Zona: Todas" },
-                  ...zonas.map((zona) => ({ value: String(zona.id), label: `Zona: ${zona.nombre}` })),
+                  ...zonas.map((zona) => ({ value: String(zona.id), label: zona.nombre })),
                 ]}
                 value={String(filtroZona)}
                 onChange={(evento) => setFiltroZona(evento.target.value)}
