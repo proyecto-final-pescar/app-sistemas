@@ -52,8 +52,6 @@
   line-height: 1.6;
 }
 
-
-
 .primaryButton,
 .dangerButton,
 .contactButton,
@@ -173,7 +171,7 @@
   background: var(--color-fondo-claro);
 }
 
-
+/* ---------- Grid y cards ---------- */
 
 .grid {
   display: grid;
@@ -185,7 +183,6 @@
   display: flex;
   min-height: 100%;
   flex-direction: column;
-  overflow: hidden;
   border: 1px solid var(--color-fondo-claro);
   border-radius: 22px;
   background: var(--color-blanco);
@@ -198,10 +195,17 @@
   box-shadow: 0 22px 40px rgba(28, 16, 51, 0.14);
 }
 
+/* Mientras hay un panel de descripción abierto, esa card queda por encima de las vecinas */
+.card:has(.descriptionPopover) {
+  position: relative;
+  z-index: 10;
+}
+
 .imageWrap {
   position: relative;
   aspect-ratio: 1.15;
   overflow: hidden;
+  border-radius: 22px 22px 0 0;
   background: var(--color-fondo-claro);
 }
 
@@ -347,6 +351,12 @@
   flex-shrink: 0;
 }
 
+/* ---------- Descripción con "Ver más" ---------- */
+
+.descriptionWrap {
+  position: relative;
+}
+
 .description {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -359,6 +369,45 @@
   font-size: 13px;
   line-height: 1.55;
 }
+
+.verMas {
+  display: inline-block;
+  margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #7c3aed;
+  cursor: pointer;
+}
+
+/* Panel que se despliega encima del resto de la card, sin cambiar su altura */
+.descriptionPopover {
+  position: absolute;
+  top: -8px;
+  left: -10px;
+  right: -10px;
+  z-index: 5;
+  padding: 8px 10px 10px;
+  border: 1px solid var(--color-fondo-claro);
+  border-radius: 14px;
+  background: var(--color-blanco);
+  box-shadow: 0 16px 32px rgba(28, 16, 51, 0.18);
+}
+
+.descriptionFull {
+  max-height: 180px;
+  margin: 4px 0 0;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  color: var(--color-texto-secundario);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* ---------- Dueño y acciones ---------- */
 
 .ownerRow {
   display: flex;
@@ -507,6 +556,7 @@
   border-color: #fecdd3;
 }
 
+/* ---------- Estados vacíos / banners / skeleton ---------- */
 
 .emptyState,
 .errorBanner,
@@ -555,7 +605,7 @@
   animation: shimmer 1.35s ease infinite;
 }
 
-
+/* ---------- Modal "ya reportado" ---------- */
 
 .avisoYaReportado {
   display: flex;
@@ -587,6 +637,8 @@
   line-height: 1.55;
 }
 
+/* ---------- Banner "en revisión" ---------- */
+
 .enRevisionBanner {
   display: flex;
   align-items: flex-start;
@@ -605,6 +657,7 @@
   flex-shrink: 0;
   margin-top: 1px;
 }
+
 @keyframes shimmer {
   0% {
     background-position: 100% 50%;
@@ -614,7 +667,7 @@
   }
 }
 
-/* responsive*/
+/* ---------- Responsive ---------- */
 
 @media (max-width: 1023px) {
   .content {

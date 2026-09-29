@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   AlertCircle,
@@ -111,6 +111,10 @@ const getWhatsAppHref = (contacto) => {
   if (digitos.length < 6) return "";
 
   
+  if (digitos.startsWith("54") && !digitos.startsWith("549") && digitos.length === 12) {
+    digitos = `549${digitos.slice(2)}`;
+  }
+
   if (!digitos.startsWith("54")) {
     if (digitos.startsWith("0")) digitos = digitos.slice(1);
     if (digitos.startsWith("15")) digitos = digitos.slice(2);
@@ -119,6 +123,73 @@ const getWhatsAppHref = (contacto) => {
 
   return `https://wa.me/${digitos}`;
 };
+
+
+function DescripcionExpandible({ texto }) {
+  const ref = useRef(null);
+  const wrapRef = useRef(null);
+  const [abierta, setAbierta] = useState(false);
+  const [recortada, setRecortada] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const medir = () => setRecortada(el.scrollHeight > el.clientHeight + 1);
+    medir();
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, [texto]);
+
+  // Cierra al hacer click afuera o con Escape
+  useEffect(() => {
+    if (!abierta) return undefined;
+    const alTocarAfuera = (event) => {
+      if (!wrapRef.current?.contains(event.target)) setAbierta(false);
+    };
+    const alTeclear = (event) => {
+      if (event.key === "Escape") setAbierta(false);
+    };
+    document.addEventListener("pointerdown", alTocarAfuera);
+    document.addEventListener("keydown", alTeclear);
+    return () => {
+      document.removeEventListener("pointerdown", alTocarAfuera);
+      document.removeEventListener("keydown", alTeclear);
+    };
+  }, [abierta]);
+
+  return (
+    <div className={styles.descriptionWrap} ref={wrapRef}>
+      <p ref={ref} className={styles.description}>
+        {texto}
+      </p>
+
+      {recortada && !abierta && (
+        <button
+          type="button"
+          className={styles.verMas}
+          aria-expanded="false"
+          onClick={() => setAbierta(true)}
+        >
+          Ver más
+        </button>
+      )}
+
+      {abierta && (
+        <div className={styles.descriptionPopover}>
+          <p className={styles.descriptionFull}>{texto}</p>
+          <button
+            type="button"
+            className={styles.verMas}
+            aria-expanded="true"
+            onClick={() => setAbierta(false)}
+          >
+            Ver menos
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Foro() {
   const { usuario } = useAuth();
@@ -563,7 +634,7 @@ function Foro() {
                         {formatearFecha(publicacion.fecha)}
                       </p>
 
-                      <p className={styles.description}>{publicacion.descripcion}</p>
+                      <DescripcionExpandible texto={publicacion.descripcion} />
 
                         {publicacion.en_revision && (
                           <div className={styles.enRevisionBanner}>
