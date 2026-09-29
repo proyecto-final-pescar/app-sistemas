@@ -1,8 +1,6 @@
 import User from '../models/User.js';
-import Mascota from '../models/Mascota.js';
-import Turno from '../models/Turno.js';
 import bcrypt from 'bcrypt';
-import mongoose from 'mongoose';
+import { invalidarUsuarioCache } from '../middleware/auth.js'
 import prisma from '../../prisma/client.js'
 import { enviarEmail } from '../utils/mailer.js';
 import { armarEmailSuspensionCuenta } from '../templates/emailSuspensionCuenta.js';
@@ -308,7 +306,7 @@ export const actualizarPerfilPropio = async (req, res) => {
       data,
       include: { rol: true, zona: true }
     })
-
+    invalidarUsuarioCache(usuarioActualizado.usuario_id)
     return res.status(200).json({
       success: true,
       message: 'Perfil actualizado correctamente.',
@@ -456,6 +454,8 @@ export const darDeBajaUsuario = async (req, res) => {
             data: { active: false }
         });
 
+        invalidarUsuarioCache(usuarioActualizado.usuario_id);
+
         // Aviso por email al usuario suspendido (no debe bloquear la baja si falla)
         try {
             const nombreCompleto = `${usuarioActualizado.nombre} ${usuarioActualizado.apellido}`.trim();
@@ -526,7 +526,7 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             where: { usuario_id: id },
             data: { active }
         });
-
+        invalidarUsuarioCache(usuarioActualizado.usuario_id);
        
         try {
             const nombreCompleto = `${usuarioActualizado.nombre} ${usuarioActualizado.apellido}`.trim();

@@ -8,6 +8,7 @@ import { armarEmailResetPassword } from '../templates/emailResetPassword.js'
 import { validateEmail } from '../validators/emailValidator.js'
 import { validatePasswordStrength } from '../validators/passwordValidator.js'
 import { hashToken } from '../utils/tokens.js'
+import { obtenerJwtSecret } from '../config/security.js'
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
@@ -34,7 +35,7 @@ const generarJwt = (usuario) =>
       email: usuario.email,
       rol: usuario.rol.nombre
     },
-    process.env.JWT_SECRET || 'clave_secreta_temporal',
+    obtenerJwtSecret(),
     { expiresIn: '24h' }
   )
 
