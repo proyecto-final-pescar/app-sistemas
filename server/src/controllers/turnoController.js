@@ -211,7 +211,8 @@ export const obtenerTurnoPorId = async (req, res) => {
       return res.status(404).json({ message: 'El recurso no existe.' })
     }
 
-    const esDueño = turno.mascota?.dueno_id === req.user.id
+    
+    const esDueño = turno.mascota?.usuario?.usuario_id === req.user.id
     const esAdmin = req.user.rol === 'administrador'
 
     if (!esDueño && !esAdmin) {
@@ -228,7 +229,7 @@ export const obtenerTurnoPorId = async (req, res) => {
     if (error.code === 'P2023') {
       return res.status(400).json({ message: 'El id del turno no es válido' })
     }
-    console.error('Error en obtenerTurnoPorId:', error)
+    
     return res.status(500).json({ message: 'Error interno del servidor' })
   }
 }
