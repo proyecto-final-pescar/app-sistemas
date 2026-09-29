@@ -79,3 +79,12 @@ export const pagarEfectivo = async (payload) => {
   const { data } = await api.post("/pagos/efectivo", payload);
   return data.data?.turno;
 };
+
+/**
+ * Reglas de negocio de turnos (fuente única en el backend).
+ * Si falla, el llamador debe usar valores por defecto locales.
+ */
+export const obtenerReglasTurnos = async () => {
+  const { data } = await api.get("/constantes/reglas-turnos");
+  return data.data; // { anticipacionMinimaHoras, plazoPagoHoras }
+};

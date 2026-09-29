@@ -8,6 +8,8 @@ import Button from "../ui/button/Button";
 import { crearPublicacion } from "../../services/publicacionService";
 import { subirImagen } from "../../services/uploadService";
 
+import RecortadorImagen from "../common/RecortadorImagen";
+
 const getFechaLocalInput = () => {
   const fecha = new Date();
   fecha.setMinutes(fecha.getMinutes() - fecha.getTimezoneOffset());
@@ -17,7 +19,6 @@ const getFechaLocalInput = () => {
 const LIMITE_NOMBRE = 100;
 const LIMITE_DESCRIPCION = 5000;
 const LIMITE_CONTACTO = 150;
-
 
 const inferirTipoContacto = (valor) => {
   const texto = valor.trim();
@@ -47,6 +48,10 @@ function FormularioPublicacion({ onCancelar, onGuardado, zonas = [] }) {
   const [guardando, setGuardando] = useState(false);
   const [errores, setErrores] = useState({});
   const [errorGeneral, setErrorGeneral] = useState("");
+
+  // NUEVOS ESTADOS PARA EL RECORTADOR
+  const [archivoOriginal, setArchivoOriginal] = useState(null);
+  const [mostrarRecortador, setMostrarRecortador] = useState(false);
 
   const opcionesZona = zonas.map((z) => ({ value: String(z.id), label: z.nombre }));
 
@@ -131,131 +136,160 @@ function FormularioPublicacion({ onCancelar, onGuardado, zonas = [] }) {
     }
   }
 
+  // MODIFICADO: en vez de setear la foto directo, abrimos el recortador
   function manejarCambioFoto(evento) {
     const archivo = evento.target.files?.[0];
 
     if (archivo) {
-      setFoto(archivo);
-      setErrores((prev) => ({ ...prev, foto: "" }));
+      setArchivoOriginal(archivo);
+      setMostrarRecortador(true);
+      // Limpiamos el input para permitir volver a elegir el mismo archivo si cancela
+      evento.target.value = null;
     }
   }
 
+  // NUEVO: confirmar/cancelar recorte
+  function manejarRecorteConfirmado(archivoRecortadoFile) {
+    setFoto(archivoRecortadoFile);
+    setErrores((prev) => ({ ...prev, foto: "" }));
+    setMostrarRecortador(false);
+    setArchivoOriginal(null);
+  }
+
+  function manejarCancelarRecorte() {
+    setMostrarRecortador(false);
+    setArchivoOriginal(null);
+  }
+
   return (
-    <form className="formPublicacion" onSubmit={manejarSubmit}>
-      <div className="formPublicacion__header">
-        <div className="formPublicacion__iconoWrap">
-          <MapPin size={22} />
+    <>
+      <form className="formPublicacion" onSubmit={manejarSubmit}>
+        <div className="formPublicacion__header">
+          <div className="formPublicacion__iconoWrap">
+            <MapPin size={22} />
+          </div>
+          <div className="formPublicacion__titulos">
+            <h2>Nueva publicación</h2>
+            <p>Ayudemos a que vuelva a casa</p>
+          </div>
         </div>
-        <div className="formPublicacion__titulos">
-          <h2>Nueva publicación</h2>
-          <p>Ayudemos a que vuelva a casa</p>
-        </div>
-      </div>
 
-      <div className="formPublicacion__body">
-        <div className="formPublicacion__colFoto">
-          <label className="formPublicacion__foto">
-            {foto ? (
-              <div className="formPublicacion__fotoPreviewWrap">
-                <img className="formPublicacion__fotoImg" src={previewUrl} alt="Vista previa" />
-                <div className="formPublicacion__fotoOverlay">
-                  <span className="formPublicacion__fotoEditBtn">
-                    <Pencil size={16} />
-                  </span>
+        <div className="formPublicacion__body">
+          <div className="formPublicacion__colFoto">
+            <label className="formPublicacion__foto">
+              {foto ? (
+                <div className="formPublicacion__fotoPreviewWrap">
+                  <img className="formPublicacion__fotoImg" src={previewUrl} alt="Vista previa" />
+                  <div className="formPublicacion__fotoOverlay">
+                    <span className="formPublicacion__fotoEditBtn">
+                      <Pencil size={16} />
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <>
-                <span className="formPublicacion__fotoIconoCirculo">
-                  <Camera size={20} />
-                </span>
-                <span className="formPublicacion__fotoTexto">Subir foto de la mascota</span>
-                <span className="formPublicacion__fotoSubtexto">JPG o PNG</span>
-              </>
-            )}
-            <input type="file" accept="image/*" onChange={manejarCambioFoto} />
-          </label>
-          {errores.foto && <p className="formPublicacion__error">{errores.foto}</p>}
-        </div>
+              ) : (
+                <>
+                  <span className="formPublicacion__fotoIconoCirculo">
+                    <Camera size={20} />
+                  </span>
+                  <span className="formPublicacion__fotoTexto">Subir foto de la mascota</span>
+                  <span className="formPublicacion__fotoSubtexto">JPG o PNG</span>
+                </>
+              )}
+              <input type="file" accept="image/*" onChange={manejarCambioFoto} />
+            </label>
+            {errores.foto && <p className="formPublicacion__error">{errores.foto}</p>}
+          </div>
 
-        <div className="formPublicacion__colCampos">
-          <Input
-            label="Nombre (Opcional)"
-            placeholder="Ej: Tobi"
-            value={nombre}
-            maxLength={LIMITE_NOMBRE}
-            onChange={(evento) => setNombre(evento.target.value)}
-          />
-
-          <div className="formPublicacion__fila">
-            <Select
-              label="Zona / Barrio"
-              placeholder="Seleccioná una zona"
-              opciones={opcionesZona}
-              value={zona}
-              onChange={(evento) => setZona(evento.target.value)}
-              error={errores.zona}
+          <div className="formPublicacion__colCampos">
+            <Input
+              label="Nombre (Opcional)"
+              placeholder="Ej: Tobi"
+              value={nombre}
+              maxLength={LIMITE_NOMBRE}
+              onChange={(evento) => setNombre(evento.target.value)}
             />
+
+            <div className="formPublicacion__fila">
+              <Select
+                label="Zona / Barrio"
+                placeholder="Seleccioná una zona"
+                opciones={opcionesZona}
+                value={zona}
+                onChange={(evento) => setZona(evento.target.value)}
+                error={errores.zona}
+              />
+
+              <Input
+                label="Fecha en la que se perdió"
+                type="date"
+                value={fecha}
+                max={fechaMaxima}
+                onChange={(evento) => setFecha(evento.target.value)}
+                error={errores.fecha}
+              />
+            </div>
+
+            <div className="formPublicacion__campo">
+              <label className="formPublicacion__label">Descripción física</label>
+              <textarea
+                className="formPublicacion__textarea"
+                placeholder="Color, tamaño, si llevaba collar, alguna seña particular..."
+                rows={3}
+                maxLength={LIMITE_DESCRIPCION}
+                value={descripcion}
+                onChange={(evento) => setDescripcion(evento.target.value)}
+              />
+              <div className="formPublicacion__campoFooter">
+                {errores.descripcion && <p className="formPublicacion__error">{errores.descripcion}</p>}
+                <span className="formPublicacion__contador">
+                  {descripcion.trim().length}/{LIMITE_DESCRIPCION}
+                </span>
+              </div>
+            </div>
 
             <Input
-              label="Fecha en la que se perdió"
-              type="date"
-              value={fecha}
-              max={fechaMaxima}
-              onChange={(evento) => setFecha(evento.target.value)}
-              error={errores.fecha}
+              label="Contacto"
+              placeholder="Teléfono o email"
+              value={contacto}
+              maxLength={LIMITE_CONTACTO}
+              onChange={(evento) => setContacto(evento.target.value)}
+              error={errores.contacto}
             />
           </div>
+        </div>
 
-          <div className="formPublicacion__campo">
-            <label className="formPublicacion__label">Descripción física</label>
-            <textarea
-              className="formPublicacion__textarea"
-              placeholder="Color, tamaño, si llevaba collar, alguna seña particular..."
-              rows={3}
-              maxLength={LIMITE_DESCRIPCION}
-              value={descripcion}
-              onChange={(evento) => setDescripcion(evento.target.value)}
-            />
-            <div className="formPublicacion__campoFooter">
-              {errores.descripcion && <p className="formPublicacion__error">{errores.descripcion}</p>}
-              <span className="formPublicacion__contador">
-                {descripcion.trim().length}/{LIMITE_DESCRIPCION}
-              </span>
-            </div>
-          </div>
+        {errorGeneral && <p className="formPublicacion__errorGeneral">{errorGeneral}</p>}
 
-          <Input
-            label="Contacto"
-            placeholder="Teléfono o email"
-            value={contacto}
-            maxLength={LIMITE_CONTACTO}
-            onChange={(evento) => setContacto(evento.target.value)}
-            error={errores.contacto}
+        <div className="formPublicacion__acciones">
+          <Button
+            type="button"
+            texto="Cancelar"
+            variante="secundario"
+            tamaño="mediano"
+            onClick={onCancelar}
+          />
+
+          <Button
+            type="submit"
+            disabled={guardando}
+            texto={guardando ? "Publicando..." : "Publicar"}
+            variante="primario"
+            tamaño="mediano"
           />
         </div>
-      </div>
+      </form>
 
-      {errorGeneral && <p className="formPublicacion__errorGeneral">{errorGeneral}</p>}
-
-      <div className="formPublicacion__acciones">
-        <Button
-          type="button"
-          texto="Cancelar"
-          variante="secundario"
-          tamaño="mediano"
-          onClick={onCancelar}
+      {/* Modal de recorte, fuera del form */}
+      {mostrarRecortador && archivoOriginal && (
+        <RecortadorImagen
+          archivo={archivoOriginal}
+          onConfirmar={manejarRecorteConfirmado}
+          onCancelar={manejarCancelarRecorte}
+          aspecto={1.15}
+          forma="rectangular"
         />
-
-        <Button
-          type="submit"
-          disabled={guardando}
-          texto={guardando ? "Publicando..." : "Publicar"}
-          variante="primario"
-          tamaño="mediano"
-        />
-      </div>
-    </form>
+      )}
+    </>
   );
 }
 

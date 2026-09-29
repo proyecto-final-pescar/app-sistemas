@@ -4,6 +4,7 @@ import './Modal.css';
 
 const TAMANIOS = {
   sm: 'mdl-content--sm',
+  md: 'mdl-content--md',
   lg: 'mdl-content--lg',
 };
 
