@@ -252,7 +252,7 @@ function Login() {
                   onClick={() => setShowPassword((currentValue) => !currentValue)}
                   className={styles.passwordButton}
                 >
-                  <EyeIcon />
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </span>
             </label>
@@ -315,10 +315,6 @@ function Login() {
             Privacidad
           </a>
         </p>
-
-        <button type="button" aria-label="Ayuda" className={styles.helpButton}>
-          ?
-        </button>
       </main>
     </GoogleOAuthProvider>
   );
@@ -347,6 +343,16 @@ function EyeIcon() {
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" />
       <circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" />
+      <circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="2" />
+      <path d="M3 3l18 18" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
     </svg>
   );
 }

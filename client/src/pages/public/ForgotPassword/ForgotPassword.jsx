@@ -72,7 +72,7 @@ export default function ForgotPassword() {
             <form onSubmit={handleSubmit}>
               <Input
                 label="Email"
-                placeholder="ana@mypet.com"
+                placeholder="usuario@mypet.com"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
