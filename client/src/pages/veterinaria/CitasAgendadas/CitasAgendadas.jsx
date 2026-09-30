@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PawPrint, Calendar, Clock, User, Stethoscope } from "lucide-react";
+import { PawPrint, Calendar, Clock, User, Stethoscope, ArrowRight } from "lucide-react";
 
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
@@ -59,12 +59,12 @@ const turnoVencido = (turno, ahora) => {
   return fin ? fin.getTime() <= ahora : false;
 };
 
-// Prximos: confirmados (CON) cuyo horario de fin todavia no pasó.
+// Próximos: confirmados (CON) cuyo horario de fin todavía no pasó.
 const esProximo = (turno, ahora) =>
   turno.estado_turno_id === "CON" && !turnoVencido(turno, ahora);
 
 // Pasados: atendidos (ATE, o sea con consulta registrada) o confirmados cuyo
-// horario ya paso sin que se registrara la consulta.
+// horario ya pasó sin que se registrara la consulta.
 const esPasado = (turno, ahora) =>
   turno.estado_turno_id === "ATE" ||
   (turno.estado_turno_id === "CON" && turnoVencido(turno, ahora));
@@ -79,7 +79,7 @@ export default function CitasAgendadas() {
   const [busquedaTutor, setBusquedaTutor] = useState("");
   const [paginaActual, setPaginaActual] = useState(1);
 
-  
+
   const [ahora, setAhora] = useState(() => Date.now());
 
   useEffect(() => {
@@ -95,14 +95,14 @@ export default function CitasAgendadas() {
       try {
         const veterinaria = await obtenerMiVeterinaria();
 
-       
+
         const veterinariaId = veterinaria?.veterinaria_id ?? veterinaria?._id;
 
         if (!veterinariaId) {
           throw new Error("No se encontró la veterinaria del usuario.");
         }
 
-       
+
         const data = await obtenerTurnosPorVeterinaria(veterinariaId, { estados: "CON,ATE" });
 
         setTurnos(Array.isArray(data) ? data : []);
@@ -192,6 +192,7 @@ export default function CitasAgendadas() {
             <input
               type="text"
               placeholder="Filtrar por nombre del tutor..."
+              aria-label="Filtrar turnos por nombre del tutor"
               value={busquedaTutor}
               onChange={(e) => setBusquedaTutor(e.target.value)}
               className={styles.inputBusqueda}
@@ -203,7 +204,7 @@ export default function CitasAgendadas() {
               <div className={styles.bannerInfo}>
                 <PawPrint className={styles.bannerIcon} size={28} />
 
-                <div>
+                <div className={styles.bannerTextos}>
                   <p className={styles.bannerLabel}>Próximo turno</p>
 
                   <p className={styles.bannerTitulo}>
@@ -232,13 +233,15 @@ export default function CitasAgendadas() {
                 </div>
               </div>
 
-              <Button
+              <button
                 type="button"
-                texto="Atender turno →"
-                variante="secundario"
-                tamaño="chico"
+                className={`${styles.btnAtender} ${styles.btnAtenderBanner}`}
+                aria-label={`Atender turno de ${turnoMasProximo.mascota?.nombre || "la mascota"}`}
                 onClick={() => irARegistrarConsulta(turnoMasProximo)}
-              />
+              >
+                <span>Atender turno</span>
+                <ArrowRight size={16} aria-hidden="true" />
+              </button>
             </div>
           )}
 
@@ -319,13 +322,15 @@ export default function CitasAgendadas() {
                     </div>
 
                     {tab === "proximos" && (
-                      <Button
+                      <button
                         type="button"
-                        texto="Atender turno →"
-                        variante="secundario"
-                        tamaño="chico"
+                        className={styles.btnAtender}
+                        aria-label={`Atender turno de ${turno.mascota?.nombre || "la mascota"}`}
                         onClick={() => irARegistrarConsulta(turno)}
-                      />
+                      >
+                        <span>Atender turno</span>
+                        <ArrowRight size={16} aria-hidden="true" />
+                      </button>
                     )}
                   </div>
                 );
