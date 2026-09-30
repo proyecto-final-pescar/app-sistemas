@@ -1,123 +1,102 @@
-/* Copiado de CitasAgendadas.module.css — mismos estilos base */
+/* ============================================================
+   MisTurnos.module.css — Mobile First
+   Breakpoints:
+     base          → 375px  (iPhone, mobile)
+     min-width 768px  → tablet
+     min-width 1024px → desktop
+   ============================================================
+   REGLA: NO se modifica ningún componente importado.
+   Solo CSS responsivo del layout de esta página.
+   ============================================================ */
 
+/* ─── SHELL Y MAIN ─────────────────────────────────────────── */
 .shell {
   display: flex;
   min-height: 100vh;
   background-color: #f9f8ff;
   font-family: 'Inter', Arial, Helvetica, sans-serif;
 }
+
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  min-width: 0; /* evita overflow en flex */
 }
+
+/* ─── CONTENT ───────────────────────────────────────────────
+   Mobile: padding-top 76px = 60px (topbar fija del Sidebar mobile)
+            + 16px de respiro visual.
+   El TopBar del desktop está oculto en mobile, y la barra
+   del Sidebar ya ocupa ese espacio con position:fixed.
+   ─────────────────────────────────────────────────────────── */
 .content {
-  margin: 24px 32px 40px;
+  padding: 76px 16px 32px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
-.tabs { display: flex; gap: 8px; }
+
+/* ─── TABS ──────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 8px;
+}
+
+/* ─── BANNER ────────────────────────────────────────────────── */
 .banner {
   position: relative;
   border-radius: 16px;
-  padding: 24px 28px;
+  padding: 20px 18px;
   overflow: hidden;
   background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column; /* mobile: info arriba, acciones abajo */
   gap: 16px;
-  flex-wrap: wrap;
 }
-.bannerInfo { display: flex; align-items: center; gap: 16px; }
+
+.bannerInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
 .bannerIcon {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
   background-color: rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
   flex-shrink: 0;
 }
+
 .bannerLabel {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.5px;
   color: rgba(255, 255, 255, 0.75);
   text-transform: uppercase;
 }
+
 .bannerTitulo {
   margin: 2px 0 6px;
-  font-size: 18px;
+  font-size: 15px; /* más compacto en mobile */
   font-weight: 700;
   color: #ffffff;
-}
-.bannerMeta {
-  margin: 0;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.85);
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-.card {
-  background-color: #ffffff;
-  border-radius: 16px;
-  border: 1px solid #ede9fe;
-  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
-  overflow: hidden;
-}
-.cardHeader {
-  padding: 16px 24px;
-  font-size: 13px;
-  color: #8276ab;
-  border-bottom: 1px solid #f5f3ff;
-}
-.turnoRow {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 18px 24px;
-  border-bottom: 1px solid #f5f3ff;
-}
-.turnoRow:last-child { border-bottom: none; }
-.fechaBox {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 44px;
-  color: #7c3aed;
-}
-.fechaDia { font-size: 18px; font-weight: 700; line-height: 20px; }
-.fechaMes { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
-.turnoInfo { flex: 1; min-width: 0; }
-.turnoTags { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.turnoMascota { font-size: 13px; color: #6b7280; }
-.turnoMotivo { margin: 0; font-size: 14px; font-weight: 600; color: #1f1739; }
-.turnoMeta {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: #8276ab;
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-.estadoVacio {
-  padding: 40px 24px;
-  text-align: center;
-  color: #8276ab;
-  font-size: 14px;
+  line-height: 1.35;
 }
 
-/* Clase nueva — no existe en CitasAgendadas */
-.turnoAcciones {
-  position: relative;
-  flex-shrink: 0;
+.bannerMeta {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  flex-direction: column; /* mobile: apilados */
+  gap: 5px;
 }
 
 .bannerMeta span,
@@ -127,23 +106,120 @@
   gap: 5px;
 }
 
-.turnoAcciones button {
-  width: 100%;
-}
-
-.turnoAccionesFila {
+.bannerAcciones {
   display: flex;
-  gap: 6px;
+  flex-direction: column; /* mobile: botones en columna */
+  gap: 8px;
   width: 100%;
 }
 
-.turnoAccionesFila button {
-  flex: 1;
+.bannerBtn {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: white;
+  color: #1f1739;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  width: 100%; /* mobile: ocupa todo el ancho */
 }
 
+.bannerBtn:hover    { background: rgba(255, 255, 255, 0.85); }
+.bannerBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.bannerBtnPagar           { border-color: #059669; background: #059669; color: white; }
+.bannerBtnPagar:hover     { background: #047857; border-color: #047857; }
+.bannerBtnCancelar        { border-color: #ef4444; background: #ef4444; color: white; }
+.bannerBtnCancelar:hover  { background: #dc2626; border-color: #dc2626; }
+
+/* ─── CARD ──────────────────────────────────────────────────── */
+.card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #ede9fe;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
+  overflow: visible;
+}
+
+.cardHeader {
+  padding: 14px 16px;
+  font-size: 13px;
+  color: #8276ab;
+  border-bottom: 1px solid #f5f3ff;
+}
+
+/* ─── FILA DE TURNO ─────────────────────────────────────────── */
+.turnoRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid #f5f3ff;
+  overflow: visible;
+}
+.turnoRow:last-child { border-bottom: none; }
+
+.fechaBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 36px;
+  flex-shrink: 0;
+  color: #7c3aed;
+}
+.fechaDia { font-size: 16px; font-weight: 700; line-height: 18px; }
+.fechaMes { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; }
+
+.turnoInfo  { flex: 1; min-width: 0; }
+
+.turnoTags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.turnoMascota { font-size: 12px; color: #6b7280; }
+.turnoMotivo  { margin: 0; font-size: 14px; font-weight: 600; color: #1f1739; }
+
+.turnoMeta {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #8276ab;
+  display: flex;
+  flex-direction: column; /* mobile: una línea por dato */
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.estadoVacio {
+  padding: 32px 16px;
+  text-align: center;
+  color: #8276ab;
+  font-size: 14px;
+}
+
+/* ─── MENÚ ACCIONES ─────────────────────────────────────────── */
+.turnoAcciones {
+  position: relative;
+  flex-shrink: 0;
+}
+.turnoAcciones button { width: 100%; }
+
+.turnoAccionesFila         { display: flex; gap: 6px; width: 100%; }
+.turnoAccionesFila button  { flex: 1; }
+
+/* Touch target mínimo 44×44px en mobile */
 .menuBtn {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 50%;
   border: none;
   background: transparent;
@@ -155,31 +231,27 @@
   justify-content: center;
   transition: background 0.15s;
 }
-
-.menuBtn:hover {
-  background: #f5f3ff;
-  color: #7c3aed;
-}
+.menuBtn:hover { background: #f5f3ff; color: #7c3aed; }
 
 .dropdown {
   position: absolute;
   right: 0;
-  top: 28px;
+  top: 44px; /* alineado con el nuevo alto del menuBtn */
   background: white;
   border: 1px solid #ede9fe;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12);
   z-index: 10;
-  min-width: 150px;
+  min-width: 160px;
   overflow: hidden;
 }
 
 .dropdownItem {
   width: 100%;
-  padding: 10px 16px;
+  padding: 13px 16px; /* más alto en mobile para facilitar el tap */
   border: none;
   background: transparent;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
   color: #1f1739;
   cursor: pointer;
@@ -187,72 +259,109 @@
   transition: background 0.15s;
   font-family: 'Inter', sans-serif;
 }
+.dropdownItem:hover    { background: #f5f3ff; }
+.dropdownItem:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.dropdownItem:hover {
-  background: #f5f3ff;
+
+/* ═══════════════════════════════════════════════════════════════
+   TABLET  —  min-width: 768px
+   El Sidebar desktop aparece, el TopBar también.
+   Ya no hay topbar fija de 60px, el contenido fluye normalmente.
+   ═══════════════════════════════════════════════════════════════ */
+@media (min-width: 768px) {
+
+  .content {
+    padding: 24px 24px 32px; /* sin offset de topbar mobile */
+    gap: 20px;
+  }
+
+  /* Banner vuelve a ser horizontal */
+  .banner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px;
+  }
+
+  .bannerInfo { align-items: center; gap: 16px; }
+
+  .bannerTitulo { font-size: 17px; }
+
+  .bannerMeta {
+    flex-direction: row; /* datos en fila */
+    gap: 14px;
+    font-size: 13px;
+  }
+
+  .bannerAcciones {
+    flex-direction: row; /* botones en fila */
+    width: auto;
+  }
+
+  .bannerBtn {
+    width: auto;
+    min-width: 110px;
+    padding: 8px 20px;
+    font-size: 12px;
+  }
+
+  .cardHeader { padding: 16px 20px; }
+
+  .turnoRow   { padding: 18px 20px; gap: 16px; }
+
+  .fechaBox  { min-width: 42px; }
+  .fechaDia  { font-size: 17px; line-height: 19px; }
+  .fechaMes  { font-size: 11px; }
+
+  .turnoMascota { font-size: 13px; }
+
+  .turnoMeta {
+    flex-direction: row; /* datos en fila */
+    gap: 12px;
+    font-size: 13px;
+  }
+
+  .estadoVacio { padding: 40px 24px; }
+
+  /* Touch target solo necesario en mobile — restauramos el tamaño original */
+  .menuBtn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  .dropdown { top: 28px; }
 }
 
-.dropdownItem:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
-.card {
-  overflow: visible; /* antes era overflow: hidden */
-}
+/* ═══════════════════════════════════════════════════════════════
+   DESKTOP  —  min-width: 1024px
+   Más espacio → volvemos a los márgenes originales.
+   ═══════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
 
-.turnoRow {
-  overflow: visible;
-}
+  .content {
+    margin: 24px 32px 40px; /* márgenes del diseño original */
+    padding: 0;             /* los márgenes reemplazan al padding */
+  }
 
-.bannerAcciones {
-  display: flex;
-  flex-direction: row; /* antes era column */
-  gap: 8px;
-  flex-shrink: 0;
-}
+  .banner {
+    padding: 24px 28px;
+  }
 
-.bannerBtn {
-  padding: 8px 20px;
-  border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.6);
-  background: white;
-  color: #1f1739;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: 'Inter', sans-serif;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 110px;
-  text-align: center;
-}
+  .bannerIcon { width: 48px; height: 48px; font-size: 22px; }
 
-.bannerBtn:hover {
-  background: rgba(255, 255, 255, 0.85);
-}
+  .bannerTitulo { font-size: 18px; }
 
-.bannerBtnPagar {
-  border-color: #059669;
-  background: #059669;
-  color: white;
-}
+  .bannerLabel  { font-size: 12px; }
 
-.bannerBtnPagar:hover {
-  background: #047857;
-  border-color: #047857;
-}
+  .bannerMeta   { font-size: 13px; }
 
-.bannerBtnCancelar {
-  border-color: #ef4444;
-  background: #ef4444;
-  color: white;
-}
+  .cardHeader   { padding: 16px 24px; }
 
-.bannerBtnCancelar:hover {
-  background: #dc2626;
-  border-color: #dc2626;
+  .turnoRow     { padding: 18px 24px; gap: 18px; }
 }
-
 .bannerBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;

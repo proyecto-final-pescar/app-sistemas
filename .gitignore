@@ -14,3 +14,10 @@ build/
 Thumbs.db
 .vercel
 .env*
+
+<<<<<<< HEAD
+.vscode
+=======
+.vscode
+
+>>>>>>> develop
