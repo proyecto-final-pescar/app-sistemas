@@ -448,6 +448,78 @@ export const buscarVeterinarias = async (req, res) => {
       ORDER BY distancia_metros ASC
     `;
 
+    const veterinariaIds = veterinarias.map((v) => v.veterinaria_id);
+
+    const servicios = veterinariaIds.length
+  ? await prisma.servicio.findMany({
+      where: {
+        veterinaria_id: {
+          in: veterinariaIds,
+        },
+        active: true,
+      },
+      select: {
+        veterinaria_id: true,
+        categoria_servicio: {
+          select: {
+            nombre: true,
+          },
+        },
+      },
+    })
+  : [];
+
+  const serviciosPorVeterinaria = new Map();
+
+for (const servicio of servicios) {
+  const veterinariaId = servicio.veterinaria_id;
+  const categoria = servicio.categoria_servicio?.nombre;
+
+  if (!categoria) continue;
+
+  if (!serviciosPorVeterinaria.has(veterinariaId)) {
+    serviciosPorVeterinaria.set(veterinariaId, new Set());
+  }
+
+  serviciosPorVeterinaria
+    .get(veterinariaId)
+    .add(categoria);
+}
+
+    const profesionales = veterinariaIds.length
+      ? await prisma.profesional.findMany({
+          where: {
+            veterinaria_id: {
+              in: veterinariaIds,
+            },
+            active: true,
+          },
+          select: {
+            veterinaria_id: true,
+            especialidad: {
+              select: {
+                nombre: true,
+              },
+            },
+          },
+        })
+      : [];
+
+      const especialidadesPorVeterinaria = new Map();
+
+      for (const profesional of profesionales) {
+        const veterinariaId = profesional.veterinaria_id;
+        const especialidad = profesional.especialidad?.nombre;
+
+        if (!especialidad) continue;
+
+        if (!especialidadesPorVeterinaria.has(veterinariaId)) {
+          especialidadesPorVeterinaria.set(veterinariaId, new Set());
+        }
+
+        especialidadesPorVeterinaria.get(veterinariaId).add(especialidad);
+      }
+
     const data = veterinarias.map((v) => ({
       _id: v.veterinaria_id,
       nombre: v.nombre,
@@ -455,11 +527,22 @@ export const buscarVeterinarias = async (req, res) => {
       telefono: v.telefono,
       email: v.email,
       urgencias24hs: v.urgencias,
+
+      especialidades: [
+        ...(especialidadesPorVeterinaria.get(v.veterinaria_id) ?? [])
+      ],
+      servicios: [
+  ...(serviciosPorVeterinaria.get(v.veterinaria_id) ?? [])
+],
+
       coordenadas: {
         type: 'Point',
         coordinates: [Number(v.longitud), Number(v.latitud)]
       },
+
       distanciaMetros: Number(v.distancia_metros)
+
+      
     }));
 
     return res.status(200).json({ success: true, data });
