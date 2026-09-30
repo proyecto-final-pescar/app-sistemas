@@ -48,7 +48,14 @@ export const includeTurnoCompleto = {
     }
   },
   veterinaria: { select: { veterinaria_id: true, nombre: true, direccion: true } },
-  profesional: { select: { profesional_id: true, nombre: true, apellido: true } },
+   profesional: {
+    select: {
+      profesional_id: true,
+      nombre: true,
+      apellido: true,
+      especialidad: { select: { nombre: true } }
+    }
+  },
   servicio: {
     select: {
       servicio_id: true,
@@ -61,19 +68,10 @@ export const includeTurnoCompleto = {
 // ─────────────────────────────────────────────────────────────
 // Helpers de fecha/hora
 // ─────────────────────────────────────────────────────────────
-
 export const combinarFechaHora = (fecha, horaTime) => {
   const fechaStr = typeof fecha === 'string' ? fecha.slice(0, 10) : fecha.toISOString().slice(0, 10)
-  const [anio, mes, dia] = fechaStr.split('-').map(Number)
-
-  const horas = typeof horaTime === 'string'
-    ? Number(horaTime.split(':')[0])
-    : horaTime.getUTCHours()
-  const minutos = typeof horaTime === 'string'
-    ? Number(horaTime.split(':')[1])
-    : horaTime.getUTCMinutes()
-
-  return new Date(anio, mes - 1, dia, horas, minutos, 0, 0)
+  const hhmm = typeof horaTime === 'string' ? horaTime.slice(0, 5) : horaTime.toISOString().slice(11, 16)
+  return new Date(`${fechaStr}T${hhmm}:00-03:00`)
 }
 
 export const horasHasta = (fechaHora) => (fechaHora.getTime() - Date.now()) / (1000 * 60 * 60)
@@ -89,49 +87,14 @@ const sumarMinutos = (horaTimeUTC, minutos) => {
   return copia
 }
 
-// Postgres devuelve columnas `time` como Date ancladas al epoch (UTC).
-// Se formatea a "HH:MM" antes de mandar cualquier respuesta al frontend,
-// que sigue esperando ese formato simple (heredado de la versión Mongo).
+
 export const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
 
-export const formatearTurno = (turno) => {
-  const horaInicioFormateada = formatearHora(turno.hora_inicio)
-
-  return {
-    ...turno,
-    hora_inicio: horaInicioFormateada,
-    hora_fin: formatearHora(turno.hora_fin),
-
-    _id: turno.turno_id,
-    hora: horaInicioFormateada,
-    estado: turno.estado_turno_id,
-    mascotaId: turno.mascota
-      ? {
-          _id: turno.mascota.mascota_id,
-          nombre: turno.mascota.nombre,
-          especie: turno.mascota.raza?.especie?.nombre || null,
-          raza: turno.mascota.raza?.nombre || null,
-          sexo: turno.mascota.sexo_mascota?.nombre || null,
-          peso: turno.mascota.peso != null ? Number(turno.mascota.peso) : null,
-          fechaNacimiento: turno.mascota.fecha_nacimiento
-        }
-      : null,
-    usuarioId: turno.mascota?.usuario
-      ? {
-          _id: turno.mascota.usuario.usuario_id,
-          name: `${turno.mascota.usuario.nombre} ${turno.mascota.usuario.apellido}`,
-          nombre: `${turno.mascota.usuario.nombre} ${turno.mascota.usuario.apellido}`,
-          email: turno.mascota.usuario.email
-        }
-      : null,
-    profesionalId: turno.profesional
-      ? {
-          _id: turno.profesional.profesional_id,
-          nombre: `${turno.profesional.nombre} ${turno.profesional.apellido}`
-        }
-      : null
-  }
-}
+export const formatearTurno = (turno) => ({
+  ...turno,
+  hora_inicio: formatearHora(turno.hora_inicio),
+  hora_fin: formatearHora(turno.hora_fin)
+})
 
 // ─────────────────────────────────────────────────────────────
 // GET /turnos

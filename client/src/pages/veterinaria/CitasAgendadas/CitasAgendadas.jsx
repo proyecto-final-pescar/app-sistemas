@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PawPrint, Calendar, Clock, User, Stethoscope } from "lucide-react";
 
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
@@ -10,9 +11,6 @@ import { obtenerMiVeterinaria } from "../../../services/veterinariaService";
 import { obtenerTurnosPorVeterinaria } from "../../../services/turnosService";
 
 import {
-  filtrarProximos,
-  filtrarPasados,
-  obtenerTurnoMasProximo,
   formatearDiaMes,
   formatearFechaLarga,
   ESTADO_BADGE,
@@ -21,6 +19,55 @@ import {
 import styles from "./CitasAgendadas.module.css";
 
 const TURNOS_POR_PAGINA = 10;
+
+
+const normalizarTexto = (texto) =>
+  (texto || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+
+const nombreTutorDe = (turno) => {
+  const tutor = turno?.mascota?.usuario;
+  return tutor?.nombre ? `${tutor.nombre} ${tutor.apellido || ""}`.trim() : "";
+};
+
+
+const nombreProfesionalDe = (turno) => {
+  const profesional = turno?.profesional;
+  return profesional?.nombre
+    ? `${profesional.nombre} ${profesional.apellido || ""}`.trim()
+    : "";
+};
+
+
+const obtenerFinTurno = (turno) => {
+  const fecha = String(turno?.fecha || "").slice(0, 10);
+  const hora = turno?.hora_fin || turno?.hora_inicio;
+  if (!fecha || !hora) return null;
+
+  const fin = new Date(`${fecha}T${String(hora).slice(0, 5)}:00-03:00`);
+  return Number.isNaN(fin.getTime()) ? null : fin;
+};
+
+const finTurnoMs = (turno) => obtenerFinTurno(turno)?.getTime() ?? 0;
+
+
+const turnoVencido = (turno, ahora) => {
+  const fin = obtenerFinTurno(turno);
+  return fin ? fin.getTime() <= ahora : false;
+};
+
+// Prximos: confirmados (CON) cuyo horario de fin todavia no pasó.
+const esProximo = (turno, ahora) =>
+  turno.estado_turno_id === "CON" && !turnoVencido(turno, ahora);
+
+// Pasados: atendidos (ATE, o sea con consulta registrada) o confirmados cuyo
+// horario ya paso sin que se registrara la consulta.
+const esPasado = (turno, ahora) =>
+  turno.estado_turno_id === "ATE" ||
+  (turno.estado_turno_id === "CON" && turnoVencido(turno, ahora));
 
 export default function CitasAgendadas() {
   const navigate = useNavigate();
@@ -32,6 +79,14 @@ export default function CitasAgendadas() {
   const [busquedaTutor, setBusquedaTutor] = useState("");
   const [paginaActual, setPaginaActual] = useState(1);
 
+  
+  const [ahora, setAhora] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalo = setInterval(() => setAhora(Date.now()), 60 * 1000);
+    return () => clearInterval(intervalo);
+  }, []);
+
   useEffect(() => {
     const cargarTurnos = async () => {
       setLoading(true);
@@ -40,11 +95,15 @@ export default function CitasAgendadas() {
       try {
         const veterinaria = await obtenerMiVeterinaria();
 
-        if (!veterinaria?._id) {
+       
+        const veterinariaId = veterinaria?.veterinaria_id ?? veterinaria?._id;
+
+        if (!veterinariaId) {
           throw new Error("No se encontró la veterinaria del usuario.");
         }
 
-        const data = await obtenerTurnosPorVeterinaria(veterinaria._id, { estadoDistinto: "DIS" });
+       
+        const data = await obtenerTurnosPorVeterinaria(veterinariaId, { estados: "CON,ATE" });
 
         setTurnos(Array.isArray(data) ? data : []);
       } catch (err) {
@@ -63,12 +122,13 @@ export default function CitasAgendadas() {
     cargarTurnos();
   }, []);
 
+  // Al cambiar de pestaña o de búsqueda se vuelve a la primera página
   useEffect(() => {
     setPaginaActual(1);
   }, [tab, busquedaTutor]);
 
   const irARegistrarConsulta = (turno) => {
-    const turnoId = turno?._id || turno?.id;
+    const turnoId = turno?.turno_id;
 
     if (!turnoId) {
       setError("No se pudo identificar el turno seleccionado.");
@@ -78,22 +138,22 @@ export default function CitasAgendadas() {
     navigate(`/historial/registrar/${turnoId}`);
   };
 
-  const proximos = filtrarProximos(turnos);
-  const pasados = filtrarPasados(turnos);
-  const turnoMasProximo = obtenerTurnoMasProximo(turnos);
+  // Próximos: del más cercano al más lejano. Pasados: del más reciente al más viejo.
+  const proximos = turnos
+    .filter((turno) => esProximo(turno, ahora))
+    .sort((a, b) => finTurnoMs(a) - finTurnoMs(b));
+  const pasados = turnos
+    .filter((turno) => esPasado(turno, ahora))
+    .sort((a, b) => finTurnoMs(b) - finTurnoMs(a));
+  const turnoMasProximo = proximos[0] || null;
 
   const filtrarPorTutor = (listaTurnos) => {
-    if (!busquedaTutor.trim()) return listaTurnos;
+    const texto = normalizarTexto(busquedaTutor.trim());
+    if (!texto) return listaTurnos;
 
-    const texto = busquedaTutor.trim().toLowerCase();
-
-    return listaTurnos.filter((turno) => {
-      const nombreTutor = (
-        turno.usuarioId?.name || turno.usuarioId?.nombre || ""
-      ).toLowerCase();
-
-      return nombreTutor.includes(texto);
-    });
+    return listaTurnos.filter((turno) =>
+      normalizarTexto(nombreTutorDe(turno)).includes(texto)
+    );
   };
 
   const listaVisible = filtrarPorTutor(tab === "proximos" ? proximos : pasados);
@@ -141,30 +201,32 @@ export default function CitasAgendadas() {
           {turnoMasProximo && (
             <div className={styles.banner}>
               <div className={styles.bannerInfo}>
-                <div className={styles.bannerIcon}>🐾</div>
+                <PawPrint className={styles.bannerIcon} size={28} />
 
                 <div>
                   <p className={styles.bannerLabel}>Próximo turno</p>
 
                   <p className={styles.bannerTitulo}>
                     {turnoMasProximo.motivo || "Consulta"} ·{" "}
-                    {turnoMasProximo.mascotaId?.nombre || "Mascota"}
+                    {turnoMasProximo.mascota?.nombre || "Mascota"}
                   </p>
 
                   <p className={styles.bannerMeta}>
-                    <span>📅 {formatearFechaLarga(turnoMasProximo.fecha)}</span>
-
-                    <span>🕒 {turnoMasProximo.hora || "Sin horario"} hs</span>
-
                     <span>
-                      👤{" "}
-                      {turnoMasProximo.usuarioId?.name ||
-                        turnoMasProximo.usuarioId?.nombre ||
-                        "Tutor"}
+                      <Calendar size={14} /> {formatearFechaLarga(turnoMasProximo.fecha)}
                     </span>
 
                     <span>
-                      🩺 {turnoMasProximo.profesionalId?.nombre || "Sin asignar"}
+                      <Clock size={14} /> {turnoMasProximo.hora_inicio || "Sin horario"} hs
+                    </span>
+
+                    <span>
+                      <User size={14} /> {nombreTutorDe(turnoMasProximo) || "Tutor"}
+                    </span>
+
+                    <span>
+                      <Stethoscope size={14} />{" "}
+                      {nombreProfesionalDe(turnoMasProximo) || "Sin asignar"}
                     </span>
                   </p>
                 </div>
@@ -184,7 +246,9 @@ export default function CitasAgendadas() {
             <div className={styles.cardHeader}>
               {listaVisible.length} turno
               {listaVisible.length !== 1 ? "s" : ""}{" "}
-              {tab === "proximos" ? "programados" : "registrados"}
+              {tab === "proximos"
+                ? listaVisible.length !== 1 ? "programados" : "programado"
+                : listaVisible.length !== 1 ? "pasados" : "pasado"}
             </div>
 
             {loading && (
@@ -195,8 +259,9 @@ export default function CitasAgendadas() {
 
             {!loading && !error && listaVisible.length === 0 && (
               <p className={styles.estadoVacio}>
-                No hay turnos {tab === "proximos" ? "próximos" : "pasados"} para
-                mostrar.
+                {busquedaTutor.trim()
+                  ? "No hay turnos que coincidan con la búsqueda."
+                  : `No hay turnos ${tab === "proximos" ? "próximos" : "pasados"} para mostrar.`}
               </p>
             )}
 
@@ -204,10 +269,15 @@ export default function CitasAgendadas() {
               !error &&
               listaPagina.map((turno) => {
                 const { dia, mes } = formatearDiaMes(turno.fecha);
-                const badge = ESTADO_BADGE[turno.estado];
+                // En "Pasados", un turno confirmado (CON) es uno cuyo horario ya
+                // pasó sin que se registrara la consulta: no se muestra "Confirmado".
+                const sinConsulta = tab === "pasados" && turno.estado_turno_id === "CON";
+                const badge = sinConsulta
+                  ? { texto: "Sin consulta registrada", variante: "pendiente" }
+                  : ESTADO_BADGE[turno.estado_turno_id];
 
                 return (
-                  <div key={turno._id || turno.id} className={styles.turnoRow}>
+                  <div key={turno.turno_id} className={styles.turnoRow}>
                     <div className={styles.fechaBox}>
                       <span className={styles.fechaDia}>{dia}</span>
 
@@ -224,7 +294,7 @@ export default function CitasAgendadas() {
                         )}
 
                         <span className={styles.turnoMascota}>
-                          🐾 {turno.mascotaId?.nombre || "Mascota"}
+                          <PawPrint size={14} /> {turno.mascota?.nombre || "Mascota"}
                         </span>
                       </div>
 
@@ -233,17 +303,17 @@ export default function CitasAgendadas() {
                       </p>
 
                       <p className={styles.turnoMeta}>
-                        <span>🕒 {turno.hora || "Sin horario"} hs</span>
-
                         <span>
-                          👤{" "}
-                          {turno.usuarioId?.name ||
-                            turno.usuarioId?.nombre ||
-                            "Tutor"}
+                          <Clock size={14} /> {turno.hora_inicio || "Sin horario"} hs
                         </span>
 
                         <span>
-                          🩺 {turno.profesionalId?.nombre || "Sin asignar"}
+                          <User size={14} /> {nombreTutorDe(turno) || "Tutor"}
+                        </span>
+
+                        <span>
+                          <Stethoscope size={14} />{" "}
+                          {nombreProfesionalDe(turno) || "Sin asignar"}
                         </span>
                       </p>
                     </div>

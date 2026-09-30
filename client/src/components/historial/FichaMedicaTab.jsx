@@ -191,7 +191,7 @@ const FichaMedicaTab = ({
         ) : (
           <ul className={styles.recordList}>
             {estudios.map((estudio) => {
-              const urlArchivo = estudio.urlArchivo || estudio.url_archivo || estudio.archivoUrl || estudio.url;
+              const urlArchivo = estudio.urlArchivo;
               return (
                 <li key={estudio.id}>
                   <div>

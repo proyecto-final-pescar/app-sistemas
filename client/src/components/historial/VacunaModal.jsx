@@ -6,7 +6,14 @@ import Button from "../ui/button/Button";
 import styles from "./FichaMedicaTab.module.css";
 
 const fechaParaInput = (fecha) => (fecha ? new Date(fecha).toISOString().slice(0, 10) : "");
-const obtenerFechaHoy = () => new Date().toISOString().slice(0, 10);
+
+// Fecha de hoy en hora local 
+const obtenerFechaHoy = () => {
+  const hoy = new Date();
+  const mes = String(hoy.getMonth() + 1).padStart(2, "0");
+  const dia = String(hoy.getDate()).padStart(2, "0");
+  return `${hoy.getFullYear()}-${mes}-${dia}`;
+};
 
 const VacunaModal = ({ abierto, vacuna, profesionales = [], onClose, onGuardar }) => {
   const [form, setForm] = useState(() => ({
@@ -31,7 +38,6 @@ const VacunaModal = ({ abierto, vacuna, profesionales = [], onClose, onGuardar }
   const enviar = async (event) => {
     event.preventDefault();
     const nuevosErrores = {};
-    const hoy = obtenerFechaHoy();
 
     if (!form.nombre.trim()) {
       nuevosErrores.nombre = "El nombre es obligatorio.";
@@ -39,7 +45,7 @@ const VacunaModal = ({ abierto, vacuna, profesionales = [], onClose, onGuardar }
 
     if (!form.fechaAplicada) {
       nuevosErrores.fechaAplicada = "La fecha es obligatoria.";
-    } else if (form.fechaAplicada > hoy) {
+    } else if (form.fechaAplicada > obtenerFechaHoy()) {
       nuevosErrores.fechaAplicada = "La fecha no puede ser futura.";
     }
 

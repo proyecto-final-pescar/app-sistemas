@@ -61,6 +61,10 @@ function RegistrarConsulta() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTurno, setIsLoadingTurno] = useState(true);
 
+  // Indica qué botón se apretó ("agenda" | "ficha") para mostrar
+  // "Registrando..." solo en ese botón mientras se envía.
+  const [destinoActual, setDestinoActual] = useState(null);
+
   const [errorApi, setErrorApi] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -160,11 +164,13 @@ function RegistrarConsulta() {
 
   function actualizarMonto(valor) {
     const valorSoloNumeros = valor.replace(/[^\d]/g, "");
+
     actualizarCampo("monto", valorSoloNumeros);
   }
 
   function formatearMonto(valor) {
     if (!valor) return "";
+
     return `$${Number(valor).toLocaleString("es-AR")}`;
   }
 
@@ -172,14 +178,17 @@ function RegistrarConsulta() {
     const nuevosErrores = {};
 
     if (!form.mascotaId) {
-      nuevosErrores.mascotaId = "El turno no tiene una mascota asociada.";
+      nuevosErrores.mascotaId =
+        "El turno no tiene una mascota asociada.";
     }
 
     if (!form.profesionalId) {
-      nuevosErrores.profesionalId = "El turno no tiene un profesional asociado.";
+      nuevosErrores.profesionalId =
+        "El turno no tiene un profesional asociado.";
     }
 
     setErrores(nuevosErrores);
+
     return Object.keys(nuevosErrores).length === 0;
   }
 
@@ -187,39 +196,55 @@ function RegistrarConsulta() {
     const nuevosErrores = {};
 
     if (!form.fecha) {
-      nuevosErrores.fecha = "El turno no tiene una fecha asociada.";
+      nuevosErrores.fecha =
+        "El turno no tiene una fecha asociada.";
     }
 
     if (!form.hora) {
-      nuevosErrores.hora = "El turno no tiene una hora asociada.";
+      nuevosErrores.hora =
+        "El turno no tiene una hora asociada.";
     }
 
     if (!form.categoriaServicio) {
-      nuevosErrores.categoriaServicio = "El turno no tiene una categoría asociada.";
+      nuevosErrores.categoriaServicio =
+        "El turno no tiene una categoría asociada.";
     }
 
     if (!form.motivoConsulta.trim()) {
-      nuevosErrores.motivoConsulta = "El motivo de consulta es requerido.";
+      nuevosErrores.motivoConsulta =
+        "El motivo de consulta es requerido.";
     }
 
     if (!form.anotaciones.trim()) {
-      nuevosErrores.anotaciones = "Las anotaciones son requeridas.";
+      nuevosErrores.anotaciones =
+        "Las anotaciones son requeridas.";
     }
 
     if (!form.profesionalId) {
-      nuevosErrores.profesionalId = "El turno no tiene un profesional asociado.";
+      nuevosErrores.profesionalId =
+        "El turno no tiene un profesional asociado.";
     }
 
     if (!form.monto) {
-      nuevosErrores.monto = "El monto es requerido.";
+      nuevosErrores.monto =
+        "El monto es requerido.";
     }
 
     setErrores(nuevosErrores);
+
     return Object.keys(nuevosErrores).length === 0;
   }
 
+  // Valida, registra la consulta y redirige según el botón elegido:
+  //  - "agenda": vuelve siempre a /agenda
+  //  - "ficha":  va a la ficha médica de la mascota
   async function procesarRegistro(destino) {
-    if (!validarPasoDos()) return;
+    setErrorApi("");
+    setSuccessMessage("");
+
+    if (!validarPasoDos()) {
+      return;
+    }
 
     const body = {
       mascotaId: form.mascotaId,
@@ -234,6 +259,7 @@ function RegistrarConsulta() {
     };
 
     setIsLoading(true);
+    setDestinoActual(destino);
 
     try {
       await api.post("/historial-clinico", body);
@@ -241,40 +267,46 @@ function RegistrarConsulta() {
       setSuccessMessage("Consulta registrada correctamente.");
       setErrores({});
 
-      if (destino === "ficha") {
-        setTimeout(() => {
+     
+      setTimeout(() => {
+        if (destino === "ficha") {
           navigate(`/pacientes/${form.mascotaId}`, {
             state: { tabActiva: "ficha-medica" },
           });
-        }, 1200);
-      } else {
-        setTimeout(() => navigate(rutaVolver), 1200);
-      }
+        } else {
+          navigate("/agenda");
+        }
+      }, 1500);
     } catch (error) {
       console.error("Error al registrar la consulta:", error);
+
       setErrorApi(
         error.response?.data?.message ||
           "Error de conexión. Intentá nuevamente."
       );
+      setDestinoActual(null);
     } finally {
       setIsLoading(false);
     }
   }
 
+  
   function handleSubmit(event) {
     event.preventDefault();
 
     setErrorApi("");
     setSuccessMessage("");
 
-    if (pasoActual === 1) {
-      if (!validarPasoUno()) return;
-      setErrores({});
-      setPasoActual(2);
+    if (pasoActual !== 1) {
       return;
     }
 
-    procesarRegistro("ficha");
+    if (!validarPasoUno()) {
+      return;
+    }
+
+    setErrores({});
+    setPasoActual(2);
   }
 
   if (isLoadingTurno) {
@@ -283,12 +315,17 @@ function RegistrarConsulta() {
         <Sidebar role="veterinaria" title="Historial Clínico" />
 
         <div className="registrar-consulta-content">
-          <TopBar title="Historial Clínico" notifications={2} />
+          <TopBar
+            title="Historial Clínico"
+            notifications={2}
+          />
 
           <main className="registrar-consulta-main">
             <div className="registrar-consulta-container">
               <div className="registrar-consulta-form">
-                <p>Cargando información del turno...</p>
+                <p>
+                  Cargando información del turno...
+                </p>
               </div>
             </div>
           </main>
@@ -302,7 +339,10 @@ function RegistrarConsulta() {
       <Sidebar role="veterinaria" />
 
       <div className="registrar-consulta-content">
-        <TopBar title="Historial Clínico" notifications={2} />
+        <TopBar
+          title="Historial Clínico"
+          notifications={2}
+        />
 
         <main className="registrar-consulta-main">
           <div className="registrar-consulta-container">
@@ -345,233 +385,266 @@ function RegistrarConsulta() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="registrar-consulta-form">
+            <form
+              onSubmit={handleSubmit}
+              className="registrar-consulta-form"
+            >
               {pasoActual === 1 && (
-                <div className="registrar-consulta-section">
-                  <h2 className="registrar-consulta-section-title">
-                    Datos del dueño
-                  </h2>
+                <>
+                  <div className="registrar-consulta-section">
+                    <h2 className="registrar-consulta-section-title">
+                      Datos del dueño
+                    </h2>
 
-                  <div className="registrar-consulta-grid">
-                    <Input
-                      label="Nombre"
-                      value={form.nombreDueno}
-                      readOnly
-                      disabled
-                    />
-
-                    <Input
-                      label="Email"
-                      type="email"
-                      value={form.email}
-                      readOnly
-                      disabled
-                    />
-                  </div>
-
-                  <h2 className="registrar-consulta-section-title" style={{ marginTop: "1.5rem" }}>
-                    Datos de la mascota
-                  </h2>
-
-                  <div className="registrar-consulta-grid">
-                    <Input
-                      label="Nombre"
-                      value={form.nombreMascota}
-                      readOnly
-                      disabled
-                    />
-
-                    <Input
-                      label="Especie"
-                      value={form.especie}
-                      readOnly
-                      disabled
-                    />
-
-                    <Input
-                      label="Raza"
-                      value={form.raza}
-                      readOnly
-                      disabled
-                    />
-
-                    <Input
-                      label="Fecha de nacimiento / Edad aproximada"
-                      value={form.edad}
-                      readOnly
-                      disabled
-                    />
-
-                    <Input
-                      label="Sexo"
-                      value={form.sexo}
-                      readOnly
-                      disabled
-                    />
-
-                    <Input
-                      label="Peso"
-                      value={form.peso}
-                      readOnly
-                      disabled
-                    />
-                  </div>
-
-                  {errores.mascotaId && (
-                    <p className="registrar-consulta-error-text">
-                      {errores.mascotaId}
-                    </p>
-                  )}
-
-                  {errores.profesionalId && (
-                    <p className="registrar-consulta-error-text">
-                      {errores.profesionalId}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {pasoActual === 2 && (
-                <div className="registrar-consulta-section">
-                  <h2 className="registrar-consulta-section-title">
-                    Datos de la consulta
-                  </h2>
-
-                  <div className="registrar-consulta-grid">
-                    <Input
-                      label="Fecha"
-                      type="date"
-                      value={form.fecha}
-                      readOnly
-                      disabled
-                      error={errores.fecha}
-                    />
-
-                    <Input
-                      label="Hora"
-                      value={form.hora}
-                      readOnly
-                      disabled
-                      error={errores.hora}
-                    />
-
-                    <div className="registrar-consulta-select-wrapper">
+                    <div className="registrar-consulta-grid">
                       <Input
-                        label="Categoría del servicio"
-                        value={form.categoriaServicio}
+                        label="Nombre"
+                        value={form.nombreDueno}
                         readOnly
                         disabled
-                        error={errores.categoriaServicio}
+                      />
+
+                      <Input
+                        label="Email"
+                        type="email"
+                        value={form.email}
+                        readOnly
+                        disabled
+                      />
+                    </div>
+                  </div>
+
+                  <div className="registrar-consulta-section">
+                    <h2 className="registrar-consulta-section-title">
+                      Datos de la mascota
+                    </h2>
+
+                    <div className="registrar-consulta-grid">
+                      <Input
+                        label="Nombre"
+                        value={form.nombreMascota}
+                        readOnly
+                        disabled
+                      />
+
+                      <Input
+                        label="Especie"
+                        value={form.especie}
+                        readOnly
+                        disabled
+                      />
+
+                      <Input
+                        label="Raza"
+                        value={form.raza}
+                        readOnly
+                        disabled
+                      />
+
+                      <Input
+                        label="Fecha de nacimiento / Edad aproximada"
+                        value={form.edad}
+                        readOnly
+                        disabled
+                      />
+
+                      <Input
+                        label="Sexo"
+                        value={form.sexo}
+                        readOnly
+                        disabled
+                      />
+
+                      <Input
+                        label="Peso"
+                        value={form.peso}
+                        readOnly
+                        disabled
                       />
                     </div>
 
-                    <Input
-                      label="Profesional a cargo"
-                      value={nombreProfesional}
-                      readOnly
-                      disabled
-                      error={errores.profesionalId}
-                    />
-
-                    <Input
-                      label="Motivo de consulta"
-                      placeholder="Ej: Vacuna antirrábica anual"
-                      value={form.motivoConsulta}
-                      onChange={(event) =>
-                        actualizarCampo("motivoConsulta", event.target.value)
-                      }
-                      error={errores.motivoConsulta}
-                    />
-
-                    <Input
-                      label="Monto"
-                      placeholder="$0"
-                      value={formatearMonto(form.monto)}
-                      onChange={(event) =>
-                        actualizarMonto(event.target.value)
-                      }
-                      error={errores.monto}
-                    />
-                  </div>
-
-                  <div className="registrar-consulta-textarea-wrapper">
-                    <label className="registrar-consulta-label">
-                      Anotaciones
-                    </label>
-
-                    <textarea
-                      className={`registrar-consulta-textarea ${
-                        errores.anotaciones
-                          ? "registrar-consulta-textarea-error"
-                          : ""
-                      }`}
-                      placeholder="Escribí las anotaciones de la consulta..."
-                      value={form.anotaciones}
-                      onChange={(event) =>
-                        actualizarCampo("anotaciones", event.target.value)
-                      }
-                    />
-
-                    {errores.anotaciones && (
+                    {errores.mascotaId && (
                       <p className="registrar-consulta-error-text">
-                        {errores.anotaciones}
+                        {errores.mascotaId}
+                      </p>
+                    )}
+
+                    {errores.profesionalId && (
+                      <p className="registrar-consulta-error-text">
+                        {errores.profesionalId}
                       </p>
                     )}
                   </div>
-                </div>
+                </>
+              )}
+
+              {pasoActual === 2 && (
+                <>
+                  <div className="registrar-consulta-section">
+                    <h2 className="registrar-consulta-section-title">
+                      Datos de la consulta
+                    </h2>
+
+                    <div className="registrar-consulta-grid">
+                      <Input
+                        label="Fecha"
+                        type="date"
+                        value={form.fecha}
+                        readOnly
+                        disabled
+                        error={errores.fecha}
+                      />
+
+                      <Input
+                        label="Hora"
+                        value={form.hora}
+                        readOnly
+                        disabled
+                        error={errores.hora}
+                      />
+
+                      <div className="registrar-consulta-select-wrapper">
+                        <Input
+                          label="Categoría del servicio"
+                          value={form.categoriaServicio}
+                          readOnly
+                          disabled
+                          error={errores.categoriaServicio}
+                        />
+                      </div>
+
+                      <Input
+                        label="Profesional a cargo"
+                        value={nombreProfesional}
+                        readOnly
+                        disabled
+                        error={errores.profesionalId}
+                      />
+
+                      <Input
+                        label="Motivo de consulta"
+                        placeholder="Ej: Vacuna antirrábica anual"
+                        value={form.motivoConsulta}
+                        onChange={(event) =>
+                          actualizarCampo(
+                            "motivoConsulta",
+                            event.target.value
+                          )
+                        }
+                        error={errores.motivoConsulta}
+                      />
+
+                      <Input
+                        label="Monto"
+                        placeholder="$0"
+                        value={formatearMonto(form.monto)}
+                        onChange={(event) =>
+                          actualizarMonto(event.target.value)
+                        }
+                        error={errores.monto}
+                      />
+                    </div>
+
+                    <div className="registrar-consulta-textarea-wrapper">
+                      <label className="registrar-consulta-label">
+                        Anotaciones
+                      </label>
+
+                      <textarea
+                        className={`registrar-consulta-textarea ${errores.anotaciones
+                          ? "registrar-consulta-textarea-error"
+                          : ""
+                          }`}
+                        placeholder="Escribí las anotaciones de la consulta..."
+                        value={form.anotaciones}
+                        onChange={(event) =>
+                          actualizarCampo(
+                            "anotaciones",
+                            event.target.value
+                          )
+                        }
+                      />
+
+                      {errores.anotaciones && (
+                        <p className="registrar-consulta-error-text">
+                          {errores.anotaciones}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
 
               <div className="registrar-consulta-actions">
-                {pasoActual === 2 && !successMessage && (
-                  <Button
-                    type="button"
-                    texto="← Paso anterior"
-                    variante="secundario"
-                    tamaño="mediano"
-                    disabled={isLoading}
-                    onClick={() => {
-                      setErrores({});
-                      setPasoActual(1);
-                    }}
-                  />
-                )}
-
-                {pasoActual === 1 && !successMessage && (
-                  <Button
-                    type="submit"
-                    texto="Continuar →"
-                    variante="primario"
-                    tamaño="mediano"
-                    disabled={
-                      isLoading ||
-                      isLoadingTurno ||
-                      !form.mascotaId ||
-                      !form.profesionalId
-                    }
-                  />
-                )}
-
-                {pasoActual === 2 && !successMessage && (
-                  <>
+                {pasoActual === 2 &&
+                  !successMessage && (
                     <Button
                       type="button"
-                      texto={isLoading ? "Registrando..." : "Registrar y volver a agenda"}
+                      texto="← Paso anterior"
                       variante="secundario"
                       tamaño="mediano"
                       disabled={isLoading}
-                      onClick={() => procesarRegistro("agenda")}
+                      onClick={() => {
+                        setErrores({});
+                        setPasoActual(1);
+                      }}
                     />
+                  )}
 
+                {pasoActual === 1 &&
+                  !successMessage && (
                     <Button
-                      type="button"
-                      texto={isLoading ? "Registrando..." : "Registrar y cargar ficha / datos"}
+                      type="submit"
+                      texto="Continuar →"
                       variante="primario"
                       tamaño="mediano"
-                      disabled={isLoading}
-                      onClick={() => procesarRegistro("ficha")}
+                      disabled={
+                        isLoading ||
+                        isLoadingTurno ||
+                        !form.mascotaId ||
+                        !form.profesionalId
+                      }
                     />
-                  </>
-                )}
+                  )}
+
+                {pasoActual === 2 &&
+                  !successMessage && (
+                    <>
+                      <Button
+                        type="button"
+                        texto={
+                          isLoading && destinoActual === "agenda"
+                            ? "Registrando..."
+                            : "Registrar y volver a agenda"
+                        }
+                        variante="secundario"
+                        tamaño="mediano"
+                        disabled={
+                          isLoading ||
+                          !form.mascotaId ||
+                          !form.profesionalId
+                        }
+                        onClick={() => procesarRegistro("agenda")}
+                      />
+
+                      <Button
+                        type="button"
+                        texto={
+                          isLoading && destinoActual === "ficha"
+                            ? "Registrando..."
+                            : "Registrar y cargar ficha / datos"
+                        }
+                        variante="primario"
+                        tamaño="mediano"
+                        disabled={
+                          isLoading ||
+                          !form.mascotaId ||
+                          !form.profesionalId
+                        }
+                        onClick={() => procesarRegistro("ficha")}
+                      />
+                    </>
+                  )}
               </div>
             </form>
           </div>

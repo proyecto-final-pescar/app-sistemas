@@ -25,19 +25,38 @@ const formatearFechaLocal = (fecha) => {
   return `${year}-${month}-${day}`;
 };
 
+// Traduce el valor recibido por navegación ("fichaMedica" o "ficha-medica")
+// a la tab interna. Cualquier otro valor cae en "consultas".
+const resolverTab = (tabRecibida) =>
+  tabRecibida === "fichaMedica" || tabRecibida === "ficha-medica"
+    ? "fichaMedica"
+    : "consultas";
+
+
+const normalizarProfesionales = (veterinaria) => {
+  const lista = Array.isArray(veterinaria?.profesional)
+    ? veterinaria.profesional
+    : Array.isArray(veterinaria?.profesionales)
+      ? veterinaria.profesionales
+      : [];
+
+  return lista
+    .map((p) => ({
+      ...p,
+      profesional_id: p.profesional_id ?? p._id,
+      especialidad:
+        typeof p.especialidad === "string" ? { nombre: p.especialidad } : p.especialidad,
+    }))
+    .filter((p) => p.profesional_id);
+};
+
 // ── Componente principal ──
 const FichaPaciente = () => {
   const { mascotaId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Lee el state recibido en la navegación (acepta "fichaMedica" o "ficha-medica")
-  const tabInicial =
-    location.state?.tabActiva === "fichaMedica" || location.state?.tabActiva === "ficha-medica"
-      ? "fichaMedica"
-      : "consultas";
-
-  const [tabActiva, setTabActiva] = useState(tabInicial);
+  const [tabActiva, setTabActiva] = useState(resolverTab(location.state?.tabActiva));
   const [historial, setHistorial] = useState([]);
   const [mascota, setMascota] = useState(null);
   const [fichaMedica, setFichaMedica] = useState(null);
@@ -54,14 +73,10 @@ const FichaPaciente = () => {
   const [turnosPendientes, setTurnosPendientes] = useState([]);
   const [modalTurnosAbierto, setModalTurnosAbierto] = useState(false);
 
-  // Escucha cambios en el state de navegación
+  // Si la navegación trae una tab (ej: al venir de RegistrarConsulta), la activa
   useEffect(() => {
     if (location.state?.tabActiva) {
-      const nuevaTab =
-        location.state.tabActiva === "fichaMedica" || location.state.tabActiva === "ficha-medica"
-          ? "fichaMedica"
-          : "consultas";
-      setTabActiva(nuevaTab);
+      setTabActiva(resolverTab(location.state.tabActiva));
     }
   }, [location.state]);
 
@@ -82,13 +97,7 @@ const FichaPaciente = () => {
         setFichaMedica(data.fichaMedica ?? null);
         setVacunas(Array.isArray(data.vacunas) ? data.vacunas : []);
         setEstudios(Array.isArray(data.estudios) ? data.estudios : []);
-        const listaProfesionales = Array.isArray(veterinaria?.profesionales)
-          ? veterinaria.profesionales
-          : [];
-
-        setProfesionales(
-          listaProfesionales.map((p) => ({ ...p, profesional_id: p._id }))
-        );
+        setProfesionales(normalizarProfesionales(veterinaria));
         setTurnosPendientes(turnos);
       } catch (err) {
         if (err.response?.status === 403) {
@@ -169,6 +178,10 @@ const FichaPaciente = () => {
     setEstudios((actuales) => actuales.filter((estudio) => estudio.id !== estudioId));
   };
 
+  // Botón "+ Registrar Consulta": según cuantos turnos pendientes haya,
+  // navega directo, abre el selector, o no hace nada (botón deshabilitado).
+  // Se pasa { origen: "ficha", mascotaId } en el state para que
+  // RegistrarConsulta sepa a dónde volver.
   const handleClickRegistrarConsulta = () => {
     if (turnosPendientes.length === 0) return;
 
@@ -237,7 +250,7 @@ const FichaPaciente = () => {
             </button>
           </div>
 
-          {/* Selector de turno */}
+          {/* Selector de turno, solo cuando hay más de uno pendiente */}
           {modalTurnosAbierto && (
             <div className={styles.modalOverlay} onClick={() => setModalTurnosAbierto(false)}>
               <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
