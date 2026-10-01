@@ -359,6 +359,7 @@ model turno {
   @@index([mascota_id], map: "ix_turno_mascota")
   @@index([estado_turno_id, fecha, recordatorio_enviado], map: "ix_turno_recordatorio")
   @@index([estado_turno_id, vence_en], map: "ix_turno_vencimiento")
+  @@index([veterinaria_id, fecha, hora_inicio], map: "ix_turno_veterinaria_fecha")
 }
 
 model usuario {

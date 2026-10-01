@@ -97,14 +97,139 @@ export const formatearTurno = (turno) => ({
 })
 
 // ─────────────────────────────────────────────────────────────
+// Helpers de listado (GET /turnos): pestañas, búsqueda y paginación
+// ─────────────────────────────────────────────────────────────
+const TABS_VALIDAS = new Set(['proximos', 'pasados'])
+const LIMITE_POR_DEFECTO = 10
+const LIMITE_MAXIMO = 50
+
+// "Ahora" en hora argentina (UTC-3 fijo, igual que combinarFechaHora).
+// `hoy` es la fecha a medianoche UTC (así Prisma compara columnas @db.Date)
+// y `horaActual` es la hora sobre 1970-01-01 UTC (columnas @db.Time).
+const ahoraArgentina = () => {
+  const ar = new Date(Date.now() - 3 * 60 * 60 * 1000)
+  return {
+    hoy: new Date(Date.UTC(ar.getUTCFullYear(), ar.getUTCMonth(), ar.getUTCDate())),
+    horaActual: new Date(Date.UTC(1970, 0, 1, ar.getUTCHours(), ar.getUTCMinutes(), ar.getUTCSeconds()))
+  }
+}
+
+// Pestañas del tutor (MisTurnos). Se miden por hora de INICIO.
+//  - proximos: confirmados o pendientes de pago que todavía no empezaron
+//  - pasados: cancelados, atendidos, o cualquiera cuyo inicio ya pasó
+const condicionTabTutor = (tab) => {
+  const { hoy, horaActual } = ahoraArgentina()
+
+  if (tab === 'proximos') {
+    return {
+      AND: [
+        { estado_turno_id: { in: [ESTADO.CONFIRMADO, ESTADO.PENDIENTE] } },
+        { OR: [{ fecha: { gt: hoy } }, { fecha: hoy, hora_inicio: { gte: horaActual } }] }
+      ]
+    }
+  }
+
+  return {
+    OR: [
+      { estado_turno_id: { in: [ESTADO.CANCELADO, ESTADO.ATENDIDO] } },
+      { fecha: { lt: hoy } },
+      { fecha: hoy, hora_inicio: { lt: horaActual } }
+    ]
+  }
+}
+
+// Pestañas de la veterinaria (CitasAgendadas). Se miden por hora de FIN.
+//  - proximos: confirmados cuyo horario de fin todavía no pasó
+//  - pasados: atendidos, o confirmados cuyo fin ya pasó sin consulta registrada
+const condicionTabVeterinaria = (tab) => {
+  const { hoy, horaActual } = ahoraArgentina()
+
+  if (tab === 'proximos') {
+    return {
+      AND: [
+        { estado_turno_id: ESTADO.CONFIRMADO },
+        { OR: [{ fecha: { gt: hoy } }, { fecha: hoy, hora_fin: { gt: horaActual } }] }
+      ]
+    }
+  }
+
+  return {
+    OR: [
+      { estado_turno_id: ESTADO.ATENDIDO },
+      {
+        AND: [
+          { estado_turno_id: ESTADO.CONFIRMADO },
+          { OR: [{ fecha: { lt: hoy } }, { fecha: hoy, hora_fin: { lte: horaActual } }] }
+        ]
+      }
+    ]
+  }
+}
+
+// Cada palabra tiene que aparecer en nombre o apellido del tutor.
+// Ojo: `mode: 'insensitive'` ignora mayúsculas pero NO tildes.
+const condicionBusquedaTutor = (texto) => {
+  const palabras = texto.trim().split(/\s+/).filter(Boolean).slice(0, 5)
+  if (palabras.length === 0) return null
+
+  return {
+    usuario: {
+      AND: palabras.map((palabra) => ({
+        OR: [
+          { nombre: { contains: palabra, mode: 'insensitive' } },
+          { apellido: { contains: palabra, mode: 'insensitive' } }
+        ]
+      }))
+    }
+  }
+}
+
+// Sin `tab` se mantiene el orden histórico (fecha + hora de inicio ascendente).
+// El desempate por turno_id evita filas repetidas o salteadas entre páginas.
+const ordenarTurnos = (tab, porHoraFin) => {
+  const campoHora = tab && porHoraFin ? 'hora_fin' : 'hora_inicio'
+  const direccion = tab === 'pasados' ? 'desc' : 'asc'
+  return [{ fecha: direccion }, { [campoHora]: direccion }, { turno_id: 'asc' }]
+}
+
+// La paginación es opt-in: sin `pagina` ni `limite` la respuesta es la de siempre.
+const parsearPaginacion = (query) => {
+  if (query.pagina === undefined && query.limite === undefined) return null
+
+  const pagina = Math.max(parseInt(query.pagina, 10) || 1, 1)
+  const limite = Math.min(Math.max(parseInt(query.limite, 10) || LIMITE_POR_DEFECTO, 1), LIMITE_MAXIMO)
+
+  return { pagina, limite }
+}
+
+// ─────────────────────────────────────────────────────────────
 // GET /turnos
+//
+// Query params:
+//   veterinariaId | usuarioId ("me")   (uno de los dos es obligatorio)
+//   estado | estadoDistinto | estados | servicioId | fechaDesde | fechaHasta
+//   tab=proximos|pasados               filtra y ordena en el servidor
+//   busquedaTutor                      solo con veterinariaId
+//   pagina, limite                     activa la paginación (limite máx. 50)
+//
+// Sin paginación responde { turnos }. Con paginación responde
+// { turnos, total, pagina, limite, totalPaginas }.
 // ─────────────────────────────────────────────────────────────
 export const obtenerTurnos = async (req, res) => {
   try {
-    const { veterinariaId, usuarioId, estado, estadoDistinto, estados, servicioId, fechaDesde, fechaHasta } = req.query
+    const {
+      veterinariaId, usuarioId, estado, estadoDistinto, estados,
+      servicioId, fechaDesde, fechaHasta, tab, busquedaTutor
+    } = req.query
 
     if (!veterinariaId && !usuarioId) {
       return res.status(400).json({ message: 'Falta veterinariaId o usuarioId' })
+    }
+
+    if (tab !== undefined && !TABS_VALIDAS.has(tab)) {
+      return res.status(400).json({
+        message: `Tab inválido: "${tab}". Valores permitidos: ${[...TABS_VALIDAS].join(', ')}`
+      })
     }
 
     const filtro = {}
@@ -175,13 +300,54 @@ export const obtenerTurnos = async (req, res) => {
       if (fechaHasta) filtro.fecha.lte = new Date(`${fechaHasta}T23:59:59.999Z`)
     }
 
-    const turnos = await prisma.turno.findMany({
-      where: filtro,
-      include: includeTurnoCompleto,
-      orderBy: [{ fecha: 'asc' }, { hora_inicio: 'asc' }]
-    })
+    // Búsqueda por tutor: solo tiene sentido del lado de la veterinaria.
+    if (busquedaTutor && veterinariaId) {
+      const condicion = condicionBusquedaTutor(String(busquedaTutor).slice(0, 100))
+      if (condicion) filtro.mascota = { ...(filtro.mascota || {}), ...condicion }
+    }
 
-    return res.status(200).json({ success: true, data: { turnos: turnos.map(formatearTurno) } })
+    // Con veterinariaId aplican las reglas de la agenda de la veterinaria;
+    // con usuarioId, las de "Mis turnos" del tutor.
+    if (tab) {
+      filtro.AND = [veterinariaId ? condicionTabVeterinaria(tab) : condicionTabTutor(tab)]
+    }
+
+    const orderBy = ordenarTurnos(tab, Boolean(veterinariaId))
+    const paginacion = parsearPaginacion(req.query)
+
+    if (!paginacion) {
+      const turnos = await prisma.turno.findMany({
+        where: filtro,
+        include: includeTurnoCompleto,
+        orderBy
+      })
+
+      return res.status(200).json({ success: true, data: { turnos: turnos.map(formatearTurno) } })
+    }
+
+    const { pagina, limite } = paginacion
+
+    const [total, turnos] = await Promise.all([
+      prisma.turno.count({ where: filtro }),
+      prisma.turno.findMany({
+        where: filtro,
+        include: includeTurnoCompleto,
+        orderBy,
+        skip: (pagina - 1) * limite,
+        take: limite
+      })
+    ])
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        turnos: turnos.map(formatearTurno),
+        total,
+        pagina,
+        limite,
+        totalPaginas: Math.max(Math.ceil(total / limite), 1)
+      }
+    })
   } catch (error) {
     if (error.code === 'P2023') {
       return res.status(400).json({ message: 'El id enviado no es válido' })

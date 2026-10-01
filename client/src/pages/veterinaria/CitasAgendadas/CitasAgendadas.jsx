@@ -8,7 +8,7 @@ import Button from "../../../components/ui/button/Button";
 import Badge from "../../../components/ui/badge/Badge";
 
 import { obtenerMiVeterinaria } from "../../../services/veterinariaService";
-import { obtenerTurnosPorVeterinaria } from "../../../services/turnosService";
+import { obtenerTurnosPaginadosPorVeterinaria } from "../../../services/turnosService";
 
 import {
   formatearDiaMes,
@@ -19,13 +19,8 @@ import {
 import styles from "./CitasAgendadas.module.css";
 
 const TURNOS_POR_PAGINA = 10;
-
-
-const normalizarTexto = (texto) =>
-  (texto || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+const ESPERA_BUSQUEDA_MS = 400;
+const ESTADOS_AGENDA = "CON,ATE";
 
 
 const nombreTutorDe = (turno) => {
@@ -41,91 +36,130 @@ const nombreProfesionalDe = (turno) => {
     : "";
 };
 
-
-const obtenerFinTurno = (turno) => {
-  const fecha = String(turno?.fecha || "").slice(0, 10);
-  const hora = turno?.hora_fin || turno?.hora_inicio;
-  if (!fecha || !hora) return null;
-
-  const fin = new Date(`${fecha}T${String(hora).slice(0, 5)}:00-03:00`);
-  return Number.isNaN(fin.getTime()) ? null : fin;
-};
-
-const finTurnoMs = (turno) => obtenerFinTurno(turno)?.getTime() ?? 0;
-
-
-const turnoVencido = (turno, ahora) => {
-  const fin = obtenerFinTurno(turno);
-  return fin ? fin.getTime() <= ahora : false;
-};
-
-// Próximos: confirmados (CON) cuyo horario de fin todavía no pasó.
-const esProximo = (turno, ahora) =>
-  turno.estado_turno_id === "CON" && !turnoVencido(turno, ahora);
-
-// Pasados: atendidos (ATE, o sea con consulta registrada) o confirmados cuyo
-// horario ya pasó sin que se registrara la consulta.
-const esPasado = (turno, ahora) =>
-  turno.estado_turno_id === "ATE" ||
-  (turno.estado_turno_id === "CON" && turnoVencido(turno, ahora));
-
 export default function CitasAgendadas() {
   const navigate = useNavigate();
 
+  const [veterinariaId, setVeterinariaId] = useState(null);
   const [turnos, setTurnos] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [turnoMasProximo, setTurnoMasProximo] = useState(null);
   const [tab, setTab] = useState("proximos");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // `busquedaInput` es lo que se escribe; `busquedaTutor` es lo que se envía al backend
+  const [busquedaInput, setBusquedaInput] = useState("");
   const [busquedaTutor, setBusquedaTutor] = useState("");
   const [paginaActual, setPaginaActual] = useState(1);
 
-
-  const [ahora, setAhora] = useState(() => Date.now());
-
+  // La veterinaria se resuelve una sola vez, no en cada cambio de página
   useEffect(() => {
-    const intervalo = setInterval(() => setAhora(Date.now()), 60 * 1000);
-    return () => clearInterval(intervalo);
-  }, []);
+    let cancelado = false;
 
-  useEffect(() => {
-    const cargarTurnos = async () => {
-      setLoading(true);
-      setError("");
-
+    const cargarVeterinaria = async () => {
       try {
         const veterinaria = await obtenerMiVeterinaria();
+        const id = veterinaria?.veterinaria_id ?? veterinaria?._id;
 
-
-        const veterinariaId = veterinaria?.veterinaria_id ?? veterinaria?._id;
-
-        if (!veterinariaId) {
+        if (!id) {
           throw new Error("No se encontró la veterinaria del usuario.");
         }
 
-
-        const data = await obtenerTurnosPorVeterinaria(veterinariaId, { estados: "CON,ATE" });
-
-        setTurnos(Array.isArray(data) ? data : []);
+        if (!cancelado) setVeterinariaId(id);
       } catch (err) {
-        console.error("Error al cargar los turnos:", err);
+        console.error("Error al cargar la veterinaria:", err);
+        if (cancelado) return;
 
         if (err.response?.status === 404) {
           setError("Todavía no tenés una veterinaria registrada.");
         } else {
           setError("No se pudieron cargar los turnos. Intentá de nuevo.");
         }
-      } finally {
         setLoading(false);
       }
     };
 
-    cargarTurnos();
+    cargarVeterinaria();
+    return () => {
+      cancelado = true;
+    };
   }, []);
 
-  // Al cambiar de pestaña o de búsqueda se vuelve a la primera página
+  // Espera a que el usuario deje de tipear antes de pedir al backend
   useEffect(() => {
+    const temporizador = setTimeout(() => {
+      setBusquedaTutor(busquedaInput);
+      setPaginaActual(1);
+    }, ESPERA_BUSQUEDA_MS);
+
+    return () => clearTimeout(temporizador);
+  }, [busquedaInput]);
+
+  // Lista de la pestaña activa (una página por vez; filtra y ordena el backend)
+  useEffect(() => {
+    if (!veterinariaId) return;
+    let cancelado = false;
+
+    const cargarTurnos = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const data = await obtenerTurnosPaginadosPorVeterinaria(veterinariaId, {
+          tab,
+          estados: ESTADOS_AGENDA,
+          busquedaTutor,
+          pagina: paginaActual,
+          limite: TURNOS_POR_PAGINA,
+        });
+        if (cancelado) return;
+
+        setTurnos(data.turnos);
+        setTotal(data.total);
+        setTotalPaginas(data.totalPaginas);
+      } catch (err) {
+        console.error("Error al cargar los turnos:", err);
+        if (!cancelado) setError("No se pudieron cargar los turnos. Intentá de nuevo.");
+      } finally {
+        if (!cancelado) setLoading(false);
+      }
+    };
+
+    cargarTurnos();
+    return () => {
+      cancelado = true;
+    };
+  }, [veterinariaId, tab, busquedaTutor, paginaActual]);
+
+  // Banner del próximo turno: no depende de la pestaña, la búsqueda ni la página
+  useEffect(() => {
+    if (!veterinariaId) return;
+    let cancelado = false;
+
+    const cargarBanner = async () => {
+      try {
+        const data = await obtenerTurnosPaginadosPorVeterinaria(veterinariaId, {
+          tab: "proximos",
+          estados: ESTADOS_AGENDA,
+          pagina: 1,
+          limite: 1,
+        });
+        if (!cancelado) setTurnoMasProximo(data.turnos[0] || null);
+      } catch {
+        if (!cancelado) setTurnoMasProximo(null);
+      }
+    };
+
+    cargarBanner();
+    return () => {
+      cancelado = true;
+    };
+  }, [veterinariaId]);
+
+  const cambiarTab = (nuevaTab) => {
+    setTab(nuevaTab);
     setPaginaActual(1);
-  }, [tab, busquedaTutor]);
+  };
 
   const irARegistrarConsulta = (turno) => {
     const turnoId = turno?.turno_id;
@@ -137,30 +171,6 @@ export default function CitasAgendadas() {
 
     navigate(`/historial/registrar/${turnoId}`);
   };
-
-  // Próximos: del más cercano al más lejano. Pasados: del más reciente al más viejo.
-  const proximos = turnos
-    .filter((turno) => esProximo(turno, ahora))
-    .sort((a, b) => finTurnoMs(a) - finTurnoMs(b));
-  const pasados = turnos
-    .filter((turno) => esPasado(turno, ahora))
-    .sort((a, b) => finTurnoMs(b) - finTurnoMs(a));
-  const turnoMasProximo = proximos[0] || null;
-
-  const filtrarPorTutor = (listaTurnos) => {
-    const texto = normalizarTexto(busquedaTutor.trim());
-    if (!texto) return listaTurnos;
-
-    return listaTurnos.filter((turno) =>
-      normalizarTexto(nombreTutorDe(turno)).includes(texto)
-    );
-  };
-
-  const listaVisible = filtrarPorTutor(tab === "proximos" ? proximos : pasados);
-
-  const totalPaginas = Math.max(Math.ceil(listaVisible.length / TURNOS_POR_PAGINA), 1);
-  const inicio = (paginaActual - 1) * TURNOS_POR_PAGINA;
-  const listaPagina = listaVisible.slice(inicio, inicio + TURNOS_POR_PAGINA);
 
   return (
     <div className={styles.shell}>
@@ -177,7 +187,7 @@ export default function CitasAgendadas() {
                 texto="Próximos"
                 variante={tab === "proximos" ? "primario" : "secundario"}
                 tamaño="chico"
-                onClick={() => setTab("proximos")}
+                onClick={() => cambiarTab("proximos")}
               />
 
               <Button
@@ -185,7 +195,7 @@ export default function CitasAgendadas() {
                 texto="Pasados"
                 variante={tab === "pasados" ? "primario" : "secundario"}
                 tamaño="chico"
-                onClick={() => setTab("pasados")}
+                onClick={() => cambiarTab("pasados")}
               />
             </div>
 
@@ -193,8 +203,8 @@ export default function CitasAgendadas() {
               type="text"
               placeholder="Filtrar por nombre del tutor..."
               aria-label="Filtrar turnos por nombre del tutor"
-              value={busquedaTutor}
-              onChange={(e) => setBusquedaTutor(e.target.value)}
+              value={busquedaInput}
+              onChange={(e) => setBusquedaInput(e.target.value)}
               className={styles.inputBusqueda}
             />
           </div>
@@ -247,11 +257,11 @@ export default function CitasAgendadas() {
 
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              {listaVisible.length} turno
-              {listaVisible.length !== 1 ? "s" : ""}{" "}
+              {total} turno
+              {total !== 1 ? "s" : ""}{" "}
               {tab === "proximos"
-                ? listaVisible.length !== 1 ? "programados" : "programado"
-                : listaVisible.length !== 1 ? "pasados" : "pasado"}
+                ? total !== 1 ? "programados" : "programado"
+                : total !== 1 ? "pasados" : "pasado"}
             </div>
 
             {loading && (
@@ -260,7 +270,7 @@ export default function CitasAgendadas() {
 
             {!loading && error && <p className={styles.estadoVacio}>{error}</p>}
 
-            {!loading && !error && listaVisible.length === 0 && (
+            {!loading && !error && turnos.length === 0 && (
               <p className={styles.estadoVacio}>
                 {busquedaTutor.trim()
                   ? "No hay turnos que coincidan con la búsqueda."
@@ -270,7 +280,7 @@ export default function CitasAgendadas() {
 
             {!loading &&
               !error &&
-              listaPagina.map((turno) => {
+              turnos.map((turno) => {
                 const { dia, mes } = formatearDiaMes(turno.fecha);
                 // En "Pasados", un turno confirmado (CON) es uno cuyo horario ya
                 // pasó sin que se registrara la consulta: no se muestra "Confirmado".
