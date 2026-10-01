@@ -15,10 +15,24 @@ const RADIO_DEFAULT_METROS = 5000;
 
 const FILTROS = ["Emergencias", "Vacunación", "Cerca mío"];
 
+// Normalización para comparaciones robustas (mayúsculas/tildes),
+// mismo criterio que el filtro del mapa en Emergencias.
+const normalizarTexto = (texto = "") =>
+  String(texto ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
 function matchFiltro(vet, filtro) {
   if (!filtro) return true;
   if (filtro === "Emergencias") return !!vet.urgencias24hs;
-  if (filtro === "Vacunación") return !!vet.especialidades?.includes("Vacunación");
+  if (filtro === "Vacunación")
+    return !!vet.servicios?.some(
+      (s) =>
+        normalizarTexto(typeof s === "string" ? s : s?.categoria) ===
+        normalizarTexto(filtro),
+    );
   return true;
 }
 

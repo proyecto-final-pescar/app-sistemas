@@ -25,8 +25,15 @@ const IconAlert = () => (
 
 
 const obtenerCategoriasServicio = (vet) => {
-  const categorias = (vet.servicio || [])
-    .map((s) => s.categoria_servicio?.nombre)
+  // La API devuelve `servicios` ya mapeados: objetos { categoria, ... } en el
+  // listado y strings con el nombre de la categoría en /buscar. Se acepta
+  // también la forma cruda `servicio[].categoria_servicio.nombre` por
+  // compatibilidad, pero ninguna respuesta actual la usa.
+  const lista = vet.servicios ?? vet.servicio ?? [];
+  const categorias = lista
+    .map((s) =>
+      typeof s === "string" ? s : (s?.categoria ?? s?.categoria_servicio?.nombre),
+    )
     .filter(Boolean);
   return [...new Set(categorias)];
 };
@@ -42,6 +49,8 @@ const VetCard = ({
 }) => {
   const esSeleccionable = typeof onClick === "function";
   const categorias = obtenerCategoriasServicio(vet);
+  // La API envía `urgencias24hs`; se acepta `urgencias` como alias legacy.
+  const atiendeUrgencias = vet.urgencias24hs ?? vet.urgencias ?? false;
 
   if (variante === "fila") {
     return (
@@ -98,7 +107,7 @@ const VetCard = ({
       </div>
 
       {/* distancia + teléfono + urgencias (solo si vienen) */}
-      {(distancia != null || vet.telefono || vet.urgencias) && (
+      {(distancia != null || vet.telefono || atiendeUrgencias) && (
         <div className={styles.meta}>
           {distancia != null && (
             <span className={styles.metaItem}>
@@ -112,7 +121,7 @@ const VetCard = ({
               {vet.telefono}
             </span>
           )}
-          {vet.urgencias && (
+          {atiendeUrgencias && (
             <span className={`${styles.metaItem} ${styles.urgencias}`}>
               <IconAlert /> Urgencias 24hs
             </span>

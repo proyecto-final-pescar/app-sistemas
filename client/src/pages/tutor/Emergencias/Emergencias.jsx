@@ -174,13 +174,6 @@ const Emergencias = () => {
     buscarVeterinarias(coordsRef.current.lat, coordsRef.current.lng);
   }, [radioKm]);
 
-  console.log(
-  veterinarias.map((v) => ({
-    nombre: v.nombre,
-    especialidades: v.especialidades?.map((e) => JSON.stringify(e)),
-  }))
-);
-
   const veterinariasFiltradas = veterinarias
     .filter((v) =>
       filtroEsp === "Todas" ||
@@ -192,8 +185,8 @@ const Emergencias = () => {
     .filter((v) => !solo24hs || v.urgencias24hs)
     .filter((v) =>
       busqueda.trim() === "" ||
-      v.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      v.direccion.toLowerCase().includes(busqueda.toLowerCase())
+      (v.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ?? false) ||
+      (v.direccion?.toLowerCase().includes(busqueda.toLowerCase()) ?? false)
     );
 
   const abiertas = veterinariasFiltradas.filter(estaAbierta).length;
@@ -472,13 +465,20 @@ const Emergencias = () => {
                   <div className={styles.lista}>
                     {veterinariasFiltradas.map((vet) => {
                       const pos = getPosition(vet);
+                      // Se prefiere la distancia de PostGIS que ya trae el backend;
+                      // el cálculo local queda solo como respaldo.
+                      const distanciaKm =
+                        vet.distanciaMetros != null &&
+                        Number.isFinite(Number(vet.distanciaMetros))
+                          ? (Number(vet.distanciaMetros) / 1000).toFixed(1)
+                          : calcularDistancia(miUbicacion.lat, miUbicacion.lng, pos.lat, pos.lng);
                       return (
                         <VetCard
                           key={vet._id}
                           vet={vet}
                           activa={vetDestacada === vet._id}
                           abierta={estaAbierta(vet)}
-                          distancia={calcularDistancia(miUbicacion.lat, miUbicacion.lng, pos.lat, pos.lng)}
+                          distancia={distanciaKm}
                           onClick={() => handleCardClick(vet)}
                           onVerDetalle={() => irAlPerfil(vet._id)}
                         />
