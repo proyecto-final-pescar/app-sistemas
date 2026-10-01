@@ -25,6 +25,11 @@ const formatearFechaLocal = (fecha) => {
   return `${year}-${month}-${day}`;
 };
 
+const formatearFechaConsulta = (fecha) => {
+  if (!fecha) return "";
+  return new Date(fecha).toLocaleDateString("es-AR", { timeZone: "UTC" });
+};
+
 // Traduce el valor recibido por navegación ("fichaMedica" o "ficha-medica")
 // a la tab interna. Cualquier otro valor cae en "consultas".
 const resolverTab = (tabRecibida) =>
@@ -367,7 +372,7 @@ const FichaPaciente = () => {
                                   <circle cx="12" cy="12" r="10" />
                                   <polyline points="12 6 12 12 16 14" />
                                 </svg>
-                                {new Date(entrada.fecha).toLocaleDateString("es-AR")}
+                                {formatearFechaConsulta(entrada.fecha)}
                               </span>
                               {entrada.hora && (
                                 <span>

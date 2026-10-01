@@ -241,6 +241,7 @@ export const crearConsulta = async (req, res) => {
         mascota_id: true,
         veterinaria_id: true,
         profesional_id: true,
+        fecha: true,
         estado_turno: { select: { nombre: true } },
         consulta: { select: { consulta_id: true } }
       }
@@ -275,7 +276,7 @@ export const crearConsulta = async (req, res) => {
           profesional_id: profesionalId,
           veterinaria_id: veterinaria.veterinaria_id,
           turno_id: turnoId,
-          fecha: fechaValida,
+          fecha: turno.fecha,
           hora: horaBD,
           categoria_servicio_id: categoria.categoria_servicio_id,
           motivo_consulta: motivoConsulta.trim(),
