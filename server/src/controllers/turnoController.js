@@ -1,12 +1,15 @@
 import prisma from '../../prisma/client.js'
 import client from '../config/mercadopago.js'
 import { PaymentRefund } from 'mercadopago'
+import {
+  crearNotificacion, formatearFechaTurno, TIPO,
+} from '../services/notificacionService.js'
 
 // ─────────────────────────────────────────────────────────────
 // Reglas de negocio
 // ─────────────────────────────────────────────────────────────
 export const ANTICIPACION_MINIMA_HORAS = 10
-const PLAZO_PAGO_HORAS = 3          // siempre < ANTICIPACION_MINIMA_HORAS
+export const PLAZO_PAGO_HORAS = 3          // siempre < ANTICIPACION_MINIMA_HORAS
 const HORAS_LIMITE_CANCELACION = 24 // solo aplica a turnos ya CONFIRMADOS
 
 export const ESTADO = {
@@ -17,10 +20,10 @@ export const ESTADO = {
   ATENDIDO: 'ATE'
 }
 
-
 export const ESTADOS_VALIDOS = new Set(Object.values(ESTADO))
 
 export const includeTurnoCompleto = {
+
   mascota: {
     select: {
       mascota_id: true,
@@ -45,7 +48,14 @@ export const includeTurnoCompleto = {
     }
   },
   veterinaria: { select: { veterinaria_id: true, nombre: true, direccion: true } },
-  profesional: { select: { profesional_id: true, nombre: true, apellido: true } },
+   profesional: {
+    select: {
+      profesional_id: true,
+      nombre: true,
+      apellido: true,
+      especialidad: { select: { nombre: true } }
+    }
+  },
   servicio: {
     select: {
       servicio_id: true,
@@ -58,19 +68,10 @@ export const includeTurnoCompleto = {
 // ─────────────────────────────────────────────────────────────
 // Helpers de fecha/hora
 // ─────────────────────────────────────────────────────────────
-
 export const combinarFechaHora = (fecha, horaTime) => {
   const fechaStr = typeof fecha === 'string' ? fecha.slice(0, 10) : fecha.toISOString().slice(0, 10)
-  const [anio, mes, dia] = fechaStr.split('-').map(Number)
-
-  const horas = typeof horaTime === 'string'
-    ? Number(horaTime.split(':')[0])
-    : horaTime.getUTCHours()
-  const minutos = typeof horaTime === 'string'
-    ? Number(horaTime.split(':')[1])
-    : horaTime.getUTCMinutes()
-
-  return new Date(anio, mes - 1, dia, horas, minutos, 0, 0)
+  const hhmm = typeof horaTime === 'string' ? horaTime.slice(0, 5) : horaTime.toISOString().slice(11, 16)
+  return new Date(`${fechaStr}T${hhmm}:00-03:00`)
 }
 
 export const horasHasta = (fechaHora) => (fechaHora.getTime() - Date.now()) / (1000 * 60 * 60)
@@ -86,9 +87,7 @@ const sumarMinutos = (horaTimeUTC, minutos) => {
   return copia
 }
 
-// Postgres devuelve columnas `time` como Date ancladas al epoch (UTC).
-// Se formatea a "HH:MM" antes de mandar cualquier respuesta al frontend,
-// que sigue esperando ese formato simple (heredado de la versión Mongo).
+
 export const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
 
 export const formatearTurno = (turno) => ({
@@ -208,7 +207,8 @@ export const obtenerTurnoPorId = async (req, res) => {
       return res.status(404).json({ message: 'El recurso no existe.' })
     }
 
-    const esDueño = turno.mascota?.dueno_id === req.user.id
+    
+    const esDueño = turno.mascota?.usuario?.usuario_id === req.user.id
     const esAdmin = req.user.rol === 'administrador'
 
     if (!esDueño && !esAdmin) {
@@ -225,7 +225,7 @@ export const obtenerTurnoPorId = async (req, res) => {
     if (error.code === 'P2023') {
       return res.status(400).json({ message: 'El id del turno no es válido' })
     }
-    console.error('Error en obtenerTurnoPorId:', error)
+    
     return res.status(500).json({ message: 'Error interno del servidor' })
   }
 }
@@ -270,8 +270,7 @@ export const reservarTurno = async (req, res) => {
 
     const venceEn = new Date(Date.now() + PLAZO_PAGO_HORAS * 60 * 60 * 1000)
 
-    // Compare-and-swap: reemplaza al findOneAndUpdate condicional de Mongo.
-    // profesional_id NO se toca acá — ya viene fijo desde la creación.
+   
     const resultado = await prisma.$transaction(async (tx) => {
       const actualizado = await tx.turno.updateMany({
         where: { turno_id: turnoId, estado_turno_id: ESTADO.DISPONIBLE },
@@ -295,6 +294,16 @@ export const reservarTurno = async (req, res) => {
       })
     }
 
+    const cuando = formatearFechaTurno(turno.fecha, turno.hora_inicio)
+
+    await crearNotificacion({
+      usuarioId: req.user.id,
+      tipo: TIPO.TURNO_PENDIENTE_PAGO,
+      mensaje: `Reservaste un turno para ${mascota.nombre} el ${cuando}. Tenés ${PLAZO_PAGO_HORAS} hs para confirmarlo eligiendo cómo pagar, o el horario se libera.`,
+      link: `/mis-turnos`
+    })
+
+
     return res.status(200).json({ success: true, data: { turno: formatearTurno(resultado) } })
   } catch (error) {
     if (error.code === 'P2023') {
@@ -314,7 +323,7 @@ export const cancelarTurno = async (req, res) => {
 
     const turno = await prisma.turno.findUnique({
       where: { turno_id: id },
-      include: { mascota: true, veterinaria: true }
+      include: { mascota: true }
     })
 
     if (!turno) {
@@ -322,9 +331,8 @@ export const cancelarTurno = async (req, res) => {
     }
 
     const esDueño = turno.mascota?.dueno_id === req.user.id
-    const esVeterinaria = turno.veterinaria.usuario_id === req.user.id
 
-    if (!esDueño && !esVeterinaria) {
+    if (!esDueño) {
       return res.status(403).json({ message: 'No tenés permisos para cancelar este turno.' })
     }
 
@@ -341,22 +349,28 @@ export const cancelarTurno = async (req, res) => {
     let motivoRechazoReembolso = null
 
     if (turno.estado_turno_id === ESTADO.CONFIRMADO) {
-      const fechaHoraTurno = combinarFechaHora(turno.fecha, turno.hora_inicio)
-      const horasRestantes = horasHasta(fechaHoraTurno)
+      // Solo hay cobro real si existe un pago APROBADO. Sin cobro (p. ej.
+      // efectivo pendiente de cobro en el local) se cancela con la misma
+      // flexibilidad que un pendiente: no hay dinero que devolver.
+      pagoAReembolsar = await prisma.pago.findFirst({
+        where: { turno_id: id, estado_pago_id: 'APR' },
+        orderBy: { created_at: 'desc' }
+      })
 
-      if (horasRestantes < HORAS_LIMITE_CANCELACION) {
-        return res.status(400).json({
-          message: `Solo se puede cancelar un turno confirmado hasta ${HORAS_LIMITE_CANCELACION}hs antes. Faltan ${horasRestantes.toFixed(1)}hs`
-        })
+      if (pagoAReembolsar) {
+        const fechaHoraTurno = combinarFechaHora(turno.fecha, turno.hora_inicio)
+        const horasRestantes = horasHasta(fechaHoraTurno)
+
+        if (horasRestantes < HORAS_LIMITE_CANCELACION) {
+          return res.status(400).json({
+            message: `Solo se puede cancelar un turno confirmado hasta ${HORAS_LIMITE_CANCELACION}hs antes. Faltan ${horasRestantes.toFixed(1)}hs`
+          })
+        }
       }
 
       // Reembolso automático: solo si hay un pago realmente APROBADO (cobrado).
       // Si es efectivo y todavía está en PEN (nunca se cobró en el local),
       // no hay nada que reembolsar — se cancela sin más.
-      pagoAReembolsar = await prisma.pago.findFirst({
-        where: { turno_id: id, estado_pago_id: 'APR' },
-        orderBy: { created_at: 'desc' }
-      })
 
       if (pagoAReembolsar) {
         if (pagoAReembolsar.metodo_pago_id === 'MPG' && pagoAReembolsar.id_pago) {
@@ -423,6 +437,24 @@ export const cancelarTurno = async (req, res) => {
       }
 
       return [cancelado, nuevoTurno]
+    })
+
+    const cuando = formatearFechaTurno(turno.fecha, turno.hora_inicio)
+
+    let mensaje = `Cancelaste el turno de ${turno.mascota.nombre} del ${cuando}.`
+
+    if (pagoAReembolsar) {
+      const monto = Number(pagoAReembolsar.monto).toLocaleString('es-AR')
+      mensaje += estadoReembolso === 'APR'
+        ? ` Te reembolsamos $${monto}.`
+        : ` Tu reembolso de $${monto} está en revisión.`
+    }
+
+    await crearNotificacion({
+      usuarioId: req.user.id,
+      tipo: TIPO.SISTEMA,
+      mensaje,
+      link: `/mis-turnos`
     })
 
     return res.status(200).json({

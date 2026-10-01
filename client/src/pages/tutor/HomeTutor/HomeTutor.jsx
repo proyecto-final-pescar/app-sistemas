@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, PawPrint } from "lucide-react";
+import { Calendar, CalendarOff, PawPrint } from "lucide-react";
 import { useAuth } from "../../../hooks/useAuth";
 import api from "../../../services/api";
 import Sidebar from "../../../components/layout/Sidebar";
@@ -34,7 +34,7 @@ const formatearFechaHora = (fecha, hora) => {
 const HomeTutor = () => {
   const { usuario } = useAuth();
   const navigate = useNavigate();
-  
+
   const [query, setQuery] = useState("");
 
   const [mascotas, setMascotas] = useState([]);
@@ -52,7 +52,8 @@ const HomeTutor = () => {
         const [resMascotas, resTurnos] = await Promise.all([
           api.get("/mascotas"),
           api.get("/turnos", {
-            params: { usuarioId: "me", fechaDesde: hoy, estadoDistinto: "atendido" },
+            
+            params: { usuarioId: "me", fechaDesde: hoy, estadoDistinto: "ATE" },
           }),
         ]);
 
@@ -63,7 +64,7 @@ const HomeTutor = () => {
         // por fecha/hora ascendente desde el backend)
         const proximoPorMascota = {};
         for (const turno of turnosData) {
-          const idMascota = turno.mascotaId?._id || turno.mascotaId;
+          const idMascota = turno.mascota_id;
           if (!idMascota || proximoPorMascota[idMascota]) continue;
           proximoPorMascota[idMascota] = turno;
         }
@@ -193,7 +194,7 @@ const HomeTutor = () => {
                           />
                         ) : (
                           <div className={styles.mascotaFotoPlaceholder}>
-                            <PawPrint size={20} />
+                            <PawPrint size={22} />
                           </div>
                         )}
                         <div>
@@ -203,19 +204,22 @@ const HomeTutor = () => {
                       </div>
 
                       {proximoTurno ? (
-                        <div className={styles.proximoTurno}>
+                        <div className={`${styles.estadoTurno} ${styles.estadoTurnoActivo}`}>
                           <Calendar size={18} />
                           <div>
                             <p className={styles.proximoTurnoFecha}>
-                              {formatearFechaHora(proximoTurno.fecha, proximoTurno.hora)}
+                              {formatearFechaHora(proximoTurno.fecha, proximoTurno.hora_inicio)}
                             </p>
                             <p className={styles.proximoTurnoLugar}>
-                              {proximoTurno.veterinariaId?.nombre}
+                              {proximoTurno.veterinaria?.nombre}
                             </p>
                           </div>
                         </div>
                       ) : (
-                        <p className={styles.sinTurnos}>Sin turnos próximos</p>
+                        <div className={`${styles.estadoTurno} ${styles.estadoTurnoVacio}`}>
+                          <CalendarOff size={18} />
+                          <p className={styles.sinTurnosTexto}>Sin turnos próximos</p>
+                        </div>
                       )}
 
                       <div className={styles.mascotaCardAcciones}>

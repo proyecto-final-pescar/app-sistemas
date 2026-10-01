@@ -8,6 +8,7 @@ import { armarEmailResetPassword } from '../templates/emailResetPassword.js'
 import { validateEmail } from '../validators/emailValidator.js'
 import { validatePasswordStrength } from '../validators/passwordValidator.js'
 import { hashToken } from '../utils/tokens.js'
+import { obtenerJwtSecret } from '../config/security.js'
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
@@ -34,7 +35,7 @@ const generarJwt = (usuario) =>
       email: usuario.email,
       rol: usuario.rol.nombre
     },
-    process.env.JWT_SECRET || 'clave_secreta_temporal',
+    obtenerJwtSecret(),
     { expiresIn: '24h' }
   )
 
@@ -59,7 +60,9 @@ export const register = async (req, res) => {
       return res.status(400).json({ mensaje: 'Todos los campos son requeridos' })
     }
 
-    const emailError = validateEmail(email)
+    const emailLimpio = String(email).trim()
+
+    const emailError = validateEmail(emailLimpio)
     if (emailError) {
       return res.status(400).json({ mensaje: emailError })
     }
@@ -74,7 +77,7 @@ export const register = async (req, res) => {
       return res.status(400).json({ mensaje: 'Rol inválido' })
     }
 
-    const emailNormalizado = email.toLowerCase()
+    const emailNormalizado = emailLimpio.toLowerCase()
 
     const existente = await prisma.usuario.findUnique({
       where: { email: emailNormalizado }
@@ -137,8 +140,12 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body
 
+    if (!email || !password) {
+      return res.status(400).json({ mensaje: 'Email y contraseña son requeridos' })
+    }
+
     const usuario = await prisma.usuario.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: String(email).trim().toLowerCase() },
       include: includeUsuarioCompleto
     })
 
@@ -312,7 +319,7 @@ export const forgotPassword = async (req, res) => {
     }
 
     const usuario = await prisma.usuario.findUnique({
-      where: { email: email.toLowerCase() },
+      where: { email: String(email).trim().toLowerCase() },
       include: { usuario_password: true }
     })
 

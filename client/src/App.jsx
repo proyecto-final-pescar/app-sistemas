@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import PrivateRoute from "./components/PrivateRoute";
 import RutaVeterinariaActiva from "./components/rutaVeterinariaActiva/RutaVeterinariaActiva";
-
+import { NotificacionesProvider } from "./context/NotificacionesContext";
 import CitasAgendadas from "./pages/veterinaria/CitasAgendadas/CitasAgendadas";
 import RegistrarConsulta from "./pages/veterinaria/HistorialClinico/RegistrarConsulta";
 import RegistroDeVeterinaria from "./pages/veterinaria/RegistroDeVeterinaria/RegistroDeVeterinaria";
@@ -43,9 +43,13 @@ import PagoFallido from "./pages/tutor/Pagos/PagoFallido";
 
 import CompletarRegistroGoogle from "./pages/public/CompletarRegistroGoogle/CompletarRegistroGoogle";
 
+import Terms from "./pages/legal/Terms";
+import Privacy from "./pages/legal/Privacy";
+
 
 function App() {
   return (
+    <NotificacionesProvider>
     <BrowserRouter>
       <Routes>
       
@@ -117,6 +121,10 @@ function App() {
             </PrivateRoute>
           }
         />
+        <Route path="/terminos" element={<Terms />} />
+        <Route path="/privacidad" element={<Privacy />} />
+       
+       
         <Route
           path="/historial/registrar/:turnoId"
           element={
@@ -174,6 +182,7 @@ function App() {
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
+    </NotificacionesProvider>
   );
 }
 
