@@ -37,21 +37,29 @@ function Login() {
     }
 
     if (rol === "veterinaria") {
-      try {
-        const miVeterinaria = await obtenerMiVeterinaria();
-        const tienePerfilCompletado = Boolean(
-          miVeterinaria?._id || miVeterinaria?.nombre,
-        );
-        if (tienePerfilCompletado) {
-          navigate("/home-veterinaria", { replace: true });
-        } else {
-          navigate("/registro-veterinaria", { replace: true });
-        }
-      } catch (vetError) {
-        navigate("/registro-veterinaria", { replace: true });
-      }
-      return;
+  try {
+    const miVeterinaria = await obtenerMiVeterinaria();
+    if (!miVeterinaria?._id) {
+      navigate("/registro-veterinaria", { replace: true });
+    } else if (miVeterinaria.estado === "ACT") {
+      navigate("/home-veterinaria", { replace: true });
+    } else {
+      navigate("/veterinaria-pendiente", { replace: true });
     }
+  } catch (vetError) {
+    // Solo la ausencia de veterinaria (404) lleva al registro. Cualquier
+    // otro fallo (500, red caída) muestra error en vez de redirigir,
+    // para no hacerle creer al usuario que perdió su veterinaria.
+    if (vetError?.response?.status === 404) {
+      navigate("/registro-veterinaria", { replace: true });
+    } else {
+      setError(
+        "No se pudo verificar tu veterinaria. Revisá tu conexión e intentá de nuevo.",
+      );
+    }
+  }
+  return;
+}
 
     if (rol === "administrador") {
       navigate("/dashboard", { replace: true });
@@ -252,7 +260,7 @@ function Login() {
                   onClick={() => setShowPassword((currentValue) => !currentValue)}
                   className={styles.passwordButton}
                 >
-                  <EyeIcon />
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </span>
             </label>
@@ -315,10 +323,6 @@ function Login() {
             Privacidad
           </a>
         </p>
-
-        <button type="button" aria-label="Ayuda" className={styles.helpButton}>
-          ?
-        </button>
       </main>
     </GoogleOAuthProvider>
   );
@@ -347,6 +351,16 @@ function EyeIcon() {
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" />
       <circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" />
+      <circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="2" />
+      <path d="M3 3l18 18" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
     </svg>
   );
 }

@@ -31,10 +31,6 @@ const Hero = () => {
               tamaño="grande"
               onClick={() => navigate("/registro")}
             />
-
-            <a href="#como-funciona" className={styles.link}>
-              Cómo funciona ›
-            </a>
           </div>
 
           <div className={styles.statsRow}>

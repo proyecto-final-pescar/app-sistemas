@@ -72,5 +72,5 @@ export const ESTADO_BADGE = {
   PEN: { texto: "Pendiente", variante: "pendiente" },
   CON: { texto: "Confirmado", variante: "confirmado" },
   CAN: { texto: "Cancelado", variante: "cancelado" },
-  ATE: { texto: "Atendido", variante: "confirmado" },
+  ATE: { texto: "Atendido", variante: "atendido" },
 };

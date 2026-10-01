@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { PawPrint, Calendar, Clock, User } from "lucide-react";
+import { PawPrint, Calendar, Clock, User, Stethoscope, ArrowRight } from "lucide-react";
 
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
@@ -11,15 +11,63 @@ import { obtenerMiVeterinaria } from "../../../services/veterinariaService";
 import { obtenerTurnosPorVeterinaria } from "../../../services/turnosService";
 
 import {
-  filtrarProximos,
-  filtrarPasados,
-  obtenerTurnoMasProximo,
   formatearDiaMes,
   formatearFechaLarga,
   ESTADO_BADGE,
 } from "../../../utils/turnos";
 
 import styles from "./CitasAgendadas.module.css";
+
+const TURNOS_POR_PAGINA = 10;
+
+
+const normalizarTexto = (texto) =>
+  (texto || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+
+const nombreTutorDe = (turno) => {
+  const tutor = turno?.mascota?.usuario;
+  return tutor?.nombre ? `${tutor.nombre} ${tutor.apellido || ""}`.trim() : "";
+};
+
+
+const nombreProfesionalDe = (turno) => {
+  const profesional = turno?.profesional;
+  return profesional?.nombre
+    ? `${profesional.nombre} ${profesional.apellido || ""}`.trim()
+    : "";
+};
+
+
+const obtenerFinTurno = (turno) => {
+  const fecha = String(turno?.fecha || "").slice(0, 10);
+  const hora = turno?.hora_fin || turno?.hora_inicio;
+  if (!fecha || !hora) return null;
+
+  const fin = new Date(`${fecha}T${String(hora).slice(0, 5)}:00-03:00`);
+  return Number.isNaN(fin.getTime()) ? null : fin;
+};
+
+const finTurnoMs = (turno) => obtenerFinTurno(turno)?.getTime() ?? 0;
+
+
+const turnoVencido = (turno, ahora) => {
+  const fin = obtenerFinTurno(turno);
+  return fin ? fin.getTime() <= ahora : false;
+};
+
+// Próximos: confirmados (CON) cuyo horario de fin todavía no pasó.
+const esProximo = (turno, ahora) =>
+  turno.estado_turno_id === "CON" && !turnoVencido(turno, ahora);
+
+// Pasados: atendidos (ATE, o sea con consulta registrada) o confirmados cuyo
+// horario ya pasó sin que se registrara la consulta.
+const esPasado = (turno, ahora) =>
+  turno.estado_turno_id === "ATE" ||
+  (turno.estado_turno_id === "CON" && turnoVencido(turno, ahora));
 
 export default function CitasAgendadas() {
   const navigate = useNavigate();
@@ -28,6 +76,16 @@ export default function CitasAgendadas() {
   const [tab, setTab] = useState("proximos");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [busquedaTutor, setBusquedaTutor] = useState("");
+  const [paginaActual, setPaginaActual] = useState(1);
+
+
+  const [ahora, setAhora] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalo = setInterval(() => setAhora(Date.now()), 60 * 1000);
+    return () => clearInterval(intervalo);
+  }, []);
 
   useEffect(() => {
     const cargarTurnos = async () => {
@@ -37,14 +95,15 @@ export default function CitasAgendadas() {
       try {
         const veterinaria = await obtenerMiVeterinaria();
 
-        if (!veterinaria?.veterinaria_id) {
+
+        const veterinariaId = veterinaria?.veterinaria_id ?? veterinaria?._id;
+
+        if (!veterinariaId) {
           throw new Error("No se encontró la veterinaria del usuario.");
         }
 
-        // CON = confirmado, CAN = cancelado, ATE = atendido.
-        // Se excluyen a propósito DIS (disponible, sin tutor asignado)
-        // y PEN (pendiente de pago).
-        const data = await obtenerTurnosPorVeterinaria(veterinaria.veterinaria_id, { estados: "CON,CAN,ATE" });
+
+        const data = await obtenerTurnosPorVeterinaria(veterinariaId, { estados: "CON,ATE" });
 
         setTurnos(Array.isArray(data) ? data : []);
       } catch (err) {
@@ -63,6 +122,11 @@ export default function CitasAgendadas() {
     cargarTurnos();
   }, []);
 
+  // Al cambiar de pestaña o de búsqueda se vuelve a la primera página
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [tab, busquedaTutor]);
+
   const irARegistrarConsulta = (turno) => {
     const turnoId = turno?.turno_id;
 
@@ -74,35 +138,64 @@ export default function CitasAgendadas() {
     navigate(`/historial/registrar/${turnoId}`);
   };
 
-  const proximos = filtrarProximos(turnos);
-  const pasados = filtrarPasados(turnos);
-  const turnoMasProximo = obtenerTurnoMasProximo(turnos);
+  // Próximos: del más cercano al más lejano. Pasados: del más reciente al más viejo.
+  const proximos = turnos
+    .filter((turno) => esProximo(turno, ahora))
+    .sort((a, b) => finTurnoMs(a) - finTurnoMs(b));
+  const pasados = turnos
+    .filter((turno) => esPasado(turno, ahora))
+    .sort((a, b) => finTurnoMs(b) - finTurnoMs(a));
+  const turnoMasProximo = proximos[0] || null;
 
-  const listaVisible = tab === "proximos" ? proximos : pasados;
+  const filtrarPorTutor = (listaTurnos) => {
+    const texto = normalizarTexto(busquedaTutor.trim());
+    if (!texto) return listaTurnos;
+
+    return listaTurnos.filter((turno) =>
+      normalizarTexto(nombreTutorDe(turno)).includes(texto)
+    );
+  };
+
+  const listaVisible = filtrarPorTutor(tab === "proximos" ? proximos : pasados);
+
+  const totalPaginas = Math.max(Math.ceil(listaVisible.length / TURNOS_POR_PAGINA), 1);
+  const inicio = (paginaActual - 1) * TURNOS_POR_PAGINA;
+  const listaPagina = listaVisible.slice(inicio, inicio + TURNOS_POR_PAGINA);
 
   return (
     <div className={styles.shell}>
-      <Sidebar role="veterinaria" activeItem="Turnos" title="Turnos veterinaria" />
+      <Sidebar role="veterinaria" activeItem="Turnos" title="Agenda" />
 
       <div className={styles.main}>
-        <TopBar title="Turnos veterinaria" notifications={2} />
+        <TopBar title="Agenda" notifications={2} />
 
         <div className={styles.content}>
-          <div className={styles.tabs}>
-            <Button
-              type="button"
-              texto="Próximos"
-              variante={tab === "proximos" ? "primario" : "secundario"}
-              tamaño="chico"
-              onClick={() => setTab("proximos")}
-            />
+          <div className={styles.tabsRow}>
+            <div className={styles.tabs}>
+              <Button
+                type="button"
+                texto="Próximos"
+                variante={tab === "proximos" ? "primario" : "secundario"}
+                tamaño="chico"
+                onClick={() => setTab("proximos")}
+              />
 
-            <Button
-              type="button"
-              texto="Pasados"
-              variante={tab === "pasados" ? "primario" : "secundario"}
-              tamaño="chico"
-              onClick={() => setTab("pasados")}
+              <Button
+                type="button"
+                texto="Pasados"
+                variante={tab === "pasados" ? "primario" : "secundario"}
+                tamaño="chico"
+                onClick={() => setTab("pasados")}
+              />
+            </div>
+
+            <input
+              type="text"
+              placeholder="Filtrar por nombre del tutor..."
+              aria-label="Filtrar turnos por nombre del tutor"
+              value={busquedaTutor}
+              onChange={(e) => setBusquedaTutor(e.target.value)}
+              className={styles.inputBusqueda}
             />
           </div>
 
@@ -111,7 +204,7 @@ export default function CitasAgendadas() {
               <div className={styles.bannerInfo}>
                 <PawPrint className={styles.bannerIcon} size={28} />
 
-                <div>
+                <div className={styles.bannerTextos}>
                   <p className={styles.bannerLabel}>Próximo turno</p>
 
                   <p className={styles.bannerTitulo}>
@@ -129,22 +222,26 @@ export default function CitasAgendadas() {
                     </span>
 
                     <span>
-                      <User size={14} />{" "}
-                      {turnoMasProximo.mascota?.usuario?.nombre
-                        ? `${turnoMasProximo.mascota.usuario.nombre} ${turnoMasProximo.mascota.usuario.apellido || ""}`.trim()
-                        : "Tutor"}
+                      <User size={14} /> {nombreTutorDe(turnoMasProximo) || "Tutor"}
+                    </span>
+
+                    <span>
+                      <Stethoscope size={14} />{" "}
+                      {nombreProfesionalDe(turnoMasProximo) || "Sin asignar"}
                     </span>
                   </p>
                 </div>
               </div>
 
-              <Button
+              <button
                 type="button"
-                texto="Atender turno →"
-                variante="secundario"
-                tamaño="chico"
+                className={`${styles.btnAtender} ${styles.btnAtenderBanner}`}
+                aria-label={`Atender turno de ${turnoMasProximo.mascota?.nombre || "la mascota"}`}
                 onClick={() => irARegistrarConsulta(turnoMasProximo)}
-              />
+              >
+                <span>Atender turno</span>
+                <ArrowRight size={16} aria-hidden="true" />
+              </button>
             </div>
           )}
 
@@ -154,7 +251,7 @@ export default function CitasAgendadas() {
               {listaVisible.length !== 1 ? "s" : ""}{" "}
               {tab === "proximos"
                 ? listaVisible.length !== 1 ? "programados" : "programado"
-                : listaVisible.length !== 1 ? "registrados" : "registrado"}
+                : listaVisible.length !== 1 ? "pasados" : "pasado"}
             </div>
 
             {loading && (
@@ -165,16 +262,22 @@ export default function CitasAgendadas() {
 
             {!loading && !error && listaVisible.length === 0 && (
               <p className={styles.estadoVacio}>
-                No hay turnos {tab === "proximos" ? "próximos" : "pasados"} para
-                mostrar.
+                {busquedaTutor.trim()
+                  ? "No hay turnos que coincidan con la búsqueda."
+                  : `No hay turnos ${tab === "proximos" ? "próximos" : "pasados"} para mostrar.`}
               </p>
             )}
 
             {!loading &&
               !error &&
-              listaVisible.map((turno) => {
+              listaPagina.map((turno) => {
                 const { dia, mes } = formatearDiaMes(turno.fecha);
-                const badge = ESTADO_BADGE[turno.estado_turno_id];
+                // En "Pasados", un turno confirmado (CON) es uno cuyo horario ya
+                // pasó sin que se registrara la consulta: no se muestra "Confirmado".
+                const sinConsulta = tab === "pasados" && turno.estado_turno_id === "CON";
+                const badge = sinConsulta
+                  ? { texto: "Sin consulta registrada", variante: "pendiente" }
+                  : ESTADO_BADGE[turno.estado_turno_id];
 
                 return (
                   <div key={turno.turno_id} className={styles.turnoRow}>
@@ -208,26 +311,56 @@ export default function CitasAgendadas() {
                         </span>
 
                         <span>
-                          <User size={14} />{" "}
-                          {turno.mascota?.usuario?.nombre
-                            ? `${turno.mascota.usuario.nombre} ${turno.mascota.usuario.apellido || ""}`.trim()
-                            : "Tutor"}
+                          <User size={14} /> {nombreTutorDe(turno) || "Tutor"}
+                        </span>
+
+                        <span>
+                          <Stethoscope size={14} />{" "}
+                          {nombreProfesionalDe(turno) || "Sin asignar"}
                         </span>
                       </p>
                     </div>
 
                     {tab === "proximos" && (
-                      <Button
+                      <button
                         type="button"
-                        texto="Atender turno →"
-                        variante="secundario"
-                        tamaño="chico"
+                        className={styles.btnAtender}
+                        aria-label={`Atender turno de ${turno.mascota?.nombre || "la mascota"}`}
                         onClick={() => irARegistrarConsulta(turno)}
-                      />
+                      >
+                        <span>Atender turno</span>
+                        <ArrowRight size={16} aria-hidden="true" />
+                      </button>
                     )}
                   </div>
                 );
               })}
+
+            {!loading && !error && totalPaginas > 1 && (
+              <div className={styles.paginacion}>
+                <Button
+                  type="button"
+                  texto="← Anterior"
+                  variante="secundario"
+                  tamaño="chico"
+                  disabled={paginaActual === 1}
+                  onClick={() => setPaginaActual((p) => Math.max(p - 1, 1))}
+                />
+
+                <span className={styles.paginaInfo}>
+                  Página {paginaActual} de {totalPaginas}
+                </span>
+
+                <Button
+                  type="button"
+                  texto="Siguiente →"
+                  variante="secundario"
+                  tamaño="chico"
+                  disabled={paginaActual === totalPaginas}
+                  onClick={() => setPaginaActual((p) => Math.min(p + 1, totalPaginas))}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -9,7 +9,7 @@ import { formatearEdad } from "../../../utils/EdadMascota";
 
 import styles from "./Pacientes.module.css";
 
-const PACIENTES_POR_PAGINA = 12;
+const PACIENTES_POR_PAGINA = 10;
 const DEBOUNCE_BUSQUEDA_MS = 400;
 
 const obtenerEmojiEspecie = (especie = "") => {

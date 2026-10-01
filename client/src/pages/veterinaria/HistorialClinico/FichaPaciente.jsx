@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import api from "../../../services/api.js";
 import Sidebar from "../../../components/layout/Sidebar.jsx";
 import TopBar from "../../../components/layout/TopBar.jsx";
@@ -11,7 +11,6 @@ import { subirImagen } from "../../../services/uploadService.js";
 import { obtenerMiVeterinaria } from "../../../services/veterinariaService.js";
 import { obtenerTurnosPendientesRegistro } from "../../../services/turnosService.js";
 import styles from "./FichaPaciente.module.css";
-
 
 const formatearFechaLocal = (fecha) => {
   if (!fecha) return null;
@@ -26,12 +25,38 @@ const formatearFechaLocal = (fecha) => {
   return `${year}-${month}-${day}`;
 };
 
+// Traduce el valor recibido por navegación ("fichaMedica" o "ficha-medica")
+// a la tab interna. Cualquier otro valor cae en "consultas".
+const resolverTab = (tabRecibida) =>
+  tabRecibida === "fichaMedica" || tabRecibida === "ficha-medica"
+    ? "fichaMedica"
+    : "consultas";
+
+
+const normalizarProfesionales = (veterinaria) => {
+  const lista = Array.isArray(veterinaria?.profesional)
+    ? veterinaria.profesional
+    : Array.isArray(veterinaria?.profesionales)
+      ? veterinaria.profesionales
+      : [];
+
+  return lista
+    .map((p) => ({
+      ...p,
+      profesional_id: p.profesional_id ?? p._id,
+      especialidad:
+        typeof p.especialidad === "string" ? { nombre: p.especialidad } : p.especialidad,
+    }))
+    .filter((p) => p.profesional_id);
+};
+
 // ── Componente principal ──
 const FichaPaciente = () => {
   const { mascotaId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [tabActiva, setTabActiva] = useState("consultas");
+  const [tabActiva, setTabActiva] = useState(resolverTab(location.state?.tabActiva));
   const [historial, setHistorial] = useState([]);
   const [mascota, setMascota] = useState(null);
   const [fichaMedica, setFichaMedica] = useState(null);
@@ -45,9 +70,15 @@ const FichaPaciente = () => {
   const [errorTipo, setErrorTipo] = useState("sistema");
   const [profesionales, setProfesionales] = useState([]);
 
-  
   const [turnosPendientes, setTurnosPendientes] = useState([]);
   const [modalTurnosAbierto, setModalTurnosAbierto] = useState(false);
+
+  // Si la navegación trae una tab (ej: al venir de RegistrarConsulta), la activa
+  useEffect(() => {
+    if (location.state?.tabActiva) {
+      setTabActiva(resolverTab(location.state.tabActiva));
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -66,7 +97,7 @@ const FichaPaciente = () => {
         setFichaMedica(data.fichaMedica ?? null);
         setVacunas(Array.isArray(data.vacunas) ? data.vacunas : []);
         setEstudios(Array.isArray(data.estudios) ? data.estudios : []);
-       setProfesionales(Array.isArray(veterinaria?.profesional) ? veterinaria.profesional : []);
+        setProfesionales(normalizarProfesionales(veterinaria));
         setTurnosPendientes(turnos);
       } catch (err) {
         if (err.response?.status === 403) {
@@ -101,10 +132,10 @@ const FichaPaciente = () => {
     return coincideTexto && coincideFecha;
   });
 
- const handleGuardarFichaMedica = async (datos) => {
-  const fichaActualizada = await actualizarFichaMedica(mascotaId, datos);
-  setFichaMedica(fichaActualizada);
-};
+  const handleGuardarFichaMedica = async (datos) => {
+    const fichaActualizada = await actualizarFichaMedica(mascotaId, datos);
+    setFichaMedica(fichaActualizada);
+  };
 
   const handleGuardarVacuna = async (datos, vacunaId) => {
     if (vacunaId) {
@@ -172,7 +203,7 @@ const FichaPaciente = () => {
   };
 
   const nombreMascota = mascota?.nombre ?? "Mascota";
-  const nombreDueno = mascota?.dueno? `${mascota.dueno.nombre} ${mascota.dueno.apellido}`.trim(): "—";
+  const nombreDueno = mascota?.dueno ? `${mascota.dueno.nombre} ${mascota.dueno.apellido}`.trim() : "—";
   const telefonoDueno = mascota?.dueno?.telefono ?? "—";
   const claseError = errorTipo === "acceso" ? styles.estadoSinAcceso : styles.estadoError;
 
@@ -246,7 +277,7 @@ const FichaPaciente = () => {
                       type="button"
                       className={styles.input}
                       style={{ textAlign: "left", cursor: "pointer" }}
-                       onClick={() => handleSeleccionarTurno(turno.turno_id)}
+                      onClick={() => handleSeleccionarTurno(turno.turno_id)}
                     >
                       <strong>
                         {new Date(turno.fecha).toLocaleDateString("es-AR")} · {turno.hora_inicio}
@@ -322,7 +353,7 @@ const FichaPaciente = () => {
                   ) : (
                     <div className={styles.listaConsultas}>
                       {historialFiltrado.map((entrada) => (
-                         <div key={entrada.id} className={styles.cardConsulta}>
+                        <div key={entrada.id} className={styles.cardConsulta}>
                           <div className={styles.cardIcono}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
@@ -377,19 +408,19 @@ const FichaPaciente = () => {
             ) : error ? (
               <p className={`${styles.estadoMensaje} ${claseError}`}>{error}</p>
             ) : (
-            <FichaMedicaTab
-              mascota={mascota}
-              fichaMedica={fichaMedica}
-              historial={historial}
-              vacunas={vacunas}
-              estudios={estudios}
-              profesionales={profesionales}
-              onGuardarFicha={handleGuardarFichaMedica}
-              onGuardarVacuna={handleGuardarVacuna}
-              onEliminarVacuna={handleEliminarVacuna}
-              onGuardarEstudio={handleGuardarEstudio}
-              onEliminarEstudio={handleEliminarEstudio}
-            />
+              <FichaMedicaTab
+                mascota={mascota}
+                fichaMedica={fichaMedica}
+                historial={historial}
+                vacunas={vacunas}
+                estudios={estudios}
+                profesionales={profesionales}
+                onGuardarFicha={handleGuardarFichaMedica}
+                onGuardarVacuna={handleGuardarVacuna}
+                onEliminarVacuna={handleEliminarVacuna}
+                onGuardarEstudio={handleGuardarEstudio}
+                onEliminarEstudio={handleEliminarEstudio}
+              />
             )
           )}
         </div>
