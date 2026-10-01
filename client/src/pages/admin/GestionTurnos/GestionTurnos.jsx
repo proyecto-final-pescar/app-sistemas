@@ -1,14 +1,21 @@
-import { useState, useEffect } from 'react';
-import { Calendar, CheckCircle2, Clock, XCircle } from 'lucide-react';
-import Sidebar from '../../../components/layout/Sidebar';
-import TopBar from '../../../components/layout/TopBar';
-import Card from '../../../components/ui/card/Card';
-import Badge from '../../../components/ui/badge/Badge';
-import DetallesDeTurnoModal from '../../../components/administrador/detallesDeTurnoModal/detallesDeTurnoModal';
-import TurnosAdminService from '../../../services/TurnosAdminService';
-import styles from './GestionTurnos.module.css';
+import { useState, useEffect } from "react";
+import { Calendar, CheckCircle2, Clock, XCircle } from "lucide-react";
+import Sidebar from "../../../components/layout/Sidebar";
+import TopBar from "../../../components/layout/TopBar";
+import Card from "../../../components/ui/card/Card";
+import Badge from "../../../components/ui/badge/Badge";
+import DetallesDeTurnoModal from "../../../components/administrador/detallesDeTurnoModal/detallesDeTurnoModal";
+import TurnosAdminService from "../../../services/TurnosAdminService";
+import styles from "./GestionTurnos.module.css";
 
-const TABS_ESTADO = ['Todos', 'Confirmados', 'Pendientes', 'Cancelados'];
+const TABS_ESTADO = ["Todos", "Confirmados", "Pendientes", "Cancelados"];
+
+const formatearFechaTabla = (fechaISO) => {
+  if (!fechaISO) return "";
+  // Extrae '2026', '10', '03' ignorando la zona horaria UTC
+  const [anio, mes, dia] = fechaISO.slice(0, 10).split("-");
+  return `${parseInt(dia, 10)}/${parseInt(mes, 10)}/${anio}`;
+};
 
 export default function GestionTurnos() {
   const [turnos, setTurnos] = useState([]);
@@ -18,9 +25,9 @@ export default function GestionTurnos() {
     pendientes: 0,
     cancelados: 0,
   });
-  const [tabActivo, setTabActivo] = useState('Todos');
-  const [busqueda, setBusqueda] = useState('');
-  const [fecha, setFecha] = useState('');
+  const [tabActivo, setTabActivo] = useState("Todos");
+  const [busqueda, setBusqueda] = useState("");
+  const [fecha, setFecha] = useState("");
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [cargando, setCargando] = useState(true);
@@ -34,7 +41,7 @@ export default function GestionTurnos() {
     setCargando(true);
     try {
       const res = await TurnosAdminService.getTurnos({
-        estado: tabActivo !== 'Todos' ? tabActivo : undefined,
+        estado: tabActivo !== "Todos" ? tabActivo : undefined,
         busqueda: busqueda || undefined,
         fecha: fecha || undefined,
         pagina,
@@ -43,7 +50,7 @@ export default function GestionTurnos() {
       setStats(res.data.stats);
       setTotalPaginas(res.data.totalPaginas);
     } catch (error) {
-      console.error('Error al cargar turnos:', error);
+      console.error("Error al cargar turnos:", error);
     } finally {
       setCargando(false);
     }
@@ -73,7 +80,6 @@ export default function GestionTurnos() {
         />
 
         <main className={styles.content}>
-
           <div className={styles.stats}>
             <Card className={styles.statCard}>
               <div className={`${styles.statIcono} ${styles.statIconoVioleta}`}>
@@ -154,7 +160,7 @@ export default function GestionTurnos() {
                   key={tab}
                   type="button"
                   className={`${styles.tab} ${
-                    tabActivo === tab ? styles.tabActivo : ''
+                    tabActivo === tab ? styles.tabActivo : ""
                   }`}
                   onClick={() => cambiarTab(tab)}
                 >
@@ -191,7 +197,7 @@ export default function GestionTurnos() {
                   ) : (
                     turnos.map((turno) => (
                       <tr key={turno.turno_id}>
-                        <td>{new Date(turno.fecha).toLocaleDateString('es-AR')}</td>
+                        <td>{formatearFechaTabla(turno.fecha)}</td>
                         <td>{turno.hora}</td>
                         <td>{turno.veterinariaNombre}</td>
                         {/* el "usuario" es el cliente que pidió el turno */}

@@ -26,8 +26,12 @@ export const obtenerTurnosAdmin = async (req, res) => {
     }
 
     if (fecha) {
-  
-      where.fecha = new Date(`${fecha}T00:00:00.000Z`)
+      const inicioDia = new Date(`${fecha}T00:00:00.000Z`);
+      const finDia = new Date(`${fecha}T23:59:59.999Z`);
+      where.fecha = {
+        gte: inicioDia,
+        lte: finDia
+      };
     }
 
     if (busqueda) {
@@ -58,7 +62,9 @@ export const obtenerTurnosAdmin = async (req, res) => {
       prisma.turno.groupBy({
         by: ['estado_turno_id'],
         where: {
-          fecha: { gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) },
+          fecha: { 
+            gte: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1, 0, 0, 0, 0)) 
+          },
           estado_turno_id: { in: ESTADOS_ADMIN_IDS },
         },
         _count: true,
