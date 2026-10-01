@@ -37,21 +37,29 @@ function Login() {
     }
 
     if (rol === "veterinaria") {
-      try {
-        const miVeterinaria = await obtenerMiVeterinaria();
-        const tienePerfilCompletado = Boolean(
-          miVeterinaria?._id || miVeterinaria?.nombre,
-        );
-        if (tienePerfilCompletado) {
-          navigate("/home-veterinaria", { replace: true });
-        } else {
-          navigate("/registro-veterinaria", { replace: true });
-        }
-      } catch (vetError) {
-        navigate("/registro-veterinaria", { replace: true });
-      }
-      return;
+  try {
+    const miVeterinaria = await obtenerMiVeterinaria();
+    if (!miVeterinaria?._id) {
+      navigate("/registro-veterinaria", { replace: true });
+    } else if (miVeterinaria.estado === "ACT") {
+      navigate("/home-veterinaria", { replace: true });
+    } else {
+      navigate("/veterinaria-pendiente", { replace: true });
     }
+  } catch (vetError) {
+    // Solo la ausencia de veterinaria (404) lleva al registro. Cualquier
+    // otro fallo (500, red caída) muestra error en vez de redirigir,
+    // para no hacerle creer al usuario que perdió su veterinaria.
+    if (vetError?.response?.status === 404) {
+      navigate("/registro-veterinaria", { replace: true });
+    } else {
+      setError(
+        "No se pudo verificar tu veterinaria. Revisá tu conexión e intentá de nuevo.",
+      );
+    }
+  }
+  return;
+}
 
     if (rol === "administrador") {
       navigate("/dashboard", { replace: true });
