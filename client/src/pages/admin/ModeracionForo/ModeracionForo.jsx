@@ -57,7 +57,7 @@ export default function ModeracionForo() {
     const opcionesZona = [
         { value: "", label: "Todas las zonas" },
         ...zonas.map((zona) => ({
-            value: zona.zona_id,
+            value: zona.zona_id ?? zona.id,
             label: zona.nombre,
         })),
     ];
@@ -68,7 +68,7 @@ export default function ModeracionForo() {
         if (!pub) return false;
 
         const coincideZona = filtroZona
-            ? String(pub.zona?.zona_id) === String(filtroZona)
+            ? String(pub.zona?.zona_id ?? pub.zona?.id) === String(filtroZona)
             : true;
 
         const coincideReportes = (() => {
