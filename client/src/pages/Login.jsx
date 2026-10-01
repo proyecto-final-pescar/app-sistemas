@@ -46,8 +46,17 @@ function Login() {
     } else {
       navigate("/veterinaria-pendiente", { replace: true });
     }
-  } catch {
-    navigate("/registro-veterinaria", { replace: true });
+  } catch (vetError) {
+    // Solo la ausencia de veterinaria (404) lleva al registro. Cualquier
+    // otro fallo (500, red caída) muestra error en vez de redirigir,
+    // para no hacerle creer al usuario que perdió su veterinaria.
+    if (vetError?.response?.status === 404) {
+      navigate("/registro-veterinaria", { replace: true });
+    } else {
+      setError(
+        "No se pudo verificar tu veterinaria. Revisá tu conexión e intentá de nuevo.",
+      );
+    }
   }
   return;
 }

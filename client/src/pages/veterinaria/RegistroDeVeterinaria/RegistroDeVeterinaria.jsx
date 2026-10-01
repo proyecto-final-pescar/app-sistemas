@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
 import HeaderMinimo from "../../../components/layout/HeaderMinimo";
 import Button from "../../../components/ui/button/Button";
 import Input from "../../../components/ui/input/Input";
@@ -34,6 +34,7 @@ import {
 
 import { useCategoriasServicio } from "../../../hooks/useCategoriasServicio";
 import { useEspecialidades } from "../../../hooks/useEspecialidades";
+import { obtenerMiVeterinaria } from "../../../services/veterinariaService";
 
 const PASOS = ["Datos", "Servicios", "Profesionales", "Horarios"];
 
@@ -83,6 +84,19 @@ const hayErrores = (errores) =>
 export default function RegistroDeVeterinaria() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
+
+  // Guard inverso a RutaVeterinariaActiva: si el usuario ya tiene una
+  // veterinaria registrada, no debe ver el formulario de alta de nuevo.
+  // cargando | sin-perfil | pendiente | activa
+  const [acceso, setAcceso] = useState("cargando");
+
+  useEffect(() => {
+    obtenerMiVeterinaria()
+      .then((data) => {
+        setAcceso(data?.estado === "ACT" ? "activa" : "pendiente");
+      })
+      .catch(() => setAcceso("sin-perfil"));
+  }, []);
 
   const {
     direccion,
@@ -389,6 +403,12 @@ export default function RegistroDeVeterinaria() {
     setErrorStep4("");
     handleGuardarReal();
   };
+
+  if (acceso === "cargando") return null;
+  if (acceso === "activa")
+    return <Navigate to="/home-veterinaria" replace />;
+  if (acceso === "pendiente")
+    return <Navigate to="/veterinaria-pendiente" replace />;
 
   return (
     <div className={styles.shell}>
