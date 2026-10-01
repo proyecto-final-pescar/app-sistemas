@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PawPrint, Camera, Pencil } from "lucide-react";
 import "./FormularioMascota.css";
 
@@ -12,6 +12,7 @@ import {
   obtenerEspecies,
   obtenerRazas,
 } from "../../services/constantesService";
+import { optimizarImagen } from "../../utils/optimizarImagen";
 
 function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
   const esEdicion = Boolean(mascotaInicial);
@@ -34,23 +35,60 @@ function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
     mascotaInicial?.esCastrado ?? false,
   );
   const [foto, setFoto] = useState(null);
+  const [fotoPreview, setFotoPreview] = useState(null);
+  const fotoPreviewRef = useRef(null);
   const [archivoParaRecortar, setArchivoParaRecortar] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const [errorGeneral, setErrorGeneral] = useState(null);
 
   const [especiesDisponibles, setEspeciesDisponibles] = useState([]);
   const [razasDisponibles, setRazasDisponibles] = useState([]);
 
-  // Traer el catálogo de especies del backend
+  // Libera el blob de la vista previa al desmontar el formulario
   useEffect(() => {
-    obtenerEspecies().then(setEspeciesDisponibles);
+    return () => {
+      if (fotoPreviewRef.current) URL.revokeObjectURL(fotoPreviewRef.current);
+    };
   }, []);
 
+  // Traer el catálogo de especies del backend
+  useEffect(() => {
+    let cancelado = false;
+
+    obtenerEspecies()
+      .then((especies) => {
+        if (!cancelado) setEspeciesDisponibles(especies);
+      })
+      .catch((error) => {
+        console.error("Error al obtener especies:", error);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  // Razas de la especie elegida (ignora respuestas de una especie anterior)
   useEffect(() => {
     if (!especie) {
       setRazasDisponibles([]);
       return;
     }
-    obtenerRazas(especie).then(setRazasDisponibles);
+
+    let cancelado = false;
+
+    obtenerRazas(especie)
+      .then((razas) => {
+        if (!cancelado) setRazasDisponibles(razas);
+      })
+      .catch((error) => {
+        console.error("Error al obtener razas:", error);
+        if (!cancelado) setRazasDisponibles([]);
+      });
+
+    return () => {
+      cancelado = true;
+    };
   }, [especie]);
 
   const [errores, setErrores] = useState({});
@@ -84,12 +122,14 @@ function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
 
     return Object.keys(nuevosErrores).length === 0;
   }
+
   async function manejarSubmit(evento) {
     evento.preventDefault();
 
     if (!validarFormularioMascota()) return;
 
     setGuardando(true);
+    setErrorGeneral(null);
 
     try {
       let urlFoto = mascotaInicial?.foto || "";
@@ -109,15 +149,18 @@ function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
         foto: urlFoto,
       };
 
-      if (esEdicion) {
-        await actualizarMascota(mascotaInicial._id, datosMascota);
-      } else {
-        await crearMascota(datosMascota);
-      }
+      const mascotaGuardada = esEdicion
+        ? await actualizarMascota(mascotaInicial._id, datosMascota)
+        : await crearMascota(datosMascota);
 
-      onGuardado?.();
+      onGuardado?.(mascotaGuardada);
     } catch (error) {
       console.error(error);
+      setErrorGeneral(
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          "No pudimos guardar la mascota. Intentá de nuevo."
+      );
     } finally {
       setGuardando(false);
     }
@@ -135,13 +178,21 @@ function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
   }
 
   function manejarRecorteConfirmado(archivoRecortado) {
+    // El blob de la vista previa se crea una sola vez (no en cada render)
+    if (fotoPreviewRef.current) URL.revokeObjectURL(fotoPreviewRef.current);
+    const urlPreview = URL.createObjectURL(archivoRecortado);
+    fotoPreviewRef.current = urlPreview;
+
     setFoto(archivoRecortado);
+    setFotoPreview(urlPreview);
     setArchivoParaRecortar(null);
   }
 
   function manejarRecorteCancelado() {
     setArchivoParaRecortar(null);
   }
+
+  const fotoSrc = fotoPreview || optimizarImagen(mascotaInicial?.foto, 400);
 
   return (
     <form className="formMascota" onSubmit={manejarSubmit}>
@@ -162,11 +213,11 @@ function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
       <div className="formMascota__body">
         <div className="formMascota__colFoto">
           <label className="formMascota__foto">
-            {foto || mascotaInicial?.foto ? (
+            {fotoSrc ? (
               <div className="formMascota__fotoPreviewWrap">
                 <img
                   className="formMascota__fotoImg"
-                  src={foto ? URL.createObjectURL(foto) : mascotaInicial.foto}
+                  src={fotoSrc}
                   alt="Vista previa"
                 />
                 <div className="formMascota__fotoOverlay">
@@ -289,6 +340,8 @@ function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
         </div>
       </div>
 
+      {errorGeneral && <p className="formMascota__error">{errorGeneral}</p>}
+
       <div className="formMascota__acciones">
         <Button
           type="button"
@@ -319,7 +372,6 @@ function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
           aspecto={3 / 4}
           forma="rectangular"
           titulo="Ajustá la foto de tu mascota"
-         
           onCancelar={manejarRecorteCancelado}
           onConfirmar={manejarRecorteConfirmado}
         />
