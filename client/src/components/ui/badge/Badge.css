@@ -27,7 +27,8 @@
   color: #ef4444;
 }
 
-.badge-secondary {
+.badge-secondary,
+.badge-atendido {
   background-color: var(--color-fondo-claro);
   color: var(--color-primario);
 }
