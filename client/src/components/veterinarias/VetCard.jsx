@@ -24,11 +24,12 @@ const IconAlert = () => (
 );
 
 
+
 const obtenerCategoriasServicio = (vet) => {
-  const categorias = (vet.servicio || [])
-    .map((s) => s.categoria_servicio?.nombre)
-    .filter(Boolean);
-  return [...new Set(categorias)];
+  const nombres = Array.isArray(vet.categorias)
+    ? vet.categorias
+    : (vet.servicios || []).map((s) => s.categoria);
+  return [...new Set(nombres.filter(Boolean))];
 };
 
 const VetCard = ({
@@ -42,6 +43,8 @@ const VetCard = ({
 }) => {
   const esSeleccionable = typeof onClick === "function";
   const categorias = obtenerCategoriasServicio(vet);
+  
+  const tieneUrgencias = Boolean(vet.urgencias24hs ?? vet.urgencias);
 
   if (variante === "fila") {
     return (
@@ -98,7 +101,7 @@ const VetCard = ({
       </div>
 
       {/* distancia + teléfono + urgencias (solo si vienen) */}
-      {(distancia != null || vet.telefono || vet.urgencias) && (
+      {(distancia != null || vet.telefono || tieneUrgencias) && (
         <div className={styles.meta}>
           {distancia != null && (
             <span className={styles.metaItem}>
@@ -112,7 +115,7 @@ const VetCard = ({
               {vet.telefono}
             </span>
           )}
-          {vet.urgencias && (
+          {tieneUrgencias && (
             <span className={`${styles.metaItem} ${styles.urgencias}`}>
               <IconAlert /> Urgencias 24hs
             </span>
