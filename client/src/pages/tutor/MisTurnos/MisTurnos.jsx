@@ -71,7 +71,7 @@ export default function MisTurnos() {
         setTurnos(data.turnos);
         setTotal(data.total);
         setTotalPaginas(data.totalPaginas);
-      } catch (err) {
+      } catch {
         if (!cancelado) setError("No se pudieron cargar los turnos. Intentá de nuevo.");
       } finally {
         if (!cancelado) setLoading(false);

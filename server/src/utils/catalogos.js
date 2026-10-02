@@ -1,57 +1,92 @@
 // server/src/utils/catalogos.js
 import prisma from '../../prisma/client.js';
 
-const capitalizar = (texto) =>
-  texto.trim().charAt(0).toUpperCase() + texto.trim().slice(1).toLowerCase();
+// Los catálogos casi no cambian (se cargan por seed/admin directo en DB),
+// así que se cachean en memoria con TTL de 5 minutos. Las requests
+// concurrentes comparten una sola carga en vuelo en vez de pegarle N veces
+// a la DB (ej. un registro con varios servicios/profesionales).
+const TTL_MS = 5 * 60 * 1000;
+
+// clave -> { datos: Map|null, expiraEn: number, promesa: Promise<Map>|null }
+const caches = new Map();
+
+const normalizarClave = (texto) => (texto || '').trim().toLowerCase();
+
+const obtenerMapaCatalogo = (claveCache, modelo, campoId, claveCompuesta = null) => {
+  const ahora = Date.now();
+  const entrada = caches.get(claveCache);
+
+  if (entrada?.datos && entrada.expiraEn > ahora) {
+    return Promise.resolve(entrada.datos);
+  }
+  // Hay una carga en vuelo: compartirla en vez de duplicarla
+  if (entrada?.promesa) {
+    return entrada.promesa;
+  }
+
+  const promesa = (async () => {
+    const filas = await prisma[modelo].findMany({
+      select: { [campoId]: true, nombre: true, ...(claveCompuesta ? { [claveCompuesta]: true } : {}) },
+    });
+    const mapa = new Map();
+    for (const fila of filas) {
+      const clave = claveCompuesta
+        ? `${fila[claveCompuesta]}|${normalizarClave(fila.nombre)}`
+        : normalizarClave(fila.nombre);
+      mapa.set(clave, fila[campoId]);
+    }
+    caches.set(claveCache, { datos: mapa, expiraEn: Date.now() + TTL_MS, promesa: null });
+    return mapa;
+  })();
+
+  caches.set(claveCache, {
+    datos: entrada?.datos ?? null,
+    expiraEn: entrada?.expiraEn ?? 0,
+    promesa,
+  });
+  // Si la carga falla, se limpia para reintentar en el próximo llamado.
+  // El error se propaga igual que antes (sin caché no se tragaba).
+  promesa.catch(() => {
+    if (caches.get(claveCache)?.promesa === promesa) {
+      caches.delete(claveCache);
+    }
+  });
+
+  return promesa;
+};
+
+// Por si a futuro un endpoint admin edita catálogos
+export const invalidarCacheCatalogos = () => {
+  caches.clear();
+};
 
 export const resolverEspecialidadId = async (nombre) => {
-  const especialidad = await prisma.especialidad.findFirst({
-    where: { nombre: { equals: (nombre || '').trim(), mode: 'insensitive' } },
-    select: { especialidad_id: true }
-  });
-  return especialidad?.especialidad_id ?? null;
+  const mapa = await obtenerMapaCatalogo('especialidad', 'especialidad', 'especialidad_id');
+  return mapa.get(normalizarClave(nombre)) ?? null;
 };
 
 export const resolverCategoriaServicioId = async (nombre) => {
-  const categoria = await prisma.categoria_servicio.findFirst({
-    where: { nombre: { equals: (nombre || '').trim(), mode: 'insensitive' } },
-    select: { categoria_servicio_id: true }
-  });
-  return categoria?.categoria_servicio_id ?? null;
+  const mapa = await obtenerMapaCatalogo('categoria_servicio', 'categoria_servicio', 'categoria_servicio_id');
+  return mapa.get(normalizarClave(nombre)) ?? null;
 };
 
 export const resolverDiaSemanaId = async (nombreDia) => {
-  const dia = await prisma.dia_semana.findFirst({
-    where: { nombre: { equals: capitalizar(nombreDia), mode: 'insensitive' } },
-    select: { dia_semana_id: true }
-  });
-  return dia?.dia_semana_id ?? null;
+  const mapa = await obtenerMapaCatalogo('dia_semana', 'dia_semana', 'dia_semana_id');
+  return mapa.get(normalizarClave(nombreDia)) ?? null;
 };
 
 export const resolverEspecieId = async (nombre) => {
-  const especie = await prisma.especie.findFirst({
-    where: { nombre: { equals: (nombre || '').trim(), mode: 'insensitive' } },
-    select: { especie_id: true }
-  });
-  return especie?.especie_id ?? null;
+  const mapa = await obtenerMapaCatalogo('especie', 'especie', 'especie_id');
+  return mapa.get(normalizarClave(nombre)) ?? null;
 };
 
 export const resolverRazaId = async (especieId, nombreRaza) => {
   if (!especieId) return null;
-  const raza = await prisma.raza.findFirst({
-    where: {
-      especie_id: especieId,
-      nombre: { equals: (nombreRaza || '').trim(), mode: 'insensitive' }
-    },
-    select: { raza_id: true }
-  });
-  return raza?.raza_id ?? null;
+  const mapa = await obtenerMapaCatalogo('raza', 'raza', 'raza_id', 'especie_id');
+  return mapa.get(`${especieId}|${normalizarClave(nombreRaza)}`) ?? null;
 };
 
 export const resolverSexoMascotaId = async (nombre) => {
-  const sexo = await prisma.sexo_mascota.findFirst({
-    where: { nombre: { equals: (nombre || '').trim(), mode: 'insensitive' } },
-    select: { sexo_mascota_id: true }
-  });
-  return sexo?.sexo_mascota_id ?? null;
+  const mapa = await obtenerMapaCatalogo('sexo_mascota', 'sexo_mascota', 'sexo_mascota_id');
+  return mapa.get(normalizarClave(nombre)) ?? null;
 };

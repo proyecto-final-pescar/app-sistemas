@@ -13,43 +13,6 @@ const crearFechaLocal = (textoFecha) => {
   return new Date(anio, mes - 1, dia);
 };
 
-export const obtenerFechaHoraCompleta = (turno) => {
-  const fecha = crearFechaLocal(turno.fecha);
-  const [horas, minutos] = (turno.hora_inicio || "00:00").split(":").map(Number);
-  fecha.setHours(horas, minutos, 0, 0);
-  return fecha;
-};
-
-
-export const filtrarProximos = (turnos) => {
-  const ahora = new Date();
-  return turnos
-    .filter(
-      (t) =>
-        (t.estado_turno_id === "CON" || t.estado_turno_id === "PEN") &&
-        obtenerFechaHoraCompleta(t) >= ahora,
-    )
-    .sort((a, b) => obtenerFechaHoraCompleta(a) - obtenerFechaHoraCompleta(b));
-};
-
-
-export const filtrarPasados = (turnos) => {
-  const ahora = new Date();
-  return turnos
-    .filter(
-      (t) =>
-        t.estado_turno_id === "CAN" ||
-        t.estado_turno_id === "ATE" ||
-        obtenerFechaHoraCompleta(t) < ahora,
-    )
-    .sort((a, b) => obtenerFechaHoraCompleta(b) - obtenerFechaHoraCompleta(a));
-};
-
-export const obtenerTurnoMasProximo = (turnos) => {
-  const proximos = filtrarProximos(turnos);
-  return proximos[0] || null;
-};
-
 export const formatearDiaMes = (fecha) => {
   if (!fecha) return { dia: "--", mes: "---" };
   const d = crearFechaLocal(fecha);
