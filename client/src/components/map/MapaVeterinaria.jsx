@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
+import api from "../../services/api";
 import "./MapaVeterinaria.css";
 
 const MapaVeterinarias = () => {
@@ -49,13 +50,11 @@ const MapaVeterinarias = () => {
       try {
         const { lat, lng } = miUbicacion;
 
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/api/veterinarias/buscar?lat=${lat}&lng=${lng}&radio=50000`,
-        );
-
-        if (!response.ok) throw new Error("Error al obtener las veterinarias");
-
-        const json = await response.json();
+        // Se usa la instancia compartida `api`: resuelve el prefijo /api y el
+        // token JWT igual que el resto de la app.
+        const { data: json } = await api.get("/veterinarias/buscar", {
+          params: { lat, lng, radio: 50000 },
+        });
 
         const veterinarias = json.data.map((vete) => ({
           id: vete._id,

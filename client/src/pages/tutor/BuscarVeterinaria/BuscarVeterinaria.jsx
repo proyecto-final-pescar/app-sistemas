@@ -19,6 +19,9 @@ const CATEGORIA_VACUNACION = "VAC";
 
 const FILTROS = ["Emergencias", "Vacunación", "Cerca mío"];
 
+// Nota: los filtros de texto, urgencias y categoría los aplica el servidor
+// (params q, urgencias y categoria=VAC). Acá solo se filtra en cliente el
+// modo "Cerca mío", que usa el endpoint geográfico sin esos params.
 
 function matchTexto(vet, q) {
   if (!q) return true;
