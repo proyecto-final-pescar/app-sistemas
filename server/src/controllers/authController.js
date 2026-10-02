@@ -42,11 +42,7 @@ const generarJwt = (usuario) =>
       email: usuario.email,
       rol: usuario.rol.nombre
     },
-<<<<<<< HEAD
-    process.env.JWT_SECRET,
-=======
     obtenerJwtSecret(),
->>>>>>> d0e8b872674be2a993c3f27ea90f80190f64380b
     { expiresIn: '24h' }
   )
 
