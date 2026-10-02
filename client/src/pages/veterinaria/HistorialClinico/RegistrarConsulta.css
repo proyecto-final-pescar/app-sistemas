@@ -5,8 +5,10 @@
   font-family: "Inter", sans-serif;
 }
 
+
 .registrar-consulta-content {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
@@ -18,42 +20,77 @@
 }
 
 .registrar-consulta-container {
-  max-width: 980px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
 .registrar-consulta-volver-wrap {
   margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
 }
 
+
 .registrar-consulta-banner {
-  background: linear-gradient(135deg, #8b3df5, #5f22d9);
-  border-radius: 26px;
-  padding: 44px 46px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  border-radius: 24px;
+  padding: 28px 32px;
+  margin-bottom: 24px;
   color: #ffffff;
-  margin-bottom: 32px;
-  box-shadow: 0 12px 28px rgba(95, 34, 217, 0.22);
+  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.28);
+}
+
+.registrar-consulta-banner::after {
+  content: "";
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 180px;
+  height: 180px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  filter: blur(10px);
+  pointer-events: none;
 }
 
 .registrar-consulta-step {
-  margin: 0 0 10px;
-  font-size: 14px;
+  display: inline-block;
+  margin: 0 0 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 12px;
   font-weight: 700;
-  opacity: 0.85;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  backdrop-filter: blur(4px);
+  position: relative;
 }
 
 .registrar-consulta-title {
   margin: 0;
-  font-size: 34px;
-  line-height: 42px;
+  font-size: 26px;
+  line-height: 32px;
   font-weight: 800;
+  color: #ffffff;
+  position: relative;
 }
 
 .registrar-consulta-subtitle {
-  margin: 10px 0 0;
-  font-size: 16px;
-  line-height: 24px;
-  opacity: 0.9;
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: rgba(255, 255, 255, 0.85);
+  position: relative;
+}
+
+/* Contenedor de avisos: scroll-margin-top deja lugar para la TopBar
+   cuando se hace scrollIntoView desde el JS */
+.registrar-consulta-alertas {
+  scroll-margin-top: 96px;
 }
 
 .registrar-consulta-alert {
@@ -76,38 +113,50 @@
   border: 1px solid #b7ebc6;
 }
 
+
 .registrar-consulta-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.registrar-consulta-section {
   background: #ffffff;
-  border: 1px solid #eee7ff;
-  border-radius: 26px;
-  padding: 34px;
+  border: 1px solid #e5ddf8;
+  border-radius: 20px;
+  padding: 28px;
 }
 
 .registrar-consulta-section-title {
-  margin: 0 0 22px;
-  font-size: 22px;
-  line-height: 30px;
+  margin: 0 0 20px;
+  font-size: 17px;
+  line-height: 24px;
   font-weight: 700;
   color: #2b2142;
 }
 
-.registrar-consulta-section-title-spaced {
-  margin-top: 28px;
+.registrar-consulta-section-ayuda {
+  margin: -12px 0 18px;
+  font-size: 14px;
+  line-height: 20px;
+  color: #7e6fa0;
 }
 
+/* Las columnas se acomodan solas según el ancho real del contenedor
+   (que ya descuenta el sidebar), sin depender del ancho de la ventana */
 .registrar-consulta-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
 }
 
 .registrar-consulta-textarea-wrapper {
-  margin-top: 22px;
+  margin-top: 20px;
 }
 
 .registrar-consulta-label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: #2b2142;
   font-size: 14px;
   font-weight: 600;
@@ -115,18 +164,19 @@
 
 .registrar-consulta-textarea {
   width: 100%;
-  min-height: 128px;
+  min-height: 120px;
   border: 1px solid #e5ddf8;
   border-radius: 14px;
   background-color: #ffffff;
   padding: 12px 14px;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 16px;
+  line-height: 24px;
   color: #2b2142;
   outline: none;
   resize: vertical;
   box-sizing: border-box;
   font-family: "Inter", sans-serif;
+  transition: border-color 0.15s ease;
 }
 
 .registrar-consulta-textarea:focus {
@@ -144,37 +194,268 @@
   margin: 6px 0 0;
 }
 
+
+/* ---------- Selector de destino ---------- */
+
+.registrar-consulta-destino-opciones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.registrar-consulta-destino-opcion {
+  position: relative;
+  display: block;
+  cursor: pointer;
+}
+
+/* El radio nativo queda oculto pero accesible (teclado y lector de pantalla) */
+.registrar-consulta-destino-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.registrar-consulta-destino-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 16px 48px 16px 16px;
+  border: 1.5px solid #e5ddf8;
+  border-radius: 16px;
+  background: #ffffff;
+  transition: border-color 0.15s ease, background-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* Indicador tipo radio */
+.registrar-consulta-destino-card::after {
+  content: "";
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 2px solid #cfc3ee;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.registrar-consulta-destino-opcion:hover .registrar-consulta-destino-card {
+  border-color: #c4b5fd;
+}
+
+.registrar-consulta-destino-input:checked + .registrar-consulta-destino-card {
+  border-color: #7c3aed;
+  background: #f5f0ff;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.registrar-consulta-destino-input:checked + .registrar-consulta-destino-card::after {
+  border-color: #7c3aed;
+  background: #7c3aed;
+  box-shadow: inset 0 0 0 3px #ffffff;
+}
+
+.registrar-consulta-destino-input:focus-visible + .registrar-consulta-destino-card {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+.registrar-consulta-destino-input:disabled + .registrar-consulta-destino-card {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.registrar-consulta-destino-icono {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #f3ecff;
+  color: #7c3aed;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.registrar-consulta-destino-input:checked + .registrar-consulta-destino-card .registrar-consulta-destino-icono {
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.registrar-consulta-destino-textos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.registrar-consulta-destino-titulo {
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 700;
+  color: #2b2142;
+}
+
+.registrar-consulta-destino-desc {
+  font-size: 13px;
+  line-height: 18px;
+  color: #7e6fa0;
+}
+
+
+/* ---------- Acciones ---------- */
+
 .registrar-consulta-actions {
   display: flex;
-  justify-content: center;
-  gap: 14px;
-  margin-top: 38px;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* En el paso 2: "Paso anterior" a la izquierda, acción principal a la derecha */
+.registrar-consulta-actions-paso-2 {
+  justify-content: space-between;
+}
+
+/* ---------- Pantalla de carga (skeleton) ---------- */
+
+.registrar-consulta-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.registrar-consulta-skeleton {
+  display: block;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #efe9fb 0%, #f8f4ff 50%, #efe9fb 100%);
+  background-size: 200% 100%;
+  animation: registrar-consulta-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes registrar-consulta-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .registrar-consulta-skeleton {
+    animation: none;
+  }
+}
+
+.registrar-consulta-skeleton-volver {
+  width: 210px;
+  height: 40px;
+  border-radius: 999px;
+}
+
+.registrar-consulta-skeleton-titulo {
+  width: 160px;
+  height: 20px;
+  margin-bottom: 20px;
+}
+
+.registrar-consulta-skeleton-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.registrar-consulta-skeleton-label {
+  width: 90px;
+  height: 14px;
+}
+
+.registrar-consulta-skeleton-input {
+  height: 44px;
+  border-radius: 14px;
+}
+
+.registrar-consulta-skeleton-boton {
+  width: 160px;
+  height: 44px;
+  border-radius: 999px;
 }
 
 @media (max-width: 768px) {
+
+  .registrar-consulta-main {
+    padding-top: 76px;
+  }
+
   .registrar-consulta-volver-wrap {
     margin-bottom: 16px;
   }
 
-  .registrar-consulta-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .registrar-consulta-banner {
-    padding: 32px 28px;
+  .registrar-consulta-banner,
+  .registrar-consulta-section {
+    padding: 22px;
   }
 
   .registrar-consulta-title {
-    font-size: 30px;
-    line-height: 38px;
+    font-size: 22px;
+    line-height: 28px;
   }
 
-  .registrar-consulta-subtitle {
-    font-size: 15px;
-    line-height: 22px;
-  }
-
+  /* Botones apilados a todo el ancho: la acción principal queda arriba
+     y "Paso anterior" abajo (column-reverse invierte el orden del DOM) */
   .registrar-consulta-actions {
-    flex-direction: column;
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .registrar-consulta-actions button {
+    width: 100%;
+  }
+
+  .registrar-consulta-skeleton-boton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .registrar-consulta-main {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .registrar-consulta-banner,
+  .registrar-consulta-section {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .registrar-consulta-destino-card {
+    padding: 14px 44px 14px 14px;
+  }
+
+  .registrar-consulta-destino-card::after {
+    top: 14px;
+    right: 14px;
   }
 }

@@ -12,6 +12,44 @@ export const actualizarMiVeterinaria = async (veterinaria) => {
   return data.data;
 };
 
+export const actualizarMisDatosGenerales = async (datos) => {
+  const { data } = await api.patch("/veterinarias/mia/datos", datos);
+  return data.data;
+};
+
+export const actualizarMisServicios = async (servicios) => {
+  const { data } = await api.put("/veterinarias/mia/servicios", { servicios });
+  return data.data;
+};
+
+export const actualizarMisProfesionales = async (profesionales) => {
+  const { data } = await api.put("/veterinarias/mia/profesionales", { profesionales });
+  return data.data;
+};
+
+export const actualizarMisHorarios = async (horarios, urgencias24hs) => {
+  const { data } = await api.put("/veterinarias/mia/horarios", {
+    horarios,
+    urgencias24hs,
+  });
+  return data.data;
+};
+
+export const obtenerMetodoCobro = async () => {
+  const { data } = await api.get("/veterinarias/mia/metodo-cobro");
+  return data.data;
+};
+
+export const iniciarConexionMercadoPago = async () => {
+  const { data } = await api.post("/veterinarias/mia/metodo-cobro/mercadopago");
+  return data.data;
+};
+
+export const desconectarMercadoPago = async () => {
+  const { data } = await api.delete("/veterinarias/mia/metodo-cobro/mercadopago");
+  return data;
+};
+
 export const getVeterinariaById = async (id) => {
   const { data } = await api.get(`/veterinarias/${id}`);
   return data.data; // ahora devuelve directamente el objeto veterinaria
@@ -20,6 +58,30 @@ export const getVeterinariaById = async (id) => {
 export const getAllVeterinarias = async () => {
   const response = await api.get("/veterinarias");
   return response.data;
+};
+
+/* Listado paginado y filtrado en el servidor (buscador del tutor).
+ */
+export const obtenerVeterinariasPaginadas = async ({
+  q,
+  categoria,
+  urgencias,
+  page = 1,
+  limit = 12,
+} = {}) => {
+  const params = { page, limit };
+  if (q?.trim()) params.q = q.trim();
+  if (categoria) params.categoria = categoria;
+  if (urgencias) params.urgencias = true;
+
+  const { data } = await api.get("/veterinarias", { params });
+
+  return {
+    veterinarias: data.data ?? [],
+    total: data.paginacion?.total ?? 0,
+    page: data.paginacion?.page ?? page,
+    totalPaginas: data.paginacion?.totalPaginas ?? 1,
+  };
 };
 
 // GET /veterinarias/buscar?lat=&lng=&radio=   veterinarias cercanas
@@ -32,7 +94,7 @@ export const buscarVeterinariasCercanas = async ({ lat, lng, radio }) => {
 
 // POST /veterinarias/:id/resenas { valor: 1..5 }
 // Crea o actualiza  calificación para esa vete
-// Devuelve { miCalificacion, rating, cantidadResenias } con el promedio ya recalculado.
+// Devuelve { miCalificacion, rating, cantidadResenias } con el promedio ya recalculado
 export const calificarVeterinaria = async (id, valor) => {
   const { data } = await api.post(`/veterinarias/${id}/resenas`, { valor });
   return data.data;

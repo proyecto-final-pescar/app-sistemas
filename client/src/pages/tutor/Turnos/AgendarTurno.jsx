@@ -1,7 +1,16 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Search } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
-import { crearPreferenciaPago } from "../../../services/pagoService";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { crearPreferenciaPago } from "../../../services/pagosService";
+import { getVeterinariaById } from "../../../services/veterinariaService";
+import { obtenerMascotas } from "../../../services/mascotaService";
+import {
+  obtenerTurnosPorVeterinaria,
+  reservarTurno as reservarTurnoService,
+  pagarEfectivo,
+  obtenerReglasTurnos,
+} from "../../../services/turnosService";
+import SelectorMetodoPago from "../../../components/pagos/SelectorMetodoPago";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 
@@ -10,10 +19,14 @@ import SuccessModal from "../../../components/ui/success-modal/SuccessModal";
 
 import styles from "../../../styles/AgendarTurno.module.css";
 
-const API_URL = import.meta.env.VITE_API_URL;
-
 const ANTICIPACION_MINIMA_HORAS = 10;
 const PLAZO_PAGO_HORAS = 3;
+// Valores por defecto si el backend no responde; la fuente real es
+// GET /constantes/reglas-turnos (mismos nombres que en turnoController.js).
+const REGLAS_DEFAULT = {
+  anticipacionMinimaHoras: ANTICIPACION_MINIMA_HORAS,
+  plazoPagoHoras: PLAZO_PAGO_HORAS,
+};
 
 const formatearFechaId = (date) => {
   const yyyy = date.getFullYear();
@@ -24,19 +37,27 @@ const formatearFechaId = (date) => {
 
 const fechaIdDesdeISO = (fechaISO) => fechaISO.slice(0, 10);
 
-const cumpleAntelacionMinima = (fechaStr, hora) => {
+const cumpleAntelacionMinima = (fechaStr, hora, anticipacionHoras) => {
   const [anio, mes, dia] = fechaStr.split("-").map(Number);
   const [hh, mm] = hora.split(":").map(Number);
   const fechaHoraTurno = new Date(anio, mes - 1, dia, hh, mm);
 
   const limiteMinimo = new Date(
-    Date.now() + ANTICIPACION_MINIMA_HORAS * 60 * 60 * 1000
+    Date.now() + anticipacionHoras * 60 * 60 * 1000
   );
 
   return fechaHoraTurno >= limiteMinimo;
 };
 
-const obtenerToken = () => localStorage.getItem("token");
+const idDeTurno = (t) => t.turno_id || t._id;
+const idDeMascota = (m) => m.mascota_id || m._id;
+const idDeServicio = (s) => s.servicio_id || s._id;
+const idDeProfesional = (p) => p.profesional_id || p._id;
+
+const formatearPrecio = (valor) => {
+  const numero = Number(valor);
+  return Number.isFinite(numero) ? numero.toLocaleString("es-AR") : valor;
+};
 
 const NOMBRES_DIAS = ["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SAB"];
 const NOMBRES_DIAS_COMPLETO = {
@@ -57,7 +78,6 @@ const AgendarTurnos = () => {
   const navigate = useNavigate();
   const { veterinariaId } = useParams();
 
-  // --- Estados del Negocio ---
   const [veterinaria, setVeterinaria] = useState(null);
   const [mascotas, setMascotas] = useState([]);
   const [turnosDisponibles, setTurnosDisponibles] = useState([]);
@@ -65,7 +85,6 @@ const AgendarTurnos = () => {
   const [loadingTurnos, setLoadingTurnos] = useState(false);
   const [error, setError] = useState(null);
 
-  // --- Estados de Selección y Filtro ---
   const [servicioSeleccionadoId, setServicioSeleccionadoId] = useState("");
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todas");
   const [busquedaServicio, setBusquedaServicio] = useState("");
@@ -80,55 +99,70 @@ const AgendarTurnos = () => {
   });
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isSelectorPagoOpen, setIsSelectorPagoOpen] = useState(false);
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
-  const [turnoCreadoId, setTurnoCreadoId] = useState(null);
+  const [metodoConfirmado, setMetodoConfirmado] = useState(null);
+  const [procesandoAccion, setProcesandoAccion] = useState(false);
+  // Qué acción corre ('reservar' | 'pagar' | null): ambos botones se
+  // deshabilitan juntos, pero solo el accionado muestra "Procesando...".
+  const [accionEnCurso, setAccionEnCurso] = useState(null);
   const [procesandoPago, setProcesandoPago] = useState(false);
   const [errorPago, setErrorPago] = useState("");
   const [turnoSeleccionado, setTurnoSeleccionado] = useState(null);
-  const [profesionalSeleccionadoId, setProfesionalSeleccionadoId] = useState("");
+  const [turnoIdSeleccionado, setTurnoIdSeleccionado] = useState("");
+  // Turno ya reservado a nombre del usuario en este intento (p. ej. la
+  // preferencia de MP falló y el modal sigue abierto): no se vuelve a reservar.
+  const [turnoReservadoId, setTurnoReservadoId] = useState(null);
   const [mascotaSeleccionadaId, setMascotaSeleccionadaId] = useState("");
   const [notas, setNotas] = useState("");
   const [mascotaConfirmadaNombre, setMascotaConfirmadaNombre] = useState("");
+  // Al perder la carrera por un turno (409) se incrementa para que el
+  // efecto de abajo recargue la grilla sin el horario ya tomado.
+  const [refreshKey, setRefreshKey] = useState(0);
+  // Reintento manual de la carga inicial cuando falla.
+  const [retryKey, setRetryKey] = useState(0);
+  // Marca si el usuario canceló la espera del checkout de MP.
+  const pagoCanceladoRef = useRef(false);
+  const [reglas, setReglas] = useState(REGLAS_DEFAULT);
 
-  // Carga inicial
   useEffect(() => {
     let cancelado = false;
 
     const cargarDatosBase = async () => {
       try {
         setLoading(true);
-        const token = obtenerToken();
-        const headers = { Authorization: `Bearer ${token}` };
+        setError(null);
 
-        const [resVetRaw, resMascotasRaw] = await Promise.all([
-          fetch(`${API_URL}/veterinarias/${veterinariaId}`, { headers }),
-          fetch(`${API_URL}/mascotas`, { headers }),
-        ]);
-
-        if (!resVetRaw.ok || !resMascotasRaw.ok) {
-          throw new Error("Error al obtener los datos iniciales.");
-        }
-
-        const [resVet, resMascotas] = await Promise.all([
-          resVetRaw.json(),
-          resMascotasRaw.json(),
+        const [vet, mascotasData] = await Promise.all([
+          getVeterinariaById(veterinariaId),
+          obtenerMascotas(),
         ]);
 
         if (cancelado) return;
 
-        if (!resVet.success) {
-          setError(resVet.message || "No pudimos cargar la veterinaria.");
-          setLoading(false);
-          return;
-        }
-
-        setVeterinaria(resVet.data);
-        setMascotas(Array.isArray(resMascotas) ? resMascotas : []);
+        setVeterinaria(vet);
+        setMascotas(Array.isArray(mascotasData) ? mascotasData : mascotasData?.data || []);
         setError(null);
+
+        try {
+          const r = await obtenerReglasTurnos();
+          if (cancelado) return;
+          if (r && Number.isFinite(Number(r.anticipacionMinimaHoras)) && Number.isFinite(Number(r.plazoPagoHoras))) {
+            setReglas({
+              anticipacionMinimaHoras: Number(r.anticipacionMinimaHoras),
+              plazoPagoHoras: Number(r.plazoPagoHoras),
+            });
+          }
+        } catch {
+          // Se mantienen los valores por defecto locales.
+        }
       } catch (err) {
         if (cancelado) return;
         console.error("Error cargando datos base:", err);
-        setError("No se pudo cargar la clínica. Intentá de nuevo más tarde.");
+        setError(
+          err.response?.data?.message ||
+          "No se pudo cargar la clínica. Intentá de nuevo más tarde."
+        );
       } finally {
         if (!cancelado) setLoading(false);
       }
@@ -139,22 +173,23 @@ const AgendarTurnos = () => {
     return () => {
       cancelado = true;
     };
-  }, [veterinariaId]);
+  }, [veterinariaId, retryKey]);
 
-  // Lista de categorías únicas extraídas de los servicios
+
   const categoriasUnicas = useMemo(() => {
     const cats = new Set(["Todas"]);
     (veterinaria?.servicios || []).forEach((s) => {
-      if (s.categoria) cats.add(s.categoria);
+      const categoria = s.categoria_servicio?.nombre || s.categoria;
+      if (categoria) cats.add(categoria);
     });
     return Array.from(cats);
   }, [veterinaria]);
 
-  // Filtrado dinámico por categoría y por búsqueda
   const serviciosFiltrados = useMemo(() => {
     return (veterinaria?.servicios || []).filter((s) => {
+      const categoria = s.categoria_servicio?.nombre || s.categoria;
       const coincideCategoria =
-        categoriaSeleccionada === "Todas" || s.categoria === categoriaSeleccionada;
+        categoriaSeleccionada === "Todas" || categoria === categoriaSeleccionada;
       const coincideBusqueda = s.nombre
         .toLowerCase()
         .includes(busquedaServicio.toLowerCase());
@@ -181,14 +216,15 @@ const AgendarTurnos = () => {
   }, [fechaInicioSemana]);
 
   const servicioElegido = useMemo(
-    () => veterinaria?.servicios?.find((s) => s._id === servicioSeleccionadoId) || null,
+    () => veterinaria?.servicios?.find((s) => idDeServicio(s) === servicioSeleccionadoId) || null,
     [veterinaria, servicioSeleccionadoId]
   );
+
 
   const mapaProfesionales = useMemo(() => {
     const mapa = {};
     (veterinaria?.profesionales || []).forEach((p) => {
-      mapa[p._id] = p;
+      mapa[idDeProfesional(p)] = p;
     });
     return mapa;
   }, [veterinaria]);
@@ -198,15 +234,16 @@ const AgendarTurnos = () => {
 
     turnosDisponibles.forEach((turno) => {
       const fechaStr = fechaIdDesdeISO(turno.fecha);
-      if (!cumpleAntelacionMinima(fechaStr, turno.hora)) return;
+      const hora = turno.hora_inicio;
+      if (!cumpleAntelacionMinima(fechaStr, hora, reglas.anticipacionMinimaHoras)) return;
 
       if (!mapa[fechaStr]) mapa[fechaStr] = {};
-      if (!mapa[fechaStr][turno.hora]) mapa[fechaStr][turno.hora] = [];
-      mapa[fechaStr][turno.hora].push(turno);
+      if (!mapa[fechaStr][hora]) mapa[fechaStr][hora] = [];
+      mapa[fechaStr][hora].push(turno);
     });
 
     return mapa;
-  }, [turnosDisponibles]);
+  }, [turnosDisponibles, reglas]);
 
   const horasVisibles = useMemo(() => {
     const todasLasHoras = new Set();
@@ -218,7 +255,6 @@ const AgendarTurnos = () => {
     return Array.from(todasLasHoras).sort();
   }, [turnosPorDiaYHora]);
 
-  // Carga de turnos disponibles según servicio y semana
   useEffect(() => {
     let cancelado = false;
 
@@ -230,34 +266,25 @@ const AgendarTurnos = () => {
 
       try {
         setLoadingTurnos(true);
-        const token = obtenerToken();
-        const headers = { Authorization: `Bearer ${token}` };
 
         const fechaDesde = diasSemana[0].fechaStr;
         const fechaHasta = diasSemana[6].fechaStr;
 
-        const params = new URLSearchParams({
-          veterinariaId,
+        const turnos = await obtenerTurnosPorVeterinaria(veterinariaId, {
           servicioId: servicioSeleccionadoId,
-          estado: "disponible",
+          estado: "DIS",
           fechaDesde,
           fechaHasta,
         });
 
-        const res = await fetch(`${API_URL}/turnos?${params.toString()}`, { headers });
-        const resultado = await res.json();
-
         if (cancelado) return;
-
-        if (!res.ok || !resultado.success) {
-          throw new Error(resultado.message || "No se pudieron cargar los turnos");
-        }
-
-        setTurnosDisponibles(resultado.data.turnos || []);
+        setTurnosDisponibles(turnos || []);
       } catch (err) {
         if (cancelado) return;
         console.error("Error cargando turnos disponibles:", err);
-        setError("No se pudo cargar la grilla de turnos.");
+        setError(
+          err.response?.data?.message || "No se pudo cargar la grilla de turnos."
+        );
       } finally {
         if (!cancelado) setLoadingTurnos(false);
       }
@@ -268,13 +295,23 @@ const AgendarTurnos = () => {
     return () => {
       cancelado = true;
     };
-  }, [veterinariaId, servicioSeleccionadoId, fechaInicioSemana]);
+  }, [veterinariaId, servicioSeleccionadoId, fechaInicioSemana, refreshKey]);
 
   const handleSemanaAnterior = () => {
     setFechaInicioSemana((prev) => {
-      const nueva = new Date(prev);
-      nueva.setDate(prev.getDate() - 7);
-      return nueva;
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const offset = (hoy.getDay() + 6) % 7;
+      const lunesActual = new Date(hoy);
+      lunesActual.setDate(hoy.getDate() - offset);
+
+      const candidata = new Date(prev);
+      candidata.setDate(prev.getDate() - 7);
+      candidata.setHours(0, 0, 0, 0);
+
+      // Tope en la semana actual: no tiene sentido mostrar semanas pasadas.
+      if (candidata < lunesActual) return prev;
+      return candidata;
     });
   };
 
@@ -293,115 +330,150 @@ const AgendarTurnos = () => {
     if (!opciones.length) return;
 
     setTurnoSeleccionado({ dia, hora, opciones });
-    setProfesionalSeleccionadoId(opciones.length === 1 ? opciones[0].profesionalId : "");
+    setTurnoIdSeleccionado(opciones.length === 1 ? idDeTurno(opciones[0]) : "");
     setIsConfirmOpen(true);
   };
 
-  const handleCloseConfirm = () => {
+  const handleCloseConfirm = useCallback(() => {
+    if (procesandoAccion) return;
     setIsConfirmOpen(false);
-    setProfesionalSeleccionadoId("");
+    setAccionEnCurso(null);
+    setTurnoIdSeleccionado("");
     setMascotaSeleccionadaId("");
     setNotas("");
-  };
+    setErrorPago("");
+    setTurnoReservadoId(null);
+  }, [procesandoAccion]);
+
+  useEffect(() => {
+    if (!isConfirmOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") handleCloseConfirm();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isConfirmOpen, handleCloseConfirm]);
 
   const turnoConcretoElegido = useMemo(() => {
-    if (!turnoSeleccionado || !profesionalSeleccionadoId) return null;
+    if (!turnoSeleccionado || !turnoIdSeleccionado) return null;
     return (
       turnoSeleccionado.opciones.find(
-        (t) => t.profesionalId === profesionalSeleccionadoId
+        (t) => idDeTurno(t) === turnoIdSeleccionado
       ) || null
     );
-  }, [turnoSeleccionado, profesionalSeleccionadoId]);
+  }, [turnoSeleccionado, turnoIdSeleccionado]);
 
   const reservarTurno = async () => {
-    const token = obtenerToken();
+    const turnoId = idDeTurno(turnoConcretoElegido);
 
     const payload = {
-      fecha: turnoSeleccionado.dia.fechaStr,
-      hora: turnoSeleccionado.hora,
-      motivo: servicioElegido?.nombre || "",
       mascotaId: mascotaSeleccionadaId,
-      veterinariaId: veterinariaId,
-      profesionalId: profesionalSeleccionadoId,
+      motivo: servicioElegido?.nombre || "",
       notas: notas || undefined,
     };
 
-    const response = await fetch(`${API_URL}/turnos`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
+    const turnoReservado = await reservarTurnoService(turnoId, payload);
 
-    const resultado = await response.json();
-
-    if (!response.ok || !resultado.success) {
-      throw new Error(resultado.message || "Error al reservar el turno");
-    }
-
-    const mascotaElegida = mascotas.find((m) => m._id === mascotaSeleccionadaId);
+    const mascotaElegida = mascotas.find((m) => idDeMascota(m) === mascotaSeleccionadaId);
     setMascotaConfirmadaNombre(mascotaElegida?.nombre || "tu mascota");
 
     setTurnosDisponibles((prev) =>
-      prev.filter((t) => t._id !== turnoConcretoElegido._id)
+      prev.filter((t) => idDeTurno(t) !== turnoId)
     );
 
-    return resultado.data.turno;
+    return turnoReservado;
+  };
+
+  const manejarErrorReserva = (err, mensajeDefault) => {
+    const mensaje = err.response?.data?.message || mensajeDefault;
+    setErrorPago(mensaje);
+    // Si se perdió la carrera por el turno (409), la grilla quedó
+    // desactualizada: se recarga para no seguir mostrando el horario tomado.
+    if (err.response?.status === 409) {
+      setRefreshKey((k) => k + 1);
+    }
   };
 
   const handleConfirmarTurnoFinal = async (e) => {
     e.preventDefault();
+    if (procesandoAccion) return;
+
     if (!turnoConcretoElegido) {
-      alert("Elegí un profesional para continuar.");
+      setErrorPago("Elegí un profesional para continuar.");
       return;
     }
     if (!mascotaSeleccionadaId) {
-      alert("Elegí una mascota para continuar.");
+      setErrorPago("Elegí una mascota para continuar.");
       return;
     }
 
+    setProcesandoAccion(true);
+    setAccionEnCurso("reservar");
     try {
+      setMetodoConfirmado(null);
       await reservarTurno();
+      // Se baja el flag antes de cerrar: handleCloseConfirm se niega a
+      // cerrar mientras procesandoAccion es true y el modal quedaba abierto
+      // debajo del success.
+      setProcesandoAccion(false);
       handleCloseConfirm();
       setIsSuccessOpen(true);
     } catch (err) {
-      alert(err.message || "Hubo un problema al agendar el turno.");
+      await manejarErrorReserva(err, "Hubo un problema al agendar el turno.");
+    } finally {
+      setProcesandoAccion(false);
+      setAccionEnCurso(null);
     }
   };
 
-  const handlePagarAhora = async () => {
+  const handleAbrirSelectorPago = () => {
     if (!turnoConcretoElegido) {
-      alert("Elegí un profesional para continuar.");
+      setErrorPago("Elegí un profesional para continuar.");
       return;
     }
     if (!mascotaSeleccionadaId) {
-      alert("Elegí una mascota para continuar.");
+      setErrorPago("Elegí una mascota para continuar.");
       return;
     }
-
     setErrorPago("");
+    setIsSelectorPagoOpen(true);
+  };
+
+  const handlePagarConMercadoPago = async () => {
+    setIsSelectorPagoOpen(false);
+    setErrorPago("");
+    setProcesandoAccion(true);
+    setAccionEnCurso("pagar");
+    pagoCanceladoRef.current = false;
 
     try {
-      const turnoCreado = await reservarTurno();
-      handleCloseConfirm();
+      // Si ya se reservó en un intento anterior (falló la preferencia), no se
+      // vuelve a reservar: se reutiliza el turno pendiente a nombre del usuario.
+      let turnoIdParaPagar = turnoReservadoId;
+      if (!turnoIdParaPagar) {
+        const turnoCreado = await reservarTurno();
+        turnoIdParaPagar = idDeTurno(turnoCreado);
+        setTurnoReservadoId(turnoIdParaPagar);
+      }
+      // A propósito no se cierra el modal: si la preferencia falla, el usuario
+      // sigue acá con su reserva y puede reintentar el pago.
 
-      // El turno ya existe: aunque MercadoPago falle, no se pierde.
       setProcesandoPago(true);
 
       try {
-        const respuestaPago = await crearPreferenciaPago(turnoCreado._id);
-        const initPoint = respuestaPago.data?.init_point;
+        const respuestaPago = await crearPreferenciaPago(turnoIdParaPagar);
+        const initPoint = respuestaPago?.init_point;
 
         if (!initPoint) {
           throw new Error("No se recibió el enlace de MercadoPago.");
         }
 
+        if (pagoCanceladoRef.current) return;
         window.location.href = initPoint;
       } catch (pagoError) {
         console.error("Error al crear la preferencia de pago:", pagoError);
         setProcesandoPago(false);
+        if (pagoCanceladoRef.current) return;
         setErrorPago(
           pagoError.response?.data?.message ||
           pagoError.message ||
@@ -409,7 +481,57 @@ const AgendarTurnos = () => {
         );
       }
     } catch (err) {
-      alert(err.message || "Hubo un problema al agendar el turno.");
+      if (!pagoCanceladoRef.current) {
+        await manejarErrorReserva(err, "Hubo un problema al agendar el turno.");
+      }
+    } finally {
+      setProcesandoAccion(false);
+      setAccionEnCurso(null);
+    }
+  };
+
+  const handleCancelarPago = () => {
+    pagoCanceladoRef.current = true;
+    setProcesandoPago(false);
+    setProcesandoAccion(false);
+    setAccionEnCurso(null);
+  };
+
+  const handlePagarEnEfectivo = async () => {
+    setIsSelectorPagoOpen(false);
+    setProcesandoAccion(true);
+    setAccionEnCurso("pagar");
+
+    try {
+      const turnoId = idDeTurno(turnoConcretoElegido);
+      const payload = {
+        turnoId,
+        mascotaId: mascotaSeleccionadaId,
+        motivo: servicioElegido?.nombre || "",
+        notas: notas || undefined,
+      };
+
+      await pagarEfectivo(payload);
+
+      const mascotaElegida = mascotas.find((m) => idDeMascota(m) === mascotaSeleccionadaId);
+      setMascotaConfirmadaNombre(mascotaElegida?.nombre || "tu mascota");
+
+      setTurnosDisponibles((prev) => prev.filter((t) => idDeTurno(t) !== turnoId));
+
+      setMetodoConfirmado("efectivo");
+      // Idem arriba: cerrar con el flag bajo para que no quede abierto
+      // debajo del success.
+      setProcesandoAccion(false);
+      handleCloseConfirm();
+      setIsSuccessOpen(true);
+    } catch (err) {
+      await manejarErrorReserva(
+        err,
+        "Hubo un problema al confirmar el turno en efectivo."
+      );
+    } finally {
+      setProcesandoAccion(false);
+      setAccionEnCurso(null);
     }
   };
 
@@ -431,8 +553,24 @@ const AgendarTurnos = () => {
 
   if (error) {
     return (
-      <div className={styles.layout} style={{ justifyContent: "center", alignItems: "center" }}>
+      <div className={styles.layout} style={{ justifyContent: "center", alignItems: "center", flexDirection: "column", gap: 16 }}>
         <p>{error}</p>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            className={styles.btnConfirmar}
+            onClick={() => setRetryKey((k) => k + 1)}
+          >
+            Reintentar
+          </button>
+          <button
+            type="button"
+            className={styles.btnCancelar}
+            onClick={handleVolver}
+          >
+            Volver
+          </button>
+        </div>
       </div>
     );
   }
@@ -441,14 +579,16 @@ const AgendarTurnos = () => {
       <div className={styles.pagoLoadingOverlay}>
         <div className={styles.pagoLoadingCard}>
           <div className={styles.pagoSpinner}></div>
-
           <h2>Preparando tu pago...</h2>
-
-          <p>
-            Estamos generando el checkout seguro de MercadoPago.
-          </p>
-
+          <p>Estamos generando el checkout seguro de MercadoPago.</p>
           <span>Te vamos a redirigir automáticamente.</span>
+          <button
+            type="button"
+            className={styles.btnCancelar}
+            onClick={handleCancelarPago}
+          >
+            Cancelar
+          </button>
         </div>
       </div>
     );
@@ -485,12 +625,10 @@ const AgendarTurnos = () => {
 
           {/* CARD PRINCIPAL DE AGENDA */}
           <section className={styles.cardCalendario}>
-            {/* Header de la Card con posición fija */}
             <div className={styles.cardHeader}>
               <div className={styles.filaTituloNav}>
                 <h2 className={styles.tituloCalendario}>¿Qué necesitás?</h2>
 
-                {/* Las flechas siempre están reservadas en la esquina derecha si hay servicio activo */}
                 <div className={styles.navControlesPlaceholder}>
                   {servicioSeleccionadoId && (
                     <div className={styles.navControles}>
@@ -515,7 +653,6 @@ const AgendarTurnos = () => {
                 </div>
               </div>
 
-              {/* Fila separada fija para la Búsqueda */}
               <div className={styles.filaBuscador}>
                 <div className={styles.searchBox}>
                   <Search size={16} className={styles.searchIcon} />
@@ -530,7 +667,6 @@ const AgendarTurnos = () => {
               </div>
             </div>
 
-            {/* BARRA DE CATEGORÍAS */}
             {categoriasUnicas.length > 2 && (
               <div className={styles.categoriasScroll}>
                 {categoriasUnicas.map((cat) => (
@@ -547,7 +683,6 @@ const AgendarTurnos = () => {
               </div>
             )}
 
-            {/* CHIPS DE SERVICIOS */}
             <div className={styles.chipsScrollContainer}>
               {serviciosFiltrados.length === 0 ? (
                 <p className={styles.sinServiciosText}>
@@ -555,24 +690,24 @@ const AgendarTurnos = () => {
                 </p>
               ) : (
                 serviciosFiltrados.map((s) => {
-                  const seleccionado = s._id === servicioSeleccionadoId;
+                  const id = idDeServicio(s);
+                  const seleccionado = id === servicioSeleccionadoId;
                   return (
                     <button
-                      key={s._id}
+                      key={id}
                       type="button"
                       className={`${styles.chipServicio} ${seleccionado ? styles.chipActivo : ""
                         }`}
-                      onClick={() => setServicioSeleccionadoId(s._id)}
+                      onClick={() => setServicioSeleccionadoId(id)}
                     >
                       <span className={styles.chipNombre}>{s.nombre}</span>
-                      <span className={styles.chipPrecio}>${s.precio}</span>
+                      <span className={styles.chipPrecio}>${formatearPrecio(s.precio)}</span>
                     </button>
                   );
                 })
               )}
             </div>
 
-            {/* GRILLA DE HORARIOS */}
             {!servicioSeleccionadoId ? (
               <div className={styles.estadoVacio}>
                 <p>Seleccioná un servicio arriba para ver los horarios disponibles esta semana.</p>
@@ -670,13 +805,17 @@ const AgendarTurnos = () => {
 
             {/* MODAL CONFIRMACIÓN */}
             {isConfirmOpen && (
-              <div className={styles.modalOverlay}>
-                <div className={styles.modalContainer}>
+              <div className={styles.modalOverlay} onClick={handleCloseConfirm}>
+                <div
+                  className={styles.modalContainer}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <button
                     type="button"
                     className={styles.modalCerrar}
                     aria-label="Cerrar modal"
                     onClick={handleCloseConfirm}
+                    disabled={procesandoAccion}
                   >
                     ✕
                   </button>
@@ -698,15 +837,15 @@ const AgendarTurnos = () => {
                       <Select
                         label="Profesional"
                         placeholder="Seleccioná un profesional"
-                        value={profesionalSeleccionadoId}
-                        onChange={(e) => setProfesionalSeleccionadoId(e.target.value)}
+                        value={turnoIdSeleccionado}
+                        onChange={(e) => setTurnoIdSeleccionado(e.target.value)}
                         opciones={(turnoSeleccionado?.opciones || []).map((turno) => {
-                          const prof = mapaProfesionales[turno.profesionalId];
+                          const prof = turno.profesional || mapaProfesionales[turno.profesional_id];
                           return {
-                            value: turno.profesionalId,
+                            value: idDeTurno(turno),
                             label: prof?.especialidad
-                              ? `${prof?.nombre || "Profesional"} · ${prof.especialidad}`
-                              : prof?.nombre || "Profesional",
+                              ? `${prof?.nombre || "Profesional"} ${prof?.apellido || ""} · ${prof.especialidad?.nombre}`
+                              : `${prof?.nombre || "Profesional"} ${prof?.apellido || ""}`.trim(),
                           };
                         })}
                       />
@@ -719,8 +858,8 @@ const AgendarTurnos = () => {
                         value={mascotaSeleccionadaId}
                         onChange={(e) => setMascotaSeleccionadaId(e.target.value)}
                         opciones={mascotas.map((m) => ({
-                          value: m._id,
-                          label: `${m.nombre} · ${m.especie}`,
+                          value: idDeMascota(m),
+                          label: `${m.nombre} · ${m.especie || m.raza?.especie?.nombre || ""}`,
                         }))}
                       />
                     </div>
@@ -738,51 +877,73 @@ const AgendarTurnos = () => {
 
                     {turnoConcretoElegido && (
                       <p className={styles.modalDescripcion}>
-                        Precio del servicio: ${turnoConcretoElegido.montoServicio}
+                        Precio del servicio: ${formatearPrecio(turnoConcretoElegido.monto_servicio)}
                       </p>
                     )}
 
                     <p className={styles.modalDescripcion}>
-                      Vas a tener {PLAZO_PAGO_HORAS}hs para pagar este turno antes de
-                      que se libere automáticamente.
+                      Vas a tener {reglas.plazoPagoHoras}hs para pagar este turno antes de
+                      que se libere automáticamente (o pagalo ahora en efectivo o por MercadoPago).
                     </p>
 
+                    {errorPago && (
+                      <p className={styles.modalDescripcion} style={{ color: "#ef4444", fontWeight: 600 }}>
+                        {errorPago}
+                      </p>
+                    )}
+
+                    {turnoReservadoId && (
+                      <p className={styles.modalDescripcion} style={{ color: "#6d28d9", fontWeight: 600 }}>
+                        Este turno ya quedó reservado a tu nombre. Podés pagarlo
+                        con “Pagar ahora” o desde “Mis Turnos”.
+                      </p>
+                    )}
+
                     <div className={styles.modalAcciones}>
-                      <button type="button" className={styles.btnCancelar} onClick={handleCloseConfirm}>
+                      <button
+                        type="button"
+                        className={styles.btnCancelar}
+                        onClick={handleCloseConfirm}
+                        disabled={procesandoAccion}
+                      >
                         Cancelar
                       </button>
                       <button
                         type="button"
                         className={styles.btnCancelar}
-                        onClick={handlePagarAhora}
-                        disabled={procesandoPago}
+                        onClick={handleAbrirSelectorPago}
+                        disabled={procesandoAccion}
                       >
-                        {procesandoPago ? "Procesando..." : "Pagar ahora"}
+                        {procesandoAccion && accionEnCurso === "pagar" ? "Procesando..." : "Pagar ahora"}
                       </button>
-                      <button type="submit" className={styles.btnConfirmar}>
-                        Confirmar turno
+                      <button type="submit" className={styles.btnConfirmar} disabled={procesandoAccion || turnoReservadoId}>
+                        {procesandoAccion && accionEnCurso === "reservar" ? "Procesando..." : "Confirmar turno"}
                       </button>
                     </div>
                   </form>
                 </div>
               </div>
             )}
-            {errorPago && (
-              <div className={styles.modalOverlay}>
-                <div className={styles.modalContainer}>
-                  <p style={{ color: "#ef4444", fontWeight: 600 }}>{errorPago}</p>
-                  <button className={styles.btnConfirmar} onClick={() => setErrorPago("")}>
-                    Entendido
-                  </button>
-                </div>
-              </div>
-            )}
+
+            {/* SELECTOR DE MÉTODO DE PAGO */}
+            <SelectorMetodoPago
+              isOpen={isSelectorPagoOpen}
+              onClose={() => setIsSelectorPagoOpen(false)}
+              onElegirMercadoPago={handlePagarConMercadoPago}
+              onElegirEfectivo={handlePagarEnEfectivo}
+              monto={turnoConcretoElegido?.monto_servicio}
+              procesando={procesandoAccion}
+            />
 
             {/* MODAL ÉXITO */}
             <SuccessModal
               abierto={isSuccessOpen}
-              titulo="¡Turno reservado!"
-              mensaje={`Tu turno para ${mascotaConfirmadaNombre || "tu mascota"} quedó reservado. Tenés ${PLAZO_PAGO_HORAS}hs para pagarlo desde "Mis Turnos" o se libera automáticamente.`}
+              titulo={metodoConfirmado === "efectivo" ? "¡Turno confirmado!" : "¡Turno reservado!"}
+              mensaje={
+                metodoConfirmado === "efectivo"
+                  ? `Tu turno para ${mascotaConfirmadaNombre || "tu mascota"} quedó confirmado. Recordá abonar $${turnoConcretoElegido ? formatearPrecio(turnoConcretoElegido.monto_servicio) : ""} en efectivo en el local.`
+                  : `Tu turno para ${mascotaConfirmadaNombre || "tu mascota"} quedó reservado. Tenés ${reglas.plazoPagoHoras}hs para pagarlo desde "Mis Turnos" o se libera automáticamente.`
+              }
               textoBoton="Entendido"
               onClose={() => setIsSuccessOpen(false)}
             />

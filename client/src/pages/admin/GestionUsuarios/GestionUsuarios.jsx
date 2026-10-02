@@ -4,6 +4,8 @@ import { Eye } from "lucide-react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import DetallesDeDuenoModal from "../../../components/administrador/detallesDeDuenoModal/detallesDeDuenoModal";
+import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
+import Button from "../../../components/ui/button/Button.jsx";
 
 import {
   actualizarEstadoUsuario,
@@ -18,21 +20,18 @@ const formatearFecha = (fecha) => {
   if (!fecha) {
     return "Sin información";
   }
-
   return new Intl.DateTimeFormat("es-AR").format(new Date(fecha));
 };
 
 function GestionUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
 
-  // Valores "en vivo": se actualizan en cada tecla, sin disparar fetch todavía.
   const [busqueda, setBusqueda] = useState("");
   const [filtroNombre, setFiltroNombre] = useState("");
   const [filtroEmail, setFiltroEmail] = useState("");
   const [filtroTelefono, setFiltroTelefono] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("");
 
- 
   const [filtrosAplicados, setFiltrosAplicados] = useState({
     busqueda: "",
     filtroNombre: "",
@@ -48,20 +47,9 @@ function GestionUsuarios() {
   const [error, setError] = useState("");
   const [usuarioActualizando, setUsuarioActualizando] = useState(null);
 
-  
- 
   const [duenoSeleccionadoId, setDuenoSeleccionadoId] = useState(null);
+  const [usuarioParaConfirmar, setUsuarioParaConfirmar] = useState(null);
 
-  // NOTA 
-  // Si hay contenido en los filtros avanzados de Nombre o Email, el buscador
-  // general se deshabilita (en vez de quedar pisado ) para que el
-  // usuario entienda por qué no está buscando.
-  const busquedaGeneralDeshabilitada = Boolean(
-    filtroNombre.trim() || filtroEmail.trim()
-  );
-
-  // Referencia para poder abortar una petición anterior si todavía no
-  // termino cuando se dispara una nueva 
   const controladorActualRef = useRef(null);
 
   const cargarUsuarios = useCallback(async () => {
@@ -89,16 +77,19 @@ function GestionUsuarios() {
         signal: controlador.signal,
       });
 
+      if (controladorActualRef.current !== controlador) return;
+
       setUsuarios(respuesta.data || []);
       setTotalPaginas(respuesta.pagination?.totalPages || 1);
     } catch (errorPeticion) {
-      
       if (
         errorPeticion.name === "CanceledError" ||
         errorPeticion.code === "ERR_CANCELED"
       ) {
         return;
       }
+
+      if (controladorActualRef.current !== controlador) return;
 
       console.error("Error al cargar usuarios:", errorPeticion);
 
@@ -108,27 +99,45 @@ function GestionUsuarios() {
           "No se pudieron cargar los usuarios. Intentá nuevamente."
       );
     } finally {
-      setCargando(false);
+      if (controladorActualRef.current === controlador) {
+        setCargando(false);
+      }
     }
   }, [filtrosAplicados, paginaActual]);
 
-  
   useEffect(() => {
+    const filtrosEnVivo = {
+      busqueda,
+      filtroNombre,
+      filtroEmail,
+      filtroTelefono,
+      filtroEstado,
+    };
+
+    const sinCambios =
+      filtrosEnVivo.busqueda === filtrosAplicados.busqueda &&
+      filtrosEnVivo.filtroNombre === filtrosAplicados.filtroNombre &&
+      filtrosEnVivo.filtroEmail === filtrosAplicados.filtroEmail &&
+      filtrosEnVivo.filtroTelefono === filtrosAplicados.filtroTelefono &&
+      filtrosEnVivo.filtroEstado === filtrosAplicados.filtroEstado;
+
+    if (sinCambios) return;
+
     const temporizador = setTimeout(() => {
-      setFiltrosAplicados({
-        busqueda,
-        filtroNombre,
-        filtroEmail,
-        filtroTelefono,
-        filtroEstado,
-      });
+      setFiltrosAplicados(filtrosEnVivo);
       setPaginaActual(1);
     }, 400);
 
     return () => clearTimeout(temporizador);
-  }, [busqueda, filtroNombre, filtroEmail, filtroTelefono, filtroEstado]);
+  }, [
+    busqueda,
+    filtroNombre,
+    filtroEmail,
+    filtroTelefono,
+    filtroEstado,
+    filtrosAplicados,
+  ]);
 
-  
   useEffect(() => {
     cargarUsuarios();
 
@@ -137,24 +146,33 @@ function GestionUsuarios() {
     };
   }, [cargarUsuarios]);
 
-  const cambiarEstado = async (usuario) => {
-    const nuevoEstado = !usuario.active;
+  const ejecutarCambioEstado = async (usuario) => {
+    const estadoAnterior = usuario.active;
+    const nuevoEstado = !estadoAnterior;
 
     setUsuarioActualizando(usuario.id);
     setError("");
 
+    setUsuarios((usuariosActuales) =>
+      usuariosActuales.map((usuarioActual) =>
+        usuarioActual.id === usuario.id
+          ? { ...usuarioActual, active: nuevoEstado }
+          : usuarioActual
+      )
+    );
+
     try {
       await actualizarEstadoUsuario(usuario.id, nuevoEstado);
+    } catch (errorPeticion) {
+      console.error("Error al actualizar usuario:", errorPeticion);
 
       setUsuarios((usuariosActuales) =>
         usuariosActuales.map((usuarioActual) =>
           usuarioActual.id === usuario.id
-            ? { ...usuarioActual, active: nuevoEstado }
+            ? { ...usuarioActual, active: estadoAnterior }
             : usuarioActual
         )
       );
-    } catch (errorPeticion) {
-      console.error("Error al actualizar usuario:", errorPeticion);
 
       setError(
         errorPeticion.response?.data?.message ||
@@ -163,6 +181,17 @@ function GestionUsuarios() {
     } finally {
       setUsuarioActualizando(null);
     }
+  };
+
+  const pedirConfirmacionCambioEstado = (usuario) => {
+    if (usuarioActualizando === usuario.id) return;
+    setUsuarioParaConfirmar(usuario);
+  };
+
+  const confirmarCambioEstado = async () => {
+    if (!usuarioParaConfirmar) return;
+    await ejecutarCambioEstado(usuarioParaConfirmar);
+    setUsuarioParaConfirmar(null);
   };
 
   const irPaginaAnterior = () => {
@@ -186,37 +215,17 @@ function GestionUsuarios() {
 
         <main className={styles.content}>
           <section className={styles.toolbar}>
-            <div
-              className={styles.searchBox}
-              title={
-                busquedaGeneralDeshabilitada
-                  ? "Deshabilitado mientras usás el filtro de Nombre o Email"
-                  : undefined
-              }
-            >
+            <div className={styles.searchBox}>
               <span aria-hidden="true">⌕</span>
-
               <input
                 type="search"
-                placeholder={
-                  busquedaGeneralDeshabilitada
-                    ? "Buscador deshabilitado (hay un filtro avanzado activo)"
-                    : "Buscar por nombre o email..."
-                }
+                placeholder="Buscar por nombre o email..."
                 value={busqueda}
-                disabled={busquedaGeneralDeshabilitada}
                 onChange={(evento) => {
                   setBusqueda(evento.target.value);
                 }}
               />
             </div>
-
-            {busquedaGeneralDeshabilitada && (
-              <p className={styles.searchHint}>
-                Buscador general deshabilitado: hay un filtro avanzado de
-                Nombre o Email activo. Borralo para volver a usarlo.
-              </p>
-            )}
           </section>
 
           <section className={styles.filters}>
@@ -229,34 +238,26 @@ function GestionUsuarios() {
               type="text"
               placeholder="Nombre"
               value={filtroNombre}
-              onChange={(evento) => {
-                setFiltroNombre(evento.target.value);
-              }}
+              onChange={(evento) => setFiltroNombre(evento.target.value)}
             />
 
             <input
               type="email"
               placeholder="Email"
               value={filtroEmail}
-              onChange={(evento) => {
-                setFiltroEmail(evento.target.value);
-              }}
+              onChange={(evento) => setFiltroEmail(evento.target.value)}
             />
 
             <input
               type="text"
               placeholder="Teléfono"
               value={filtroTelefono}
-              onChange={(evento) => {
-                setFiltroTelefono(evento.target.value);
-              }}
+              onChange={(evento) => setFiltroTelefono(evento.target.value)}
             />
 
             <select
               value={filtroEstado}
-              onChange={(evento) => {
-                setFiltroEstado(evento.target.value);
-              }}
+              onChange={(evento) => setFiltroEstado(evento.target.value)}
             >
               <option value="">Estado</option>
               <option value="true">Activo</option>
@@ -267,7 +268,6 @@ function GestionUsuarios() {
           {error && (
             <div className={styles.errorMessage} role="alert">
               <span>{error}</span>
-
               <button type="button" onClick={cargarUsuarios}>
                 Reintentar
               </button>
@@ -275,13 +275,13 @@ function GestionUsuarios() {
           )}
 
           <section className={styles.tableCard}>
-            <div className={styles.tableWrapper}>
-              {cargando ? (
-                <div className={styles.loadingState}>
-                  Cargando usuarios...
-                </div>
-              ) : (
-                <>
+            {cargando ? (
+              <div className={styles.loadingState}>
+                Cargando usuarios...
+              </div>
+            ) : (
+              <>
+                <div className={styles.tableWrapper}>
                   <table className={styles.table}>
                     <thead>
                       <tr>
@@ -303,32 +303,27 @@ function GestionUsuarios() {
                       {usuarios.map((usuario) => (
                         <tr key={usuario.id}>
                           <td>{usuario.nombre}</td>
-
                           <td>
                             <span>{usuario.email}</span>
                             <span>{usuario.telefono || "Sin teléfono"}</span>
                           </td>
-
                           <td>
                             <span className={styles.petCount}>
                               {usuario.mascotas}
                             </span>
                           </td>
-
                           <td>{formatearFecha(usuario.registro)}</td>
-
                           <td>
                             {usuario.turnos?.proximos ?? 0} |{" "}
                             {usuario.turnos?.pasados ?? 0}
                           </td>
-
                           <td>
                             <button
                               type="button"
                               className={`${styles.toggle} ${
                                 usuario.active ? styles.toggleActive : ""
                               }`}
-                              onClick={() => cambiarEstado(usuario)}
+                              onClick={() => pedirConfirmacionCambioEstado(usuario)}
                               disabled={usuarioActualizando === usuario.id}
                               aria-label={
                                 usuario.active
@@ -339,7 +334,6 @@ function GestionUsuarios() {
                               <span />
                             </button>
                           </td>
-
                           <td>
                             <div className={styles.actions}>
                               <button
@@ -350,7 +344,7 @@ function GestionUsuarios() {
                                 aria-label={`Ver información de ${usuario.nombre}`}
                                 title="Ver información"
                               >
-                                <Eye size={17} />
+                                <Eye size={20} />
                               </button>
                             </div>
                           </td>
@@ -358,15 +352,63 @@ function GestionUsuarios() {
                       ))}
                     </tbody>
                   </table>
+                </div>
 
-                  {usuarios.length === 0 && !error && (
-                    <p className={styles.emptyState}>
-                      No se encontraron dueños con esos filtros.
-                    </p>
-                  )}
-                </>
-              )}
-            </div>
+                <div className={styles.cards}>
+                  {usuarios.map((usuario) => (
+                    <div key={usuario.id} className={styles.card}>
+                      <div className={styles.cardHeader}>
+                        <div className={styles.estadoWrapper}>
+                          <button
+                            type="button"
+                            className={`${styles.toggle} ${usuario.active ? styles.toggleActive : ""}`}
+                            onClick={() => pedirConfirmacionCambioEstado(usuario)}
+                            disabled={usuarioActualizando === usuario.id}
+                            aria-label={usuario.active ? `Desactivar a ${usuario.nombre}` : `Activar a ${usuario.nombre}`}
+                          >
+                            <span />
+                          </button>
+                          <span className={styles.estadoLabel}>
+                            Estado: <strong>{usuario.active ? "Activo" : "Inactivo"}</strong>
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <p className={styles.cardNombre}>{usuario.nombre}</p>
+                      <p className={styles.cardInfo}>{usuario.email}</p>
+                      <p className={styles.cardInfo}>{usuario.telefono || "Sin teléfono"}</p>
+                      
+                      <div className={styles.cardMetaGrid}>
+                        <div className={styles.cardMetaItem}>
+                          <span className={styles.cardMetaLabel}>Registro</span>
+                          <span className={styles.cardMetaValue}>{formatearFecha(usuario.registro)}</span>
+                        </div>
+                        <div className={styles.cardMetaItem}>
+                          <span className={styles.cardMetaLabel}>Turnos (Próx|Pas)</span>
+                          <span className={styles.cardMetaValue}>{usuario.turnos?.proximos ?? 0} | {usuario.turnos?.pasados ?? 0}</span>
+                        </div>
+                      </div>
+
+                      <div className={styles.cardFooter}>
+                        <Button
+                          texto="Ver detalles del dueño"
+                          variante="ver-ficha"
+                          tamaño="mediano"
+                          icon={Eye}
+                          onClick={() => setDuenoSeleccionadoId(usuario.id)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {usuarios.length === 0 && !error && (
+                  <p className={styles.emptyState}>
+                    No se encontraron dueños con esos filtros.
+                  </p>
+                )}
+              </>
+            )}
 
             {!cargando && !error && usuarios.length > 0 && (
               <div className={styles.pagination}>
@@ -413,6 +455,35 @@ function GestionUsuarios() {
       <DetallesDeDuenoModal
         duenoId={duenoSeleccionadoId}
         onClose={() => setDuenoSeleccionadoId(null)}
+      />
+
+      <ConfirmModal
+        abierto={Boolean(usuarioParaConfirmar)}
+        titulo={
+          usuarioParaConfirmar?.active
+            ? "¿Desactivar esta cuenta?"
+            : "¿Activar esta cuenta?"
+        }
+        mensaje={
+          usuarioParaConfirmar && (
+            <>
+              {usuarioParaConfirmar.active
+                ? "El dueño no va a poder iniciar sesión hasta que se reactive la cuenta."
+                : "El dueño va a poder volver a iniciar sesión con normalidad."}
+              <br />
+              <strong>{usuarioParaConfirmar.nombre}</strong> (
+              {usuarioParaConfirmar.email})
+            </>
+          )
+        }
+        textoConfirmar={usuarioParaConfirmar?.active ? "Desactivar" : "Activar"}
+        textoConfirmando={
+          usuarioParaConfirmar?.active ? "Desactivando…" : "Activando…"
+        }
+        varianteConfirmar={usuarioParaConfirmar?.active ? "peligro" : "primario"}
+        onConfirm={confirmarCambioEstado}
+        onCancel={() => setUsuarioParaConfirmar(null)}
+        confirmando={usuarioActualizando === usuarioParaConfirmar?.id}
       />
     </div>
   );

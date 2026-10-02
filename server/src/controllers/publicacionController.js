@@ -2,9 +2,14 @@
 import prisma from '../../prisma/client.js';
 import { enviarEmail } from '../utils/mailer.js';
 import { armarEmailPublicacionDadaDeBaja } from '../templates/emailPublicacionDadaDeBaja.js';
+import {
+  TIPOS_CONTACTO,
+  validarDescripcion,
+  validarFecha,
+  validarContacto
+} from '../utils/validacionesPublicacion.js';
 
 const ESTADOS_PUBLICACION = ['ACT', 'CER'];
-const TIPOS_CONTACTO = ['TEL', 'EML'];
 const LIMITES = { nombre: 100, descripcion: 5000, contacto: 150 };
 const UMBRAL_OCULTAMIENTO_REPORTES = 2;
 
@@ -43,10 +48,6 @@ const INCLUDE_PUBLICACION = {
   zona: { select: { zona_id: true, nombre: true } }
 };
 
-<<<<<<< HEAD
-// GET /publicaciones: devuelve todas las publicaciones 
-
-=======
 // SEC-M03: usado específicamente en la ruta pública (obtenerPublicacionPorId,
 // sin verifyToken). Es igual a INCLUDE_PUBLICACION pero sin el email del
 // usuario — cualquier visitante anónimo puede pedir este detalle, y el email
@@ -58,7 +59,6 @@ const INCLUDE_PUBLICACION_PUBLICO = {
 };
 
 // GET /publicaciones: devuelve todas las publicaciones
->>>>>>> 059ba67 (fix: SEC-M03 (email expuesto en publicación pública) y SEC-06 (fallback hardcodeado de JWT_SECRET))
 export const obtenerPublicaciones = async (req, res) => {
   try {
     const { zonaId, estado } = req.query;
@@ -114,12 +114,8 @@ export const obtenerPublicaciones = async (req, res) => {
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
-<<<<<<< HEAD
-// GET /publicaciones/:id: devuelve el detalle de una publicación
-=======
 
 // GET /publicaciones/:id: devuelve el detalle de una publicación (ruta pública, sin login)
->>>>>>> 059ba67 (fix: SEC-M03 (email expuesto en publicación pública) y SEC-06 (fallback hardcodeado de JWT_SECRET))
 export const obtenerPublicacionPorId = async (req, res) => {
   try {
     const { id } = req.params;
@@ -164,14 +160,25 @@ export const crearPublicacion = async (req, res) => {
       return res.status(400).json({ message: 'La zona ingresada no es válida' });
     }
 
-    const fechaParseada = new Date(fecha);
-    if (Number.isNaN(fechaParseada.getTime())) {
-      return res.status(400).json({ message: 'La fecha ingresada no es válida' });
-    }
-
     const errorLongitud = validarLongitudes({ nombre, descripcion, contacto });
     if (errorLongitud) {
       return res.status(400).json({ message: errorLongitud });
+    }
+
+    // Validaciones de formulario (mismas reglas que el front)
+    const resDescripcion = validarDescripcion(descripcion);
+    if (resDescripcion.error) {
+      return res.status(400).json({ message: resDescripcion.error });
+    }
+
+    const resFecha = validarFecha(fecha);
+    if (resFecha.error) {
+      return res.status(400).json({ message: resFecha.error });
+    }
+
+    const resContacto = validarContacto(contacto, tipoContacto);
+    if (resContacto.error) {
+      return res.status(400).json({ message: resContacto.error });
     }
 
     const nuevaPublicacion = await prisma.publicacion.create({
@@ -179,9 +186,9 @@ export const crearPublicacion = async (req, res) => {
         foto,
         nombre,
         zona_id: zonaId,
-        descripcion,
-        fecha: fechaParseada,
-        contacto,
+        descripcion: resDescripcion.valor,
+        fecha: resFecha.valor,
+        contacto: resContacto.valor,
         tipo_contacto_id: tipoContacto,
         usuario_id: usuarioId
         // estado_publicacion_id arranca en 'ACT' por defecto
@@ -226,8 +233,14 @@ export const actualizarPublicacion = async (req, res) => {
 
     if (foto !== undefined) data.foto = foto;
     if (nombre !== undefined) data.nombre = nombre;
-    if (descripcion !== undefined) data.descripcion = descripcion;
-    if (contacto !== undefined) data.contacto = contacto;
+
+    if (descripcion !== undefined) {
+      const resDescripcion = validarDescripcion(descripcion);
+      if (resDescripcion.error) {
+        return res.status(400).json({ message: resDescripcion.error });
+      }
+      data.descripcion = resDescripcion.valor;
+    }
 
     if (zona !== undefined) {
       const zonaId = parseInt(zona, 10);
@@ -238,18 +251,25 @@ export const actualizarPublicacion = async (req, res) => {
     }
 
     if (fecha !== undefined) {
-      const fechaParseada = new Date(fecha);
-      if (Number.isNaN(fechaParseada.getTime())) {
-        return res.status(400).json({ message: 'La fecha ingresada no es válida' });
+      const resFecha = validarFecha(fecha);
+      if (resFecha.error) {
+        return res.status(400).json({ message: resFecha.error });
       }
-      data.fecha = fechaParseada;
+      data.fecha = resFecha.valor;
     }
 
-    if (tipoContacto !== undefined) {
-      if (!TIPOS_CONTACTO.includes(tipoContacto)) {
+    // contacto y tipo se validan juntos: el formato depende del tipo
+    if (contacto !== undefined || tipoContacto !== undefined) {
+      const tipo = tipoContacto ?? publicacion.tipo_contacto_id;
+      if (!TIPOS_CONTACTO.includes(tipo)) {
         return res.status(400).json({ message: 'El tipo de contacto no es válido' });
       }
-      data.tipo_contacto_id = tipoContacto;
+      const resContacto = validarContacto(contacto ?? publicacion.contacto, tipo);
+      if (resContacto.error) {
+        return res.status(400).json({ message: resContacto.error });
+      }
+      data.tipo_contacto_id = tipo;
+      data.contacto = resContacto.valor;
     }
 
     if (estado !== undefined) {

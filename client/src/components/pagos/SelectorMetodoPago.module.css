@@ -1,0 +1,125 @@
+.contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: var(--fuente-texto);
+}
+
+.titulo {
+  margin: 0;
+  font-family: var(--fuente-titulos);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-texto-principal);
+}
+
+.monto {
+  margin: -8px 0 0;
+  font-size: var(--texto-form-size);
+  color: var(--color-texto-secundario);
+}
+
+.opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.opcion {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--color-fondo-claro);
+  border-radius: 14px;
+  background-color: var(--color-blanco);
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.opcion:hover {
+  border-color: var(--color-primario);
+  background-color: var(--color-fondo-claro);
+}
+
+.opcionActiva {
+  border-color: var(--color-primario);
+  background-color: var(--color-fondo-claro);
+}
+
+/* El input real queda oculto visualmente pero accesible (foco, teclado) */
+.radioInput {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+.radioCirculo {
+  flex-shrink: 0;
+  margin-top: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--color-texto-secundario);
+  position: relative;
+  transition: border-color 0.15s;
+}
+
+.opcionActiva .radioCirculo {
+  border-color: var(--color-primario);
+}
+
+.opcionActiva .radioCirculo::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--color-primario);
+  transform: translate(-50%, -50%);
+}
+
+.opcionTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.opcionTitulo {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-texto-principal);
+}
+
+.opcionDescripcion {
+  font-size: var(--texto-form-size);
+  line-height: var(--texto-form-line-height);
+  color: var(--color-texto-secundario);
+}
+
+.btnConfirmar {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 999px;
+  background-color: var(--color-cta);
+  color: var(--color-blanco);
+  font-family: var(--fuente-texto);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s, opacity 0.15s;
+}
+
+.btnConfirmar:hover:not(:disabled) {
+  background-color: #047857;
+}
+
+.btnConfirmar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

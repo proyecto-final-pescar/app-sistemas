@@ -23,6 +23,22 @@ const IconAlert = () => (
   </svg>
 );
 
+
+
+const obtenerCategoriasServicio = (vet) => {
+  // La API puede mandar `categorias` (listado liviano y /buscar) o
+  // `servicios` ya mapeados (objetos { categoria } o strings). Se acepta
+  // también la forma cruda `servicio[].categoria_servicio.nombre` por
+  // compatibilidad, pero ninguna respuesta actual la usa.
+  const lista = vet.categorias ?? vet.servicios ?? vet.servicio ?? [];
+  const categorias = lista
+    .map((s) =>
+      typeof s === "string" ? s : (s?.categoria ?? s?.categoria_servicio?.nombre),
+    )
+    .filter(Boolean);
+  return [...new Set(categorias)];
+};
+
 const VetCard = ({
   vet,
   activa = false,
@@ -33,6 +49,9 @@ const VetCard = ({
   variante = "grid", //  puede estar en la seccion urgencias o al buscar desde el home
 }) => {
   const esSeleccionable = typeof onClick === "function";
+  const categorias = obtenerCategoriasServicio(vet);
+  // La API envía `urgencias24hs`; se acepta `urgencias` como alias legacy.
+  const atiendeUrgencias = vet.urgencias24hs ?? vet.urgencias ?? false;
 
   if (variante === "fila") {
     return (
@@ -89,7 +108,7 @@ const VetCard = ({
       </div>
 
       {/* distancia + teléfono + urgencias (solo si vienen) */}
-      {(distancia != null || vet.telefono || vet.urgencias24hs) && (
+      {(distancia != null || vet.telefono || atiendeUrgencias) && (
         <div className={styles.meta}>
           {distancia != null && (
             <span className={styles.metaItem}>
@@ -103,7 +122,7 @@ const VetCard = ({
               {vet.telefono}
             </span>
           )}
-          {vet.urgencias24hs && (
+          {atiendeUrgencias && (
             <span className={`${styles.metaItem} ${styles.urgencias}`}>
               <IconAlert /> Urgencias 24hs
             </span>
@@ -111,11 +130,11 @@ const VetCard = ({
         </div>
       )}
 
-      {/* Especialidades */}
-      {vet.especialidades?.length > 0 && (
+      
+      {categorias.length > 0 && (
         <div className={styles.tags}>
-          {vet.especialidades.slice(0, 3).map((esp) => (
-            <span key={esp} className={styles.tag}>{esp}</span>
+          {categorias.slice(0, 3).map((cat) => (
+            <span key={cat} className={styles.tag}>{cat}</span>
           ))}
         </div>
       )}

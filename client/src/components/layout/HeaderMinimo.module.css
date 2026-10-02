@@ -1,0 +1,57 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #ede9fe;
+}
+
+.logoGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logoIcon {
+  width: 28px;
+  height: 28px;
+}
+
+.logoWordmark {
+  height: 18px;
+}
+
+.logoutButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #ede9fe;
+  border-radius: 10px;
+  background-color: #faf9ff;
+  color: #7c3aed;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 14px;
+  cursor: pointer;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+  transition: background-color 0.15s;
+}
+
+.logoutButton:hover {
+  background-color: #f0ecfb;
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 14px 16px;
+  }
+
+  .logoutButton span {
+    display: none;
+  }
+
+  .logoutButton {
+    padding: 9px 10px;
+  }
+}

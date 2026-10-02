@@ -4,10 +4,11 @@ import './Modal.css';
 
 const TAMANIOS = {
   sm: 'mdl-content--sm',
+  md: 'mdl-content--md',
   lg: 'mdl-content--lg',
 };
 
-function Modal({ isOpen, onClose, children, size = 'sm', sinPadding }) {
+function Modal({ isOpen, onClose, children, size = 'sm', sinPadding, zIndex }) {
   useEffect(() => {
     if (!isOpen) return;
 
@@ -32,7 +33,7 @@ function Modal({ isOpen, onClose, children, size = 'sm', sinPadding }) {
   const claseTamanio = TAMANIOS[size] || TAMANIOS.sm;
 
   return (
-    <div className="mdl-overlay" onClick={onClose}>
+    <div className="mdl-overlay" onClick={onClose} style={zIndex ? { zIndex } : undefined}>
       <div
         className={`mdl-content ${claseTamanio}${sinPadding ? ' mdl-content--sin-padding' : ''}`}
         role="dialog"

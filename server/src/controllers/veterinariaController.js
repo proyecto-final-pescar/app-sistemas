@@ -11,12 +11,149 @@ import {
 const PACIENTES_LIMITE_DEFAULT = 12;
 const PACIENTES_LIMITE_MAXIMO = 50;
 
+// Paginación de GET /veterinarias (listado del buscador del tutor)
+const LISTADO_LIMITE_DEFAULT = 12;
+const LISTADO_LIMITE_MAXIMO = 50;
+
+const REGEX_CODIGO_CATEGORIA = /^[A-Z]{3}$/;
+
 const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 const REGEX_SOLO_LETRAS = /^[a-zA-ZÀ-ÖØ-öø-ÿ\u00f1\u00d1\s'.-]+$/;
+const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const REGEX_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const esTextoValido = (texto) => REGEX_SOLO_LETRAS.test((texto || "").trim());
 
-// Convierte "09:00" a un datetime ISO válido. La fecha es un valor fijo arbitrario:
-// Postgres solo persiste la parte de hora (@db.Time), así que no importa cuál se use.
+
+const PREFIJOS_CUIT_VALIDOS = ['20', '23', '24', '27', '30', '33', '34'];
+
+const soloDigitos = (valor) => String(valor ?? '').replace(/\D/g, '');
+
+// CUIT/CUIL: 11 dígitos, prefijo válido y dígito verificador (módulo 11).
+const validarCUITCompleto = (cuit) => {
+  const d = soloDigitos(cuit);
+  if (d.length !== 11) return false;
+  if (!PREFIJOS_CUIT_VALIDOS.includes(d.slice(0, 2))) return false;
+  const pesos = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  const suma = pesos.reduce((acc, peso, i) => acc + peso * Number(d[i]), 0);
+  let verificador = 11 - (suma % 11);
+  if (verificador === 11) verificador = 0;
+  if (verificador === 10) return false;
+  return verificador === Number(d[10]);
+};
+
+// se persiste: XX-XXXXXXXX-X
+const normalizarCUIT = (cuit) => {
+  const d = soloDigitos(cuit);
+  if (d.length !== 11) return String(cuit ?? '').trim();
+  return `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}`;
+};
+
+
+const normalizarTelefonoAR = (telefono) => {
+  let d = soloDigitos(telefono);
+  if (d.startsWith('54')) {
+    d = d.slice(2);
+    if (d.startsWith('9')) d = d.slice(1);
+  }
+  if (d.startsWith('0')) d = d.slice(1);
+  if (d.startsWith('1115') && d.length === 12) d = '11' + d.slice(4);
+  return d;
+};
+const validarTelefonoAR = (telefono) => /^11[2-9]\d{7}$/.test(normalizarTelefonoAR(telefono));
+
+const normalizarSitioWeb = (sitio) => {
+  const s = String(sitio ?? '').trim();
+  if (!s) return '';
+  return /^https?:\/\//i.test(s) ? s : `https://${s}`;
+};
+const validarSitioWeb = (sitio) => {
+  const s = normalizarSitioWeb(sitio);
+  if (!s) return true;
+  if (/\s/.test(s)) return false;
+  try {
+    const url = new URL(s);
+    return ['http:', 'https:'].includes(url.protocol) && url.hostname.includes('.');
+  } catch {
+    return false;
+  }
+};
+
+// Limpia y normaliza los datos generales antes de validarlos y guardarlos.
+const normalizarDatosGenerales = (body) => {
+  const limpio = { ...body };
+  for (const campo of ['nombre', 'direccion', 'razonSocial', 'cuit', 'telefono', 'email', 'sitioWeb']) {
+    if (typeof limpio[campo] === 'string') limpio[campo] = limpio[campo].trim();
+  }
+  if (typeof limpio.cuit === 'string') limpio.cuit = normalizarCUIT(limpio.cuit);
+  if (typeof limpio.telefono === 'string') limpio.telefono = normalizarTelefonoAR(limpio.telefono);
+  if (typeof limpio.sitioWeb === 'string') limpio.sitioWeb = normalizarSitioWeb(limpio.sitioWeb);
+  return limpio;
+};
+
+// Devuelve '' si está todo bien, o el mensaje de error.
+const validarHorariosBody = (horarios) => {
+  if (!horarios || typeof horarios !== 'object' || Array.isArray(horarios)) {
+    return 'Los horarios tienen un formato inválido.';
+  }
+  const dias = Object.entries(horarios);
+  if (dias.length === 0) return 'Seleccioná al menos un día de atención.';
+  for (const [dia, franja] of dias) {
+    if (!DIAS_SEMANA.includes(dia)) return `El día "${dia}" no es válido.`;
+    if (!REGEX_HORA.test(franja?.desde) || !REGEX_HORA.test(franja?.hasta) || franja.desde >= franja.hasta) {
+      return `El horario de "${dia}" no es válido.`;
+    }
+  }
+  return '';
+};
+
+
+const CABA_LAT_MIN = -34.7051;
+const CABA_LAT_MAX = -34.5265;
+const CABA_LNG_MIN = -58.5314;
+const CABA_LNG_MAX = -58.3357;
+
+const estaEnCABA = (lat, lng) =>
+  Number.isFinite(lat) && Number.isFinite(lng) &&
+  lat >= CABA_LAT_MIN && lat <= CABA_LAT_MAX &&
+  lng >= CABA_LNG_MIN && lng <= CABA_LNG_MAX;
+
+const relacionesVeterinaria = {
+  profesional: {
+    where: { active: true },
+    include: {
+      especialidad: { select: { nombre: true } },
+      profesional_servicio: {
+        where: { servicio: { active: true } },
+        select: { servicio_id: true }
+      }
+    }
+  },
+  servicio: {
+    where: { active: true },
+    include: { categoria_servicio: { select: { nombre: true } } }
+  },
+  horario_veterinaria: {
+    include: { dia_semana: { select: { nombre: true } } }
+  }
+};
+
+
+const seleccionListado = {
+  veterinaria_id: true,
+  nombre: true,
+  direccion: true,
+  telefono: true,
+  urgencias: true,
+  horario_veterinaria: {
+    select: {
+      hora_desde: true,
+      hora_hasta: true,
+      dia_semana: { select: { nombre: true } }
+    }
+  }
+};
+
+
 const horaADateTime = (hora) => new Date(`1970-01-01T${hora}:00.000Z`);
 
 const separarNombreApellido = (nombreCompleto) => {
@@ -26,13 +163,19 @@ const separarNombreApellido = (nombreCompleto) => {
   return { nombre, apellido };
 };
 
-// Traduce la respuesta cruda de Prisma (con catálogos anidados) al shape
-// legible que espera el frontend, compatible con lo que devolvía Mongo.
-const mapearVeterinariaLegible = (veterinaria) => {
-  if (!veterinaria) return veterinaria;
+const obtenerNombreApellido = (profesional) => {
+  const apellidoExplicito =
+    typeof profesional?.apellido === 'string' ? profesional.apellido.trim() : '';
+  if (apellidoExplicito) {
+    return { nombre: (profesional?.nombre || '').trim(), apellido: apellidoExplicito };
+  }
+  return separarNombreApellido(profesional?.nombre);
+};
 
+
+const construirHorarios = (horariosDb) => {
   const horarios = {};
-  for (const horario of veterinaria.horario_veterinaria || []) {
+  for (const horario of horariosDb || []) {
     const dia = horario.dia_semana?.nombre;
     if (!dia) continue;
     horarios[dia] = {
@@ -40,6 +183,11 @@ const mapearVeterinariaLegible = (veterinaria) => {
       hasta: new Date(horario.hora_hasta).toISOString().slice(11, 16)
     };
   }
+  return horarios;
+};
+
+const mapearVeterinariaLegible = (veterinaria) => {
+  if (!veterinaria) return veterinaria;
 
   return {
     _id: veterinaria.veterinaria_id,
@@ -67,10 +215,42 @@ const mapearVeterinariaLegible = (veterinaria) => {
       _id: p.profesional_id,
       nombre: [p.nombre, p.apellido].filter(Boolean).join(' '),
       especialidad: p.especialidad?.nombre,
-      email: p.email
+      email: p.email,
+      serviciosIds: (p.profesional_servicio || []).map((relacion) => relacion.servicio_id)
     })),
-    horarios
+    horarios: construirHorarios(veterinaria.horario_veterinaria)
   };
+};
+
+// Shape reducido del listado: lo mínimo que usan la tarjeta y el cálculo
+// de abierto/cerrado (urgencias24hs + horarios).
+const mapearVeterinariaListado = (veterinaria, rating) => ({
+  _id: veterinaria.veterinaria_id,
+  nombre: veterinaria.nombre,
+  direccion: veterinaria.direccion,
+  telefono: veterinaria.telefono,
+  urgencias24hs: veterinaria.urgencias,
+  horarios: construirHorarios(veterinaria.horario_veterinaria),
+  rating: rating?.rating ?? null,
+  cantidadResenias: rating?.cantidadResenias ?? 0
+});
+
+
+const obtenerRatingsPorId = async (ids) => {
+  if (ids.length === 0) return new Map();
+
+  const ratings = await prisma.$queryRaw`
+    SELECT veterinaria_id, rating, cantidad_resenias
+    FROM vw_rating_veterinaria
+    WHERE veterinaria_id = ANY(${ids}::uuid[])
+  `;
+
+  return new Map(
+    ratings.map((r) => [
+      r.veterinaria_id,
+      { rating: Number(r.rating), cantidadResenias: Number(r.cantidad_resenias) }
+    ])
+  );
 };
 
 // --- Helpers de sincronización 
@@ -84,20 +264,32 @@ const sincronizarProfesionales = async (tx, veterinariaId, profesionalesBody) =>
     profesionalesBody.filter((p) => p.profesional_id).map((p) => p.profesional_id)
   );
 
+  const idsAjenos = [...idsEnviados].filter((id) => !idsExistentes.has(id));
+  if (idsAjenos.length > 0) {
+    throw { status: 400, message: 'Uno o más profesionales no pertenecen a tu veterinaria.' };
+  }
+
+  const serviciosActivos = await tx.servicio.findMany({
+    where: { veterinaria_id: veterinariaId, active: true },
+    select: { servicio_id: true }
+  });
+  const idsServiciosActivos = new Set(serviciosActivos.map((servicio) => servicio.servicio_id));
+
   for (const profesional of profesionalesBody) {
-    const { nombre, apellido } = separarNombreApellido(profesional.nombre);
+    const { nombre, apellido } = obtenerNombreApellido(profesional);
     const especialidadId = await resolverEspecialidadId(profesional.especialidad);
     if (!especialidadId) {
       throw { status: 400, message: `Especialidad "${profesional.especialidad}" no reconocida.` };
     }
 
-    if (profesional.profesional_id && idsExistentes.has(profesional.profesional_id)) {
-      await tx.profesional.update({
+    let profesionalGuardado;
+    if (profesional.profesional_id) {
+      profesionalGuardado = await tx.profesional.update({
         where: { profesional_id: profesional.profesional_id },
         data: { nombre, apellido, especialidad_id: especialidadId, email: profesional.email }
       });
     } else {
-      await tx.profesional.create({
+      profesionalGuardado = await tx.profesional.create({
         data: {
           veterinaria_id: veterinariaId,
           nombre,
@@ -106,6 +298,26 @@ const sincronizarProfesionales = async (tx, veterinariaId, profesionalesBody) =>
           email: profesional.email
         }
       });
+    }
+
+    if (profesional.serviciosIds !== undefined) {
+      const serviciosIds = [...new Set(profesional.serviciosIds)];
+      const servicioAjeno = serviciosIds.find((id) => !idsServiciosActivos.has(id));
+      if (servicioAjeno) {
+        throw { status: 400, message: 'Uno o más servicios no pertenecen a tu veterinaria.' };
+      }
+
+      await tx.profesional_servicio.deleteMany({
+        where: { profesional_id: profesionalGuardado.profesional_id }
+      });
+      if (serviciosIds.length > 0) {
+        await tx.profesional_servicio.createMany({
+          data: serviciosIds.map((servicioId) => ({
+            profesional_id: profesionalGuardado.profesional_id,
+            servicio_id: servicioId
+          }))
+        });
+      }
     }
   }
 
@@ -128,16 +340,25 @@ const sincronizarServicios = async (tx, veterinariaId, serviciosBody) => {
     serviciosBody.filter((s) => s.servicio_id).map((s) => s.servicio_id)
   );
 
+  const idsAjenos = [...idsEnviados].filter((id) => !idsExistentes.has(id));
+  if (idsAjenos.length > 0) {
+    throw { status: 400, message: 'Uno o más servicios no pertenecen a tu veterinaria.' };
+  }
+
   for (const servicio of serviciosBody) {
     const categoriaId = await resolverCategoriaServicioId(servicio.categoria);
     if (!categoriaId) {
       throw { status: 400, message: `Categoría de servicio "${servicio.categoria}" no reconocida.` };
     }
 
-    if (servicio.servicio_id && idsExistentes.has(servicio.servicio_id)) {
+    if (servicio.servicio_id) {
       await tx.servicio.update({
         where: { servicio_id: servicio.servicio_id },
-        data: { nombre: servicio.nombre, precio: servicio.precio, categoria_servicio_id: categoriaId }
+        data: {
+          nombre: servicio.nombre,
+          precio: servicio.precio,
+          categoria_servicio_id: categoriaId
+        }
       });
     } else {
       await tx.servicio.create({
@@ -206,6 +427,17 @@ const aplicarActualizacionVeterinaria = async (veterinariaId, body) => {
   const latitud = latitudDirecta ?? coordenadas?.coordinates?.[1];
   const longitud = longitudDirecta ?? coordenadas?.coordinates?.[0];
 
+  const datosGenerales = normalizarDatosGenerales({
+    nombre, direccion, razonSocial, cuit, telefono, email, sitioWeb
+  });
+  const errorGenerales = validarDatosGenerales(datosGenerales);
+  if (errorGenerales) throw { status: 400, message: errorGenerales };
+
+  if (horarios !== undefined) {
+    const errorHorarios = validarHorariosBody(horarios);
+    if (errorHorarios) throw { status: 400, message: errorHorarios };
+  }
+
   const profesionalesNormalizados = profesionales?.map((p) => ({
     ...p,
     profesional_id: p.profesional_id || p._id
@@ -227,13 +459,13 @@ const aplicarActualizacionVeterinaria = async (veterinariaId, body) => {
 
   return prisma.$transaction(async (tx) => {
     const dataVeterinaria = {};
-    if (nombre !== undefined) dataVeterinaria.nombre = nombre;
-    if (direccion !== undefined) dataVeterinaria.direccion = direccion;
-    if (razonSocial !== undefined) dataVeterinaria.razon_social = razonSocial;
-    if (cuit !== undefined) dataVeterinaria.cuit = cuit;
-    if (telefono !== undefined) dataVeterinaria.telefono = telefono;
-    if (email !== undefined) dataVeterinaria.email = email;
-    if (sitioWeb !== undefined) dataVeterinaria.sitio_web = sitioWeb;
+    if (nombre !== undefined) dataVeterinaria.nombre = datosGenerales.nombre;
+    if (direccion !== undefined) dataVeterinaria.direccion = datosGenerales.direccion;
+    if (razonSocial !== undefined) dataVeterinaria.razon_social = datosGenerales.razonSocial;
+    if (cuit !== undefined) dataVeterinaria.cuit = datosGenerales.cuit;
+    if (telefono !== undefined) dataVeterinaria.telefono = datosGenerales.telefono;
+    if (email !== undefined) dataVeterinaria.email = datosGenerales.email;
+    if (sitioWeb !== undefined) dataVeterinaria.sitio_web = datosGenerales.sitioWeb;
     if (latitud !== undefined) dataVeterinaria.latitud = latitud;
     if (longitud !== undefined) dataVeterinaria.longitud = longitud;
     if (urgencias24hs !== undefined) dataVeterinaria.urgencias = urgencias24hs;
@@ -246,33 +478,121 @@ const aplicarActualizacionVeterinaria = async (veterinariaId, body) => {
     if (serviciosNormalizados !== undefined) await sincronizarServicios(tx, veterinariaId, serviciosNormalizados);
     if (horarios !== undefined) await sincronizarHorarios(tx, veterinariaId, horarios);
 
+    // Regla de negocio: ningún profesional activo puede quedar sin servicios
+    // activos (por ejemplo, al borrar un servicio que era el único que brindaba).
+    if (profesionalesNormalizados !== undefined || serviciosNormalizados !== undefined) {
+      const sinServicios = await tx.profesional.findMany({
+        where: {
+          veterinaria_id: veterinariaId,
+          active: true,
+          profesional_servicio: { none: { servicio: { active: true } } }
+        },
+        select: { nombre: true, apellido: true }
+      });
+      if (sinServicios.length > 0) {
+        const { nombre: n, apellido: a } = sinServicios[0];
+        throw {
+          status: 400,
+          message: `El profesional "${[n, a].filter(Boolean).join(' ')}" debe tener al menos un servicio asociado.`
+        };
+      }
+    }
+
     return tx.veterinaria.findUnique({
       where: { veterinaria_id: veterinariaId },
-      include: {
-        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
-        servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
-        horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
-      }
+      include: relacionesVeterinaria
     });
-  });
+  }, { maxWait: 10000, timeout: 30000 });
 };
 
-// Valida nombre y especialidad de cada profesional del arreglo.
+// Valida los datos generales. En creación los campos obligatorios deben venir
+// completos; en edición solo se validan los que vienen en el body.
+const validarDatosGenerales = (body, { creacion = false } = {}) => {
+  const obligatorios = creacion
+    ? ['nombre', 'direccion', 'cuit', 'telefono', 'email']
+    : ['nombre', 'direccion', 'telefono', 'email'];
+  for (const campo of obligatorios) {
+    const valor = body[campo];
+    if ((creacion && valor === undefined) || (valor !== undefined && !String(valor).trim())) {
+      return `El campo ${campo} es obligatorio.`;
+    }
+  }
+
+  const maximos = { nombre: 80, razonSocial: 80, direccion: 200, email: 60, sitioWeb: 100 };
+  for (const [campo, maximo] of Object.entries(maximos)) {
+    if (body[campo] !== undefined && String(body[campo]).length > maximo) {
+      return `El campo ${campo} no puede superar los ${maximo} caracteres.`;
+    }
+  }
+
+  if (body.telefono !== undefined && !validarTelefonoAR(body.telefono)) {
+    return 'Ingresá un teléfono válido de Buenos Aires: código de área 11 más el número (10 dígitos en total).';
+  }
+  if (body.email !== undefined && !REGEX_EMAIL.test(String(body.email).trim())) {
+    return 'Ingresá un email institucional válido.';
+  }
+  if (body.cuit !== undefined && !validarCUITCompleto(body.cuit)) {
+    return 'Ingresá un CUIT/CUIL válido.';
+  }
+  if (body.sitioWeb && !validarSitioWeb(body.sitioWeb)) {
+    return 'Ingresá un sitio web válido.';
+  }
+  return '';
+};
+
+// Valida nombre, apellido, email, especialidad y servicios de cada profesional.
+// Regla de negocio: todo profesional debe tener al menos un servicio asociado.
 const validarProfesionales = (profesionales) => {
   if (!Array.isArray(profesionales)) return null;
 
+  const emailsVistos = new Set();
+
   for (const profesional of profesionales) {
-    const { nombre, apellido } = separarNombreApellido(profesional?.nombre);
-    const especialidad = (profesional?.especialidad || "").trim();
+    const { nombre, apellido } = obtenerNombreApellido(profesional);
+    const especialidad = (profesional?.especialidad || '').trim();
+    const nombreCompleto = `${nombre} ${apellido}`.trim();
+    const esNuevo = !profesional?.profesional_id;
 
     if (!nombre || !apellido || !especialidad) {
       return 'El nombre completo (nombre y apellido) y la especialidad del profesional son obligatorios.';
     }
+    if (nombre.length > 60 || apellido.length > 60) {
+      return `El nombre "${nombreCompleto}" es demasiado largo.`;
+    }
     if (!esTextoValido(nombre) || !esTextoValido(apellido)) {
-      return `El nombre "${profesional.nombre}" solo puede contener letras.`;
+      return `El nombre "${nombreCompleto}" solo puede contener letras.`;
     }
     if (!esTextoValido(especialidad)) {
       return `La especialidad "${especialidad}" solo puede contener letras.`;
+    }
+
+    // El email es obligatorio para profesionales nuevos; en los existentes
+    // solo se valida el formato si viene.
+    const email = String(profesional?.email || '').trim();
+    if (!email && esNuevo) {
+      return `El email del profesional "${nombreCompleto}" es obligatorio.`;
+    }
+    if (email) {
+      if (!REGEX_EMAIL.test(email)) {
+        return `El email "${email}" del profesional "${nombreCompleto}" no es válido.`;
+      }
+      const clave = email.toLowerCase();
+      if (emailsVistos.has(clave)) {
+        return `El email "${email}" está repetido entre los profesionales.`;
+      }
+      emailsVistos.add(clave);
+    }
+
+    if (profesional.serviciosIds !== undefined && !Array.isArray(profesional.serviciosIds)) {
+      return `Los servicios del profesional "${nombreCompleto}" deben enviarse como una lista.`;
+    }
+    // Un profesional nuevo debe traer servicios; uno existente puede omitir
+    // el campo (se conservan los actuales) pero no enviarlo vacío.
+    const sinServicios = Array.isArray(profesional.serviciosIds)
+      ? profesional.serviciosIds.length === 0
+      : esNuevo;
+    if (sinServicios) {
+      return `El profesional "${nombreCompleto}" debe tener al menos un servicio asociado.`;
     }
   }
 
@@ -280,8 +600,11 @@ const validarProfesionales = (profesionales) => {
 };
 
 // Valida nombre, categoría y precio de cada servicio del arreglo.
+// Un servicio NO necesita tener profesionales asignados.
 const validarServicios = (servicios) => {
   if (!Array.isArray(servicios)) return null;
+
+  const vistos = new Set();
 
   for (const servicio of servicios) {
     const nombre = (servicio?.nombre || '').trim();
@@ -290,11 +613,24 @@ const validarServicios = (servicios) => {
     if (!nombre || !categoria || servicio?.precio === undefined || servicio?.precio === null || servicio?.precio === '') {
       return 'El nombre, la categoría y el precio de cada servicio son obligatorios.';
     }
+    if (nombre.length > 80) {
+      return `El nombre del servicio "${nombre}" no puede superar los 80 caracteres.`;
+    }
 
     const precio = Number(servicio.precio);
-    if (Number.isNaN(precio) || precio <= 0) {
-      return `El precio "${servicio.precio}" del servicio "${nombre}" debe ser un número mayor a 0.`;
+    if (
+      !Number.isFinite(precio) ||
+      precio <= 0 ||
+      !/^\d+(\.\d{1,2})?$/.test(String(servicio.precio).trim())
+    ) {
+      return `El precio "${servicio.precio}" del servicio "${nombre}" debe ser mayor a 0 y tener hasta 2 decimales.`;
     }
+
+    const clave = `${categoria.toLowerCase()}|${nombre.toLowerCase()}`;
+    if (vistos.has(clave)) {
+      return `El servicio "${nombre}" está repetido en la misma categoría.`;
+    }
+    vistos.add(clave);
   }
 
   return null;
@@ -357,6 +693,115 @@ export const buscarVeterinarias = async (req, res) => {
       ORDER BY distancia_metros ASC
     `;
 
+    // Datos extra para las tarjetas: horarios (para calcular abierto/cerrado),
+    // categorías de servicio (para las etiquetas) y especialidades. Tres
+    // queries acotadas por IN, en paralelo, solo si hay resultados.
+    const veterinariaIds = veterinarias.map((v) => v.veterinaria_id);
+
+    const [servicios, profesionales, franjas] = veterinariaIds.length > 0
+      ? await Promise.all([
+        prisma.servicio.findMany({
+          where: {
+            veterinaria_id: {
+              in: veterinariaIds,
+            },
+            active: true,
+          },
+          select: {
+            veterinaria_id: true,
+            categoria_servicio: {
+              select: {
+                nombre: true,
+              },
+            },
+          },
+        }),
+        prisma.profesional.findMany({
+          where: {
+            veterinaria_id: {
+              in: veterinariaIds,
+            },
+            active: true,
+          },
+          select: {
+            veterinaria_id: true,
+            especialidad: {
+              select: {
+                nombre: true,
+              },
+            },
+          },
+        }),
+        prisma.horario_veterinaria.findMany({
+          where: {
+            veterinaria_id: {
+              in: veterinariaIds,
+            },
+          },
+          select: {
+            veterinaria_id: true,
+            hora_desde: true,
+            hora_hasta: true,
+            dia_semana: {
+              select: {
+                nombre: true,
+              },
+            },
+          },
+        }),
+      ])
+      : [[], [], []];
+
+    const serviciosPorVeterinaria = new Map();
+
+    for (const servicio of servicios) {
+      const veterinariaId = servicio.veterinaria_id;
+      const categoria = servicio.categoria_servicio?.nombre;
+
+      if (!categoria) continue;
+
+      if (!serviciosPorVeterinaria.has(veterinariaId)) {
+        serviciosPorVeterinaria.set(veterinariaId, new Set());
+      }
+
+      serviciosPorVeterinaria.get(veterinariaId).add(categoria);
+    }
+
+    const especialidadesPorVeterinaria = new Map();
+
+    for (const profesional of profesionales) {
+      const veterinariaId = profesional.veterinaria_id;
+      const especialidad = profesional.especialidad?.nombre;
+
+      if (!especialidad) continue;
+
+      if (!especialidadesPorVeterinaria.has(veterinariaId)) {
+        especialidadesPorVeterinaria.set(veterinariaId, new Set());
+      }
+
+      especialidadesPorVeterinaria.get(veterinariaId).add(especialidad);
+    }
+
+    // Horarios por día ({ dia: { desde: 'HH:MM', hasta: 'HH:MM' } }), mismo
+    // formato que mapearVeterinariaLegible. El mapa los necesita para el
+    // badge Abierto/Cerrado y el contador de abiertas.
+    const horariosPorVeterinaria = new Map();
+
+    for (const franja of franjas) {
+      const dia = franja.dia_semana?.nombre;
+
+      if (!dia) continue;
+
+      if (!horariosPorVeterinaria.has(franja.veterinaria_id)) {
+        horariosPorVeterinaria.set(franja.veterinaria_id, {});
+      }
+
+      horariosPorVeterinaria.get(franja.veterinaria_id)[dia] = {
+        desde: new Date(franja.hora_desde).toISOString().slice(11, 16),
+        hasta: new Date(franja.hora_hasta).toISOString().slice(11, 16),
+      };
+    }
+
     const data = veterinarias.map((v) => ({
       _id: v.veterinaria_id,
       nombre: v.nombre,
@@ -364,11 +809,24 @@ export const buscarVeterinarias = async (req, res) => {
       telefono: v.telefono,
       email: v.email,
       urgencias24hs: v.urgencias,
+
+      especialidades: [
+        ...(especialidadesPorVeterinaria.get(v.veterinaria_id) ?? []),
+      ],
+      servicios: [
+        ...(serviciosPorVeterinaria.get(v.veterinaria_id) ?? []),
+      ],
+      horarios:
+        horariosPorVeterinaria.get(v.veterinaria_id) ?? {},
+
       coordenadas: {
         type: 'Point',
-        coordinates: [Number(v.longitud), Number(v.latitud)]
+        coordinates: [Number(v.longitud), Number(v.latitud)],
       },
-      distanciaMetros: Number(v.distancia_metros)
+      categorias: [
+        ...(serviciosPorVeterinaria.get(v.veterinaria_id) ?? []),
+      ].sort((a, b) => a.localeCompare(b, 'es')),
+      distanciaMetros: Number(v.distancia_metros),
     }));
 
     return res.status(200).json({ success: true, data });
@@ -380,22 +838,99 @@ export const buscarVeterinarias = async (req, res) => {
   }
 };
 
-// GET /veterinarias: devuelve todas las veterinarias activas
+// GET /veterinarias: veterinarias activas.
+//
+// Query params (todos opcionales):
+//   q          texto a buscar en nombre o dirección
+//   urgencias  'true' para solo las de urgencias 24hs
+//   categoria  código de categoria_servicio (ej. 'VAC'): que ofrezcan un
+//              servicio activo de esa categoría
+//   page, limit  activan la paginación y el shape liviano del listado
+//
+// Sin page/limit responde como siempre (todas, con profesionales, servicios y
+// horarios completos). Con paginación responde { data, paginacion } con el
+// shape reducido de mapearVeterinariaListado.
 export const obtenerVeterinarias = async (req, res) => {
   try {
-    const veterinarias = await prisma.veterinaria.findMany({
-      where: { estado_veterinaria_id: 'ACT' },
-      include: {
-        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
-        servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
-        horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
+    const { q, urgencias, categoria } = req.query;
+
+    if (categoria !== undefined && (typeof categoria !== 'string' || !REGEX_CODIGO_CATEGORIA.test(categoria))) {
+      return res.status(400).json({ message: 'La categoría enviada no es válida' });
+    }
+
+    const texto = typeof q === 'string' ? q.trim().slice(0, 100) : '';
+
+    const where = { estado_veterinaria_id: 'ACT' };
+
+    if (texto) {
+      where.OR = [
+        { nombre: { contains: texto, mode: 'insensitive' } },
+        { direccion: { contains: texto, mode: 'insensitive' } }
+      ];
+    }
+
+    if (urgencias === 'true') where.urgencias = true;
+
+    if (categoria) {
+      where.servicio = { some: { active: true, categoria_servicio_id: categoria } };
+    }
+
+    const paginar = req.query.page !== undefined || req.query.limit !== undefined;
+
+    if (!paginar) {
+      const veterinarias = await prisma.veterinaria.findMany({
+        where,
+        include: relacionesVeterinaria
+      });
+
+      const ratingsPorId = await obtenerRatingsPorId(veterinarias.map((v) => v.veterinaria_id));
+
+      const data = veterinarias.map((v) => ({
+        ...mapearVeterinariaLegible(v),
+        rating: ratingsPorId.get(v.veterinaria_id)?.rating ?? null,
+        cantidadResenias: ratingsPorId.get(v.veterinaria_id)?.cantidadResenias ?? 0
+      }));
+
+      return res.status(200).json({ success: true, data });
+    }
+
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || LISTADO_LIMITE_DEFAULT, 1),
+      LISTADO_LIMITE_MAXIMO
+    );
+
+    const [total, veterinarias] = await Promise.all([
+      prisma.veterinaria.count({ where }),
+      prisma.veterinaria.findMany({
+        where,
+        select: seleccionListado,
+        // veterinaria_id como desempate para que la paginación sea estable
+        orderBy: [{ nombre: 'asc' }, { veterinaria_id: 'asc' }],
+        skip: (page - 1) * limit,
+        take: limit
+      })
+    ]);
+
+    const ratingsPorId = await obtenerRatingsPorId(veterinarias.map((v) => v.veterinaria_id));
+
+    const data = veterinarias.map((v) =>
+      mapearVeterinariaListado(v, ratingsPorId.get(v.veterinaria_id))
+    );
+
+    return res.status(200).json({
+      success: true,
+      data,
+      paginacion: {
+        total,
+        page,
+        limit,
+        totalPaginas: Math.max(Math.ceil(total / limit), 1)
       }
     });
-
-    res.status(200).json({ success: true, data: veterinarias.map(mapearVeterinariaLegible) });
   } catch (error) {
     console.error('Error en GET /veterinarias:', error);
-    res.status(500).json({ message: 'Error interno del servidor' });
+    return res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
 
@@ -406,18 +941,26 @@ export const obtenerVeterinariaPorId = async (req, res) => {
 
     const veterinaria = await prisma.veterinaria.findFirst({
       where: { veterinaria_id: id, estado_veterinaria_id: 'ACT' },
-      include: {
-        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
-        servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
-        horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
-      }
+      include: relacionesVeterinaria
     });
 
     if (!veterinaria) {
       return res.status(404).json({ message: 'El recurso no existe.' });
     }
 
-    res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinaria) });
+    const [agregado] = await prisma.$queryRaw`
+      SELECT rating, cantidad_resenias
+      FROM vw_rating_veterinaria
+      WHERE veterinaria_id = ${id}::uuid
+    `;
+
+    const data = {
+      ...mapearVeterinariaLegible(veterinaria),
+      rating: agregado ? Number(agregado.rating) : null,
+      cantidadResenias: agregado ? Number(agregado.cantidad_resenias) : 0
+    };
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     console.error('Error en GET /veterinarias/:id:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
@@ -431,18 +974,26 @@ export const obtenerMiVeterinaria = async (req, res) => {
 
     const veterinaria = await prisma.veterinaria.findUnique({
       where: { usuario_id: usuarioId },
-      include: {
-        profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
-        servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
-        horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
-      }
+      include: relacionesVeterinaria
     });
 
     if (!veterinaria) {
       return res.status(404).json({ message: 'No tenés una veterinaria registrada.' });
     }
 
-    res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinaria) });
+    const [agregado] = await prisma.$queryRaw`
+      SELECT rating, cantidad_resenias
+      FROM vw_rating_veterinaria
+      WHERE veterinaria_id = ${veterinaria.veterinaria_id}::uuid
+    `;
+
+    const data = {
+      ...mapearVeterinariaLegible(veterinaria),
+      rating: agregado ? Number(agregado.rating) : null,
+      cantidadResenias: agregado ? Number(agregado.cantidad_resenias) : 0
+    };
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     console.error('Error en GET /veterinarias/mia:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
@@ -466,9 +1017,74 @@ export const actualizarMiVeterinaria = async (req, res) => {
     return res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinariaActualizada) });
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ message: error.message });
+    if (error.code === 'P2002') {
+      return res.status(409).json({ message: 'El CUIT ingresado ya pertenece a otra veterinaria.' });
+    }
     console.error('Error en PUT /veterinarias/mia:', error);
     return res.status(500).json({ message: 'Error interno del servidor' });
   }
+};
+
+const actualizarSeccionPropia = async (req, res, camposPermitidos) => {
+  try {
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return res.status(400).json({ message: 'Datos inválidos' });
+    }
+
+    const veterinaria = await prisma.veterinaria.findUnique({
+      where: { usuario_id: req.user.id },
+      select: { veterinaria_id: true }
+    });
+    if (!veterinaria) {
+      return res.status(404).json({ message: 'No tenés una veterinaria registrada.' });
+    }
+
+    const body = Object.fromEntries(
+      camposPermitidos
+        .filter((campo) => req.body[campo] !== undefined)
+        .map((campo) => [campo, req.body[campo]])
+    );
+
+    const veterinariaActualizada = await aplicarActualizacionVeterinaria(
+      veterinaria.veterinaria_id,
+      body
+    );
+    return res.status(200).json({
+      success: true,
+      data: mapearVeterinariaLegible(veterinariaActualizada)
+    });
+  } catch (error) {
+    if (error.status === 400) return res.status(400).json({ message: error.message });
+    if (error.code === 'P2002') {
+      return res.status(409).json({ message: 'El CUIT ingresado ya pertenece a otra veterinaria.' });
+    }
+    console.error('Error al actualizar una sección de Mi Veterinaria:', error);
+    return res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+// La validación y normalización de los datos generales (CUIT, teléfono de
+// Buenos Aires, email, sitio web) vive en aplicarActualizacionVeterinaria, así
+// que aplica igual en el registro y en todas las rutas de edición.
+export const actualizarMisDatosGenerales = (req, res) =>
+  actualizarSeccionPropia(req, res, [
+    'nombre', 'direccion', 'razonSocial', 'cuit', 'telefono', 'email', 'sitioWeb'
+  ]);
+
+export const actualizarMisServicios = (req, res) =>
+  Array.isArray(req.body?.servicios)
+    ? actualizarSeccionPropia(req, res, ['servicios'])
+    : res.status(400).json({ message: 'Los servicios deben enviarse como una lista.' });
+
+export const actualizarMisProfesionales = (req, res) =>
+  Array.isArray(req.body?.profesionales)
+    ? actualizarSeccionPropia(req, res, ['profesionales'])
+    : res.status(400).json({ message: 'Los profesionales deben enviarse como una lista.' });
+
+export const actualizarMisHorarios = (req, res) => {
+  const errorHorarios = validarHorariosBody(req.body?.horarios);
+  if (errorHorarios) return res.status(400).json({ message: errorHorarios });
+  return actualizarSeccionPropia(req, res, ['horarios', 'urgencias24hs']);
 };
 
 // POST /veterinarias: crea el perfil de una veterinaria (solo rol 'veterinaria')
@@ -493,11 +1109,48 @@ export const crearVeterinaria = async (req, res) => {
       urgencias24hs
     } = req.body;
 
+    // Datos generales: mismas reglas que la edición, pero con los campos
+    // obligatorios exigidos. El front valida lo mismo, pero solo como feedback.
+    const datos = normalizarDatosGenerales({
+      nombre, direccion, razonSocial, cuit, telefono, email, sitioWeb
+    });
+    const errorGenerales = validarDatosGenerales(datos, { creacion: true });
+    if (errorGenerales) {
+      return res.status(400).json({ message: errorGenerales });
+    }
+
+    if (!Array.isArray(servicios) || servicios.length === 0) {
+      return res.status(400).json({ message: 'Registrá al menos un servicio.' });
+    }
+    if (!Array.isArray(profesionales) || profesionales.length === 0) {
+      return res.status(400).json({ message: 'Registrá al menos un profesional.' });
+    }
+
+    const errorHorarios = validarHorariosBody(horarios);
+    if (errorHorarios) {
+      return res.status(400).json({ message: errorHorarios });
+    }
+
     const latitud = latitudDirecta ?? coordenadas?.coordinates?.[1];
     const longitud = longitudDirecta ?? coordenadas?.coordinates?.[0];
 
     if (latitud === undefined || longitud === undefined) {
       return res.status(400).json({ message: 'Las coordenadas son requeridas' });
+    }
+
+    const latitudNum = Number(latitud);
+    const longitudNum = Number(longitud);
+    if (!Number.isFinite(latitudNum) || !Number.isFinite(longitudNum)) {
+      return res.status(400).json({ message: 'Las coordenadas deben ser números válidos.' });
+    }
+
+    // Cobertura geográfica: por ahora MyPet solo opera en CABA. Esta es la
+    // validación que efectivamente protege el dato — la del frontend es
+    // solo feedback inmediato para el usuario.
+    if (!estaEnCABA(latitudNum, longitudNum)) {
+      return res.status(400).json({
+        message: 'Por el momento MyPet solo está disponible para veterinarias ubicadas en la Ciudad Autónoma de Buenos Aires (CABA).'
+      });
     }
 
     if (profesionales.length > 0) {
@@ -516,7 +1169,7 @@ export const crearVeterinaria = async (req, res) => {
 
     const profesionalesResueltos = [];
     for (const profesional of profesionales) {
-      const { nombre: nombreProf, apellido } = separarNombreApellido(profesional.nombre);
+      const { nombre: nombreProf, apellido } = obtenerNombreApellido(profesional);
       const especialidadId = await resolverEspecialidadId(profesional.especialidad);
       if (!especialidadId) {
         return res.status(400).json({
@@ -527,12 +1180,23 @@ export const crearVeterinaria = async (req, res) => {
         nombre: nombreProf,
         apellido,
         especialidad_id: especialidadId,
-        email: profesional.email
+        email: profesional.email,
+        serviciosIds: [...new Set(profesional.serviciosIds || [])]
       });
     }
 
     const serviciosResueltos = [];
+    const idsLocalesServicios = new Set();
     for (const servicio of servicios) {
+      const idLocal = typeof servicio.idLocal === 'string' ? servicio.idLocal.trim() : '';
+      if (!idLocal) {
+        return res.status(400).json({ message: 'Cada servicio debe incluir un identificador local válido.' });
+      }
+      if (idsLocalesServicios.has(idLocal)) {
+        return res.status(400).json({ message: 'Los identificadores locales de los servicios deben ser únicos.' });
+      }
+      idsLocalesServicios.add(idLocal);
+
       const categoriaId = await resolverCategoriaServicioId(servicio.categoria);
       if (!categoriaId) {
         return res.status(400).json({
@@ -540,10 +1204,22 @@ export const crearVeterinaria = async (req, res) => {
         });
       }
       serviciosResueltos.push({
+        idLocal,
         nombre: servicio.nombre,
         precio: servicio.precio,
         categoria_servicio_id: categoriaId
       });
+    }
+
+    for (const profesional of profesionalesResueltos) {
+      const referenciaDesconocida = profesional.serviciosIds.find(
+        (idLocal) => !idsLocalesServicios.has(idLocal)
+      );
+      if (referenciaDesconocida) {
+        return res.status(400).json({
+          message: `El profesional referencia un servicio desconocido: ${referenciaDesconocida}.`
+        });
+      }
     }
 
     const horariosResueltos = [];
@@ -563,28 +1239,55 @@ export const crearVeterinaria = async (req, res) => {
     }
 
     const veterinariaCreada = await prisma.$transaction(async (tx) => {
-      return tx.veterinaria.create({
+      const nuevaVeterinaria = await tx.veterinaria.create({
         data: {
           usuario_id: usuarioId,
-          nombre,
-          direccion,
-          razon_social: razonSocial,
-          cuit,
-          telefono,
-          email,
-          sitio_web: sitioWeb,
-          latitud,
-          longitud,
+          nombre: datos.nombre,
+          direccion: datos.direccion,
+          razon_social: datos.razonSocial,
+          cuit: datos.cuit,
+          telefono: datos.telefono,
+          email: datos.email,
+          sitio_web: datos.sitioWeb,
+          latitud: latitudNum,
+          longitud: longitudNum,
           urgencias: urgencias24hs ?? false,
-          profesional: { create: profesionalesResueltos },
-          servicio: { create: serviciosResueltos },
           horario_veterinaria: { create: horariosResueltos }
-        },
-        include: {
-          profesional: { where: { active: true }, include: { especialidad: { select: { nombre: true } } } },
-          servicio: { where: { active: true }, include: { categoria_servicio: { select: { nombre: true } } } },
-          horario_veterinaria: { include: { dia_semana: { select: { nombre: true } } } }
         }
+      });
+
+      const serviciosPorIdLocal = new Map();
+      for (const { idLocal, ...datosServicio } of serviciosResueltos) {
+        const servicioCreado = await tx.servicio.create({
+          data: { ...datosServicio, veterinaria_id: nuevaVeterinaria.veterinaria_id }
+        });
+        serviciosPorIdLocal.set(idLocal, servicioCreado.servicio_id);
+      }
+
+      for (const profesional of profesionalesResueltos) {
+        const profesionalCreado = await tx.profesional.create({
+          data: {
+            veterinaria_id: nuevaVeterinaria.veterinaria_id,
+            nombre: profesional.nombre,
+            apellido: profesional.apellido,
+            especialidad_id: profesional.especialidad_id,
+            email: profesional.email
+          }
+        });
+
+        if (profesional.serviciosIds.length > 0) {
+          await tx.profesional_servicio.createMany({
+            data: profesional.serviciosIds.map((idLocal) => ({
+              profesional_id: profesionalCreado.profesional_id,
+              servicio_id: serviciosPorIdLocal.get(idLocal)
+            }))
+          });
+        }
+      }
+
+      return tx.veterinaria.findUnique({
+        where: { veterinaria_id: nuevaVeterinaria.veterinaria_id },
+        include: relacionesVeterinaria
       });
     });
 
@@ -612,7 +1315,7 @@ export const actualizarVeterinaria = async (req, res) => {
   try {
     const { id } = req.params;
     const usuarioId = req.user.id;
-    const esAdmin = req.user.role === 'administrador';
+    const esAdmin = req.user.rol === 'administrador';
 
     const veterinaria = await prisma.veterinaria.findFirst({
       where: { veterinaria_id: id, estado_veterinaria_id: 'ACT' }
@@ -630,6 +1333,7 @@ export const actualizarVeterinaria = async (req, res) => {
     return res.status(200).json({ success: true, data: mapearVeterinariaLegible(veterinariaActualizada) });
   } catch (error) {
     if (error.status === 400) return res.status(400).json({ message: error.message });
+    if (error.code === 'P2002') return res.status(409).json({ message: 'El CUIT ingresado ya pertenece a otra veterinaria.' });
     if (error.code === 'P2025') return res.status(404).json({ message: 'El recurso no existe.' });
     console.error('Error en PUT /veterinarias/:id:', error);
     return res.status(500).json({ message: 'Error interno del servidor' });
@@ -642,7 +1346,8 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
     const usuarioId = req.user.id;
 
     const veterinaria = await prisma.veterinaria.findFirst({
-      where: { usuario_id: usuarioId, estado_veterinaria_id: 'ACT' }
+      where: { usuario_id: usuarioId, estado_veterinaria_id: 'ACT' },
+      select: { veterinaria_id: true }
     });
 
     if (!veterinaria) {
@@ -661,20 +1366,15 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
 
     const busqueda = (req.query.busqueda || '').trim();
 
-    // IDs de mascotas que tuvieron al menos un turno confirmado/atendido con esta veterinaria
-    const mascotaIdsConTurno = await prisma.turno.findMany({
-      where: {
-        veterinaria_id: veterinaria.veterinaria_id,
-        estado_turno: { nombre: { in: ['confirmado', 'atendido'] } },
-        mascota_id: { not: null }
-      },
-      distinct: ['mascota_id'],
-      select: { mascota_id: true }
-    });
-    const idsUnicos = mascotaIdsConTurno.map((t) => t.mascota_id);
-
+    // Pacientes: mascotas con al menos un turno confirmado o atendido en esta
+    // veterinaria.
     const filtroBase = {
-      mascota_id: { in: idsUnicos },
+      turno: {
+        some: {
+          veterinaria_id: veterinaria.veterinaria_id,
+          estado_turno_id: { in: ['CON', 'ATE'] }
+        }
+      },
       ...(busqueda
         ? {
           OR: [
@@ -694,10 +1394,16 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
           nombre: true,
           fecha_nacimiento: true,
           foto: true,
-          raza: { select: { nombre: true } },
+          raza: {
+            select: {
+              nombre: true,
+              especie: { select: { nombre: true } }
+            }
+          },
           usuario: { select: { usuario_id: true, nombre: true, apellido: true } }
         },
-        orderBy: { nombre: 'asc' },
+        // mascota_id como desempate para que la paginación sea estable
+        orderBy: [{ nombre: 'asc' }, { mascota_id: 'asc' }],
         skip,
         take: limit
       }),
@@ -705,13 +1411,14 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
     ]);
 
     const data = pacientes.map((mascota) => ({
-      id: mascota.mascota_id,
+      mascota_id: mascota.mascota_id,
       nombre: mascota.nombre,
       raza: mascota.raza?.nombre || 'Sin especificar',
-      fechaNacimiento: mascota.fecha_nacimiento,
+      especie: mascota.raza?.especie?.nombre || null,
+      fecha_nacimiento: mascota.fecha_nacimiento,
       foto: mascota.foto || null,
       dueño: {
-        id: mascota.usuario?.usuario_id,
+        usuario_id: mascota.usuario?.usuario_id,
         nombre: mascota.usuario
           ? `${mascota.usuario.nombre} ${mascota.usuario.apellido}`
           : 'Sin información'

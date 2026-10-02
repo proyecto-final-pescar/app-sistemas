@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
@@ -10,8 +11,11 @@ import Modal from "../../../components/layout/modal/Modal";
 import {
   obtenerMascotas,
   eliminarMascota,
-} from "../../../services/MascotaService";
+} from "../../../services/mascotaService";
 import styles from "../../../styles/MisMascotas.module.css";
+
+const ordenarPorNombre = (lista) =>
+  [...lista].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 
 const MisMascotas = () => {
   const navigate = useNavigate();
@@ -24,57 +28,68 @@ const MisMascotas = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [mensajeExito, setMensajeExito] = useState(null);
 
+  const exitoTimerRef = useRef(null);
 
-  const cargarMascotas = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await obtenerMascotas();
-      setMascotas(data);
-     
-    } catch (err) {
-      console.error("Error al obtener mascotas:", err);
+  // silencioso: refresca la lista sin volver a mostrar los skeletons
+  const cargarMascotas = useCallback(
+    async ({ silencioso = false } = {}) => {
+      try {
+        if (!silencioso) setLoading(true);
+        setError(null);
+        const data = await obtenerMascotas();
+        setMascotas(data);
+      } catch (err) {
+        console.error("Error al obtener mascotas:", err);
 
-      const status = err?.response?.status;
-      const mensajeBackend = err?.response?.data?.error;
+        const status = err?.response?.status;
+        const mensajeBackend = err?.response?.data?.error;
 
-      if (status === 401) {
-        setError(mensajeBackend || "Tu sesión expiró. Te estamos llevando al login…");
-        setTimeout(() => navigate("/login"), 1500);
-      } else if (mensajeBackend) {
-        setError(mensajeBackend);
-      } else {
-        setError("No pudimos cargar tus mascotas. Intentá nuevamente en unos minutos.");
+        if (status === 401) {
+          setError(mensajeBackend || "Tu sesión expiró. Te estamos llevando al login…");
+          setTimeout(() => navigate("/login"), 1500);
+        } else if (mensajeBackend) {
+          setError(mensajeBackend);
+        } else {
+          setError("No pudimos cargar tus mascotas. Intentá nuevamente en unos minutos.");
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [navigate]);
+    },
+    [navigate]
+  );
 
   useEffect(() => {
     cargarMascotas();
   }, [cargarMascotas]);
 
+  // Limpia el timer del mensaje de éxito al salir de la pantalla
+  useEffect(() => {
+    return () => {
+      if (exitoTimerRef.current) clearTimeout(exitoTimerRef.current);
+    };
+  }, []);
+
   const abrirModalNuevaMascota = () => {
-  setMascotaSeleccionada(null);
-  setModalAbierto(true);
-};
+    setMascotaSeleccionada(null);
+    setModalAbierto(true);
+  };
 
-const mostrarExito = (mensaje) => {
-  setMensajeExito(mensaje);
-  setTimeout(() => setMensajeExito(null), 3000);
-};
-
+  const mostrarExito = (mensaje) => {
+    if (exitoTimerRef.current) clearTimeout(exitoTimerRef.current);
+    setMensajeExito(mensaje);
+    exitoTimerRef.current = setTimeout(() => setMensajeExito(null), 3000);
+  };
 
   const handleViewPet = (id) => navigate(`/tutor/historial-medico/${id}`);
- const handleEdit = (id) => {
-  const mascota = mascotas.find((m) => m._id === id);
 
-  if (!mascota) return;
+  const handleEdit = (id) => {
+    const mascota = mascotas.find((m) => m._id === id);
+    if (!mascota) return;
 
-  setMascotaSeleccionada(mascota);
-  setModalAbierto(true);
-};
+    setMascotaSeleccionada(mascota);
+    setModalAbierto(true);
+  };
 
   const handleDelete = async (id) => {
     const mascotasPrevias = mascotas;
@@ -88,7 +103,7 @@ const mostrarExito = (mensaje) => {
       const status = err?.response?.status;
       const mensajeBackend = err?.response?.data?.error;
 
-     setMascotas(mascotasPrevias);
+      setMascotas(mascotasPrevias);
 
       if (status === 401) {
         setError(mensajeBackend || "Tu sesión expiró. Te estamos llevando al login…");
@@ -99,6 +114,31 @@ const mostrarExito = (mensaje) => {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const handleGuardado = (mascotaGuardada) => {
+    const eraEdicion = Boolean(mascotaSeleccionada);
+    setModalAbierto(false);
+
+    if (mascotaGuardada?._id) {
+      // El backend ya devolvió la mascota: se actualiza la lista sin otro request
+      setMascotas((prev) => {
+        const existe = prev.some((m) => m._id === mascotaGuardada._id);
+        const lista = existe
+          ? prev.map((m) => (m._id === mascotaGuardada._id ? mascotaGuardada : m))
+          : [...prev, mascotaGuardada];
+        return ordenarPorNombre(lista);
+      });
+    } else {
+      // Fallback: refetch sin parpadeo
+      cargarMascotas({ silencioso: true });
+    }
+
+    mostrarExito(
+      eraEdicion
+        ? "¡Mascota actualizada correctamente!"
+        : "¡Mascota agregada correctamente!"
+    );
   };
 
   return (
@@ -113,21 +153,23 @@ const mostrarExito = (mensaje) => {
             <p className={styles.countLabel}>
               {loading
                 ? "Cargando mascotas…"
-                : `${mascotas.length} ${mascotas.length === 1
-                    ? "mascota registrada"
-                    : "mascotas registradas"
+                : `${mascotas.length} ${
+                    mascotas.length === 1
+                      ? "mascota registrada"
+                      : "mascotas registradas"
                   }`}
             </p>
-                <Button
-                texto="+ Agregar Mascota"
-                variante="primario"
-                tamaño="mediano"
-                 onClick={abrirModalNuevaMascota}
-              />
+            <Button
+              texto="Agregar Mascota"
+              variante="primario"
+              tamaño="mediano"
+              icon={Plus}
+              onClick={abrirModalNuevaMascota}
+            />
           </div>
 
           {error && <div className={styles.errorBanner}>{error}</div>}
-          {mensajeExito && (                                
+          {mensajeExito && (
             <div className={styles.successBanner}>{mensajeExito}</div>
           )}
 
@@ -159,9 +201,7 @@ const mostrarExito = (mensaje) => {
                   />
                 </div>
               ))}
-              <AddPetCard
-                  onClick={abrirModalNuevaMascota}
-                />
+              <AddPetCard onClick={abrirModalNuevaMascota} />
             </div>
           )}
 
@@ -172,29 +212,22 @@ const mostrarExito = (mensaje) => {
           )}
         </main>
 
-
         {modalAbierto && (
           <Modal
             isOpen={modalAbierto}
             onClose={() => setModalAbierto(false)}
+            size="lg"
+            sinPadding
           >
             <FormularioMascota
               mascotaInicial={mascotaSeleccionada}
               onCancelar={() => setModalAbierto(false)}
-              onGuardado={() => {
-                setModalAbierto(false);
-                cargarMascotas();
-                 mostrarExito(                                    
-                  mascotaSeleccionada
-                    ? "¡Mascota actualizada correctamente!"
-                    : "¡Mascota agregada correctamente!"
-                );
-                }}
+              onGuardado={handleGuardado}
             />
           </Modal>
         )}
-      </div> 
-    </div>  
+      </div>
+    </div>
   );
 };
 

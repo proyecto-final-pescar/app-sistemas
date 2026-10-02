@@ -1,4 +1,5 @@
 import prisma from '../../prisma/client.js';
+import { ANTICIPACION_MINIMA_HORAS, PLAZO_PAGO_HORAS } from './turnoController.js';
 
 // Devuelve la lista de categorías de servicio válidas, leyendo directo de la tabla.
 export const obtenerCategoriasServicio = async (req, res) => {
@@ -77,4 +78,16 @@ export const obtenerSexosMascota = async (req, res) => {
     console.error('Error en GET /constantes/sexos-mascota:', error);
     return res.status(500).json({ message: 'Error interno del servidor' });
   }
+};
+
+// Reglas de negocio de turnos como fuente única para el frontend
+// (antelación mínima y plazo de pago). Son constantes, no van a la DB.
+export const obtenerReglasTurnos = (req, res) => {
+  return res.status(200).json({
+    success: true,
+    data: {
+      anticipacionMinimaHoras: ANTICIPACION_MINIMA_HORAS,
+      plazoPagoHoras: PLAZO_PAGO_HORAS
+    }
+  });
 };

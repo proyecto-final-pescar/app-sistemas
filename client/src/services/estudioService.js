@@ -13,4 +13,3 @@ export const actualizarEstudio = async (estudioId, datos) => {
 export const eliminarEstudio = async (estudioId) => {
   await api.delete(`/estudios/${estudioId}`);
 };
-

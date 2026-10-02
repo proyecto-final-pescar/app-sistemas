@@ -178,6 +178,11 @@ JWT_EXPIRES_IN=        # Tiempo de expiración del token. Ejemplo: 7d, 24h
 # MercadoPago
 MP_ACCESS_TOKEN=       # Access token de tu cuenta sandbox de MercadoPago
 MP_PUBLIC_KEY=         # Public key de tu cuenta sandbox de MercadoPago
+MP_CLIENT_ID=          # Identificador de la aplicación OAuth de Mercado Pago
+MP_CLIENT_SECRET=      # Secreto de la aplicación OAuth (solo backend)
+MP_REDIRECT_URI=       # Callback: /api/veterinarias/mercadopago/callback
+MP_CREDENTIALS_ENCRYPTION_KEY= # Secreto largo para cifrar tokens de veterinarias
+MP_WEBHOOK_SECRET=     # Firma secreta de Webhooks configurada en Mercado Pago
 
 # Cloudinary
 CLOUDINARY_CLOUD_NAME= # Nombre de tu cuenta en Cloudinary

@@ -13,16 +13,10 @@ const obtenerIniciales = (nombre) => {
     .join("");
 };
 
-const formatearFecha = (fechaStr, horaStr) => {
-  if (!fechaStr) return "Sin fecha";
-  const fechaObj = new Date(fechaStr);
-  const fechaLimpia = fechaObj.toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-  return `${fechaLimpia} - ${horaStr || "--:--"} hs`;
+const formatearFecha = (fechaISO, horaInicio) => {
+  if (!fechaISO) return "Sin fecha";
+  const [anio, mes, dia] = fechaISO.slice(0, 10).split("-");
+  return `${dia}/${mes}/${anio} - ${horaInicio || "--:--"} hs`;
 };
 
 function DetallesDeTurnoModal({ turnoId, onClose, onVerComprobante }) {
@@ -73,16 +67,15 @@ function DetallesDeTurnoModal({ turnoId, onClose, onVerComprobante }) {
 
   if (!turnoId) return null;
 
-  const inicialesDueno = obtenerIniciales(turno?.usuarioId?.name);
+  const inicialesDueno = obtenerIniciales(turno?.dueno?.nombre);
 
-  // Obtener nombre del profesional si existe profesionalId en el turno
-  const profesionalNombre =
-    turno?.veterinariaId?.profesionales?.find(
-      (prof) => String(prof._id) === String(turno?.profesionalId),
-    )?.nombre || "No especificado";
+  const profesionalNombre = turno?.profesional
+    ? `${turno.profesional.nombre} ${turno.profesional.apellido}`
+    : "No especificado";
 
-  // Definir el monto
-  const montoFormateado = turno?.monto ? `$${turno.monto}` : "Consultar";
+  const montoFormateado = turno?.monto != null
+    ? turno.monto.toLocaleString("es-AR", { style: "currency", currency: "ARS" })
+    : "Consultar";
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -115,7 +108,6 @@ function DetallesDeTurnoModal({ turnoId, onClose, onVerComprobante }) {
 
         {!loading && !error && turno && (
           <>
-            {/* Header con Título y Badge de Estado */}
             <div className={styles.header}>
               <h2 id="detalles-turno-title" className={styles.title}>
                 Detalle del turno
@@ -126,7 +118,6 @@ function DetallesDeTurnoModal({ turnoId, onClose, onVerComprobante }) {
               />
             </div>
 
-            {/* Sección: Información del turno */}
             <section className={styles.section}>
               <h3 className={styles.sectionTitle}>Información del turno</h3>
 
@@ -134,21 +125,21 @@ function DetallesDeTurnoModal({ turnoId, onClose, onVerComprobante }) {
                 <div className={styles.field}>
                   <span className={styles.label}>Fecha y hora</span>
                   <span className={styles.value}>
-                    {formatearFecha(turno.fecha, turno.hora)}
+                    {formatearFecha(turno.fecha, turno.hora_inicio)}
                   </span>
                 </div>
 
                 <div className={styles.field}>
                   <span className={styles.label}>Servicio</span>
                   <span className={styles.value}>
-                    {turno.motivo || "No especificado"}
+                    {turno.servicio?.nombre || turno.motivo || "No especificado"}
                   </span>
                 </div>
 
                 <div className={styles.field}>
                   <span className={styles.label}>Veterinaria</span>
                   <span className={styles.value}>
-                    {turno.veterinariaId?.nombre || "No especificada"}
+                    {turno.veterinaria?.nombre || "No especificada"}
                   </span>
                 </div>
 
@@ -166,11 +157,11 @@ function DetallesDeTurnoModal({ turnoId, onClose, onVerComprobante }) {
 
                 <div className={styles.field}>
                   <span className={styles.label}>Comprobante de pago</span>
-                  {turno.pagoId ? (
+                  {turno.pago?.pago_id ? (
                     <button
                       type="button"
                       className={styles.linkComprobante}
-                      onClick={() => onVerComprobante?.(turno.pagoId)}
+                      onClick={() => onVerComprobante?.(turno.pago.pago_id)}
                       aria-label="Ver comprobante de pago"
                     >
                       Ver comprobante <span aria-hidden="true">→</span>
@@ -182,7 +173,6 @@ function DetallesDeTurnoModal({ turnoId, onClose, onVerComprobante }) {
               </div>
             </section>
 
-            {/* Sección: Dueño */}
             <section className={styles.section}>
               <h3 className={styles.sectionTitle}>Dueño</h3>
               <div className={styles.profileRow}>
@@ -191,24 +181,23 @@ function DetallesDeTurnoModal({ turnoId, onClose, onVerComprobante }) {
                 </div>
                 <div className={styles.profileInfo}>
                   <span className={styles.profileName}>
-                    {turno.usuarioId?.name || "Sin nombre"}
+                    {turno.dueno?.nombre || "Sin nombre"}
                   </span>
                   <span className={styles.profileSubtext}>
-                    {turno.usuarioId?.email || "Sin email"}
+                    {turno.dueno?.email || "Sin email"}
                   </span>
                 </div>
               </div>
             </section>
 
-            {/* Sección: Mascota */}
             <section className={styles.section}>
               <h3 className={styles.sectionTitle}>Mascota</h3>
               <div className={styles.profileRow}>
                 <div className={styles.avatarMascota}>
-                  {turno.mascotaId?.foto ? (
+                  {turno.mascota?.foto ? (
                     <img
-                      src={turno.mascotaId.foto}
-                      alt={turno.mascotaId.nombre}
+                      src={turno.mascota.foto}
+                      alt={turno.mascota.nombre}
                     />
                   ) : (
                     <span className={styles.iconMascota} aria-hidden="true">
@@ -218,11 +207,11 @@ function DetallesDeTurnoModal({ turnoId, onClose, onVerComprobante }) {
                 </div>
                 <div className={styles.profileInfo}>
                   <span className={styles.profileName}>
-                    {turno.mascotaId?.nombre || "Sin nombre"}
+                    {turno.mascota?.nombre || "Sin nombre"}
                   </span>
                   <span className={styles.profileSubtext}>
-                    {turno.mascotaId?.especie || "Especie no descrita"}
-                    {turno.mascotaId?.raza ? ` · ${turno.mascotaId.raza}` : ""}
+                    {turno.mascota?.especie || "Especie no descrita"}
+                    {turno.mascota?.raza ? ` · ${turno.mascota.raza}` : ""}
                   </span>
                 </div>
               </div>

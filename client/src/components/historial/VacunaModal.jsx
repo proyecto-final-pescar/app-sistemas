@@ -5,7 +5,15 @@ import Select from "../ui/select/Select";
 import Button from "../ui/button/Button";
 import styles from "./FichaMedicaTab.module.css";
 
-const fechaParaInput = (fecha) => fecha ? new Date(fecha).toISOString().slice(0, 10) : "";
+const fechaParaInput = (fecha) => (fecha ? new Date(fecha).toISOString().slice(0, 10) : "");
+
+// Fecha de hoy en hora local 
+const obtenerFechaHoy = () => {
+  const hoy = new Date();
+  const mes = String(hoy.getMonth() + 1).padStart(2, "0");
+  const dia = String(hoy.getDate()).padStart(2, "0");
+  return `${hoy.getFullYear()}-${mes}-${dia}`;
+};
 
 const VacunaModal = ({ abierto, vacuna, profesionales = [], onClose, onGuardar }) => {
   const [form, setForm] = useState(() => ({
@@ -17,17 +25,34 @@ const VacunaModal = ({ abierto, vacuna, profesionales = [], onClose, onGuardar }
   const [guardando, setGuardando] = useState(false);
   const [errorApi, setErrorApi] = useState("");
 
-  const opcionesProfesionales = profesionales.map((p) => ({
-    value: p._id,
-    label: p.especialidad ? `${p.nombre} · ${p.especialidad}` : p.nombre,
-  }));
+  const opcionesProfesionales = profesionales.map((p) => {
+    const nombreCompleto = [p.nombre, p.apellido].filter(Boolean).join(" ");
+    const especialidad = p.especialidad?.nombre ? ` · ${p.especialidad.nombre}` : "";
+
+    return {
+      value: p.profesional_id,
+      label: `${nombreCompleto}${especialidad}`,
+    };
+  });
 
   const enviar = async (event) => {
     event.preventDefault();
     const nuevosErrores = {};
-    if (!form.nombre.trim()) nuevosErrores.nombre = "El nombre es obligatorio.";
-    if (!form.fechaAplicada) nuevosErrores.fechaAplicada = "La fecha es obligatoria.";
-    if (!form.profesionalId) nuevosErrores.profesionalId = "Seleccioná el profesional que aplicó la vacuna.";
+
+    if (!form.nombre.trim()) {
+      nuevosErrores.nombre = "El nombre es obligatorio.";
+    }
+
+    if (!form.fechaAplicada) {
+      nuevosErrores.fechaAplicada = "La fecha es obligatoria.";
+    } else if (form.fechaAplicada > obtenerFechaHoy()) {
+      nuevosErrores.fechaAplicada = "La fecha no puede ser futura.";
+    }
+
+    if (!form.profesionalId) {
+      nuevosErrores.profesionalId = "Seleccioná el profesional que aplicó la vacuna.";
+    }
+
     setErrores(nuevosErrores);
     if (Object.keys(nuevosErrores).length) return;
 
@@ -36,7 +61,7 @@ const VacunaModal = ({ abierto, vacuna, profesionales = [], onClose, onGuardar }
     try {
       await onGuardar(
         { nombre: form.nombre.trim(), fechaAplicada: form.fechaAplicada, profesionalId: form.profesionalId },
-        vacuna?._id
+        vacuna?.id
       );
       onClose();
     } catch (err) {
@@ -53,8 +78,20 @@ const VacunaModal = ({ abierto, vacuna, profesionales = [], onClose, onGuardar }
           <h2 className={styles.modalTitle}>{vacuna ? "Editar vacuna" : "Agregar vacuna"}</h2>
           <p className={styles.modalSubtitle}>Completá los datos del registro de vacunación.</p>
         </div>
-        <Input label="Nombre de la vacuna" value={form.nombre} onChange={(e) => setForm((actual) => ({ ...actual, nombre: e.target.value }))} error={errores.nombre} />
-        <Input label="Fecha aplicada" type="date" value={form.fechaAplicada} onChange={(e) => setForm((actual) => ({ ...actual, fechaAplicada: e.target.value }))} error={errores.fechaAplicada} />
+        <Input
+          label="Nombre de la vacuna"
+          value={form.nombre}
+          onChange={(e) => setForm((actual) => ({ ...actual, nombre: e.target.value }))}
+          error={errores.nombre}
+        />
+        <Input
+          label="Fecha aplicada"
+          type="date"
+          max={obtenerFechaHoy()}
+          value={form.fechaAplicada}
+          onChange={(e) => setForm((actual) => ({ ...actual, fechaAplicada: e.target.value }))}
+          error={errores.fechaAplicada}
+        />
         <Select
           label="Profesional"
           opciones={opcionesProfesionales}
@@ -66,7 +103,13 @@ const VacunaModal = ({ abierto, vacuna, profesionales = [], onClose, onGuardar }
         {errorApi && <p className={styles.formError} role="alert">{errorApi}</p>}
         <div className={styles.modalActions}>
           <Button texto="Cancelar" variante="secundario" tamaño="mediano" onClick={onClose} disabled={guardando} />
-          <Button type="submit" texto={guardando ? "Guardando..." : vacuna ? "Guardar cambios" : "Agregar vacuna"} variante="primario" tamaño="mediano" disabled={guardando} />
+          <Button
+            type="submit"
+            texto={guardando ? "Guardando..." : vacuna ? "Guardar cambios" : "Agregar vacuna"}
+            variante="primario"
+            tamaño="mediano"
+            disabled={guardando}
+          />
         </div>
       </form>
     </Modal>

@@ -1,9 +1,17 @@
 import { useState, useEffect } from "react";
-import api from "../../../services/api.js";
+import { FileText } from "lucide-react";
 import Sidebar from "../../../components/layout/Sidebar.jsx";
 import TopBar from "../../../components/layout/TopBar.jsx";
 import RechazarVetModal from "../../../components/administrador/rechazarVetModal/rechazarVetModal.jsx";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal.jsx";
+import VeterinariaDetalleModal from "../../../components/administrador/detallesDeVetModal/VeterinariaDetalleModal.jsx";
+import Button from "../../../components/ui/button/Button.jsx";
+
+import {
+  getVeterinariasAdmin,
+  aprobarVeterinariaAdmin,
+  actualizarEstadoVeterinariaAdmin,
+} from "../../../services/adminService";
 import styles from "./GestionVeterinarias.module.css";
 
 const ITEMS_POR_PAGINA = 10;
@@ -28,19 +36,22 @@ const GestionVeterinarias = () => {
   const [paginaPendientes, setPaginaPendientes] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
-  const [vetARechazar, setVetARechazar] = useState(null); // { id, nombre } | null
-  const [vetAAprobar, setVetAAprobar] = useState(null); // { id, nombre } | null
+  const [vetARechazar, setVetARechazar] = useState(null);
+  const [vetAAprobar, setVetAAprobar] = useState(null);
   const [isAprobando, setIsAprobando] = useState(false);
+  const [vetIdDetalle, setVetIdDetalle] = useState(null);
+  const [vetACambiarEstado, setVetACambiarEstado] = useState(null);
+  const [isCambiandoEstado, setIsCambiandoEstado] = useState(false);
 
   useEffect(() => {
     const cargarDatos = async () => {
       setIsLoading(true);
       setError("");
       try {
-        const response = await api.get("/admin/veterinarias");
-        const todas = response.data.data ?? [];
+        const respuesta = await getVeterinariasAdmin();
+        const todas = respuesta.data ?? [];
 
-        setVeterinarias(todas.filter((v) => v.estado === "activa"));
+        setVeterinarias(todas.filter((v) => v.estado === "activa" || v.estado === "suspendida"));
         setPendientes(todas.filter((v) => v.estado === "pendiente"));
       } catch (err) {
         console.error("Error al cargar veterinarias:", err.response?.data || err.message);
@@ -76,13 +87,12 @@ const GestionVeterinarias = () => {
     setPaginaPendientes(1);
   };
 
-  // Abre el modal de confirmación de aprobación
   const abrirModalAprobacion = (vet) => {
     setVetAAprobar({ id: vet._id, nombre: vet.nombre });
   };
 
   const cerrarModalAprobacion = () => {
-    if (isAprobando) return; // evita cerrar mientras hay una request en curso
+    if (isAprobando) return;
     setVetAAprobar(null);
   };
 
@@ -90,7 +100,7 @@ const GestionVeterinarias = () => {
     if (!vetAAprobar) return;
     try {
       setIsAprobando(true);
-      await api.patch(`/admin/veterinarias/${vetAAprobar.id}/aprobar`);
+      await aprobarVeterinariaAdmin(vetAAprobar.id);
 
       const aprobada = pendientes.find((v) => v._id === vetAAprobar.id);
       setPendientes((prev) => prev.filter((v) => v._id !== vetAAprobar.id));
@@ -105,7 +115,6 @@ const GestionVeterinarias = () => {
     }
   };
 
-  // Abre el modal de rechazo
   const abrirModalRechazo = (vet) => {
     setVetARechazar({ id: vet._id, nombre: vet.nombre });
   };
@@ -117,18 +126,42 @@ const GestionVeterinarias = () => {
     setPendientes((prev) => prev.filter((v) => v._id !== vetARechazar.id));
   };
 
-  const handleToggleEstado = async (vet) => {
-    const nuevoEstado = vet.estado === "activa" ? "suspendida" : "activa";
+  const abrirModalCambioEstado = (vet) => {
+    const estadoNuevo = vet.estado === "activa" ? "suspendida" : "activa";
+    setVetACambiarEstado({
+      id: vet._id,
+      nombre: vet.nombre,
+      estadoActual: vet.estado,
+      estadoNuevo,
+    });
+  };
+
+  const cerrarModalCambioEstado = () => {
+    if (isCambiandoEstado) return;
+    setVetACambiarEstado(null);
+  };
+
+  const confirmarCambioEstado = async () => {
+    if (!vetACambiarEstado) return;
     try {
-      await api.put(`/admin/veterinarias/${vet._id}`, { estado: nuevoEstado });
+      setIsCambiandoEstado(true);
+      await actualizarEstadoVeterinariaAdmin(vetACambiarEstado.id, vetACambiarEstado.estadoNuevo);
       setVeterinarias((prev) =>
-        prev.map((v) => (v._id === vet._id ? { ...v, estado: nuevoEstado } : v))
+        prev.map((v) =>
+          v._id === vetACambiarEstado.id ? { ...v, estado: vetACambiarEstado.estadoNuevo } : v
+        )
       );
+      setVetACambiarEstado(null);
     } catch (err) {
       console.error("Error al cambiar estado:", err.response?.data || err.message);
       alert("Error al cambiar el estado.");
+    } finally {
+      setIsCambiandoEstado(false);
     }
   };
+
+  const abrirModalDetalle = (vet) => setVetIdDetalle(vet._id);
+  const cerrarModalDetalle = () => setVetIdDetalle(null);
 
   const IconoDocumento = () => (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -231,12 +264,16 @@ const GestionVeterinarias = () => {
                           <td>
                             <button
                               className={`${styles.toggle} ${vet.estado === "activa" ? styles.toggleOn : styles.toggleOff}`}
-                              onClick={() => handleToggleEstado(vet)}
+                              onClick={() => abrirModalCambioEstado(vet)}
                               title={vet.estado === "activa" ? "Suspender" : "Activar"}
                             />
                           </td>
                           <td>
-                            <button className={styles.btnIcono} title="Ver datos del registro">
+                            <button
+                              className={styles.btnIcono}
+                              title="Ver datos del registro"
+                              onClick={() => abrirModalDetalle(vet)}
+                            >
                               <IconoDocumento />
                             </button>
                           </td>
@@ -254,10 +291,15 @@ const GestionVeterinarias = () => {
                   listaVisible.map((vet) => (
                     <div key={vet._id} className={styles.card}>
                       <div className={styles.cardHeader}>
-                        <button
-                          className={`${styles.toggle} ${vet.estado === "activa" ? styles.toggleOn : styles.toggleOff}`}
-                          onClick={() => handleToggleEstado(vet)}
-                        />
+                        <div className={styles.estadoWrapper}>
+                          <button
+                            className={`${styles.toggle} ${vet.estado === "activa" ? styles.toggleOn : styles.toggleOff}`}
+                            onClick={() => abrirModalCambioEstado(vet)}
+                          />
+                          <span className={styles.estadoLabel}>
+                            Estado: <strong>{vet.estado === "activa" ? "Activa" : "Suspendida"}</strong>
+                          </span>
+                        </div>
                       </div>
                       <p className={styles.cardNombre}>{vet.nombre}</p>
                       <p className={styles.cardInfo}>{vet.email}</p>
@@ -275,6 +317,16 @@ const GestionVeterinarias = () => {
                           )}
                         </div>
                       )}
+                      
+                      <div className={styles.cardFooter}>
+                        <Button
+                          texto="Ver datos del registro"
+                          variante="ver-ficha"
+                          tamaño="mediano"
+                          icon={FileText}
+                          onClick={() => abrirModalDetalle(vet)}
+                        />
+                      </div>
                     </div>
                   ))
                 )}
@@ -314,7 +366,11 @@ const GestionVeterinarias = () => {
                           <td>{new Date(vet.createdAt).toLocaleDateString("es-AR")}</td>
                           <td>
                             <div className={styles.accionesPendiente}>
-                              <button className={styles.btnIcono} title="Ver datos del registro">
+                              <button
+                                className={styles.btnIcono}
+                                title="Ver datos del registro"
+                                onClick={() => abrirModalDetalle(vet)}
+                              >
                                 <IconoDocumento />
                               </button>
                               <button className={styles.btnAprobar} onClick={() => abrirModalAprobacion(vet)}>
@@ -346,9 +402,29 @@ const GestionVeterinarias = () => {
                       <p className={styles.cardInfo}>{vet.telefono}</p>
                       <p className={styles.cardInfo}>{vet.direccion}</p>
                       <p className={styles.cardInfo}>CUIT: {vet.cuit}</p>
-                      <div className={styles.cardAcciones}>
-                        <button className={styles.btnAprobar} onClick={() => abrirModalAprobacion(vet)}>Aprobar</button>
-                        <button className={styles.btnRechazar} onClick={() => abrirModalRechazo(vet)}>Rechazar</button>
+                      
+                      <div className={styles.cardAccionesColumnas}>
+                        <Button
+                          texto="Ver datos del registro"
+                          variante="ver-ficha"
+                          tamaño="mediano"
+                          icon={FileText}
+                          onClick={() => abrirModalDetalle(vet)}
+                        />
+                        <div className={styles.cardAccionesFila}>
+                          <Button 
+                            texto="Rechazar" 
+                            variante="peligro-borde" 
+                            tamaño="mediano" 
+                            onClick={() => abrirModalRechazo(vet)} 
+                          />
+                          <Button 
+                            texto="Aprobar" 
+                            variante="primario" 
+                            tamaño="mediano" 
+                            onClick={() => abrirModalAprobacion(vet)} 
+                          />
+                        </div>
                       </div>
                     </div>
                   ))
@@ -372,12 +448,34 @@ const GestionVeterinarias = () => {
         confirmando={isAprobando}
       />
 
+      <ConfirmModal
+        abierto={!!vetACambiarEstado}
+        titulo={vetACambiarEstado?.estadoNuevo === "suspendida" ? "Suspender veterinaria" : "Activar veterinaria"}
+        mensaje={
+          vetACambiarEstado?.estadoNuevo === "suspendida"
+            ? `¿Confirmás que querés suspender a "${vetACambiarEstado?.nombre}"? Dejará de estar visible y disponible para los tutores en la plataforma.`
+            : `¿Confirmás que querés reactivar a "${vetACambiarEstado?.nombre}"? Volverá a estar visible y disponible para los tutores.`
+        }
+        textoConfirmar={vetACambiarEstado?.estadoNuevo === "suspendida" ? "Suspender" : "Activar"}
+        varianteConfirmar={vetACambiarEstado?.estadoNuevo === "suspendida" ? "peligro" : "primario"}
+        onConfirm={confirmarCambioEstado}
+        onCancel={cerrarModalCambioEstado}
+        confirmando={isCambiandoEstado}
+      />
+
       {vetARechazar && (
         <RechazarVetModal
           veterinariaId={vetARechazar.id}
           nombreVeterinaria={vetARechazar.nombre}
           onClose={cerrarModalRechazo}
           onSuccess={handleRechazoExitoso}
+        />
+      )}
+
+      {vetIdDetalle && (
+        <VeterinariaDetalleModal
+          veterinariaId={vetIdDetalle}
+          onClose={cerrarModalDetalle}
         />
       )}
     </div>

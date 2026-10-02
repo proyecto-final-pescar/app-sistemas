@@ -1,11 +1,11 @@
 import "dotenv/config";
 
 import express from "express";
+import compression from "compression";
 import cors from "cors";
 
 //import connectDB from "./config/db.js";
 import routes from "./routes/index.js";
-import "./config/mercadopago.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import { iniciarJobsTurnos } from "./jobs/turnoJobs.js";
 
@@ -31,6 +31,7 @@ const allowedOrigins = new Set([
 ]);
 
 const corsOptions = {
+  credentials: true,
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.has(origin)) {
       callback(null, true);
@@ -40,9 +41,14 @@ const corsOptions = {
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  
+  maxAge: 7200,
 };
 
 app.use(cors(corsOptions));
+// Comprime las respuestas de texto/JSON con gzip (las imágenes de
+// Cloudinary ya viajan optimizadas y no se tocan por defecto).
+app.use(compression());
 app.use(express.json());
 
 app.use("/api", routes);

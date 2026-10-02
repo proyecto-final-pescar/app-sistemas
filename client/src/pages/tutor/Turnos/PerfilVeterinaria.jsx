@@ -18,6 +18,7 @@ import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import EmergencyOutlinedIcon from '@mui/icons-material/EmergencyOutlined';
 
 
+
 function EmptyState({ icon, message }) {
   return (
     <div className="perfil-vet__empty">
@@ -66,8 +67,8 @@ export default function PerfilVeterinaria() {
   const [errorCalificacion, setErrorCalificacion] = useState(null);
 
   const handleReservarTurno = () => {
-   
-      navigate(`/turnos/agendar/${veterinaria._id}`);
+    console.log(veterinaria)
+    navigate(`/turnos/agendar/${veterinaria._id}`);
   };
 
   const handleCalificar = async (valor) => {
@@ -155,13 +156,14 @@ export default function PerfilVeterinaria() {
     nombre,
     direccion,
     email,
-    urgencias24hs,
+    urgencias24hs, 
     telefono,
     profesionales = [],   
     servicios     = [],   
     horarios      = [],
   } = veterinaria;
 
+  
   return (
     <div className={styles.layout}>
     <Sidebar role="tutor" />
