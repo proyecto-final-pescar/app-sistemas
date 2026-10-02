@@ -11,6 +11,12 @@ import {
 const PACIENTES_LIMITE_DEFAULT = 12;
 const PACIENTES_LIMITE_MAXIMO = 50;
 
+// Paginación de GET /veterinarias (listado del buscador del tutor)
+const LISTADO_LIMITE_DEFAULT = 12;
+const LISTADO_LIMITE_MAXIMO = 50;
+
+const REGEX_CODIGO_CATEGORIA = /^[A-Z]{3}$/;
+
 const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 const REGEX_SOLO_LETRAS = /^[a-zA-ZÀ-ÖØ-öø-ÿ\u00f1\u00d1\s'.-]+$/;
 const REGEX_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -132,6 +138,22 @@ const relacionesVeterinaria = {
 };
 
 
+const seleccionListado = {
+  veterinaria_id: true,
+  nombre: true,
+  direccion: true,
+  telefono: true,
+  urgencias: true,
+  horario_veterinaria: {
+    select: {
+      hora_desde: true,
+      hora_hasta: true,
+      dia_semana: { select: { nombre: true } }
+    }
+  }
+};
+
+
 const horaADateTime = (hora) => new Date(`1970-01-01T${hora}:00.000Z`);
 
 const separarNombreApellido = (nombreCompleto) => {
@@ -151,11 +173,9 @@ const obtenerNombreApellido = (profesional) => {
 };
 
 
-const mapearVeterinariaLegible = (veterinaria) => {
-  if (!veterinaria) return veterinaria;
-
+const construirHorarios = (horariosDb) => {
   const horarios = {};
-  for (const horario of veterinaria.horario_veterinaria || []) {
+  for (const horario of horariosDb || []) {
     const dia = horario.dia_semana?.nombre;
     if (!dia) continue;
     horarios[dia] = {
@@ -163,6 +183,11 @@ const mapearVeterinariaLegible = (veterinaria) => {
       hasta: new Date(horario.hora_hasta).toISOString().slice(11, 16)
     };
   }
+  return horarios;
+};
+
+const mapearVeterinariaLegible = (veterinaria) => {
+  if (!veterinaria) return veterinaria;
 
   return {
     _id: veterinaria.veterinaria_id,
@@ -193,8 +218,39 @@ const mapearVeterinariaLegible = (veterinaria) => {
       email: p.email,
       serviciosIds: (p.profesional_servicio || []).map((relacion) => relacion.servicio_id)
     })),
-    horarios
+    horarios: construirHorarios(veterinaria.horario_veterinaria)
   };
+};
+
+// Shape reducido del listado: lo mínimo que usan la tarjeta y el cálculo
+// de abierto/cerrado (urgencias24hs + horarios).
+const mapearVeterinariaListado = (veterinaria, rating) => ({
+  _id: veterinaria.veterinaria_id,
+  nombre: veterinaria.nombre,
+  direccion: veterinaria.direccion,
+  telefono: veterinaria.telefono,
+  urgencias24hs: veterinaria.urgencias,
+  horarios: construirHorarios(veterinaria.horario_veterinaria),
+  rating: rating?.rating ?? null,
+  cantidadResenias: rating?.cantidadResenias ?? 0
+});
+
+
+const obtenerRatingsPorId = async (ids) => {
+  if (ids.length === 0) return new Map();
+
+  const ratings = await prisma.$queryRaw`
+    SELECT veterinaria_id, rating, cantidad_resenias
+    FROM vw_rating_veterinaria
+    WHERE veterinaria_id = ANY(${ids}::uuid[])
+  `;
+
+  return new Map(
+    ratings.map((r) => [
+      r.veterinaria_id,
+      { rating: Number(r.rating), cantidadResenias: Number(r.cantidad_resenias) }
+    ])
+  );
 };
 
 // --- Helpers de sincronización 
@@ -637,10 +693,14 @@ export const buscarVeterinarias = async (req, res) => {
       ORDER BY distancia_metros ASC
     `;
 
+    // Datos extra para las tarjetas: horarios (para calcular abierto/cerrado),
+    // categorías de servicio (para las etiquetas) y especialidades. Tres
+    // queries acotadas por IN, en paralelo, solo si hay resultados.
     const veterinariaIds = veterinarias.map((v) => v.veterinaria_id);
 
-    const servicios = veterinariaIds.length
-      ? await prisma.servicio.findMany({
+    const [servicios, profesionales, franjas] = veterinariaIds.length > 0
+      ? await Promise.all([
+        prisma.servicio.findMany({
           where: {
             veterinaria_id: {
               in: veterinariaIds,
@@ -655,8 +715,42 @@ export const buscarVeterinarias = async (req, res) => {
               },
             },
           },
-        })
-      : [];
+        }),
+        prisma.profesional.findMany({
+          where: {
+            veterinaria_id: {
+              in: veterinariaIds,
+            },
+            active: true,
+          },
+          select: {
+            veterinaria_id: true,
+            especialidad: {
+              select: {
+                nombre: true,
+              },
+            },
+          },
+        }),
+        prisma.horario_veterinaria.findMany({
+          where: {
+            veterinaria_id: {
+              in: veterinariaIds,
+            },
+          },
+          select: {
+            veterinaria_id: true,
+            hora_desde: true,
+            hora_hasta: true,
+            dia_semana: {
+              select: {
+                nombre: true,
+              },
+            },
+          },
+        }),
+      ])
+      : [[], [], []];
 
     const serviciosPorVeterinaria = new Map();
 
@@ -672,25 +766,6 @@ export const buscarVeterinarias = async (req, res) => {
 
       serviciosPorVeterinaria.get(veterinariaId).add(categoria);
     }
-
-    const profesionales = veterinariaIds.length
-      ? await prisma.profesional.findMany({
-          where: {
-            veterinaria_id: {
-              in: veterinariaIds,
-            },
-            active: true,
-          },
-          select: {
-            veterinaria_id: true,
-            especialidad: {
-              select: {
-                nombre: true,
-              },
-            },
-          },
-        })
-      : [];
 
     const especialidadesPorVeterinaria = new Map();
 
@@ -710,26 +785,6 @@ export const buscarVeterinarias = async (req, res) => {
     // Horarios por día ({ dia: { desde: 'HH:MM', hasta: 'HH:MM' } }), mismo
     // formato que mapearVeterinariaLegible. El mapa los necesita para el
     // badge Abierto/Cerrado y el contador de abiertas.
-    const franjas = veterinariaIds.length
-      ? await prisma.horario_veterinaria.findMany({
-          where: {
-            veterinaria_id: {
-              in: veterinariaIds,
-            },
-          },
-          select: {
-            veterinaria_id: true,
-            hora_desde: true,
-            hora_hasta: true,
-            dia_semana: {
-              select: {
-                nombre: true,
-              },
-            },
-          },
-        })
-      : [];
-
     const horariosPorVeterinaria = new Map();
 
     for (const franja of franjas) {
@@ -768,7 +823,9 @@ export const buscarVeterinarias = async (req, res) => {
         type: 'Point',
         coordinates: [Number(v.longitud), Number(v.latitud)],
       },
-
+      categorias: [
+        ...(serviciosPorVeterinaria.get(v.veterinaria_id) ?? []),
+      ].sort((a, b) => a.localeCompare(b, 'es')),
       distanciaMetros: Number(v.distancia_metros),
     }));
 
@@ -781,42 +838,99 @@ export const buscarVeterinarias = async (req, res) => {
   }
 };
 
-// GET /veterinarias: devuelve todas las veterinarias activas
+// GET /veterinarias: veterinarias activas.
+//
+// Query params (todos opcionales):
+//   q          texto a buscar en nombre o dirección
+//   urgencias  'true' para solo las de urgencias 24hs
+//   categoria  código de categoria_servicio (ej. 'VAC'): que ofrezcan un
+//              servicio activo de esa categoría
+//   page, limit  activan la paginación y el shape liviano del listado
+//
+// Sin page/limit responde como siempre (todas, con profesionales, servicios y
+// horarios completos). Con paginación responde { data, paginacion } con el
+// shape reducido de mapearVeterinariaListado.
 export const obtenerVeterinarias = async (req, res) => {
   try {
-    const veterinarias = await prisma.veterinaria.findMany({
-      where: { estado_veterinaria_id: 'ACT' },
-      include: relacionesVeterinaria
-    });
+    const { q, urgencias, categoria } = req.query;
 
-    const ids = veterinarias.map((v) => v.veterinaria_id);
+    if (categoria !== undefined && (typeof categoria !== 'string' || !REGEX_CODIGO_CATEGORIA.test(categoria))) {
+      return res.status(400).json({ message: 'La categoría enviada no es válida' });
+    }
 
-    // Un solo query para todos los ratings del batch, en vez de N+1 contra la vista.
-    const ratings = ids.length > 0
-      ? await prisma.$queryRaw`
-          SELECT veterinaria_id, rating, cantidad_resenias
-          FROM vw_rating_veterinaria
-          WHERE veterinaria_id = ANY(${ids}::uuid[])
-        `
-      : [];
+    const texto = typeof q === 'string' ? q.trim().slice(0, 100) : '';
 
-    const ratingsPorId = new Map(
-      ratings.map((r) => [
-        r.veterinaria_id,
-        { rating: Number(r.rating), cantidadResenias: Number(r.cantidad_resenias) }
-      ])
+    const where = { estado_veterinaria_id: 'ACT' };
+
+    if (texto) {
+      where.OR = [
+        { nombre: { contains: texto, mode: 'insensitive' } },
+        { direccion: { contains: texto, mode: 'insensitive' } }
+      ];
+    }
+
+    if (urgencias === 'true') where.urgencias = true;
+
+    if (categoria) {
+      where.servicio = { some: { active: true, categoria_servicio_id: categoria } };
+    }
+
+    const paginar = req.query.page !== undefined || req.query.limit !== undefined;
+
+    if (!paginar) {
+      const veterinarias = await prisma.veterinaria.findMany({
+        where,
+        include: relacionesVeterinaria
+      });
+
+      const ratingsPorId = await obtenerRatingsPorId(veterinarias.map((v) => v.veterinaria_id));
+
+      const data = veterinarias.map((v) => ({
+        ...mapearVeterinariaLegible(v),
+        rating: ratingsPorId.get(v.veterinaria_id)?.rating ?? null,
+        cantidadResenias: ratingsPorId.get(v.veterinaria_id)?.cantidadResenias ?? 0
+      }));
+
+      return res.status(200).json({ success: true, data });
+    }
+
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || LISTADO_LIMITE_DEFAULT, 1),
+      LISTADO_LIMITE_MAXIMO
     );
 
-    const data = veterinarias.map((v) => ({
-      ...mapearVeterinariaLegible(v),
-      rating: ratingsPorId.get(v.veterinaria_id)?.rating ?? null,
-      cantidadResenias: ratingsPorId.get(v.veterinaria_id)?.cantidadResenias ?? 0
-    }));
+    const [total, veterinarias] = await Promise.all([
+      prisma.veterinaria.count({ where }),
+      prisma.veterinaria.findMany({
+        where,
+        select: seleccionListado,
+        // veterinaria_id como desempate para que la paginación sea estable
+        orderBy: [{ nombre: 'asc' }, { veterinaria_id: 'asc' }],
+        skip: (page - 1) * limit,
+        take: limit
+      })
+    ]);
 
-    res.status(200).json({ success: true, data });
+    const ratingsPorId = await obtenerRatingsPorId(veterinarias.map((v) => v.veterinaria_id));
+
+    const data = veterinarias.map((v) =>
+      mapearVeterinariaListado(v, ratingsPorId.get(v.veterinaria_id))
+    );
+
+    return res.status(200).json({
+      success: true,
+      data,
+      paginacion: {
+        total,
+        page,
+        limit,
+        totalPaginas: Math.max(Math.ceil(total / limit), 1)
+      }
+    });
   } catch (error) {
     console.error('Error en GET /veterinarias:', error);
-    res.status(500).json({ message: 'Error interno del servidor' });
+    return res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
 
@@ -1232,7 +1346,8 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
     const usuarioId = req.user.id;
 
     const veterinaria = await prisma.veterinaria.findFirst({
-      where: { usuario_id: usuarioId, estado_veterinaria_id: 'ACT' }
+      where: { usuario_id: usuarioId, estado_veterinaria_id: 'ACT' },
+      select: { veterinaria_id: true }
     });
 
     if (!veterinaria) {
@@ -1251,20 +1366,15 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
 
     const busqueda = (req.query.busqueda || '').trim();
 
-    // IDs de mascotas que tuvieron al menos un turno confirmado/atendido con esta veterinaria
-    const mascotaIdsConTurno = await prisma.turno.findMany({
-      where: {
-        veterinaria_id: veterinaria.veterinaria_id,
-        estado_turno: { nombre: { in: ['confirmado', 'atendido'] } },
-        mascota_id: { not: null }
-      },
-      distinct: ['mascota_id'],
-      select: { mascota_id: true }
-    });
-    const idsUnicos = mascotaIdsConTurno.map((t) => t.mascota_id);
-
+    // Pacientes: mascotas con al menos un turno confirmado o atendido en esta
+    // veterinaria.
     const filtroBase = {
-      mascota_id: { in: idsUnicos },
+      turno: {
+        some: {
+          veterinaria_id: veterinaria.veterinaria_id,
+          estado_turno_id: { in: ['CON', 'ATE'] }
+        }
+      },
       ...(busqueda
         ? {
           OR: [
@@ -1292,7 +1402,8 @@ export const obtenerPacientesVeterinaria = async (req, res) => {
           },
           usuario: { select: { usuario_id: true, nombre: true, apellido: true } }
         },
-        orderBy: { nombre: 'asc' },
+        // mascota_id como desempate para que la paginación sea estable
+        orderBy: [{ nombre: 'asc' }, { mascota_id: 'asc' }],
         skip,
         take: limit
       }),

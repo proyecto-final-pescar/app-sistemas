@@ -1,4 +1,5 @@
 import { Router } from 'express';
+
 import {
     obtenerCategoriasServicio,
     obtenerEspecialidades,
@@ -9,6 +10,11 @@ import {
 } from '../controllers/constantesController.js';
 
 const router = Router();
+
+router.use((req, res, next) => {
+  res.set('Cache-Control', 'private, max-age=300');
+  next();
+});
 
 router.get('/categorias-servicio', obtenerCategoriasServicio);
 router.get('/especialidades', obtenerEspecialidades);

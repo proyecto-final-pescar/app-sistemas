@@ -1,20 +1,8 @@
-import axios from "axios";
+import api from "./api.js";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  return config;
-});
+// La subida puede tardar mas que el resto de los requests 
+// por eso tiene su propio timeout
+const TIMEOUT_SUBIDA_MS = 60000;
 
 export const subirImagen = async (archivo, carpeta = "mascotas") => {
   const formData = new FormData();
@@ -26,6 +14,7 @@ export const subirImagen = async (archivo, carpeta = "mascotas") => {
     headers: {
       "Content-Type": "multipart/form-data",
     },
+    timeout: TIMEOUT_SUBIDA_MS,
   });
 
   return data.url;
