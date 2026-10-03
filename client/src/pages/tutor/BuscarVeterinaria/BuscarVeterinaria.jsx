@@ -10,14 +10,13 @@ import {
   buscarVeterinariasCercanas,
 } from "../../../services/veterinariaService";
 import { calcularEstadoApertura } from "../../../utils/Horarios";
+import { useCategoriasServicio } from "../../../hooks/useCategoriasServicio";
 import styles from "../../../pages/tutor/HomeTutor/HomeTutor.module.css";
 
 const RADIO_DEFAULT_METROS = 5000;
 const VETERINARIAS_POR_PAGINA = 12;
-// Código de categoria_servicio para el chip "Vacunación"
-const CATEGORIA_VACUNACION = "VAC";
 
-const FILTROS = ["Emergencias", "Vacunación", "Cerca mío"];
+const FILTROS_ESPECIALES = ["Emergencias", "Cerca mío"];
 
 // Nota: los filtros de texto, urgencias y categoría los aplica el servidor
 // (params q, urgencias y categoria=VAC). Acá solo se filtra en cliente el
@@ -40,6 +39,24 @@ const BuscarVeterinaria = () => {
   const filtro = searchParams.get("filtro") || "";
 
   const [inputValue, setInputValue] = useState(query);
+
+  // Chips de categoría desde el catálogo (misma fuente que el registro).
+  // Cada chip manda el código (id) al backend, no el nombre.
+  const { categorias } = useCategoriasServicio();
+  const chips = useMemo(
+    () => ["Emergencias", ...categorias.map((c) => c.nombre), "Cerca mío"],
+    [categorias]
+  );
+  // Código de la categoría del filtro activo (undefined = sin filtro o
+  // filtro especial). Memoizado para que cargarListado siempre vea el
+  // valor vigente cuando el catálogo termina de cargar.
+  const codigoCategoriaFiltro = useMemo(
+    () =>
+      !FILTROS_ESPECIALES.includes(filtro) && filtro
+        ? categorias.find((c) => c.nombre === filtro)?.id
+        : undefined,
+    [categorias, filtro]
+  );
 
   const [veterinarias, setVeterinarias] = useState([]);
   const [pagina, setPagina] = useState(1);
@@ -70,7 +87,7 @@ const BuscarVeterinaria = () => {
 
         const data = await obtenerVeterinariasPaginadas({
           q: query,
-          categoria: filtro === "Vacunación" ? CATEGORIA_VACUNACION : undefined,
+          categoria: codigoCategoriaFiltro,
           urgencias: filtro === "Emergencias",
           page: paginaACargar,
           limit: VETERINARIAS_POR_PAGINA,
@@ -103,7 +120,7 @@ const BuscarVeterinaria = () => {
         }
       }
     },
-    [navigate, query, filtro]
+    [navigate, query, filtro, codigoCategoriaFiltro]
   );
 
   const buscarCercanas = useCallback(async () => {
@@ -217,7 +234,7 @@ const BuscarVeterinaria = () => {
             </form>
 
             <div className={styles.chips}>
-              {FILTROS.map((f) => (
+              {chips.map((f) => (
                 <button
                   key={f}
                   type="button"

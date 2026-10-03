@@ -2,24 +2,45 @@ import prisma from '../../prisma/client.js';
 
 // ---------- Helpers de fechas ----------
 
+// Argentina usa UTC-3 fijo (sin horario de verano). El servidor corre en UTC,
+// así que el "día local" se calcula desplazando el instante antes de recortar:
+// sin esto, las ventanas quedan corridas 3h (incluyen horas del día anterior
+// y pierden las últimas del día actual).
+const ARGENTINA_UTC_OFFSET_MS = -3 * 60 * 60 * 1000;
+const DIA_MS = 24 * 60 * 60 * 1000;
+
+const partesFechaArgentina = (instante = new Date()) => {
+  const ar = new Date(instante.getTime() + ARGENTINA_UTC_OFFSET_MS);
+  return {
+    anio: ar.getUTCFullYear(),
+    mes: ar.getUTCMonth(),
+    dia: ar.getUTCDate(),
+    diaSemana: ar.getUTCDay(),
+  };
+};
+
+// Medianoche argentina expresada como instante UTC (ej. 2026-10-03T03:00Z).
+const medianocheArgentinaUTC = ({ anio, mes, dia }) =>
+  new Date(Date.UTC(anio, mes, dia) - ARGENTINA_UTC_OFFSET_MS);
+
 function toDateOnly(d) {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
+  return medianocheArgentinaUTC(partesFechaArgentina(d));
 }
 
 function getRangoSemanaActual() {
-  const ahora = new Date();
-  const diaSemana = ahora.getDay(); 
-  const diffLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
+  const hoy = partesFechaArgentina(new Date());
+  const diffLunes = hoy.diaSemana === 0 ? -6 : 1 - hoy.diaSemana;
 
-  const inicio = new Date(ahora);
-  inicio.setDate(ahora.getDate() + diffLunes);
-  const fin = new Date(inicio);
-  fin.setDate(inicio.getDate() + 6);
+  const baseMs = Date.UTC(hoy.anio, hoy.mes, hoy.dia) + diffLunes * DIA_MS;
+  const base = new Date(baseMs);
+  const inicio = medianocheArgentinaUTC({
+    anio: base.getUTCFullYear(),
+    mes: base.getUTCMonth(),
+    dia: base.getUTCDate(),
+  });
+  const fin = new Date(inicio.getTime() + 6 * DIA_MS);
 
-  return { inicio: toDateOnly(inicio), fin: toDateOnly(fin) };
+  return { inicio, fin };
 }
 
 function getRangoSemanaTimestamp() {

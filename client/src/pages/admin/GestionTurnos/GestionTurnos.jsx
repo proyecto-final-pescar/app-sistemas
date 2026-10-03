@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Calendar, CheckCircle2, Clock, XCircle } from "lucide-react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
@@ -26,30 +26,56 @@ export default function GestionTurnos() {
     cancelados: 0,
   });
   const [tabActivo, setTabActivo] = useState("Todos");
+  // Lo que se tipea vs lo que viaja al backend (con debounce de 400ms)
+  const [busquedaInput, setBusquedaInput] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [fecha, setFecha] = useState("");
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
+  // Total con los filtros aplicados (lo devuelve el backend). Las tarjetas
+  // de stats usan stats.total, que es el total del mes sin filtrar.
+  const [totalResultados, setTotalResultados] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [turnoSeleccionadoId, setTurnoSeleccionadoId] = useState(null);
+  // Cancela el request anterior: evita que respuestas fuera de orden
+  // pisen la tabla mientras se tipea.
+  const abortRef = useRef(null);
+
+  // Espera a que el usuario deje de tipear antes de buscar en el backend
+  useEffect(() => {
+    const temporizador = setTimeout(() => {
+      setBusqueda(busquedaInput);
+      setPagina(1);
+    }, 400);
+    return () => clearTimeout(temporizador);
+  }, [busquedaInput]);
 
   useEffect(() => {
     cargarTurnos();
+    return () => abortRef.current?.abort();
   }, [tabActivo, busqueda, fecha, pagina]);
 
   const cargarTurnos = async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setCargando(true);
     try {
-      const res = await TurnosAdminService.getTurnos({
-        estado: tabActivo !== "Todos" ? tabActivo : undefined,
-        busqueda: busqueda || undefined,
-        fecha: fecha || undefined,
-        pagina,
-      });
+      const res = await TurnosAdminService.getTurnos(
+        {
+          estado: tabActivo !== "Todos" ? tabActivo : undefined,
+          busqueda: busqueda || undefined,
+          fecha: fecha || undefined,
+          pagina,
+        },
+        controller.signal
+      );
       setTurnos(res.data.turnos);
       setStats(res.data.stats);
+      setTotalResultados(res.data.totalResultados ?? res.data.stats.total);
       setTotalPaginas(res.data.totalPaginas);
     } catch (error) {
+      if (error?.name === "AbortError") return;
       console.error("Error al cargar turnos:", error);
     } finally {
       setCargando(false);
@@ -127,7 +153,7 @@ export default function GestionTurnos() {
               <div className={styles.panelTitulo}>
                 <h2>Turnos por veterinaria</h2>
                 <span className={styles.resultados}>
-                  Mostrando {turnos.length} de {stats.total} resultados
+                  Mostrando {turnos.length} de {totalResultados} resultados
                 </span>
               </div>
 
@@ -144,11 +170,8 @@ export default function GestionTurnos() {
                 <input
                   type="text"
                   placeholder="Buscar..."
-                  value={busqueda}
-                  onChange={(e) => {
-                    setBusqueda(e.target.value);
-                    setPagina(1);
-                  }}
+                  value={busquedaInput}
+                  onChange={(e) => setBusquedaInput(e.target.value)}
                   className={styles.inputBusqueda}
                 />
               </div>

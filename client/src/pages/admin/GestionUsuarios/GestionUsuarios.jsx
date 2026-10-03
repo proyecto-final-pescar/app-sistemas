@@ -16,11 +16,36 @@ import styles from "./GestionUsuarios.module.css";
 
 const USUARIOS_POR_PAGINA = 10;
 
+// Ventana de páginas: primera, última y ±2 alrededor de la actual.
+// Evita renderizar cientos de botones cuando hay muchas páginas.
+const paginasVisibles = (total, actual) => {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const paginas = new Set([1, total, actual - 2, actual - 1, actual, actual + 1, actual + 2]);
+  const validas = [...paginas].filter((n) => n >= 1 && n <= total).sort((a, b) => a - b);
+  const resultado = [];
+  let anterior = 0;
+  for (const n of validas) {
+    if (anterior && n - anterior > 1) resultado.push("…");
+    resultado.push(n);
+    anterior = n;
+  }
+  return resultado;
+};
+
 const formatearFecha = (fecha) => {
   if (!fecha) {
     return "Sin información";
   }
-  return new Intl.DateTimeFormat("es-AR").format(new Date(fecha));
+  // Se corta el ISO sin convertir zona horaria: evita el día desplazado
+  // según la TZ del navegador (mismo criterio que Turnos/Vets).
+  const soloFecha = String(fecha).slice(0, 10);
+  const [anio, mes, dia] = soloFecha.split("-");
+  if (!anio || !mes || !dia) {
+    return new Intl.DateTimeFormat("es-AR").format(new Date(fecha));
+  }
+  return `${dia}/${mes}/${anio}`;
 };
 
 function GestionUsuarios() {
@@ -420,24 +445,24 @@ function GestionUsuarios() {
                   ← Anterior
                 </button>
 
-                {Array.from({ length: totalPaginas }, (_, indice) => {
-                  const numeroPagina = indice + 1;
-
-                  return (
+                {paginasVisibles(totalPaginas, paginaActual).map((item, indice) =>
+                  item === "…" ? (
+                    <span key={`ellipsis-${indice}`}>
+                      …
+                    </span>
+                  ) : (
                     <button
                       type="button"
-                      key={numeroPagina}
-                      onClick={() => setPaginaActual(numeroPagina)}
+                      key={item}
+                      onClick={() => setPaginaActual(item)}
                       className={
-                        paginaActual === numeroPagina
-                          ? styles.activePage
-                          : ""
+                        paginaActual === item ? styles.activePage : ""
                       }
                     >
-                      {numeroPagina}
+                      {item}
                     </button>
-                  );
-                })}
+                  )
+                )}
 
                 <button
                   type="button"

@@ -62,8 +62,11 @@ export const obtenerTurnosAdmin = async (req, res) => {
       prisma.turno.groupBy({
         by: ['estado_turno_id'],
         where: {
-          fecha: { 
-            gte: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1, 0, 0, 0, 0)) 
+          // Mes actual acotado por ambos lados: sin el techo, los turnos de
+          // meses futuros inflarían las tarjetas de estadísticas.
+          fecha: {
+            gte: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1, 0, 0, 0, 0)),
+            lt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1, 0, 0, 0, 0)),
           },
           estado_turno_id: { in: ESTADOS_ADMIN_IDS },
         },
@@ -94,6 +97,7 @@ export const obtenerTurnosAdmin = async (req, res) => {
       data: {
         turnos,
         stats,
+        totalResultados,
         totalPaginas: Math.max(1, Math.ceil(totalResultados / LIMITE)),
       },
     })

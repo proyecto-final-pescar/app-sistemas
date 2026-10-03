@@ -109,6 +109,9 @@ export default function ModeracionForo() {
     };
 
     const handleSuccessModeracion = (mensaje) => {
+        // La acción cambió el total: volver a página 1 para no quedar en
+        // una página vacía si la actual dejó de existir.
+        setPaginaActual(1);
         cargar();
         setAvisoExito(mensaje || "La publicación se dio de baja correctamente.");
     };
@@ -172,12 +175,12 @@ export default function ModeracionForo() {
                                 )}
                                 {!loading && error && (
                                     <tr>
-                                        <td colSpan="9" className={styles.estadoVacio}>{error}</td>
+                                        <td colSpan="7" className={styles.estadoVacio}>{error}</td>
                                     </tr>
                                 )}
                                 {!loading && !error && publicacionesFiltradas.length === 0 && (
                                     <tr>
-                                        <td colSpan="9" className={styles.estadoVacio}>
+                                        <td colSpan="7" className={styles.estadoVacio}>
                                             No hay publicaciones con reportes para mostrar.
                                         </td>
                                     </tr>
