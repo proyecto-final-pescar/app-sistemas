@@ -7,6 +7,12 @@ import Select from "../ui/select/Select";
 import Button from "../ui/button/Button";
 import { crearPublicacion } from "../../services/publicacionService";
 import { subirImagen } from "../../services/uploadService";
+import {
+  FECHA_MINIMA,
+  MAX_DESCRIPCION,
+  analizarContacto,
+  validarDescripcion,
+} from "../../utils/validacionesPublicacion";
 
 import RecortadorImagen from "../common/RecortadorImagen";
 
@@ -17,23 +23,8 @@ const getFechaLocalInput = () => {
 };
 
 const LIMITE_NOMBRE = 100;
-const LIMITE_DESCRIPCION = 5000;
+const LIMITE_DESCRIPCION = MAX_DESCRIPCION;
 const LIMITE_CONTACTO = 150;
-
-const inferirTipoContacto = (valor) => {
-  const texto = valor.trim();
-
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(texto)) {
-    return "EML";
-  }
-
-  const digitos = texto.replace(/\D/g, "");
-  if (digitos.length >= 6) {
-    return "TEL";
-  }
-
-  return null;
-};
 
 function FormularioPublicacion({ onCancelar, onGuardado, zonas = [] }) {
   const fechaMaxima = getFechaLocalInput();
@@ -82,21 +73,21 @@ function FormularioPublicacion({ onCancelar, onGuardado, zonas = [] }) {
       nuevosErrores.fecha = "Indicá la fecha en la que se perdió";
     } else if (fecha > fechaMaxima) {
       nuevosErrores.fecha = "La fecha no puede ser futura";
+    } else if (fecha < FECHA_MINIMA) {
+      nuevosErrores.fecha = "La fecha ingresada no es válida";
     }
 
-    if (descripcion.trim().length < 12) {
-      nuevosErrores.descripcion = "Sumá una descripción un poco más completa";
-    } else if (descripcion.trim().length > LIMITE_DESCRIPCION) {
-      nuevosErrores.descripcion = `La descripción no puede superar los ${LIMITE_DESCRIPCION} caracteres`;
+    const errorDescripcion = validarDescripcion(descripcion);
+    if (errorDescripcion) {
+      nuevosErrores.descripcion = errorDescripcion;
     }
 
     const contactoLimpio = contacto.trim();
-    if (contactoLimpio === "") {
-      nuevosErrores.contacto = "Agregá un contacto";
-    } else if (contactoLimpio.length > LIMITE_CONTACTO) {
+    if (contactoLimpio.length > LIMITE_CONTACTO) {
       nuevosErrores.contacto = `El contacto no puede superar los ${LIMITE_CONTACTO} caracteres`;
-    } else if (!inferirTipoContacto(contactoLimpio)) {
-      nuevosErrores.contacto = "Ingresá un teléfono o un email válido";
+    } else {
+      const { error: errorContacto } = analizarContacto(contactoLimpio);
+      if (errorContacto) nuevosErrores.contacto = errorContacto;
     }
 
     setErrores(nuevosErrores);
@@ -109,7 +100,7 @@ function FormularioPublicacion({ onCancelar, onGuardado, zonas = [] }) {
     if (!validarFormularioPublicacion()) return;
 
     const contactoLimpio = contacto.trim();
-    const tipoContacto = inferirTipoContacto(contactoLimpio);
+    const { tipo: tipoContacto } = analizarContacto(contactoLimpio);
 
     setGuardando(true);
     setErrorGeneral("");
@@ -130,7 +121,10 @@ function FormularioPublicacion({ onCancelar, onGuardado, zonas = [] }) {
       onGuardado?.();
     } catch (error) {
       console.error(error);
-      setErrorGeneral("No se pudo crear la publicación. Intentá de nuevo.");
+      // Si el back rechazó por validación (400), mostramos su mensaje concreto
+      const mensajeServidor =
+        error?.response?.status === 400 ? error?.response?.data?.message : "";
+      setErrorGeneral(mensajeServidor || "No se pudo crear la publicación. Intentá de nuevo.");
     } finally {
       setGuardando(false);
     }
@@ -223,6 +217,7 @@ function FormularioPublicacion({ onCancelar, onGuardado, zonas = [] }) {
                 label="Fecha en la que se perdió"
                 type="date"
                 value={fecha}
+                min={FECHA_MINIMA}
                 max={fechaMaxima}
                 onChange={(evento) => setFecha(evento.target.value)}
                 error={errores.fecha}
@@ -249,7 +244,7 @@ function FormularioPublicacion({ onCancelar, onGuardado, zonas = [] }) {
 
             <Input
               label="Contacto"
-              placeholder="Teléfono o email"
+              placeholder="Teléfono con código de área o email"
               value={contacto}
               maxLength={LIMITE_CONTACTO}
               onChange={(evento) => setContacto(evento.target.value)}

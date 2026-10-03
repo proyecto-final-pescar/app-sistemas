@@ -25,6 +25,7 @@ export default function ModeracionForo() {
     const [filtroReportes, setFiltroReportes] = useState("");
     const [paginaActual, setPaginaActual] = useState(1);
     const [publicacionSeleccionada, setPublicacionSeleccionada] = useState(null);
+    const [avisoExito, setAvisoExito] = useState("");
     const ITEMS_POR_PAGINA = 10;
 
     const cargar = async () => {
@@ -54,10 +55,20 @@ export default function ModeracionForo() {
         cargarZonas();
     }, []);
 
+    useEffect(() => {
+        if (!avisoExito) return undefined;
+        const timer = setTimeout(() => setAvisoExito(""), 6000);
+        return () => clearTimeout(timer);
+    }, [avisoExito]);
+
     const opcionesZona = [
         { value: "", label: "Todas las zonas" },
         ...zonas.map((zona) => ({
+<<<<<<< HEAD
             value: zona.zona_id ?? zona.id,
+=======
+            value: String(zona.id),
+>>>>>>> 900e2c92c3f13a8aa5143bc515ea316d7faddff3
             label: zona.nombre,
         })),
     ];
@@ -101,8 +112,9 @@ export default function ModeracionForo() {
         setPublicacionSeleccionada(null);
     };
 
-    const handleSuccessModeracion = () => {
+    const handleSuccessModeracion = (mensaje) => {
         cargar();
+        setAvisoExito(mensaje || "La publicación se dio de baja correctamente.");
     };
 
     return (
@@ -113,6 +125,12 @@ export default function ModeracionForo() {
                 <TopBar title="Moderación de Foro" />
 
                 <div className={styles.content}>
+
+                    {avisoExito && (
+                        <div className={styles.successBanner} role="status">
+                            {avisoExito}
+                        </div>
+                    )}
 
                     {/* Filtros */}
                     <div className={styles.filtros}>
@@ -129,7 +147,7 @@ export default function ModeracionForo() {
                         <Select
                             placeholder="Zona"
                             opciones={opcionesZona}
-                            value={filtroZona}
+                            value={String(filtroZona)}
                             onChange={(e) => { setFiltroZona(e.target.value); setPaginaActual(1); }}
                         />
                     </div>

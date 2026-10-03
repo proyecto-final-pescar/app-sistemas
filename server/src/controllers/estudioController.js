@@ -1,4 +1,5 @@
 import prisma from '../../prisma/client.js'
+import { esFechaFutura } from '../utils/fechas.js'
 
 const isValidUUID = (id) => {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
@@ -85,6 +86,13 @@ export const crearEstudio = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'La fecha no es válida'
+      })
+    }
+
+    if (esFechaFutura(fechaValida)) {
+      return res.status(400).json({
+        success: false,
+        message: 'La fecha no puede ser futura'
       })
     }
 
@@ -345,6 +353,13 @@ export const actualizarEstudio = async (req, res) => {
         return res.status(400).json({
           success: false,
           message: 'La fecha no es válida'
+        })
+      }
+
+      if (esFechaFutura(fechaValida)) {
+        return res.status(400).json({
+          success: false,
+          message: 'La fecha no puede ser futura'
         })
       }
 

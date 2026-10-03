@@ -9,7 +9,7 @@ import {
 // Reglas de negocio
 // ─────────────────────────────────────────────────────────────
 export const ANTICIPACION_MINIMA_HORAS = 10
-const PLAZO_PAGO_HORAS = 3          // siempre < ANTICIPACION_MINIMA_HORAS
+export const PLAZO_PAGO_HORAS = 3          // siempre < ANTICIPACION_MINIMA_HORAS
 const HORAS_LIMITE_CANCELACION = 24 // solo aplica a turnos ya CONFIRMADOS
 
 export const ESTADO = {
@@ -20,10 +20,10 @@ export const ESTADO = {
   ATENDIDO: 'ATE'
 }
 
-
 export const ESTADOS_VALIDOS = new Set(Object.values(ESTADO))
 
 export const includeTurnoCompleto = {
+
   mascota: {
     select: {
       mascota_id: true,
@@ -48,7 +48,14 @@ export const includeTurnoCompleto = {
     }
   },
   veterinaria: { select: { veterinaria_id: true, nombre: true, direccion: true } },
-  profesional: { select: { profesional_id: true, nombre: true, apellido: true } },
+   profesional: {
+    select: {
+      profesional_id: true,
+      nombre: true,
+      apellido: true,
+      especialidad: { select: { nombre: true } }
+    }
+  },
   servicio: {
     select: {
       servicio_id: true,
@@ -61,19 +68,10 @@ export const includeTurnoCompleto = {
 // ─────────────────────────────────────────────────────────────
 // Helpers de fecha/hora
 // ─────────────────────────────────────────────────────────────
-
 export const combinarFechaHora = (fecha, horaTime) => {
   const fechaStr = typeof fecha === 'string' ? fecha.slice(0, 10) : fecha.toISOString().slice(0, 10)
-  const [anio, mes, dia] = fechaStr.split('-').map(Number)
-
-  const horas = typeof horaTime === 'string'
-    ? Number(horaTime.split(':')[0])
-    : horaTime.getUTCHours()
-  const minutos = typeof horaTime === 'string'
-    ? Number(horaTime.split(':')[1])
-    : horaTime.getUTCMinutes()
-
-  return new Date(anio, mes - 1, dia, horas, minutos, 0, 0)
+  const hhmm = typeof horaTime === 'string' ? horaTime.slice(0, 5) : horaTime.toISOString().slice(11, 16)
+  return new Date(`${fechaStr}T${hhmm}:00-03:00`)
 }
 
 export const horasHasta = (fechaHora) => (fechaHora.getTime() - Date.now()) / (1000 * 60 * 60)
@@ -89,9 +87,7 @@ const sumarMinutos = (horaTimeUTC, minutos) => {
   return copia
 }
 
-// Postgres devuelve columnas `time` como Date ancladas al epoch (UTC).
-// Se formatea a "HH:MM" antes de mandar cualquier respuesta al frontend,
-// que sigue esperando ese formato simple (heredado de la versión Mongo).
+
 export const formatearHora = (horaDate) => (horaDate ? horaDate.toISOString().slice(11, 16) : null)
 
 export const formatearTurno = (turno) => ({
@@ -101,14 +97,139 @@ export const formatearTurno = (turno) => ({
 })
 
 // ─────────────────────────────────────────────────────────────
+// Helpers de listado (GET /turnos): pestañas, búsqueda y paginación
+// ─────────────────────────────────────────────────────────────
+const TABS_VALIDAS = new Set(['proximos', 'pasados'])
+const LIMITE_POR_DEFECTO = 10
+const LIMITE_MAXIMO = 50
+
+// "Ahora" en hora argentina (UTC-3 fijo, igual que combinarFechaHora).
+// `hoy` es la fecha a medianoche UTC (así Prisma compara columnas @db.Date)
+// y `horaActual` es la hora sobre 1970-01-01 UTC (columnas @db.Time).
+const ahoraArgentina = () => {
+  const ar = new Date(Date.now() - 3 * 60 * 60 * 1000)
+  return {
+    hoy: new Date(Date.UTC(ar.getUTCFullYear(), ar.getUTCMonth(), ar.getUTCDate())),
+    horaActual: new Date(Date.UTC(1970, 0, 1, ar.getUTCHours(), ar.getUTCMinutes(), ar.getUTCSeconds()))
+  }
+}
+
+// Pestañas del tutor (MisTurnos). Se miden por hora de INICIO.
+//  - proximos: confirmados o pendientes de pago que todavía no empezaron
+//  - pasados: cancelados, atendidos, o cualquiera cuyo inicio ya pasó
+const condicionTabTutor = (tab) => {
+  const { hoy, horaActual } = ahoraArgentina()
+
+  if (tab === 'proximos') {
+    return {
+      AND: [
+        { estado_turno_id: { in: [ESTADO.CONFIRMADO, ESTADO.PENDIENTE] } },
+        { OR: [{ fecha: { gt: hoy } }, { fecha: hoy, hora_inicio: { gte: horaActual } }] }
+      ]
+    }
+  }
+
+  return {
+    OR: [
+      { estado_turno_id: { in: [ESTADO.CANCELADO, ESTADO.ATENDIDO] } },
+      { fecha: { lt: hoy } },
+      { fecha: hoy, hora_inicio: { lt: horaActual } }
+    ]
+  }
+}
+
+// Pestañas de la veterinaria (CitasAgendadas). Se miden por hora de FIN.
+//  - proximos: confirmados cuyo horario de fin todavía no pasó
+//  - pasados: atendidos, o confirmados cuyo fin ya pasó sin consulta registrada
+const condicionTabVeterinaria = (tab) => {
+  const { hoy, horaActual } = ahoraArgentina()
+
+  if (tab === 'proximos') {
+    return {
+      AND: [
+        { estado_turno_id: ESTADO.CONFIRMADO },
+        { OR: [{ fecha: { gt: hoy } }, { fecha: hoy, hora_fin: { gt: horaActual } }] }
+      ]
+    }
+  }
+
+  return {
+    OR: [
+      { estado_turno_id: ESTADO.ATENDIDO },
+      {
+        AND: [
+          { estado_turno_id: ESTADO.CONFIRMADO },
+          { OR: [{ fecha: { lt: hoy } }, { fecha: hoy, hora_fin: { lte: horaActual } }] }
+        ]
+      }
+    ]
+  }
+}
+
+// Cada palabra tiene que aparecer en nombre o apellido del tutor.
+// Ojo: `mode: 'insensitive'` ignora mayúsculas pero NO tildes.
+const condicionBusquedaTutor = (texto) => {
+  const palabras = texto.trim().split(/\s+/).filter(Boolean).slice(0, 5)
+  if (palabras.length === 0) return null
+
+  return {
+    usuario: {
+      AND: palabras.map((palabra) => ({
+        OR: [
+          { nombre: { contains: palabra, mode: 'insensitive' } },
+          { apellido: { contains: palabra, mode: 'insensitive' } }
+        ]
+      }))
+    }
+  }
+}
+
+// Sin `tab` se mantiene el orden histórico (fecha + hora de inicio ascendente).
+// El desempate por turno_id evita filas repetidas o salteadas entre páginas.
+const ordenarTurnos = (tab, porHoraFin) => {
+  const campoHora = tab && porHoraFin ? 'hora_fin' : 'hora_inicio'
+  const direccion = tab === 'pasados' ? 'desc' : 'asc'
+  return [{ fecha: direccion }, { [campoHora]: direccion }, { turno_id: 'asc' }]
+}
+
+// La paginación es opt-in: sin `pagina` ni `limite` la respuesta es la de siempre.
+const parsearPaginacion = (query) => {
+  if (query.pagina === undefined && query.limite === undefined) return null
+
+  const pagina = Math.max(parseInt(query.pagina, 10) || 1, 1)
+  const limite = Math.min(Math.max(parseInt(query.limite, 10) || LIMITE_POR_DEFECTO, 1), LIMITE_MAXIMO)
+
+  return { pagina, limite }
+}
+
+// ─────────────────────────────────────────────────────────────
 // GET /turnos
+//
+// Query params:
+//   veterinariaId | usuarioId ("me")   (uno de los dos es obligatorio)
+//   estado | estadoDistinto | estados | servicioId | fechaDesde | fechaHasta
+//   tab=proximos|pasados               filtra y ordena en el servidor
+//   busquedaTutor                      solo con veterinariaId
+//   pagina, limite                     activa la paginación (limite máx. 50)
+//
+// Sin paginación responde { turnos }. Con paginación responde
+// { turnos, total, pagina, limite, totalPaginas }.
 // ─────────────────────────────────────────────────────────────
 export const obtenerTurnos = async (req, res) => {
   try {
-    const { veterinariaId, usuarioId, estado, estadoDistinto, estados, servicioId, fechaDesde, fechaHasta } = req.query
+    const {
+      veterinariaId, usuarioId, estado, estadoDistinto, estados,
+      servicioId, fechaDesde, fechaHasta, tab, busquedaTutor
+    } = req.query
 
     if (!veterinariaId && !usuarioId) {
       return res.status(400).json({ message: 'Falta veterinariaId o usuarioId' })
+    }
+
+    if (tab !== undefined && !TABS_VALIDAS.has(tab)) {
+      return res.status(400).json({
+        message: `Tab inválido: "${tab}". Valores permitidos: ${[...TABS_VALIDAS].join(', ')}`
+      })
     }
 
     const filtro = {}
@@ -179,13 +300,54 @@ export const obtenerTurnos = async (req, res) => {
       if (fechaHasta) filtro.fecha.lte = new Date(`${fechaHasta}T23:59:59.999Z`)
     }
 
-    const turnos = await prisma.turno.findMany({
-      where: filtro,
-      include: includeTurnoCompleto,
-      orderBy: [{ fecha: 'asc' }, { hora_inicio: 'asc' }]
-    })
+    // Búsqueda por tutor: solo tiene sentido del lado de la veterinaria.
+    if (busquedaTutor && veterinariaId) {
+      const condicion = condicionBusquedaTutor(String(busquedaTutor).slice(0, 100))
+      if (condicion) filtro.mascota = { ...(filtro.mascota || {}), ...condicion }
+    }
 
-    return res.status(200).json({ success: true, data: { turnos: turnos.map(formatearTurno) } })
+    // Con veterinariaId aplican las reglas de la agenda de la veterinaria;
+    // con usuarioId, las de "Mis turnos" del tutor.
+    if (tab) {
+      filtro.AND = [veterinariaId ? condicionTabVeterinaria(tab) : condicionTabTutor(tab)]
+    }
+
+    const orderBy = ordenarTurnos(tab, Boolean(veterinariaId))
+    const paginacion = parsearPaginacion(req.query)
+
+    if (!paginacion) {
+      const turnos = await prisma.turno.findMany({
+        where: filtro,
+        include: includeTurnoCompleto,
+        orderBy
+      })
+
+      return res.status(200).json({ success: true, data: { turnos: turnos.map(formatearTurno) } })
+    }
+
+    const { pagina, limite } = paginacion
+
+    const [total, turnos] = await Promise.all([
+      prisma.turno.count({ where: filtro }),
+      prisma.turno.findMany({
+        where: filtro,
+        include: includeTurnoCompleto,
+        orderBy,
+        skip: (pagina - 1) * limite,
+        take: limite
+      })
+    ])
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        turnos: turnos.map(formatearTurno),
+        total,
+        pagina,
+        limite,
+        totalPaginas: Math.max(Math.ceil(total / limite), 1)
+      }
+    })
   } catch (error) {
     if (error.code === 'P2023') {
       return res.status(400).json({ message: 'El id enviado no es válido' })
@@ -211,7 +373,8 @@ export const obtenerTurnoPorId = async (req, res) => {
       return res.status(404).json({ message: 'El recurso no existe.' })
     }
 
-    const esDueño = turno.mascota?.dueno_id === req.user.id
+    
+    const esDueño = turno.mascota?.usuario?.usuario_id === req.user.id
     const esAdmin = req.user.rol === 'administrador'
 
     if (!esDueño && !esAdmin) {
@@ -228,7 +391,7 @@ export const obtenerTurnoPorId = async (req, res) => {
     if (error.code === 'P2023') {
       return res.status(400).json({ message: 'El id del turno no es válido' })
     }
-    console.error('Error en obtenerTurnoPorId:', error)
+    
     return res.status(500).json({ message: 'Error interno del servidor' })
   }
 }
@@ -352,22 +515,28 @@ export const cancelarTurno = async (req, res) => {
     let motivoRechazoReembolso = null
 
     if (turno.estado_turno_id === ESTADO.CONFIRMADO) {
-      const fechaHoraTurno = combinarFechaHora(turno.fecha, turno.hora_inicio)
-      const horasRestantes = horasHasta(fechaHoraTurno)
+      // Solo hay cobro real si existe un pago APROBADO. Sin cobro (p. ej.
+      // efectivo pendiente de cobro en el local) se cancela con la misma
+      // flexibilidad que un pendiente: no hay dinero que devolver.
+      pagoAReembolsar = await prisma.pago.findFirst({
+        where: { turno_id: id, estado_pago_id: 'APR' },
+        orderBy: { created_at: 'desc' }
+      })
 
-      if (horasRestantes < HORAS_LIMITE_CANCELACION) {
-        return res.status(400).json({
-          message: `Solo se puede cancelar un turno confirmado hasta ${HORAS_LIMITE_CANCELACION}hs antes. Faltan ${horasRestantes.toFixed(1)}hs`
-        })
+      if (pagoAReembolsar) {
+        const fechaHoraTurno = combinarFechaHora(turno.fecha, turno.hora_inicio)
+        const horasRestantes = horasHasta(fechaHoraTurno)
+
+        if (horasRestantes < HORAS_LIMITE_CANCELACION) {
+          return res.status(400).json({
+            message: `Solo se puede cancelar un turno confirmado hasta ${HORAS_LIMITE_CANCELACION}hs antes. Faltan ${horasRestantes.toFixed(1)}hs`
+          })
+        }
       }
 
       // Reembolso automático: solo si hay un pago realmente APROBADO (cobrado).
       // Si es efectivo y todavía está en PEN (nunca se cobró en el local),
       // no hay nada que reembolsar — se cancela sin más.
-      pagoAReembolsar = await prisma.pago.findFirst({
-        where: { turno_id: id, estado_pago_id: 'APR' },
-        orderBy: { created_at: 'desc' }
-      })
 
       if (pagoAReembolsar) {
         if (pagoAReembolsar.metodo_pago_id === 'MPG' && pagoAReembolsar.id_pago) {

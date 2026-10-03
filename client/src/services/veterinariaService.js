@@ -60,6 +60,30 @@ export const getAllVeterinarias = async () => {
   return response.data;
 };
 
+/* Listado paginado y filtrado en el servidor (buscador del tutor).
+ */
+export const obtenerVeterinariasPaginadas = async ({
+  q,
+  categoria,
+  urgencias,
+  page = 1,
+  limit = 12,
+} = {}) => {
+  const params = { page, limit };
+  if (q?.trim()) params.q = q.trim();
+  if (categoria) params.categoria = categoria;
+  if (urgencias) params.urgencias = true;
+
+  const { data } = await api.get("/veterinarias", { params });
+
+  return {
+    veterinarias: data.data ?? [],
+    total: data.paginacion?.total ?? 0,
+    page: data.paginacion?.page ?? page,
+    totalPaginas: data.paginacion?.totalPaginas ?? 1,
+  };
+};
+
 // GET /veterinarias/buscar?lat=&lng=&radio=   veterinarias cercanas
 export const buscarVeterinariasCercanas = async ({ lat, lng, radio }) => {
   const { data } = await api.get("/veterinarias/buscar", {
@@ -70,7 +94,7 @@ export const buscarVeterinariasCercanas = async ({ lat, lng, radio }) => {
 
 // POST /veterinarias/:id/resenas { valor: 1..5 }
 // Crea o actualiza  calificación para esa vete
-// Devuelve { miCalificacion, rating, cantidadResenias } con el promedio ya recalculado.
+// Devuelve { miCalificacion, rating, cantidadResenias } con el promedio ya recalculado
 export const calificarVeterinaria = async (id, valor) => {
   const { data } = await api.post(`/veterinarias/${id}/resenas`, { valor });
   return data.data;

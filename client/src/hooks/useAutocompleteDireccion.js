@@ -1,17 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 
-/**
- * Encapsula el autocompletado de direcciones vía Google Places:
- * debounce de búsqueda, sugerencias, y resolución de lat/lng al elegir
- * una sugerencia. Usado tanto en el registro de veterinaria como en la
- * edición de perfil, para no duplicar esta lógica en los dos lugares.
- */
+
 export function useAutocompleteDireccion(direccionInicial = "", latInicial = null, lngInicial = null) {
   const [direccion, setDireccion] = useState(direccionInicial);
   const [lat, setLat] = useState(latInicial);
   const [lng, setLng] = useState(lngInicial);
   const [suggestions, setSuggestions] = useState([]);
   const [loadingAddress, setLoadingAddress] = useState(false);
+  const [addressComponents, setAddressComponents] = useState([]);
   const debounceRef = useRef(null);
 
   useEffect(() => {
@@ -42,24 +38,35 @@ export function useAutocompleteDireccion(direccionInicial = "", latInicial = nul
     setDireccion(valor);
     setLat(null);
     setLng(null);
+    setAddressComponents([]);
   }, []);
 
-  const handleSelectPlace = useCallback(async (place) => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/places/details?place_id=${place.place_id}`,
-      );
-      const data = await res.json();
-      const location = data.result?.geometry?.location;
-      setDireccion(place.description);
-      setLat(typeof location?.lat === "number" ? location.lat : null);
-      setLng(typeof location?.lng === "number" ? location.lng : null);
-    } catch {
-      setDireccion(place.description);
-    } finally {
-      setSuggestions([]);
+const handleSelectPlace = useCallback(async (place) => {
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_API_URL}/places/details?place_id=${encodeURIComponent(place.place_id)}`,
+    );
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error("Error en /places/details:", data);
+      throw new Error(data.detalle || data.message || "details falló");
     }
-  }, []);
+
+    const location = data.result?.geometry?.location;
+    setDireccion(place.description);
+    setLat(typeof location?.lat === "number" ? location.lat : null);
+    setLng(typeof location?.lng === "number" ? location.lng : null);
+    setAddressComponents(data.result?.address_components || []);
+  } catch (err) {
+    console.error("handleSelectPlace:", err);
+    // Se conserva lo que el usuario había escrito; lat/lng siguen en null
+    // y validateStep1 le va a pedir que vuelva a elegir de la lista.
+    setAddressComponents([]);
+  } finally {
+    setSuggestions([]);
+  }
+}, []);
 
   // Permite sincronizar el hook cuando los datos iniciales llegan de
   // forma asíncrona (ej: MiVeterinaria.jsx, que carga la veterinaria
@@ -69,6 +76,7 @@ export function useAutocompleteDireccion(direccionInicial = "", latInicial = nul
     setLat(nuevoLat ?? null);
     setLng(nuevoLng ?? null);
     setSuggestions([]);
+    setAddressComponents([]);
   }, []);
 
   return {
@@ -77,6 +85,7 @@ export function useAutocompleteDireccion(direccionInicial = "", latInicial = nul
     lng,
     suggestions,
     loadingAddress,
+    addressComponents,
     handleChangeDireccion,
     handleSelectPlace,
     resetDireccion,

@@ -1,4 +1,5 @@
 import cron from 'node-cron'
+import { Payment } from 'mercadopago'
 
 import prisma from '../../prisma/client.js'
 import {
@@ -6,6 +7,8 @@ import {
   formatearHora,
   liberarTurnosVencidos
 } from '../controllers/turnoController.js'
+import { METODO_PAGO_MAP } from '../controllers/webhookController.js'
+import { obtenerClienteMercadoPago } from '../services/mercadoPagoOAuthService.js'
 import {
   crearNotificacion,
   formatearFechaTurno,
@@ -151,6 +154,133 @@ export const enviarRecordatoriosTurnos = async () => {
   }
 }
 
+// Margen para darle al webhook la oportunidad de llegar antes de consultar a MP.
+const ANTIGUEDAD_MINIMA_PAGO_MS = 5 * 60 * 1000
+const RECONCILIAR_LOTE_MAXIMO = 20
+
+// Si el webhook de Mercado Pago se demora o se pierde, el turno queda
+// pendiente hasta vencer aunque el usuario haya pagado. Este job busca esos
+// casos en MP (por external_reference = turno_id) y confirma los aprobados.
+// Es idempotente: si el webhook llega en el medio, el updateMany no matchea
+// y se salta sin duplicar nada.
+export const reconciliarPagosPendientes = async () => {
+  try {
+    const desde = new Date(Date.now() - ANTIGUEDAD_MINIMA_PAGO_MS)
+
+    const turnos = await prisma.turno.findMany({
+      where: {
+        estado_turno_id: ESTADO.PENDIENTE,
+        mascota_id: { not: null },
+        pago: {
+          some: {
+            estado_pago_id: 'PEN',
+            created_at: { lt: desde }
+          }
+        }
+      },
+      select: {
+        turno_id: true,
+        veterinaria_id: true,
+        mascota: { select: { nombre: true, dueno_id: true } },
+        veterinaria: { select: { nombre: true } },
+        pago: {
+          where: { estado_pago_id: 'PEN' },
+          orderBy: { created_at: 'desc' },
+          take: 1,
+          select: { pago_id: true, monto: true }
+        }
+      },
+      orderBy: { vence_en: 'asc' },
+      take: RECONCILIAR_LOTE_MAXIMO
+    })
+
+    for (const turno of turnos) {
+      const pagoLocal = turno.pago[0]
+      if (!pagoLocal) continue
+
+      try {
+        const cliente = await obtenerClienteMercadoPago(turno.veterinaria_id)
+        const pagoClient = new Payment(cliente)
+
+        const busqueda = await pagoClient.search({
+          options: { external_reference: turno.turno_id }
+        })
+        const candidato = (busqueda.results || []).find((p) => p.status === 'approved')
+        if (!candidato?.id) continue
+
+        const pagoMP = await pagoClient.get({ id: candidato.id })
+
+        const montoRecibido = Number(pagoMP.transaction_amount)
+        if (pagoMP.currency_id !== 'ARS' || Math.abs(montoRecibido - Number(pagoLocal.monto)) > 0.009) {
+          console.error('Reconciliación rechazada por importe o moneda inconsistente.', {
+            pagoId: pagoLocal.pago_id,
+            turnoId: turno.turno_id
+          })
+          continue
+        }
+
+        const pagoIdMp = pagoMP.metadata?.pago_id
+        if (pagoIdMp && String(pagoIdMp) !== String(pagoLocal.pago_id)) {
+          // Es otro pago (p. ej. de un reintento anterior): no tocar este registro.
+          continue
+        }
+
+        const [estadoAprobado, estadoConfirmado, metodoPago] = await Promise.all([
+          prisma.estado_pago.findUnique({ where: { nombre: 'aprobado' } }),
+          prisma.estado_turno.findUnique({ where: { nombre: 'confirmado' } }),
+          METODO_PAGO_MAP[pagoMP.payment_type_id]
+            ? prisma.metodo_pago.findUnique({ where: { nombre: METODO_PAGO_MAP[pagoMP.payment_type_id] } })
+            : null
+        ])
+        if (!estadoAprobado || !estadoConfirmado) {
+          throw new Error('Faltan estados requeridos en los catálogos.')
+        }
+
+        await prisma.$transaction(async (tx) => {
+          const resultado = await tx.pago.updateMany({
+            where: {
+              pago_id: pagoLocal.pago_id,
+              OR: [{ id_pago: null }, { id_pago: String(pagoMP.id) }]
+            },
+            data: {
+              id_pago: String(pagoMP.id),
+              metodo_pago_id: metodoPago?.metodo_pago_id || null,
+              estado_pago_id: estadoAprobado.estado_pago_id,
+              motivo_rechazo: null,
+              fecha_aprobacion: pagoMP.date_approved ? new Date(pagoMP.date_approved) : new Date()
+            }
+          })
+          if (resultado.count !== 1) {
+            throw new Error('El pago local ya fue reclamado por otro pago externo.')
+          }
+
+          const turnoActual = await tx.turno.findUnique({
+            where: { turno_id: turno.turno_id },
+            select: { estado_turno_id: true }
+          })
+          if (turnoActual?.estado_turno_id !== ESTADO.CONFIRMADO) {
+            await tx.turno.update({
+              where: { turno_id: turno.turno_id },
+              data: { estado_turno_id: estadoConfirmado.estado_turno_id, vence_en: null }
+            })
+          }
+        })
+
+        await crearNotificacion({
+          usuarioId: turno.mascota.dueno_id,
+          tipo: TIPO.TURNO_CONFIRMADO,
+          mensaje: `¡Pago aprobado! Tu turno en ${turno.veterinaria.nombre} para ${turno.mascota.nombre} quedó confirmado.`,
+          link: `/mis-turnos`
+        })
+      } catch (error) {
+        console.error(`Error al reconciliar el pago del turno ${turno.turno_id}:`, error)
+      }
+    }
+  } catch (error) {
+    console.error('Error al obtener turnos para reconciliación:', error)
+  }
+}
+
 export const iniciarJobsTurnos = () => {
   // Libera turnos vencidos cada 15 minutos
   cron.schedule('*/15 * * * *', () => {
@@ -160,5 +290,10 @@ export const iniciarJobsTurnos = () => {
   // Envía recordatorios para turnos dentro de las próximas 24 horas
   cron.schedule('*/15 * * * *', () => {
     enviarRecordatoriosTurnos()
+  })
+
+  // Reconcilia pagos aprobados en MP cuyo webhook se demoró o se perdió
+  cron.schedule('*/15 * * * *', () => {
+    reconciliarPagosPendientes()
   })
 }
