@@ -64,11 +64,7 @@ export default function ModeracionForo() {
     const opcionesZona = [
         { value: "", label: "Todas las zonas" },
         ...zonas.map((zona) => ({
-<<<<<<< HEAD
-            value: zona.zona_id ?? zona.id,
-=======
             value: String(zona.id),
->>>>>>> 900e2c92c3f13a8aa5143bc515ea316d7faddff3
             label: zona.nombre,
         })),
     ];

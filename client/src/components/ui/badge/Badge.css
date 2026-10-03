@@ -27,17 +27,12 @@
   color: #ef4444;
 }
 
-<<<<<<< HEAD
-.badge-secondary,
-.badge-atendido {
-=======
 .badge-atendido {
   background-color: #ede9fe;
   color: #7c3aed;
 }
 
 .badge-secondary {
->>>>>>> 900e2c92c3f13a8aa5143bc515ea316d7faddff3
   background-color: var(--color-fondo-claro);
   color: var(--color-primario);
 }
