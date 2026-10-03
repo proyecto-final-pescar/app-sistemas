@@ -4,9 +4,18 @@ import { resolverEspecieId, resolverRazaId, resolverSexoMascotaId } from '../uti
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const esUuidValido = (id) => UUID_REGEX.test(id || '');
 
-const INCLUDE_MASCOTA = {
-    raza: { include: { especie: true } },
-    sexo_mascota: true
+// Solo las columnas que el frontend usa
+const SELECT_MASCOTA = {
+    mascota_id: true,
+    nombre: true,
+    fecha_nacimiento: true,
+    foto: true,
+    es_castrado: true,
+    peso: true,
+    dueno_id: true,
+    active: true,
+    raza: { select: { nombre: true, especie: { select: { nombre: true } } } },
+    sexo_mascota: { select: { nombre: true } }
 };
 
 const mapearMascotaLegible = (mascota) => {
@@ -33,7 +42,7 @@ export const obtenerMascotas = async (req, res) => {
 
         const mascotas = await prisma.mascota.findMany({
             where: { dueno_id: duenoId, active: true },
-            include: INCLUDE_MASCOTA,
+            select: SELECT_MASCOTA,
             orderBy: { nombre: 'asc' }
         });
 
@@ -44,7 +53,7 @@ export const obtenerMascotas = async (req, res) => {
     }
 };
 
-// GET /mascotas/:id: ficha completa de una mascota (con su ficha médica)
+// GET /mascotas/:id: ficha de una mascota
 export const obtenerMascotaPorId = async (req, res) => {
     try {
         const { id } = req.params;
@@ -56,7 +65,7 @@ export const obtenerMascotaPorId = async (req, res) => {
 
         const mascota = await prisma.mascota.findUnique({
             where: { mascota_id: id },
-            include: INCLUDE_MASCOTA
+            select: SELECT_MASCOTA
         });
 
         if (!mascota || !mascota.active) {
@@ -83,12 +92,15 @@ export const crearMascota = async (req, res) => {
             return res.status(400).json({ message: 'Nombre, especie y sexo son requeridos' });
         }
 
-        const especieId = await resolverEspecieId(especie);
+        // Especie y sexo son independientes: se resuelven en paralelo
+        const [especieId, sexoMascotaId] = await Promise.all([
+            resolverEspecieId(especie),
+            resolverSexoMascotaId(sexo)
+        ]);
+
         if (!especieId) {
             return res.status(400).json({ message: `La especie "${especie}" no es válida` });
         }
-
-        const sexoMascotaId = await resolverSexoMascotaId(sexo);
         if (!sexoMascotaId) {
             return res.status(400).json({ message: `El sexo "${sexo}" no es válido` });
         }
@@ -98,22 +110,22 @@ export const crearMascota = async (req, res) => {
             return res.status(400).json({ message: `La raza "${raza}" no es válida para la especie seleccionada` });
         }
 
-    const nuevaMascota = await prisma.mascota.create({
-        data: {
-            nombre,
-            raza_id: razaId,
-            sexo_mascota_id: sexoMascotaId,
-            fecha_nacimiento: new Date(fechaNacimiento),
-            foto,
-            es_castrado: Boolean(esCastrado),
-            peso,
-            dueno_id: duenoId,
-            ficha_medica: { create: {} }
-        },
-        include: INCLUDE_MASCOTA
-    });
+        const nuevaMascota = await prisma.mascota.create({
+            data: {
+                nombre,
+                raza_id: razaId,
+                sexo_mascota_id: sexoMascotaId,
+                fecha_nacimiento: new Date(fechaNacimiento),
+                foto,
+                es_castrado: Boolean(esCastrado),
+                peso,
+                dueno_id: duenoId,
+                ficha_medica: { create: {} }
+            },
+            select: SELECT_MASCOTA
+        });
 
-    res.status(201).json(mapearMascotaLegible(nuevaMascota));
+        res.status(201).json(mapearMascotaLegible(nuevaMascota));
     } catch (error) {
         if (error.code === 'P2003') {
             return res.status(400).json({ message: 'Datos de referencia inválidos (raza, sexo o dueño)' });
@@ -133,7 +145,15 @@ export const actualizarMascota = async (req, res) => {
             return res.status(400).json({ message: 'El id de la mascota no es válido' });
         }
 
-        const mascotaExistente = await prisma.mascota.findUnique({ where: { mascota_id: id } });
+        // Una sola lectura: dueño, estado y la especie actual (evita la query extra a raza)
+        const mascotaExistente = await prisma.mascota.findUnique({
+            where: { mascota_id: id },
+            select: {
+                dueno_id: true,
+                active: true,
+                raza: { select: { especie_id: true } }
+            }
+        });
         if (!mascotaExistente || !mascotaExistente.active) {
             return res.status(404).json({ message: 'Mascota no encontrada' });
         }
@@ -150,19 +170,22 @@ export const actualizarMascota = async (req, res) => {
         if (peso !== undefined) data.peso = peso;
         if (fechaNacimiento !== undefined) data.fecha_nacimiento = new Date(fechaNacimiento);
 
-        let especieId = null;
-        if (especie !== undefined) {
-            especieId = await resolverEspecieId(especie);
-            if (!especieId) {
+        // Especie y sexo en paralelo, solo si vinieron en el body
+        const [especieId, sexoMascotaId] = await Promise.all([
+            especie !== undefined ? resolverEspecieId(especie) : null,
+            sexo !== undefined ? resolverSexoMascotaId(sexo) : null
+        ]);
+
+        if (especie !== undefined && !especieId) {
             return res.status(400).json({ message: `La especie "${especie}" no es válida` });
-            }
         }
+        if (sexo !== undefined && !sexoMascotaId) {
+            return res.status(400).json({ message: `El sexo "${sexo}" no es válido` });
+        }
+        if (sexo !== undefined) data.sexo_mascota_id = sexoMascotaId;
 
         if (raza !== undefined) {
-            const especieIdParaRaza = especieId ?? (await prisma.raza.findUnique({
-                where: { raza_id: mascotaExistente.raza_id },
-                select: { especie_id: true }
-            }))?.especie_id;
+            const especieIdParaRaza = especieId ?? mascotaExistente.raza?.especie_id;
 
             const razaId = await resolverRazaId(especieIdParaRaza, raza);
             if (!razaId) {
@@ -171,18 +194,10 @@ export const actualizarMascota = async (req, res) => {
             data.raza_id = razaId;
         }
 
-        if (sexo !== undefined) {
-            const sexoMascotaId = await resolverSexoMascotaId(sexo);
-            if (!sexoMascotaId) {
-                return res.status(400).json({ message: `El sexo "${sexo}" no es válido` });
-            }
-            data.sexo_mascota_id = sexoMascotaId;
-        }
-
         const mascotaActualizada = await prisma.mascota.update({
             where: { mascota_id: id },
             data,
-            include: INCLUDE_MASCOTA
+            select: SELECT_MASCOTA
         });
 
         res.json(mapearMascotaLegible(mascotaActualizada));
@@ -208,7 +223,10 @@ export const eliminarMascota = async (req, res) => {
             return res.status(400).json({ message: 'El id de la mascota no es válido' });
         }
 
-        const mascota = await prisma.mascota.findUnique({ where: { mascota_id: id } });
+        const mascota = await prisma.mascota.findUnique({
+            where: { mascota_id: id },
+            select: { dueno_id: true, active: true }
+        });
         if (!mascota || !mascota.active) {
             return res.status(404).json({ message: 'Mascota no encontrada' });
         }
@@ -218,7 +236,8 @@ export const eliminarMascota = async (req, res) => {
 
         await prisma.mascota.update({
             where: { mascota_id: id },
-            data: { active: false }
+            data: { active: false },
+            select: { mascota_id: true }
         });
 
         res.json({ message: 'Mascota eliminada correctamente' });

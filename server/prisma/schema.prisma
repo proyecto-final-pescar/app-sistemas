@@ -220,6 +220,8 @@ model profesional {
   profesional_servicio profesional_servicio[]
   turno                turno[]
   vacuna               vacuna[]
+
+  @@index([veterinaria_id], map: "ix_profesional_veterinaria")
 }
 
 model profesional_servicio {
@@ -311,6 +313,8 @@ model servicio {
   categoria_servicio    categoria_servicio     @relation(fields: [categoria_servicio_id], references: [categoria_servicio_id], onDelete: NoAction, onUpdate: NoAction)
   veterinaria           veterinaria            @relation(fields: [veterinaria_id], references: [veterinaria_id], onDelete: NoAction, onUpdate: NoAction)
   turno                 turno[]
+
+  @@index([veterinaria_id, categoria_servicio_id], map: "ix_servicio_veterinaria_categoria")
 }
 
 model sexo_mascota {
@@ -359,6 +363,7 @@ model turno {
   @@index([mascota_id], map: "ix_turno_mascota")
   @@index([estado_turno_id, fecha, recordatorio_enviado], map: "ix_turno_recordatorio")
   @@index([estado_turno_id, vence_en], map: "ix_turno_vencimiento")
+  @@index([veterinaria_id, fecha, hora_inicio], map: "ix_turno_veterinaria_fecha")
 }
 
 model usuario {

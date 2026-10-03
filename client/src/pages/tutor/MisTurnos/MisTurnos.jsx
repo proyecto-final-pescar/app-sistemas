@@ -7,21 +7,30 @@ import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
 import DetalleTurnoModal from "../../../components/ui/detalle-turno-modal/DetalleTurnoModal";
 import SuccessModal from "../../../components/ui/success-modal/SuccessModal"; // 1. IMPORTAR SUCCESS MODAL
 import { FaCalendarAlt, FaClock, FaHospital, FaPaw, FaUserMd } from "react-icons/fa";
-import { obtenerTurnosPorUsuario, cancelarTurno, pagarEfectivo } from "../../../services/turnosService";
+import {
+  obtenerTurnosPaginadosPorUsuario,
+  cancelarTurno,
+  pagarEfectivo,
+} from "../../../services/turnosService";
 import { crearPreferenciaPago } from "../../../services/pagosService";
 import SelectorMetodoPago from "../../../components/pagos/SelectorMetodoPago";
 import {
-  filtrarProximos,
-  filtrarPasados,
-  obtenerTurnoMasProximo,
   formatearDiaMes,
   formatearFechaLarga,
   ESTADO_BADGE,
 } from "../../../utils/turnos";
 import styles from "./MisTurnos.module.css";
 
+const TURNOS_POR_PAGINA = 10;
+
 export default function MisTurnos() {
   const [turnos, setTurnos] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [pagina, setPagina] = useState(1);
+  const [turnoMasProximo, setTurnoMasProximo] = useState(null);
+  // Se incrementa después de cancelar o pagar para volver a pedir lista y banner
+  const [recarga, setRecarga] = useState(0);
   const [tab, setTab] = useState("proximos");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -38,27 +47,76 @@ export default function MisTurnos() {
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [turnoConfirmadoEfectivo, setTurnoConfirmadoEfectivo] = useState(null);
 
+  // Lista de la pestaña activa (una página por vez; filtra y ordena el backend)
   useEffect(() => {
+    let cancelado = false;
+
     const cargarTurnos = async () => {
       setLoading(true);
       setError("");
       try {
-        const data = await obtenerTurnosPorUsuario();
-        setTurnos(data);
-      } catch (err) {
-        setError("No se pudieron cargar los turnos. Intentá de nuevo.");
+        const data = await obtenerTurnosPaginadosPorUsuario({
+          tab,
+          pagina,
+          limite: TURNOS_POR_PAGINA,
+        });
+        if (cancelado) return;
+
+        // Si la página quedó vacía (ej. se canceló el último de la página), retrocede
+        if (data.turnos.length === 0 && pagina > 1) {
+          setPagina(pagina - 1);
+          return;
+        }
+
+        setTurnos(data.turnos);
+        setTotal(data.total);
+        setTotalPaginas(data.totalPaginas);
+      } catch {
+        if (!cancelado) setError("No se pudieron cargar los turnos. Intentá de nuevo.");
       } finally {
-        setLoading(false);
+        if (!cancelado) setLoading(false);
       }
     };
+
     cargarTurnos();
-  }, []);
+    return () => {
+      cancelado = true;
+    };
+  }, [tab, pagina, recarga]);
+
+  // Banner del próximo turno: independiente de la pestaña y de la página
+  useEffect(() => {
+    let cancelado = false;
+
+    const cargarBanner = async () => {
+      try {
+        const data = await obtenerTurnosPaginadosPorUsuario({
+          tab: "proximos",
+          pagina: 1,
+          limite: 1,
+        });
+        if (!cancelado) setTurnoMasProximo(data.turnos[0] || null);
+      } catch {
+        if (!cancelado) setTurnoMasProximo(null);
+      }
+    };
+
+    cargarBanner();
+    return () => {
+      cancelado = true;
+    };
+  }, [recarga]);
 
   useEffect(() => {
     const cerrarMenu = () => setMenuAbierto(null);
     document.addEventListener("click", cerrarMenu);
     return () => document.removeEventListener("click", cerrarMenu);
   }, []);
+
+  const cambiarTab = (nuevaTab) => {
+    setTab(nuevaTab);
+    setPagina(1);
+  };
 
   const handleCancelar = async () => {
     if (!modalCancelar) return;
@@ -68,11 +126,8 @@ export default function MisTurnos() {
 
     try {
       const { reembolso } = await cancelarTurno(modalCancelar);
-      setTurnos((prev) =>
-        prev.map((t) =>
-          t.turno_id === modalCancelar ? { ...t, estado_turno_id: "CAN" } : t
-        )
-      );
+      // El turno cambia de pestaña: se vuelve a pedir lista y banner
+      setRecarga((r) => r + 1);
 
       if (!reembolso) {
         setMensajeCancelacion("Turno cancelado correctamente.");
@@ -129,10 +184,9 @@ export default function MisTurnos() {
     setPagando(turnoId);
 
     try {
-      const turnoActualizado = await pagarEfectivo({ turnoId });
-      setTurnos((prev) =>
-        prev.map((t) => (t.turno_id === turnoId ? turnoActualizado : t))
-      );
+      await pagarEfectivo({ turnoId });
+      // El estado cambió a confirmado: se vuelve a pedir lista y banner
+      setRecarga((r) => r + 1);
       
       // Guardar el turno para armar el mensaje e indicar éxito
       setTurnoConfirmadoEfectivo(turnoSeleccionado);
@@ -145,11 +199,6 @@ export default function MisTurnos() {
       setPagando(null);
     }
   };
-
-  const proximos = filtrarProximos(turnos);
-  const pasados = filtrarPasados(turnos);
-  const turnoMasProximo = obtenerTurnoMasProximo(turnos);
-  const listaVisible = tab === "proximos" ? proximos : pasados;
 
   // Un PEN con el plazo vencido ya no se puede pagar (el cron lo libera):
   // se oculta la acción en vez de ofrecer algo que el backend va a rechazar.
@@ -172,13 +221,13 @@ export default function MisTurnos() {
               texto="Próximos"
               variante={tab === "proximos" ? "primario" : "secundario"}
               tamaño="chico"
-              onClick={() => setTab("proximos")}
+              onClick={() => cambiarTab("proximos")}
             />
             <Button
               texto="Pasados"
               variante={tab === "pasados" ? "primario" : "secundario"}
               tamaño="chico"
-              onClick={() => setTab("pasados")}
+              onClick={() => cambiarTab("pasados")}
             />
           </div>
 
@@ -246,19 +295,19 @@ export default function MisTurnos() {
           {/* Lista de turnos */}
           <div className={styles.card}>
             <div className={styles.cardHeader}>
-              {listaVisible.length} turno{listaVisible.length !== 1 ? "s" : ""}{" "}
+              {total} turno{total !== 1 ? "s" : ""}{" "}
               {tab === "proximos" ? "programados" : "registrados"}
             </div>
 
             {loading && <p className={styles.estadoVacio}>Cargando turnos...</p>}
             {!loading && error && <p className={styles.estadoVacio}>{error}</p>}
-            {!loading && !error && listaVisible.length === 0 && (
+            {!loading && !error && turnos.length === 0 && (
               <p className={styles.estadoVacio}>
                 No hay turnos {tab === "proximos" ? "próximos" : "pasados"} para mostrar.
               </p>
             )}
 
-            {!loading && !error && listaVisible.map((turno) => {
+            {!loading && !error && turnos.map((turno) => {
               const { dia, mes } = formatearDiaMes(turno.fecha);
               const badge = ESTADO_BADGE[turno.estado_turno_id];
               const esFuturo = new Date(turno.fecha) > new Date();
@@ -350,6 +399,32 @@ export default function MisTurnos() {
                 </div>
               );
             })}
+
+            {!loading && !error && totalPaginas > 1 && (
+              <div className={styles.paginacion}>
+                <Button
+                  type="button"
+                  texto="← Anterior"
+                  variante="secundario"
+                  tamaño="chico"
+                  disabled={pagina === 1}
+                  onClick={() => setPagina((p) => Math.max(p - 1, 1))}
+                />
+
+                <span className={styles.paginaInfo}>
+                  Página {pagina} de {totalPaginas}
+                </span>
+
+                <Button
+                  type="button"
+                  texto="Siguiente →"
+                  variante="secundario"
+                  tamaño="chico"
+                  disabled={pagina === totalPaginas}
+                  onClick={() => setPagina((p) => Math.min(p + 1, totalPaginas))}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

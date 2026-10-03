@@ -12,6 +12,13 @@ import { obtenerJwtSecret } from '../config/security.js'
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
+// SEC-06: sin fallback. Si falta la variable de entorno, el server no debe
+// arrancar en silencio con un secreto conocido/hardcodeado — mismo patrón
+// que ya se usa en config/gemini.js y config/groq.js para sus propias keys.
+if (!process.env.JWT_SECRET) {
+  throw new Error('Falta configurar JWT_SECRET en el archivo .env')
+}
+
 const RESET_TOKEN_EXPIRATION_MS = 60 * 60 * 1000 // 1 hora
 const VERIFICACION_TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000 // 24 hs
 const SALT_ROUNDS = 10

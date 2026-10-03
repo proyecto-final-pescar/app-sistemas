@@ -24,12 +24,13 @@ const IconAlert = () => (
 );
 
 
+
 const obtenerCategoriasServicio = (vet) => {
-  // La API devuelve `servicios` ya mapeados: objetos { categoria, ... } en el
-  // listado y strings con el nombre de la categoría en /buscar. Se acepta
+  // La API puede mandar `categorias` (listado liviano y /buscar) o
+  // `servicios` ya mapeados (objetos { categoria } o strings). Se acepta
   // también la forma cruda `servicio[].categoria_servicio.nombre` por
   // compatibilidad, pero ninguna respuesta actual la usa.
-  const lista = vet.servicios ?? vet.servicio ?? [];
+  const lista = vet.categorias ?? vet.servicios ?? vet.servicio ?? [];
   const categorias = lista
     .map((s) =>
       typeof s === "string" ? s : (s?.categoria ?? s?.categoria_servicio?.nombre),
