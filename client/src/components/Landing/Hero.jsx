@@ -1,30 +1,41 @@
 import { useNavigate } from "react-router-dom";
+import { Calendar, ShieldCheck } from "lucide-react";
 import Badge from "../ui/badge/Badge";
 import Button from "../ui/button/Button";
+import { getMascota } from "./mascotas";
 import styles from "./Hero.module.css";
 
 const Hero = () => {
   const navigate = useNavigate();
+  const principal = getMascota(0);
+  const arriba = getMascota(1);
+  const abajo = getMascota(2);
+  const extra = getMascota(4);
 
   return (
     <section className={styles.section}>
+      <span className={`${styles.blob} ${styles.blobViolet}`} aria-hidden="true" />
+      <span className={`${styles.blob} ${styles.blobGreen}`} aria-hidden="true" />
+
       <div className={styles.container}>
         {/* Texto */}
         <div className={styles.textColumn}>
-          <Badge texto="+12.000 mascotas registradas en CABA y GBA" variante="zona" />
+          <div className={styles.fadeUp}>
+            <Badge texto="Disponible en CABA" variante="zona" />
+          </div>
 
-          <h1 className={styles.title}>
+          <h1 className={`${styles.title} ${styles.fadeUp} ${styles.d1}`}>
             Toda la salud de tu <span className={styles.titleAccent}>mascota</span> en
             un solo lugar
           </h1>
 
-          <p className={styles.description}>
+          <p className={`${styles.description} ${styles.fadeUp} ${styles.d2}`}>
             Unificá los datos clínicos dispersos de tu peludo en un historial
-            digital, y encontrá clínicas de urgencias 24h en CABA y GBA en
+            digital, y encontrá clínicas de urgencias 24h en CABA en
             segundos — sin llamadas, sin estrés.
           </p>
 
-          <div className={styles.actionsRow}>
+          <div className={`${styles.actionsRow} ${styles.fadeUp} ${styles.d3}`}>
             <Button
               texto="Registrarme gratis"
               variante="primario"
@@ -32,49 +43,67 @@ const Hero = () => {
               onClick={() => navigate("/registro")}
             />
           </div>
-
-          <div className={styles.statsRow}>
-            {[
-              { value: "340+", label: "Clínicas 24h" },
-              { value: "12k+", label: "Historiales" },
-              { value: "48", label: "Barrios" },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <p className={styles.statValue}>{stat.value}</p>
-                <p className={styles.statLabel}>{stat.label}</p>
-              </div>
-            ))}
-          </div>
         </div>
 
-        {/* Imagen + tarjetas flotantes */}
+        {/* Collage + tarjetas flotantes */}
         <div className={styles.imageColumn}>
-          <img
-            src="https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&w=800&q=80"
-            alt="Perro sonriente en la playa"
-            className={styles.heroImage}
-          />
+          <div className={styles.collage}>
+            <div className={`${styles.frame} ${styles.frameMain}`}>
+              <img
+                src={principal.src}
+                alt={principal.alt}
+                className={styles.img}
+                fetchPriority="high"
+                decoding="async"
+              />
+            </div>
+            <div className={`${styles.frame} ${styles.frameTop}`}>
+              <img
+                src={arriba.src}
+                alt={arriba.alt}
+                className={styles.img}
+                decoding="async"
+              />
+            </div>
+            <div className={`${styles.frame} ${styles.frameBottom}`}>
+              <img
+                src={abajo.src}
+                alt={abajo.alt}
+                className={styles.img}
+                decoding="async"
+              />
+            </div>
+            <div className={`${styles.frame} ${styles.frameSmall}`}>
+              <img
+                src={extra.src}
+                alt={extra.alt}
+                className={styles.img}
+                decoding="async"
+              />
+            </div>
+          </div>
 
           <div className={`${styles.floatingCard} ${styles.floatingCardTop}`}>
             <span className={styles.statusDot} />
             <div>
               <p className={styles.floatingLabelSuccess}>Clínica encontrada</p>
-              <p className={styles.floatingValue}>VetCenter Palermo 24h</p>
+              <p className={styles.floatingValue}>VetCenter</p>
               <p className={styles.floatingSubtext}>1.2 km · Abierto ahora</p>
             </div>
           </div>
 
-          <div className={`${styles.floatingCard} ${styles.floatingCardBottom}`}>
-            <span className={styles.appointmentIcon}>
-              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="1.5" />
-                <path d="M10 6v4l2.5 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+          <div className={`${styles.chip} ${styles.chipRight}`}>
+            <span className={styles.chipIcon}>
+              <Calendar size={18} aria-hidden="true" />
             </span>
-            <div>
-              <p className={styles.floatingLabelMuted}>Próximo turno</p>
-              <p className={styles.floatingValue}>Vacuna antirrábica · Lun 26/05</p>
-            </div>
+            Turno confirmado
+          </div>
+
+          <div className={`${styles.chip} ${styles.chipBottom}`}>
+            <span className={styles.chipIcon}>
+              <ShieldCheck size={18} aria-hidden="true" />
+            </span>
+            Vacunas al día
           </div>
         </div>
       </div>

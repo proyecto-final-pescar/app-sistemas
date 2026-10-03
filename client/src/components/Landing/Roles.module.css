@@ -1,0 +1,159 @@
+.section {
+  padding: 96px 24px;
+  background-color: var(--color-fondo-claro);
+  font-family: "Inter", Arial, Helvetica, sans-serif;
+  box-sizing: border-box;
+}
+
+.container {
+  max-width: 1120px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.title {
+  margin: 0 0 32px;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: #1c1533;
+}
+
+.toggle {
+  display: inline-flex;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 48px;
+  border-radius: 999px;
+  background-color: var(--color-blanco);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.12);
+}
+
+.toggleBtn {
+  border: 0;
+  background: transparent;
+  padding: 10px 24px;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: #7c6aa6;
+  cursor: pointer;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.toggleBtnActive {
+  background-color: var(--color-primario);
+  color: var(--color-blanco);
+}
+
+.content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+  text-align: left;
+  animation: fadeSlide 0.45s ease;
+}
+
+.subtitle {
+  margin: 0 0 24px;
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  color: #1c1533;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 32px;
+  display: grid;
+  gap: 14px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #7c6aa6;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--color-blanco);
+  color: var(--color-primario);
+}
+
+.photo {
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  margin: 0 auto;
+  border: 6px solid var(--color-blanco);
+  box-shadow: 0 24px 48px rgba(124, 58, 237, 0.2);
+}
+
+.photoTutor {
+  border-radius: 48px 48px 48px 120px;
+}
+
+.photoVet {
+  border-radius: 120px 48px 48px 48px;
+}
+
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 64px 20px;
+  }
+
+  .title {
+    font-size: 27px;
+  }
+
+  .content {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .photo {
+    order: -1;
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .section {
+    padding: 48px 16px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content {
+    animation: none;
+  }
+}

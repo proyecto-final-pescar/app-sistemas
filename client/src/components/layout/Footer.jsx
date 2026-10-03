@@ -76,18 +76,7 @@ const Footer = () => {
           />
         </a>
 
-        <p
-          style={{
-            margin: 0,
-            color: "#7c6aa6",
-            fontSize: "14px",
-            lineHeight: "20px",
-            fontWeight: "400",
-            letterSpacing: "-0.15px",
-          }}
-        >
-          Datos protegidos bajo ley 25.326
-        </p>
+        
 
         <p
           style={{
