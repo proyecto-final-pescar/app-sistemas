@@ -4,7 +4,7 @@ import express from "express";
 import compression from "compression";
 import cors from "cors";
 
-import prisma, { connectDB, disconnectDB } from "./prisma/client.js";
+import prisma, { connectDB, disconnectDB } from "../prisma/client.js";
 import routes from "./routes/index.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import { iniciarJobsTurnos } from "./jobs/turnoJobs.js";
