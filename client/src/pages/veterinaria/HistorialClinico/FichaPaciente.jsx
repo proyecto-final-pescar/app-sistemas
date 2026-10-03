@@ -10,25 +10,8 @@ import { crearEstudio, actualizarEstudio, eliminarEstudio } from "../../../servi
 import { subirImagen } from "../../../services/uploadService.js";
 import { obtenerMiVeterinaria } from "../../../services/veterinariaService.js";
 import { obtenerTurnosPendientesRegistro } from "../../../services/turnosService.js";
+import { fechaISO, formatearFechaSinHora } from "../../../utils/fechas.js";
 import styles from "./FichaPaciente.module.css";
-
-const formatearFechaLocal = (fecha) => {
-  if (!fecha) return null;
-
-  const date = new Date(fecha);
-  if (Number.isNaN(date.getTime())) return null;
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-};
-
-const formatearFechaConsulta = (fecha) => {
-  if (!fecha) return "";
-  return new Date(fecha).toLocaleDateString("es-AR", { timeZone: "UTC" });
-};
 
 // Traduce el valor recibido por navegación ("fichaMedica" o "ficha-medica")
 // a la tab interna. Cualquier otro valor cae en "consultas".
@@ -131,7 +114,7 @@ const FichaPaciente = () => {
       entrada.categoriaServicio?.toLowerCase().includes(texto);
 
     const coincideFecha = filtroFecha
-      ? formatearFechaLocal(entrada.fecha) === filtroFecha
+      ? fechaISO(entrada.fecha) === filtroFecha
       : true;
 
     return coincideTexto && coincideFecha;
@@ -285,7 +268,7 @@ const FichaPaciente = () => {
                       onClick={() => handleSeleccionarTurno(turno.turno_id)}
                     >
                       <strong>
-                        {new Date(turno.fecha).toLocaleDateString("es-AR")} · {turno.hora_inicio}
+                        {formatearFechaSinHora(turno.fecha)} · {turno.hora_inicio}
                       </strong>
                       <div className={styles.archivoNombre}>
                         {turno.profesional?.nombre} {turno.profesional?.apellido}
@@ -372,7 +355,7 @@ const FichaPaciente = () => {
                                   <circle cx="12" cy="12" r="10" />
                                   <polyline points="12 6 12 12 16 14" />
                                 </svg>
-                                {formatearFechaConsulta(entrada.fecha)}
+                                {formatearFechaSinHora(entrada.fecha)}
                               </span>
                               {entrada.hora && (
                                 <span>
