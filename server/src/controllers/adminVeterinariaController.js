@@ -252,6 +252,17 @@ export const actualizarVeterinariaAdmin = async (req, res) => {
             });
         }
 
+        // Este PUT solo alterna activa<->suspendida (el toggle del listado).
+        // Las pendientes se gestionan por aprobar/rechazar.
+        const estadoActual = veterinaria.estado_veterinaria_id;
+        const permiteDirecto = (estadoActual === ESTADO_A_CODIGO.activa && codigoEstado === ESTADO_A_CODIGO.suspendida)
+            || (estadoActual === ESTADO_A_CODIGO.suspendida && codigoEstado === ESTADO_A_CODIGO.activa);
+        if (!permiteDirecto) {
+            return res.status(409).json({
+                message: 'Este endpoint solo permite alternar entre activa y suspendida. Las pendientes se gestionan con aprobar/rechazar.'
+            });
+        }
+
         const veterinariaActualizada = await prisma.veterinaria.update({
             where: { veterinaria_id: id },
             data: { estado_veterinaria_id: codigoEstado },
@@ -355,6 +366,12 @@ export const aprobarVeterinaria = async (req, res) => {
             return res.status(404).json({ message: 'La veterinaria no existe.' });
         }
 
+        // Solo una pendiente puede aprobarse: evita doble aprobación
+        // silenciosa o "revivir" una suspendida por error.
+        if (veterinaria.estado_veterinaria_id !== ESTADO_A_CODIGO.pendiente) {
+            return res.status(409).json({ message: 'Solo se pueden aprobar veterinarias pendientes.' });
+        }
+
         const veterinariaActualizada = await prisma.veterinaria.update({
             where: { veterinaria_id: id },
             data: { estado_veterinaria_id: ESTADO_A_CODIGO.activa },
@@ -393,6 +410,12 @@ export const rechazarVeterinaria = async (req, res) => {
 
         if (!veterinaria) {
             return res.status(404).json({ message: 'La veterinaria no existe.' });
+        }
+
+        // Solo una pendiente puede rechazarse: rechazar una activa la
+        // sacaría de la plataforma por error.
+        if (veterinaria.estado_veterinaria_id !== ESTADO_A_CODIGO.pendiente) {
+            return res.status(409).json({ message: 'Solo se pueden rechazar veterinarias pendientes.' });
         }
 
         const veterinariaActualizada = await prisma.veterinaria.update({

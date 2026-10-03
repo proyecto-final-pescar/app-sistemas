@@ -437,8 +437,8 @@ const Emergencias = () => {
                       </option>
 
                       {categorias.map((categoria) => (
-                        <option key={categoria} value={categoria}>
-                          {categoria}
+                        <option key={categoria.id} value={categoria.nombre}>
+                          {categoria.nombre}
                         </option>
                       ))}
                     </select>
