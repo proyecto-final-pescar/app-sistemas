@@ -2,7 +2,11 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import { obtenerMiVeterinaria } from "../../../services/veterinariaService";
-import { crearOfertaHoraria, obtenerTurnosPorVeterinaria } from "../../../services/turnosService";
+import {
+  crearOfertaHoraria,
+  obtenerDisponibilidadGrilla,
+} from "../../../services/turnosService";
+import TurnoValidator from "../../../validators/TurnoValidator";
 import styles from "./CargaTurnos.module.css";
 
 const RECURRENCIAS = [
@@ -18,7 +22,6 @@ const DURACIONES = [
   { value: 120, label: "2 horas" },
 ];
 
-// Mapeo de días para la BDD (claves de 3 letras usadas en horario_veterinaria)
 const DIAS_MAPA = [
   { nombre: "Lunes", clave: "LUN" },
   { nombre: "Martes", clave: "MAR" },
@@ -28,10 +31,6 @@ const DIAS_MAPA = [
   { nombre: "Sábado", clave: "SAB" },
   { nombre: "Domingo", clave: "DOM" },
 ];
-
-
-const normalizarDia = (dia) =>
-  dia.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 const esFechaPasada = (fecha) => {
   const fechaEvaluada = new Date(fecha);
@@ -68,7 +67,9 @@ const generarSlots = (apertura, cierre, duracion) => {
   let total = aH * 60 + aM;
   const fin = cH * 60 + cM;
   while (total + duracion <= fin) {
-    const h = Math.floor(total / 60).toString().padStart(2, "0");
+    const h = Math.floor(total / 60)
+      .toString()
+      .padStart(2, "0");
     const m = (total % 60).toString().padStart(2, "0");
     slots.push(`${h}:${m}`);
     total += duracion;
@@ -90,7 +91,6 @@ export default function CargaTurnos() {
   const [slotsExistentes, setSlotsExistentes] = useState([]);
   const semanaAjustadaRef = useRef(false);
 
-  // Indicador de scroll horizontal de la grilla (solo mobile)
   const [scrolleado, setScrolleado] = useState(false);
   const [alFinal, setAlFinal] = useState(false);
   const grillaRef = useRef(null);
@@ -103,7 +103,6 @@ export default function CargaTurnos() {
     setAlFinal(llegoAlFinal);
   };
 
-  // Al cambiar de semana vuelve a haber contenido nuevo: reiniciamos el hint
   useEffect(() => {
     setScrolleado(false);
     setAlFinal(false);
@@ -112,20 +111,20 @@ export default function CargaTurnos() {
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
-
   const servicioSeleccionado = veterinaria?.servicios?.find(
-    (s) => s.servicio_id === servicioId
+    (s) => s.servicio_id === servicioId || s._id === servicioId,
   );
+
   const [duracion, setDuracion] = useState(30);
 
-  const profesionalesDelServicio = veterinaria?.profesionales?.filter((p) => {
-    if (!servicioId) return false;
-
-    if (Array.isArray(p.servicios)) {
-      return p.servicios.some((s) => (s.servicio_id || s) === servicioId);
-    }
-    return true;
-  }) || [];
+  const profesionalesDelServicio =
+    veterinaria?.profesionales?.filter((p) => {
+      if (!servicioId) return false;
+      if (Array.isArray(p.serviciosIds)) {
+        return p.serviciosIds.includes(servicioId);
+      }
+      return true;
+    }) || [];
 
   useEffect(() => {
     const cargar = async () => {
@@ -145,31 +144,40 @@ export default function CargaTurnos() {
     const vetId = veterinaria?._id;
     if (!vetId) return;
 
+    const lunes = obtenerLunesDeSemana(semanaOffset);
+    const domingo = new Date(lunes);
+    domingo.setDate(lunes.getDate() + 6);
+
+    const fechaDesde = lunes.toISOString().split("T")[0];
+    const fechaHasta = domingo.toISOString().split("T")[0];
+
     try {
-      const turnos = await obtenerTurnosPorVeterinaria(vetId, { estado: "DIS" });
+      const turnos = await obtenerDisponibilidadGrilla(vetId, {
+        fechaDesde,
+        fechaHasta,
+      });
+
       setSlotsExistentes(
         turnos.map((t) => {
           const [hIni, mIni] = t.hora_inicio.split(":").map(Number);
           const [hFin, mFin] = t.hora_fin.split(":").map(Number);
-          const duracionReal = (hFin * 60 + mFin) - (hIni * 60 + mIni);
+          const duracionReal = hFin * 60 + mFin - (hIni * 60 + mIni);
 
           return {
             fecha: new Date(t.fecha).toISOString().split("T")[0],
             hora: t.hora_inicio,
-            servicioId: t.servicio?.servicio_id,
-            profesionalId: t.profesional?.profesional_id,
+            servicioId: t.servicio_id, 
+            profesionalId: t.profesional_id,
             duracion: duracionReal,
           };
-        })
+        }),
       );
     } catch {
-
+      // Manejo de error silencioso
     }
-  }, [veterinaria]);
+  }, [veterinaria, semanaOffset]);
 
   useEffect(() => {
-    // La función actualiza el estado únicamente después de resolver la petición remota.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarExistentes();
   }, [cargarExistentes, servicioId, profesionales]);
 
@@ -178,12 +186,6 @@ export default function CargaTurnos() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [error, exito]);
-
-  const esFechaPasada = (fecha) => {
-    const f = new Date(fecha);
-    f.setHours(0, 0, 0, 0);
-    return f < hoy;
-  };
 
   const esCeldaPasada = (fecha, hora) => {
     const ahora = new Date();
@@ -202,10 +204,6 @@ export default function CargaTurnos() {
     SAB: "sabado",
     DOM: "domingo",
   };
-
-  // Mapeo flexible de horarios para SQL (horario_veterinaria)
-  // Reemplazar la función obtenerHorarioDia
-
 
   const obtenerHorarioDia = (claveDia) => {
     if (!veterinaria?.horarios) return null;
@@ -244,8 +242,6 @@ export default function CargaTurnos() {
 
     if (offset > 0) setSemanaOffset(offset);
     semanaAjustadaRef.current = true;
-    // La semana inicial se calcula una sola vez cuando llega la veterinaria.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [veterinaria]);
 
   const obtenerRangoGlobal = () => {
@@ -265,10 +261,13 @@ export default function CargaTurnos() {
       if (hasta > maxCierre) maxCierre = hasta;
     });
 
-    return minApertura === "23:59" ? { apertura: "08:00", cierre: "18:00" } : { apertura: minApertura, cierre: maxCierre };
+    return minApertura === "23:59"
+      ? { apertura: "08:00", cierre: "18:00" }
+      : { apertura: minApertura, cierre: maxCierre };
   };
 
-  const { apertura: aperturaGlobal, cierre: cierreGlobal } = obtenerRangoGlobal();
+  const { apertura: aperturaGlobal, cierre: cierreGlobal } =
+    obtenerRangoGlobal();
   const filas = generarSlots(aperturaGlobal, cierreGlobal, duracion);
 
   const lunesSemana = obtenerLunesDeSemana(semanaOffset);
@@ -277,25 +276,6 @@ export default function CargaTurnos() {
     f.setDate(lunesSemana.getDate() + i);
     return f;
   });
-
-  const hayOcupacion = (fecha, hora, duracionAEvaluar) => {
-    const fechaStr = fecha.toISOString().split("T")[0];
-    const [h, m] = hora.split(":").map(Number);
-    const inicioNuevo = h * 60 + m;
-    const finNuevo = inicioNuevo + duracionAEvaluar;
-
-    return slotsExistentes.some((s) => {
-      if (s.fecha !== fechaStr) return false;
-      if (!profesionales.some((p) => p.toString() === s.profesionalId)) return false;
-
-      const [sh, sm] = s.hora.split(":").map(Number);
-      const inicioExistente = sh * 60 + sm;
-      const finExistente = inicioExistente + s.duracion;
-
-
-      return inicioExistente < finNuevo && finExistente > inicioNuevo;
-    });
-  };
 
   const esCeldaBloqueada = (claveDia, hora, diaIndex) => {
     const horario = obtenerHorarioDia(claveDia, diaIndex);
@@ -309,7 +289,8 @@ export default function CargaTurnos() {
     const fechaStr = fecha.toISOString().split("T")[0];
     return slotsExistentes.some((s) => {
       if (s.fecha !== fechaStr || s.servicioId !== servicioId) return false;
-      if (!profesionales.some((p) => p.toString() === s.profesionalId)) return false;
+      if (!profesionales.some((p) => p.toString() === s.profesionalId))
+        return false;
       const [sh, sm] = s.hora.split(":").map(Number);
       const inicioExistente = sh * 60 + sm;
       const finExistente = inicioExistente + s.duracion;
@@ -327,19 +308,16 @@ export default function CargaTurnos() {
 
     return slotsExistentes.some((s) => {
       if (s.fecha !== fechaStr) return false;
-      if (!profesionales.some((p) => p.toString() === s.profesionalId)) return false;
+      if (!profesionales.some((p) => p.toString() === s.profesionalId))
+        return false;
 
       const [sh, sm] = s.hora.split(":").map(Number);
       const inicioExistente = sh * 60 + sm;
       const finExistente = inicioExistente + s.duracion;
 
-      // Mismo criterio de solapamiento que usa el backend al crear la oferta
       const solapan = inicioExistente < finNuevo && finExistente > inicioNuevo;
       if (!solapan) return false;
 
-      // Si es exactamente el mismo turno ya creado (mismo servicio, mismo
-      // inicio, misma duración), no lo marcamos "ocupado": lo pinta lila
-      // la función esCeldaExistente.
       const esElMismoYaCreado =
         s.servicioId === servicioId &&
         inicioExistente === inicioNuevo &&
@@ -364,7 +342,9 @@ export default function CargaTurnos() {
     if (esFechaPasada(fecha)) return;
     const diaClave = DIAS_MAPA[diaIdx].clave;
     const slotsDelDia = filas.filter((h) => !esCeldaBloqueada(diaClave, h));
-    const todosSeleccionados = slotsDelDia.every((h) => slotsSeleccionados[`${diaIdx}-${h}`]);
+    const todosSeleccionados = slotsDelDia.every(
+      (h) => slotsSeleccionados[`${diaIdx}-${h}`],
+    );
 
     const nuevos = { ...slotsSeleccionados };
     slotsDelDia.forEach((h) => {
@@ -377,41 +357,40 @@ export default function CargaTurnos() {
     const diaClave = DIAS_MAPA[diaIdx].clave;
     const slotsDelDia = filas.filter((h) => !esCeldaBloqueada(diaClave, h));
     return (
-      slotsDelDia.length > 0 && slotsDelDia.every((h) => slotsSeleccionados[`${diaIdx}-${h}`])
+      slotsDelDia.length > 0 &&
+      slotsDelDia.every((h) => slotsSeleccionados[`${diaIdx}-${h}`])
     );
   };
 
-  const calcularFechasExpandidas = useCallback(
-    (diaIdx) => {
-      const fechaBase = fechasSemana[diaIdx];
-      if (esFechaPasada(fechaBase)) return [];
+  // 1. Corrección del error del React Compiler: Se removió el envoltorio useCallback
+  const calcularFechasExpandidas = (diaIdx) => {
+    const fechaBase = fechasSemana[diaIdx];
+    if (esFechaPasada(fechaBase)) return [];
 
-      const fechas = [];
-      let iteraciones = 1;
-      let intervalo = 7;
+    const fechas = [];
+    let iteraciones = 1;
+    let intervalo = 7;
 
-      if (recurrencia === "quincenal") {
-        iteraciones = 2;
-        intervalo = 7;
-      } else if (recurrencia === "mensual") {
-        const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-        let f = new Date(fechaBase);
-        while (f <= fin) {
-          if (!esFechaPasada(f)) fechas.push(new Date(f));
-          f.setDate(f.getDate() + 7);
-        }
-        return fechas;
-      }
-
-      for (let i = 0; i < iteraciones; i++) {
-        const f = new Date(fechaBase);
-        f.setDate(fechaBase.getDate() + i * intervalo);
-        if (!esFechaPasada(f)) fechas.push(f);
+    if (recurrencia === "quincenal") {
+      iteraciones = 2;
+      intervalo = 7;
+    } else if (recurrencia === "mensual") {
+      const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+      let f = new Date(fechaBase);
+      while (f <= fin) {
+        if (!esFechaPasada(f)) fechas.push(new Date(f));
+        f.setDate(f.getDate() + 7);
       }
       return fechas;
-    },
-    [fechasSemana, recurrencia, hoy]
-  );
+    }
+
+    for (let i = 0; i < iteraciones; i++) {
+      const f = new Date(fechaBase);
+      f.setDate(fechaBase.getDate() + i * intervalo);
+      if (!esFechaPasada(f)) fechas.push(f);
+    }
+    return fechas;
+  };
 
   const totalSlotsACrear = () => {
     let total = 0;
@@ -426,16 +405,13 @@ export default function CargaTurnos() {
 
   const toggleProfesional = (id) => {
     setProfesionales((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
     );
   };
 
   const handleGuardar = async () => {
     setError("");
     setExito("");
-
-    if (!servicioId) return setError("Seleccioná un servicio.");
-    if (!profesionales.length) return setError("Seleccioná al menos un profesional.");
 
     const slotsAEnviar = [];
     Object.entries(slotsSeleccionados).forEach(([key, sel]) => {
@@ -451,8 +427,15 @@ export default function CargaTurnos() {
       });
     });
 
-    if (!slotsAEnviar.length) {
-      return setError("Seleccioná al menos un horario en la grilla.");
+    const errorValidacion = TurnoValidator.validarDatosOferta(
+      servicioId,
+      profesionales,
+      slotsAEnviar,
+      duracion,
+    );
+
+    if (errorValidacion) {
+      return setError(errorValidacion);
     }
 
     setGuardando(true);
@@ -465,16 +448,27 @@ export default function CargaTurnos() {
         duracion,
         slots: slotsAEnviar,
       });
-      const cantidad = result?.data?.cantidad || result?.cantidad || slotsAEnviar.length;
+      const cantidad =
+        result?.data?.cantidad || result?.cantidad || slotsAEnviar.length;
       setExito(`Se crearon ${cantidad} turnos disponibles correctamente.`);
       setSlotsSeleccionados({});
       await cargarExistentes();
     } catch (err) {
-      setError(err.response?.data?.message || "No se pudieron crear los turnos.");
+      setError(
+        err.response?.data?.message ||
+          "Ocurrió un error inesperado al intentar crear los turnos.",
+      );
     } finally {
       setGuardando(false);
     }
   };
+
+  const mesAnioVisible = fechasSemana[0].toLocaleDateString("es-AR", {
+    month: "long",
+    year: "numeric",
+  });
+  const mesAnioFormateado =
+    mesAnioVisible.charAt(0).toUpperCase() + mesAnioVisible.slice(1);
 
   return (
     <div className={styles.shell}>
@@ -482,7 +476,9 @@ export default function CargaTurnos() {
       <div className={styles.main}>
         <TopBar title="Cargar turnos" />
         <div className={styles.content}>
-          {loading && <p className={styles.estadoVacio}>Cargando información...</p>}
+          {loading && (
+            <p className={styles.estadoVacio}>Cargando información...</p>
+          )}
 
           {!loading && (
             <>
@@ -493,7 +489,6 @@ export default function CargaTurnos() {
                     type="button"
                     className={styles.btnCerrarAlerta}
                     onClick={() => setError("")}
-                    aria-label="Cerrar mensaje"
                   >
                     ×
                   </button>
@@ -506,17 +501,27 @@ export default function CargaTurnos() {
                     type="button"
                     className={styles.btnCerrarAlerta}
                     onClick={() => setExito("")}
-                    aria-label="Cerrar mensaje"
                   >
                     ×
                   </button>
                 </div>
               )}
 
-              {/* Sección 1 — Configuración */}
               <div className={styles.card}>
                 <div className={styles.cardTitulo}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#7c3aed"
+                    strokeWidth="2"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
                   Configuración del turno
                 </div>
                 <div className={styles.fila}>
@@ -543,13 +548,20 @@ export default function CargaTurnos() {
                   </div>
 
                   <div className={styles.campo}>
-                    <label className={styles.label}>Profesionales disponibles</label>
+                    <label className={styles.label}>
+                      Profesionales disponibles
+                    </label>
                     <div className={styles.profesionalesGrid}>
                       {!servicioId && (
-                        <span className={styles.helperTextSuave}>Elegí un servicio para ver los profesionales que lo brindan.</span>
+                        <span className={styles.helperTextSuave}>
+                          Elegí un servicio para ver los profesionales que lo
+                          brindan.
+                        </span>
                       )}
                       {servicioId && profesionalesDelServicio.length === 0 && (
-                        <span className={styles.helperTextSuave}>Ningún profesional brinda este servicio todavía.</span>
+                        <span className={styles.helperTextSuave}>
+                          Ningún profesional brinda este servicio todavía.
+                        </span>
                       )}
                       {profesionalesDelServicio.map((p) => {
                         const id = p.profesional_id || p._id;
@@ -562,7 +574,9 @@ export default function CargaTurnos() {
                             type="button"
                           >
                             {p.nombre} {p.apellido || ""}
-                            {estaActivo && <span className={styles.chipX}>×</span>}
+                            {estaActivo && (
+                              <span className={styles.chipX}>×</span>
+                            )}
                           </button>
                         );
                       })}
@@ -589,37 +603,67 @@ export default function CargaTurnos() {
                 </div>
               </div>
 
-              {/* Sección 2 — Grilla */}
               <div className={styles.card}>
                 <div className={styles.cardTituloFila}>
                   <div className={styles.cardTitulo}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#7c3aed"
+                      strokeWidth="2"
+                    >
+                      <rect x="3" y="4" width="18" height="18" rx="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
                     Seleccioná días y horarios
                   </div>
                   <div className={styles.leyenda}>
-                    <span className={styles.leyendaItem}><span className={styles.leyendaDotVerde}></span>Seleccionado</span>
-                    <span className={styles.leyendaItem}><span className={styles.leyendaDotGris}></span>No seleccionado</span>
-                    <span className={styles.leyendaItem}><span className={styles.leyendaDotVioleta}></span>Ya creado</span>
-                    <span className={styles.leyendaItem}><span className={styles.leyendaDotBloqueado}></span>No disponible</span>
+                    <span className={styles.leyendaItem}>
+                      <span className={styles.leyendaDotVerde}></span>
+                      Seleccionado
+                    </span>
+                    <span className={styles.leyendaItem}>
+                      <span className={styles.leyendaDotGris}></span>No
+                      seleccionado
+                    </span>
+                    <span className={styles.leyendaItem}>
+                      <span className={styles.leyendaDotVioleta}></span>Ya
+                      creado
+                    </span>
+                    <span className={styles.leyendaItem}>
+                      <span className={styles.leyendaDotBloqueado}></span>No
+                      disponible
+                    </span>
                   </div>
                 </div>
-                <div className={styles.navSemanaTop}>
-                  <button
-                    className={styles.btnNav}
-                    onClick={() => setSemanaOffset((o) => Math.max(o - 1, 0))}
-                    disabled={semanaOffset === 0}
-                    type="button"
-                  >
-                    ‹
-                  </button>
-                  <button
-                    className={styles.btnNav}
-                    onClick={() => setSemanaOffset((o) => o + 1)}
-                    type="button"
-                  >
-                    ›
-                  </button>
+
+                <div className={styles.navContenedor}>
+                  <div className={styles.navSemanaTop}>
+                    <button
+                      className={styles.btnNav}
+                      onClick={() => setSemanaOffset((o) => Math.max(o - 1, 0))}
+                      disabled={semanaOffset === 0}
+                      type="button"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      className={styles.btnNav}
+                      onClick={() => setSemanaOffset((o) => o + 1)}
+                      type="button"
+                    >
+                      ›
+                    </button>
+                  </div>
+                  <div className={styles.mesAnioIndicador}>
+                    {mesAnioFormateado}
+                  </div>
                 </div>
+
                 <div className={styles.filaRecurrencia}>
                   <div className={styles.campo}>
                     <label className={styles.label}>Recurrencia</label>
@@ -637,9 +681,11 @@ export default function CargaTurnos() {
                   </div>
                 </div>
 
-                {/* Hint de scroll horizontal — visible solo en mobile, se apaga al scrollear */}
-                <p className={`${styles.scrollHint} ${scrolleado ? styles.scrollHintOculto : ""}`}>
-                  Deslizá para ver más días <span className={styles.scrollHintFlecha}>→</span>
+                <p
+                  className={`${styles.scrollHint} ${scrolleado ? styles.scrollHintOculto : ""}`}
+                >
+                  Deslizá para ver más días{" "}
+                  <span className={styles.scrollHintFlecha}>→</span>
                 </p>
 
                 <div
@@ -656,20 +702,31 @@ export default function CargaTurnos() {
                         <th className={styles.thHora}></th>
                         {DIAS_MAPA.map((diaObj, i) => {
                           const fecha = fechasSemana[i];
-                          const disponible = diasDisponibles.includes(diaObj.clave);
+                          const disponible = diasDisponibles.includes(
+                            diaObj.clave,
+                          );
                           const pasado = esFechaPasada(fecha);
                           return (
-                            <th key={diaObj.clave} className={`${styles.thDia} ${!disponible || pasado ? styles.thDiaBloqueado : ""}`}>
+                            <th
+                              key={diaObj.clave}
+                              className={`${styles.thDia} ${!disponible || pasado ? styles.thDiaBloqueado : ""}`}
+                            >
                               <div className={styles.thDiaContenido}>
-                                <span className={styles.thDiaNombre}>{diaObj.nombre}</span>
-                                <span className={styles.thDiaFecha}>{formatearFecha(fecha)}</span>
+                                <span className={styles.thDiaNombre}>
+                                  {diaObj.nombre}
+                                </span>
+                                <span className={styles.thDiaFecha}>
+                                  {formatearFecha(fecha)}
+                                </span>
                                 {disponible && !pasado && (
                                   <button
                                     className={`${styles.btnTodoDia} ${todoElDiaSeleccionado(i) ? styles.btnTodoDiaActivo : ""}`}
                                     onClick={() => toggleTodoElDia(i)}
                                     type="button"
                                   >
-                                    <span className={`${styles.radioCircle} ${todoElDiaSeleccionado(i) ? styles.radioCircleActivo : ""}`}></span>
+                                    <span
+                                      className={`${styles.radioCircle} ${todoElDiaSeleccionado(i) ? styles.radioCircleActivo : ""}`}
+                                    ></span>
                                     Todo el día
                                   </button>
                                 )}
@@ -685,17 +742,41 @@ export default function CargaTurnos() {
                           <td className={styles.tdHora}>{hora}</td>
                           {DIAS_MAPA.map((diaObj, i) => {
                             const fecha = fechasSemana[i];
-                            const bloqueado = esCeldaBloqueada(diaObj.clave, hora, i);
+                            const bloqueado = esCeldaBloqueada(
+                              diaObj.clave,
+                              hora,
+                              i,
+                            );
                             const pasado = esCeldaPasada(fecha, hora);
                             const existente = esCeldaExistente(fecha, hora);
                             const ocupada = esCeldaOcupada(fecha, hora);
-                            const seleccionado = slotsSeleccionados[`${i}-${hora}`];
+                            const seleccionado =
+                              slotsSeleccionados[`${i}-${hora}`];
 
                             if (bloqueado || pasado) {
                               return (
-                                <td key={diaObj.clave} className={styles.tdBloqueado}>
+                                <td
+                                  key={diaObj.clave}
+                                  className={styles.tdBloqueado}
+                                >
                                   <div className={styles.celdaBloqueada}>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
+                                    <svg
+                                      width="12"
+                                      height="12"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="#d1d5db"
+                                      strokeWidth="2"
+                                    >
+                                      <rect
+                                        x="3"
+                                        y="11"
+                                        width="18"
+                                        height="11"
+                                        rx="2"
+                                      />
+                                      <path d="M7 11V7a5 5 0 0110 0v4" />
+                                    </svg>
                                   </div>
                                 </td>
                               );
@@ -703,8 +784,13 @@ export default function CargaTurnos() {
 
                             if (existente || ocupada) {
                               return (
-                                <td key={diaObj.clave} className={styles.tdExistente}>
-                                  <div className={styles.celdaExistente}>{hora}</div>
+                                <td
+                                  key={diaObj.clave}
+                                  className={styles.tdExistente}
+                                >
+                                  <div className={styles.celdaExistente}>
+                                    {hora}
+                                  </div>
                                 </td>
                               );
                             }
@@ -715,7 +801,9 @@ export default function CargaTurnos() {
                                   type="button"
                                   className={`${styles.celda} ${seleccionado ? styles.celdaSeleccionada : ""}`}
                                   onClick={() => toggleSlot(i, hora)}
-                                  disabled={!servicioId || !profesionales.length}
+                                  disabled={
+                                    !servicioId || !profesionales.length
+                                  }
                                 >
                                   {hora}
                                 </button>
@@ -730,8 +818,29 @@ export default function CargaTurnos() {
 
                 {totalSlotsACrear() > 0 && (
                   <div className={styles.resumen}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-                    Se crearán <strong>{totalSlotsACrear()} turnos</strong> de <strong>{servicioSeleccionado?.nombre || "el servicio seleccionado"}</strong> con <strong>{profesionales.length} profesional{profesionales.length !== 1 ? "es" : ""}</strong>.
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#7c3aed"
+                      strokeWidth="2"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    Se crearán <strong>{totalSlotsACrear()} turnos</strong> de{" "}
+                    <strong>
+                      {servicioSeleccionado?.nombre ||
+                        "el servicio seleccionado"}
+                    </strong>{" "}
+                    con{" "}
+                    <strong>
+                      {profesionales.length} profesional
+                      {profesionales.length !== 1 ? "es" : ""}
+                    </strong>
+                    .
                   </div>
                 )}
               </div>
@@ -752,7 +861,19 @@ export default function CargaTurnos() {
                   onClick={handleGuardar}
                   disabled={guardando}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
                   {guardando ? "Guardando..." : "Guardar turnos"}
                 </button>
               </div>

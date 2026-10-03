@@ -29,7 +29,7 @@ export const obtenerTurnosPorVeterinaria = async (
 export const obtenerTurnosPorUsuario = async () => {
   const { data } = await api.get("/turnos", {
     params: { usuarioId: "me" }
-  });
+  }); 
   return data.data?.turnos || [];
 };
 
@@ -132,4 +132,14 @@ export const pagarEfectivo = async (payload) => {
 export const obtenerReglasTurnos = async () => {
   const { data } = await api.get("/constantes/reglas-turnos");
   return data.data; // { anticipacionMinimaHoras, plazoPagoHoras }
+};
+export const obtenerDisponibilidadGrilla = async (veterinariaId, filtros = {}) => {
+  const queryParams = new URLSearchParams();
+  queryParams.append("veterinariaId", veterinariaId);
+  if (filtros.fechaDesde) queryParams.append("fechaDesde", filtros.fechaDesde);
+  if (filtros.fechaHasta) queryParams.append("fechaHasta", filtros.fechaHasta);
+
+  // 👈 VOLVEMOS A LA RUTA ORIGINAL DE TURNOS
+  const res = await api.get(`/turnos/disponibles/grilla?${queryParams.toString()}`);
+  return res.data.data.turnos;
 };

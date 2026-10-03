@@ -796,3 +796,29 @@
     opacity: 0;
   }
 }
+
+/* ... [Mantené todo tu CSS existente arriba intacto] ... */
+
+.navSemanaTop {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* NUEVAS CLASES PARA EL INDICADOR DE MES/AÑO */
+.navContenedor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.mesAnioIndicador {
+  font-size: 13px;
+  color: #8276ab;
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-right: 2px;
+}
+/* ... [Sigue tu CSS responsive de @media queries abajo] ... */
