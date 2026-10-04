@@ -47,6 +47,11 @@ function convertirFechaParaInput(fecha) {
   return fechaConvertida.toISOString().slice(0, 10);
 }
 
+function obtenerFechaDeTurno(fecha) {
+  if (!fecha) return "";
+  return String(fecha).slice(0, 10);
+}
+
 function IconoAgenda() {
   return (
     <svg
@@ -160,7 +165,7 @@ function RegistrarConsulta() {
           sexo: mascota?.sexo_mascota?.nombre || "",
           peso: mascota?.peso != null ? String(mascota.peso) : "",
           profesionalId: turno.profesional_id || "",
-          fecha: convertirFechaParaInput(turno.fecha),
+          fecha: obtenerFechaDeTurno(turno.fecha),
           hora: turno.hora_inicio || "",
           categoriaServicio: turno.servicio?.categoria_servicio?.nombre || "Consulta",
           motivoConsulta: turno.motivo || "",

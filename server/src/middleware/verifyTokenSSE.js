@@ -1,13 +1,15 @@
 // server/src/middleware/verifyTokenSSE.js
 import jwt from 'jsonwebtoken'
 import prisma from '../../prisma/client.js'
+import { obtenerJwtSecret } from '../config/security.js'
 
 // EventSource no puede mandar headers, por eso el token llega por query.
 // Se revalida la cuenta en DB igual que verifyToken: una cuenta
 // desactivada no debe poder mantener el stream abierto.
-// NOTA: no se reutiliza el helper de auth.js a propósito para no
-// generar conflictos con el PR de seguridad pendiente sobre ese archivo.
-const getJwtSecret = () => process.env.JWT_SECRET || 'clave_secreta_temporal'
+// NOTA: se usa el helper centralizado como en el resto del backend (SEC-06).
+// Si falta JWT_SECRET, obtenerJwtSecret lanza y el server no opera con un
+// secreto conocido/hardcodeado.
+const getJwtSecret = () => obtenerJwtSecret()
 
 const verifyTokenSSE = async (req, res, next) => {
   const token = req.query.token

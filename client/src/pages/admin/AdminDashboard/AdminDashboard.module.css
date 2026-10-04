@@ -606,6 +606,12 @@
     min-width: auto;
   }
 
+  .tabFiltroActivo {
+    background: var(--color-primario);
+    color: var(--color-blanco);
+    border-color: var(--color-primario);
+  }
+  
   .turnoRow {
     flex-direction: row;
     align-items: center;

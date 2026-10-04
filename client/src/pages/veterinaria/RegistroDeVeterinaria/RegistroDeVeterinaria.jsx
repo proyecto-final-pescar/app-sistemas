@@ -674,7 +674,7 @@ export default function RegistroDeVeterinaria() {
                     )}
                     <Select
                       label="Categoría del Servicio *"
-                      opciones={categorias}
+                      opciones={categorias.map((c) => ({ value: c.nombre, label: c.nombre }))}
                       value={servicio.categoria}
                       placeholder={loadingCategorias ? "Cargando categorías..." : "Seleccioná una categoría"}
                       error={erroresStep2[index]?.categoria}

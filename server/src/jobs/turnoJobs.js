@@ -15,15 +15,18 @@ import {
   TIPO
 } from '../services/notificacionService.js'
 import { sendRecordatorioTurnoEmail } from '../utils/mailer.js'
+import { mapConLimite } from '../utils/concurrencia.js'
 
 // Se avisa cuando faltan 24 hs o menos para el turno.
 const HORAS_RECORDATORIO = 24
 const HORA_MS = 60 * 60 * 1000
 const DIA_MS = 24 * HORA_MS
 
+const CONCURRENCIA_RECORDATORIOS = 3
+const CONCURRENCIA_RECONCILIACION = 3
+
 export const enviarRecordatoriosTurnos = async () => {
   try {
-   
     const ahora = new Date()
     const hoy = Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate())
 
@@ -52,17 +55,15 @@ export const enviarRecordatoriosTurnos = async () => {
       }
     })
 
-    for (const turno of turnos) {
-    
+    const procesarRecordatorio = async (turno) => {
       const fechaISO = turno.fecha.toISOString().slice(0, 10)
       const hora = formatearHora(turno.hora_inicio)
       const diferenciaMs =
         new Date(`${fechaISO}T${hora}:00-03:00`).getTime() - Date.now()
 
-      if (diferenciaMs <= 0 || diferenciaMs > HORAS_RECORDATORIO * HORA_MS) continue
+      if (diferenciaMs <= 0 || diferenciaMs > HORAS_RECORDATORIO * HORA_MS) return
 
       try {
-       
         const { count } = await prisma.turno.updateMany({
           where: {
             turno_id: turno.turno_id,
@@ -72,7 +73,7 @@ export const enviarRecordatoriosTurnos = async () => {
           data: { recordatorio_enviado: true }
         })
 
-        if (count === 0) continue
+        if (count === 0) return
 
         const { mascota, veterinaria } = turno
 
@@ -102,7 +103,6 @@ export const enviarRecordatoriosTurnos = async () => {
             hora
           })
         } catch (errorEnvio) {
-          
           console.error(
             `No se pudo enviar el email de recordatorio del turno ${turno.turno_id}:`,
             errorEnvio
@@ -118,7 +118,6 @@ export const enviarRecordatoriosTurnos = async () => {
             })
         }
 
-        
         // El mensaje es determinístico por turno, así que si el email falló
         // y esta pasada es un reintento, no se duplica el aviso en la campana.
         const mensajeRecordatorio = `Recordatorio: tenés turno para ${mascota.nombre} en ${veterinaria.nombre} el ${formatearFechaTurno(turno.fecha, turno.hora_inicio)}.`
@@ -146,6 +145,8 @@ export const enviarRecordatoriosTurnos = async () => {
         )
       }
     }
+
+    await mapConLimite(turnos, CONCURRENCIA_RECORDATORIOS, procesarRecordatorio)
   } catch (error) {
     console.error(
       'Error al obtener turnos para recordatorio:',
@@ -194,19 +195,43 @@ export const reconciliarPagosPendientes = async () => {
       take: RECONCILIAR_LOTE_MAXIMO
     })
 
-    for (const turno of turnos) {
+    if (turnos.length === 0) return
+
+    
+    const [estadoAprobado, estadoConfirmado, metodosPago] = await Promise.all([
+      prisma.estado_pago.findUnique({ where: { nombre: 'aprobado' } }),
+      prisma.estado_turno.findUnique({ where: { nombre: 'confirmado' } }),
+      prisma.metodo_pago.findMany()
+    ])
+    if (!estadoAprobado || !estadoConfirmado) {
+      throw new Error('Faltan estados requeridos en los catálogos.')
+    }
+    const metodoPagoPorNombre = new Map(metodosPago.map((m) => [m.nombre, m]))
+
+  
+    const clientesMP = new Map()
+    const obtenerCliente = (veterinariaId) => {
+      if (!clientesMP.has(veterinariaId)) {
+        const promesa = obtenerClienteMercadoPago(veterinariaId)
+        clientesMP.set(veterinariaId, promesa)
+        promesa.catch(() => clientesMP.delete(veterinariaId))
+      }
+      return clientesMP.get(veterinariaId)
+    }
+
+    const reconciliarTurno = async (turno) => {
       const pagoLocal = turno.pago[0]
-      if (!pagoLocal) continue
+      if (!pagoLocal) return
 
       try {
-        const cliente = await obtenerClienteMercadoPago(turno.veterinaria_id)
+        const cliente = await obtenerCliente(turno.veterinaria_id)
         const pagoClient = new Payment(cliente)
 
         const busqueda = await pagoClient.search({
           options: { external_reference: turno.turno_id }
         })
         const candidato = (busqueda.results || []).find((p) => p.status === 'approved')
-        if (!candidato?.id) continue
+        if (!candidato?.id) return
 
         const pagoMP = await pagoClient.get({ id: candidato.id })
 
@@ -216,25 +241,17 @@ export const reconciliarPagosPendientes = async () => {
             pagoId: pagoLocal.pago_id,
             turnoId: turno.turno_id
           })
-          continue
+          return
         }
 
         const pagoIdMp = pagoMP.metadata?.pago_id
         if (pagoIdMp && String(pagoIdMp) !== String(pagoLocal.pago_id)) {
           // Es otro pago (p. ej. de un reintento anterior): no tocar este registro.
-          continue
+          return
         }
 
-        const [estadoAprobado, estadoConfirmado, metodoPago] = await Promise.all([
-          prisma.estado_pago.findUnique({ where: { nombre: 'aprobado' } }),
-          prisma.estado_turno.findUnique({ where: { nombre: 'confirmado' } }),
-          METODO_PAGO_MAP[pagoMP.payment_type_id]
-            ? prisma.metodo_pago.findUnique({ where: { nombre: METODO_PAGO_MAP[pagoMP.payment_type_id] } })
-            : null
-        ])
-        if (!estadoAprobado || !estadoConfirmado) {
-          throw new Error('Faltan estados requeridos en los catálogos.')
-        }
+        const nombreMetodo = METODO_PAGO_MAP[pagoMP.payment_type_id]
+        const metodoPago = nombreMetodo ? metodoPagoPorNombre.get(nombreMetodo) : null
 
         await prisma.$transaction(async (tx) => {
           const resultado = await tx.pago.updateMany({
@@ -276,24 +293,50 @@ export const reconciliarPagosPendientes = async () => {
         console.error(`Error al reconciliar el pago del turno ${turno.turno_id}:`, error)
       }
     }
+
+    await mapConLimite(turnos, CONCURRENCIA_RECONCILIACION, reconciliarTurno)
   } catch (error) {
-    console.error('Error al obtener turnos para reconciliación:', error)
+    console.error('Error en la reconciliación de pagos pendientes:', error)
+  }
+}
+
+// Envuelve un job para que:
+// - no arranque una pasada nueva si la anterior sigue corriendo,
+// - un error inesperado no deje el cron sin manejar,
+// - quede en el log cuánto tardó cada pasada (así se puede medir el impacto).
+const envolverJob = (nombre, job) => {
+  let corriendo = false
+
+  return async () => {
+    if (corriendo) {
+      console.warn(`[jobs] ${nombre} sigue en ejecución, se omite esta pasada`)
+      return
+    }
+
+    corriendo = true
+    const inicio = Date.now()
+    try {
+      await job()
+    } catch (error) {
+      console.error(`[jobs] ${nombre} falló:`, error)
+    } finally {
+      corriendo = false
+      console.log(`[jobs] ${nombre} terminó en ${Date.now() - inicio} ms`)
+    }
   }
 }
 
 export const iniciarJobsTurnos = () => {
-  // Libera turnos vencidos cada 15 minutos
-  cron.schedule('*/15 * * * *', () => {
-    liberarTurnosVencidos()
-  })
+  // Los tres jobs corren cada 15 minutos pero desfasados 5 minutos entre sí,
+  // para que no compitan por el event loop ni por el pool de Prisma en el
+  // mismo instante
 
-  // Envía recordatorios para turnos dentro de las próximas 24 horas
-  cron.schedule('*/15 * * * *', () => {
-    enviarRecordatoriosTurnos()
-  })
+  // Libera turnos vencidos (minutos 0, 15, 30, 45)
+  cron.schedule('0,15,30,45 * * * *', envolverJob('liberarTurnos', liberarTurnosVencidos))
 
-  // Reconcilia pagos aprobados en MP cuyo webhook se demoró o se perdió
-  cron.schedule('*/15 * * * *', () => {
-    reconciliarPagosPendientes()
-  })
+  // Envía recordatorios para turnos dentro de las próximas 24 horas (minutos 5, 20, 35, 50)
+  cron.schedule('5,20,35,50 * * * *', envolverJob('recordatorios', enviarRecordatoriosTurnos))
+
+  // Reconcilia pagos aprobados en MP cuyo webhook se demoró o se perdió (minutos 10, 25, 40, 55)
+  cron.schedule('10,25,40,55 * * * *', envolverJob('reconciliarPagos', reconciliarPagosPendientes))
 }

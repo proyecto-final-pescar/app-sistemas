@@ -5,6 +5,7 @@ import Button from "../ui/button/Button";
 import ConfirmModal from "../ui/confirm-modal/ConfirmModal";
 import MenuAcciones from "../common/menuAcciones/MenuAcciones";
 import { formatearEdad } from "../../utils/EdadMascota";
+import { optimizarImagen } from "../../utils/optimizarImagen";
 import styles from "../../styles/MisMascotas.module.css";
 
 const MascotaCard = ({ mascota, onView, onEdit, onDelete, eliminando = false }) => {
@@ -35,22 +36,24 @@ const MascotaCard = ({ mascota, onView, onEdit, onDelete, eliminando = false }) 
         <article className={styles.card}>
             <div className={styles.cardImageWrapper}>
                 {foto ? (
-    <img
-        src={foto}
-        alt={nombre}
-        className={styles.cardImage}
-        onError={(e) => {
-            e.currentTarget.style.display = "none";
-            e.currentTarget.nextSibling.style.display = "flex";
-        }}
-    />
-) : null}
-<div
-    className={styles.cardImagePlaceholder}
-    style={{ display: foto ? "none" : "flex" }}
->
-    <PawPrint size={40} color="#a78bfa" strokeWidth={1.75} />
-</div>
+                    <img
+                        src={optimizarImagen(foto, 600)}
+                        alt={nombre}
+                        className={styles.cardImage}
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            e.currentTarget.nextSibling.style.display = "flex";
+                        }}
+                    />
+                ) : null}
+                <div
+                    className={styles.cardImagePlaceholder}
+                    style={{ display: foto ? "none" : "flex" }}
+                >
+                    <PawPrint size={40} color="#a78bfa" strokeWidth={1.75} />
+                </div>
                 <div className={styles.cardImageOverlay}>
                     <span className={styles.petName}>{nombre}</span>
                     <span className={styles.petBreed}>
@@ -92,15 +95,15 @@ const MascotaCard = ({ mascota, onView, onEdit, onDelete, eliminando = false }) 
                     </span>
                 </div>
 
-               <div className={styles.actionsRow}>
+                <div className={styles.actionsRow}>
                     <Button
                         texto="Ver ficha completa ›"
                         variante="ver-ficha"
                         tamaño="chico"
                         onClick={() => onView(_id)}
                     />
-                    </div>
                 </div>
+            </div>
 
             <ConfirmModal
                 abierto={modalAbierto}

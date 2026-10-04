@@ -23,7 +23,6 @@ export const NotificacionesProvider = ({ children }) => {
     }
   }, []);
 
-
   useEffect(() => {
     if (!isAuthenticated) {
       setNotificaciones([]);
@@ -31,13 +30,14 @@ export const NotificacionesProvider = ({ children }) => {
       return undefined;
     }
 
+    // Carga inicial: se hace una sola vez, aca, aunque el SSE tarde en abrir
+    // o falle
     cargar();
 
     const token = localStorage.getItem("token");
     if (!token) return undefined;
 
     // EventSource no puede mandar headers, por eso el token va en la query
-
     const es = new EventSource(`${API_BASE_URL}/notificaciones/stream?token=${token}`);
 
     es.addEventListener("notificacion", (evento) => {
@@ -47,8 +47,17 @@ export const NotificacionesProvider = ({ children }) => {
       );
     });
 
-
-    es.onopen = () => cargar();
+    // La primera apertura no vuelve a pedir la lista 
+    // Solo las reconexiones recargan, para recuperar lo que llegó mientras
+    // la conexión estuvo caída
+    let primeraApertura = true;
+    es.onopen = () => {
+      if (primeraApertura) {
+        primeraApertura = false;
+        return;
+      }
+      cargar();
+    };
 
     es.onerror = () => {
       console.error("Error en la conexión de notificaciones en tiempo real");
@@ -57,7 +66,6 @@ export const NotificacionesProvider = ({ children }) => {
     return () => {
       es.close();
     };
-    
   }, [isAuthenticated, usuario?.id, cargar]);
 
   const marcarLeidaLocal = useCallback((id) => {
