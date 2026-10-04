@@ -8,6 +8,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Reveal from "../ui/reveal/Reveal";
+import { getMascota } from "./mascotas";
 import styles from "./Features.module.css";
 
 
@@ -93,6 +94,8 @@ const Features = () => {
                         src={getMascota(index + 3).src}
                         alt=""
                         aria-hidden="true"
+                        loading="lazy"
+                        decoding="async"
                         className={styles.petAvatar}
                       />
                     )}

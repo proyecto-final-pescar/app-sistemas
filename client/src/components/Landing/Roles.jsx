@@ -86,6 +86,8 @@ const Roles = () => {
             <img
               src={foto.src}
               alt={foto.alt}
+              loading="lazy"
+              decoding="async"
               className={`${styles.photo} ${rol === "tutor" ? styles.photoTutor : styles.photoVet}`}
             />
           </div>
