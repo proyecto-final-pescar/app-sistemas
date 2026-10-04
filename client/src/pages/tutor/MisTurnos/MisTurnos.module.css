@@ -1,4 +1,4 @@
-/* Copiado de CitasAgendadas.module.css — mismos estilos base */
+
 
 .shell {
   display: flex;
@@ -6,19 +6,64 @@
   background-color: #f9f8ff;
   font-family: 'Inter', Arial, Helvetica, sans-serif;
 }
+
 .main {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
 }
+
 .content {
   margin: 24px 32px 40px;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
-.tabs { display: flex; gap: 8px; }
+
+/* ---------- Tabs + botón Sacar turno ---------- */
+
+.tabsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: nowrap; /* tabs y botón siempre en la misma fila */
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.sacarTurnoBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 999px;
+  background-color: #7c3aed;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.sacarTurnoBtn:hover {
+  background-color: #6d28d9;
+}
+
+/* ---------- Banner próximo turno ---------- */
+
 .banner {
   position: relative;
   border-radius: 16px;
@@ -31,7 +76,13 @@
   gap: 16px;
   flex-wrap: wrap;
 }
-.bannerInfo { display: flex; align-items: center; gap: 16px; }
+
+.bannerInfo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .bannerIcon {
   width: 48px;
   height: 48px;
@@ -43,6 +94,7 @@
   font-size: 22px;
   flex-shrink: 0;
 }
+
 .bannerLabel {
   margin: 0;
   font-size: 12px;
@@ -51,12 +103,14 @@
   color: rgba(255, 255, 255, 0.75);
   text-transform: uppercase;
 }
+
 .bannerTitulo {
   margin: 2px 0 6px;
   font-size: 18px;
   font-weight: 700;
   color: #ffffff;
 }
+
 .bannerMeta {
   margin: 0;
   font-size: 13px;
@@ -65,27 +119,90 @@
   gap: 14px;
   flex-wrap: wrap;
 }
+
+.bannerAcciones {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.bannerBtn {
+  padding: 8px 20px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: white;
+  color: #1f1739;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 110px;
+  text-align: center;
+}
+
+.bannerBtn:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.bannerBtnPagar {
+  border-color: #059669;
+  background: #059669;
+  color: white;
+}
+
+.bannerBtnPagar:hover {
+  background: #047857;
+  border-color: #047857;
+}
+
+.bannerBtnCancelar {
+  border-color: #ef4444;
+  background: #ef4444;
+  color: white;
+}
+
+.bannerBtnCancelar:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.bannerBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Lista de turnos ---------- */
+
 .card {
   background-color: #ffffff;
   border-radius: 16px;
   border: 1px solid #ede9fe;
   box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
-  overflow: hidden;
+  overflow: visible; /* para que el dropdown no se corte */
 }
+
 .cardHeader {
   padding: 16px 24px;
   font-size: 13px;
   color: #8276ab;
   border-bottom: 1px solid #f5f3ff;
 }
+
 .turnoRow {
   display: flex;
   align-items: center;
   gap: 18px;
   padding: 18px 24px;
   border-bottom: 1px solid #f5f3ff;
+  overflow: visible;
 }
-.turnoRow:last-child { border-bottom: none; }
+
+.turnoRow:last-child {
+  border-bottom: none;
+}
+
 .fechaBox {
   display: flex;
   flex-direction: column;
@@ -93,12 +210,43 @@
   min-width: 44px;
   color: #7c3aed;
 }
-.fechaDia { font-size: 18px; font-weight: 700; line-height: 20px; }
-.fechaMes { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
-.turnoInfo { flex: 1; min-width: 0; }
-.turnoTags { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.turnoMascota { font-size: 13px; color: #6b7280; }
-.turnoMotivo { margin: 0; font-size: 14px; font-weight: 600; color: #1f1739; }
+
+.fechaDia {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.fechaMes {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.turnoInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.turnoTags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.turnoMascota {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.turnoMotivo {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f1739;
+}
+
 .turnoMeta {
   margin: 4px 0 0;
   font-size: 13px;
@@ -107,6 +255,14 @@
   gap: 14px;
   flex-wrap: wrap;
 }
+
+.bannerMeta span,
+.turnoMeta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .estadoVacio {
   padding: 40px 24px;
   text-align: center;
@@ -114,17 +270,15 @@
   font-size: 14px;
 }
 
-/* Clase nueva — no existe en CitasAgendadas */
+.estadoVacioTexto {
+  margin: 0 0 16px;
+}
+
+/* ---------- Menú ⋮ de cada turno ---------- */
+
 .turnoAcciones {
   position: relative;
   flex-shrink: 0;
-}
-
-.bannerMeta span,
-.turnoMeta span {
-  display: flex;
-  align-items: center;
-  gap: 5px;
 }
 
 .turnoAcciones button {
@@ -197,66 +351,8 @@
   cursor: not-allowed;
 }
 
-.card {
-  overflow: visible; /* antes era overflow: hidden */
-}
+/* ---------- Modales de error / mensaje ---------- */
 
-.turnoRow {
-  overflow: visible;
-}
-
-.bannerAcciones {
-  display: flex;
-  flex-direction: row; /* antes era column */
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.bannerBtn {
-  padding: 8px 20px;
-  border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.6);
-  background: white;
-  color: #1f1739;
-  font-size: 12px;
-  font-weight: 600;
-  font-family: 'Inter', sans-serif;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 110px;
-  text-align: center;
-}
-
-.bannerBtn:hover {
-  background: rgba(255, 255, 255, 0.85);
-}
-
-.bannerBtnPagar {
-  border-color: #059669;
-  background: #059669;
-  color: white;
-}
-
-.bannerBtnPagar:hover {
-  background: #047857;
-  border-color: #047857;
-}
-
-.bannerBtnCancelar {
-  border-color: #ef4444;
-  background: #ef4444;
-  color: white;
-}
-
-.bannerBtnCancelar:hover {
-  background: #dc2626;
-  border-color: #dc2626;
-}
-
-.bannerBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 .errorOverlay {
   position: fixed;
   top: 0;
@@ -307,6 +403,9 @@
 .errorModal button:hover {
   background-color: #6d28d9;
 }
+
+/* ---------- Paginación ---------- */
+
 .paginacion {
   display: flex;
   justify-content: center;
@@ -320,4 +419,51 @@
 .paginaInfo {
   font-size: 14px;
   color: #7c6aa6;
+}
+
+/* ---------- Responsive ---------- */
+/* Mismo breakpoint que el Sidebar: en <=767px el TopBar se oculta y aparece
+   la barra fija del Sidebar mobile (.mobileTopbar, 60px de alto). */
+
+@media (max-width: 767px) {
+  .main {
+    padding-top: 60px; /* altura de .mobileTopbar */
+  }
+
+  .content {
+    margin: 16px 16px 32px;
+    gap: 16px;
+  }
+
+  .tabsRow {
+    gap: 8px;
+  }
+
+  .sacarTurnoBtn {
+    padding: 9px 16px;
+    font-size: 13px;
+  }
+
+  .banner {
+    padding: 20px;
+  }
+
+  .bannerAcciones {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .bannerBtn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .turnoRow {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .cardHeader {
+    padding: 14px 16px;
+  }
 }

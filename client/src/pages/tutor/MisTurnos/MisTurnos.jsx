@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import Button from "../../../components/ui/button/Button";
@@ -6,7 +7,7 @@ import Badge from "../../../components/ui/badge/Badge";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal";
 import DetalleTurnoModal from "../../../components/ui/detalle-turno-modal/DetalleTurnoModal";
 import SuccessModal from "../../../components/ui/success-modal/SuccessModal"; // 1. IMPORTAR SUCCESS MODAL
-import { FaCalendarAlt, FaClock, FaHospital, FaPaw, FaUserMd } from "react-icons/fa";
+import { FaCalendarAlt, FaClock, FaHospital, FaPaw, FaPlus, FaUserMd } from "react-icons/fa";
 import {
   obtenerTurnosPaginadosPorUsuario,
   cancelarTurno,
@@ -24,6 +25,9 @@ import styles from "./MisTurnos.module.css";
 const TURNOS_POR_PAGINA = 10;
 
 export default function MisTurnos() {
+  const navigate = useNavigate();
+  const irASacarTurno = () => navigate("/urgencias"); 
+
   const [turnos, setTurnos] = useState([]);
   const [total, setTotal] = useState(0);
   const [totalPaginas, setTotalPaginas] = useState(1);
@@ -178,7 +182,7 @@ export default function MisTurnos() {
   const handlePagarEnEfectivo = async () => {
     const turnoSeleccionado = turnoParaPagar;
     const turnoId = turnoSeleccionado.turno_id;
-    
+
     setTurnoParaPagar(null);
     if (pagando) return;
     setPagando(turnoId);
@@ -187,7 +191,7 @@ export default function MisTurnos() {
       await pagarEfectivo({ turnoId });
       // El estado cambió a confirmado: se vuelve a pedir lista y banner
       setRecarga((r) => r + 1);
-      
+
       // Guardar el turno para armar el mensaje e indicar éxito
       setTurnoConfirmadoEfectivo(turnoSeleccionado);
       setIsSuccessOpen(true);
@@ -209,26 +213,32 @@ export default function MisTurnos() {
 
   return (
     <div className={styles.shell}>
-      <Sidebar role="tutor" activeItem="Turnos" title="Mis turnos" />
+      <Sidebar title="Mis turnos" />
       <div className={styles.main}>
-        <TopBar title="Mis turnos" notifications={0} />
+        <TopBar title="Mis turnos" />
 
         <div className={styles.content}>
 
-          {/* Tabs */}
-          <div className={styles.tabs}>
-            <Button
-              texto="Próximos"
-              variante={tab === "proximos" ? "primario" : "secundario"}
-              tamaño="chico"
-              onClick={() => cambiarTab("proximos")}
-            />
-            <Button
-              texto="Pasados"
-              variante={tab === "pasados" ? "primario" : "secundario"}
-              tamaño="chico"
-              onClick={() => cambiarTab("pasados")}
-            />
+          {/* Tabs + Sacar turno */}
+          <div className={styles.tabsRow}>
+            <div className={styles.tabs}>
+              <Button
+                texto="Próximos"
+                variante={tab === "proximos" ? "primario" : "secundario"}
+                tamaño="chico"
+                onClick={() => cambiarTab("proximos")}
+              />
+              <Button
+                texto="Pasados"
+                variante={tab === "pasados" ? "primario" : "secundario"}
+                tamaño="chico"
+                onClick={() => cambiarTab("pasados")}
+              />
+            </div>
+
+            <button className={styles.sacarTurnoBtn} onClick={irASacarTurno}>
+              <FaPlus size={12} /> Sacar turno
+            </button>
           </div>
 
           {/* Banner próximo turno */}
@@ -302,9 +312,16 @@ export default function MisTurnos() {
             {loading && <p className={styles.estadoVacio}>Cargando turnos...</p>}
             {!loading && error && <p className={styles.estadoVacio}>{error}</p>}
             {!loading && !error && turnos.length === 0 && (
-              <p className={styles.estadoVacio}>
-                No hay turnos {tab === "proximos" ? "próximos" : "pasados"} para mostrar.
-              </p>
+              <div className={styles.estadoVacio}>
+                <p className={styles.estadoVacioTexto}>
+                  No hay turnos {tab === "proximos" ? "próximos" : "pasados"} para mostrar.
+                </p>
+                {tab === "proximos" && (
+                  <button className={styles.sacarTurnoBtn} onClick={irASacarTurno}>
+                    <FaPlus size={12} /> Buscar veterinaria y sacar turno
+                  </button>
+                )}
+              </div>
             )}
 
             {!loading && !error && turnos.map((turno) => {
@@ -466,7 +483,7 @@ export default function MisTurnos() {
           </div>
         </div>
       )}
-      
+
       {mensajeCancelacion && (
         <div className={styles.errorOverlay}>
           <div className={styles.errorModal}>
