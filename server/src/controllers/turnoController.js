@@ -374,6 +374,10 @@ export const obtenerTurnosDisponiblesGrilla = async (req, res) => {
       if (fechaHasta) filtro.fecha.lte = new Date(`${fechaHasta}T23:59:59.999Z`);
     }
 
+    // Tope de seguridad: la UI siempre pide una semana, pero un llamado
+    // directo sin fechas no debería poder traer el historial completo.
+    const LIMITE_GRILLA = 500;
+
     const turnos = await prisma.turno.findMany({
       where: filtro,
       select: {
@@ -383,7 +387,8 @@ export const obtenerTurnosDisponiblesGrilla = async (req, res) => {
         hora_fin: true,
         servicio_id: true,
         profesional_id: true
-      }
+      },
+      take: LIMITE_GRILLA
     });
 
     const turnosMapeados = turnos.map(t => ({
@@ -919,7 +924,7 @@ export const crearOfertaHoraria = async (req, res) => {
             conflictos.push({
               fecha: slot.fecha,
               hora: slot.hora,
-              professional: `${profesional.nombre} ${profesional.apellido}`,
+              profesional: `${profesional.nombre} ${profesional.apellido}`,
             });
           } else {
             console.error(

@@ -333,7 +333,7 @@ export default function CargaTurnos() {
 
   const toggleSlot = (diaIdx, hora) => {
     const fecha = fechasSemana[diaIdx];
-    if (esFechaPasada(fecha)) return;
+    if (esFechaPasada(fecha) || esCeldaPasada(fecha, hora)) return;
     const key = `${diaIdx}-${hora}`;
     setSlotsSeleccionados((prev) => ({
       ...prev,
@@ -345,7 +345,9 @@ export default function CargaTurnos() {
     const fecha = fechasSemana[diaIdx];
     if (esFechaPasada(fecha)) return;
     const diaClave = DIAS_MAPA[diaIdx].clave;
-    const slotsDelDia = filas.filter((h) => !esCeldaBloqueada(diaClave, h));
+    const slotsDelDia = filas.filter(
+      (h) => !esCeldaBloqueada(diaClave, h) && !esCeldaPasada(fecha, h),
+    );
     const todosSeleccionados = slotsDelDia.every(
       (h) => slotsSeleccionados[`${diaIdx}-${h}`],
     );
@@ -359,7 +361,10 @@ export default function CargaTurnos() {
 
   const todoElDiaSeleccionado = (diaIdx) => {
     const diaClave = DIAS_MAPA[diaIdx].clave;
-    const slotsDelDia = filas.filter((h) => !esCeldaBloqueada(diaClave, h));
+    const fecha = fechasSemana[diaIdx];
+    const slotsDelDia = filas.filter(
+      (h) => !esCeldaBloqueada(diaClave, h) && !esCeldaPasada(fecha, h),
+    );
     return (
       slotsDelDia.length > 0 &&
       slotsDelDia.every((h) => slotsSeleccionados[`${diaIdx}-${h}`])
@@ -757,7 +762,7 @@ export default function CargaTurnos() {
                           hora,
                           i,
                         );
-                        const pasado = esFechaPasada(fecha, hora);
+                        const pasado = esCeldaPasada(fecha, hora);
                         const existente = esCeldaExistente(fecha, hora);
                         const ocupada = esCeldaOcupada(fecha, hora);
                         const seleccionado =

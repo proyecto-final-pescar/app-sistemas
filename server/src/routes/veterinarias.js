@@ -25,15 +25,12 @@ import {
   finalizarConexionMercadoPago,
   desconectarMercadoPago,
 } from "../controllers/mercadoPagoVeterinariaController.js";
-import { obtenerTurnosDisponiblesGrilla } from "../controllers/turnoController.js";
 
 const router = Router();
 
 // Todas las rutas requieren autenticación
 router.get("/buscar", verifyToken, buscarVeterinarias);
 router.get("/", verifyToken, obtenerVeterinarias);
-// Agregar esta línea:
-router.get("/disponibles/grilla", verifyToken, obtenerTurnosDisponiblesGrilla);
 
 router.get("/mia", verifyToken, verificarRol("veterinaria"), obtenerMiVeterinaria);
 router.put("/mia", verifyToken, verificarRol("veterinaria"), actualizarMiVeterinaria);
