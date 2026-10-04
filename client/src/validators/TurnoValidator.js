@@ -1,9 +1,7 @@
 // client/src/validators/TurnoValidator.js
 
 class TurnoValidator {
-  /**
-   * Valida que la duración sea un número entero y positivo.
-   */
+
   static validarDuracion(duracion) {
     if (duracion === undefined || duracion === null || typeof duracion !== "number") {
       return "La duración es obligatoria y debe ser un número.";
@@ -14,9 +12,6 @@ class TurnoValidator {
     return null;
   }
 
-  /**
-   * Valida que la hora tenga el formato estricto HH:MM (00:00 a 23:59).
-   */
   static validarFormatoHora(hora) {
     const regexHora = /^([01]\d|2[0-3]):[0-5]\d$/;
     if (!regexHora.test(hora)) {
@@ -25,9 +20,6 @@ class TurnoValidator {
     return null;
   }
 
-  /**
-   * Validador principal para el payload de creación de oferta horaria.
-   */
   static validarDatosOferta(servicioId, profesionales, slots, duracion) {
     if (!servicioId) return "Seleccioná un servicio.";
     
