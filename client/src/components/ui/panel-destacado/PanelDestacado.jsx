@@ -5,10 +5,13 @@ import styles from "./PanelDestacado.module.css";
 /**
  * Panel destacado con fondo en degradado violeta.
  * Reutilizable: a veces lleva buscador y chips, a veces solo texto.
+ *
+ * @param {boolean} compacto - versión más baja (menos padding y título más chico),
+ *   
  */
-const PanelDestacado = ({ chipsSuperior, titulo, subtitulo, children }) => {
+const PanelDestacado = ({ chipsSuperior, titulo, subtitulo, children, compacto = false }) => {
     return (
-        <div className={styles.panel}>
+        <div className={`${styles.panel} ${compacto ? styles.compacto : ""}`}>
             {/* Formas decorativas de fondo, siempre presentes */}
             <span className={styles.circuloGrande} aria-hidden="true" />
             <span className={styles.circuloChico} aria-hidden="true" />
@@ -37,6 +40,7 @@ PanelDestacado.propTypes = {
     titulo: PropTypes.node.isRequired,
     subtitulo: PropTypes.node,
     children: PropTypes.node,
+    compacto: PropTypes.bool,
 };
 
 export default PanelDestacado;

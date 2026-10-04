@@ -46,8 +46,13 @@ function IndicadorEscritura({ tardandoMucho }) {
 }
 
 /**
- * Panel flotante con la conversación. Se renderiza únicamente cuando
- * el chat está abierto (controlado por ChatBot.jsx).
+ * Panel con la conversación.
+ *
+ * - Flotante: lo renderiza ChatBot.jsx cuando el chat está abierto.
+ * - Inline: lo usa PerfilUsuario.jsx como vista previa funcional del asistente.
+ *
+ * @param {boolean} ocultarCerrar - oculta el botón de cerrar 
+ * @param {boolean} autoEnfocar 
  */
 export default function InterfazChat({
   mensajes,
@@ -59,27 +64,32 @@ export default function InterfazChat({
   pose = 'idle',
   nombreBot = 'Firu',
   inline = false,
-  soloVistaPrevia = false,
+  ocultarCerrar = false,
+  autoEnfocar = true,
 }) {
   const [textoInput, setTextoInput] = useState('');
-  const finMensajesRef = useRef(null);
+  const cuerpoRef = useRef(null);
   const inputRef = useRef(null);
 
+  // Scroll interno del panel. Se usa scrollTo sobre el contenedor (y no
+  // scrollIntoView) para no mover la página entera cuando el chat es inline.
   useEffect(() => {
-    finMensajesRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const cuerpo = cuerpoRef.current;
+    if (!cuerpo) return;
+    cuerpo.scrollTo({ top: cuerpo.scrollHeight, behavior: 'smooth' });
   }, [mensajes, estaEscribiendo]);
 
   // Devuelve el foco al input apenas se vuelve a habilitar, para que
   // el usuario pueda seguir escribiendo sin tener que hacer click de nuevo.
   useEffect(() => {
-    if (!estaEscribiendo) {
-      inputRef.current?.focus();
-    }
-  }, [estaEscribiendo]);
+    if (estaEscribiendo) return;
+    if (!autoEnfocar && mensajes.length <= 1) return;
+    inputRef.current?.focus({ preventScroll: true });
+  }, [estaEscribiendo, autoEnfocar, mensajes.length]);
 
   const manejarEnvio = (evento) => {
     evento.preventDefault();
-    
+
     if (!textoInput.trim() || estaEscribiendo) return;
     onEnviarMensaje(textoInput);
     setTextoInput('');
@@ -99,7 +109,7 @@ export default function InterfazChat({
             <p className={estilos.estadoBot}>Asistente de MyPet</p>
           </div>
         </div>
-        {!soloVistaPrevia && (
+        {!ocultarCerrar && (
           <button
             type="button"
             className={estilos.botonCerrar}
@@ -111,7 +121,7 @@ export default function InterfazChat({
         )}
       </header>
 
-      <div className={estilos.cuerpoMensajes}>
+      <div ref={cuerpoRef} className={estilos.cuerpoMensajes}>
         {mensajes.map((mensaje) => (
           <div
             key={mensaje.id}
@@ -130,8 +140,6 @@ export default function InterfazChat({
         ))}
 
         {estaEscribiendo && <IndicadorEscritura tardandoMucho={tardandoMucho} />}
-
-        <div ref={finMensajesRef} />
       </div>
 
       <form className={estilos.formularioInput} onSubmit={manejarEnvio}>
@@ -142,13 +150,13 @@ export default function InterfazChat({
           placeholder="Escribí tu mensaje..."
           value={textoInput}
           onChange={(evento) => setTextoInput(evento.target.value)}
-          disabled={estaEscribiendo || soloVistaPrevia}
+          disabled={estaEscribiendo}
           aria-label="Mensaje para el asistente"
         />
         <button
           type="submit"
           className={estilos.botonEnviar}
-          disabled={!textoInput.trim() || estaEscribiendo || soloVistaPrevia}
+          disabled={!textoInput.trim() || estaEscribiendo}
           aria-label="Enviar mensaje"
         >
           <IconoEnviar />
