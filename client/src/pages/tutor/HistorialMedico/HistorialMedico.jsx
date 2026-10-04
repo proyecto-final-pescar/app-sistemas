@@ -98,7 +98,7 @@ export default function HistorialMedico() {
   const formatearFecha = (fechaIso) => {
     if (!fechaIso) return '';
     return new Date(fechaIso).toLocaleDateString('es-AR', {
-      day: '2-digit', month: 'short', year: 'numeric'
+      day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC'
     });
   };
 
