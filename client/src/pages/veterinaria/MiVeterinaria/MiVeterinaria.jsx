@@ -880,7 +880,7 @@ function MiVeterinaria() {
             {modalEdicion.tipo === "servicio" ? (
               <>
                 <Input label="Nombre *" value={modalEdicion.valores.nombre} onChange={(e) => actualizarModal("nombre", e.target.value)} />
-                <Select label="Categoría *" opciones={categorias} value={modalEdicion.valores.categoria} onChange={(e) => actualizarModal("categoria", e.target.value)} error={errorCategorias} />
+                <Select label="Categoría *" opciones={categorias.map((c) => ({ value: c.nombre, label: c.nombre }))} value={modalEdicion.valores.categoria} onChange={(e) => actualizarModal("categoria", e.target.value)} error={errorCategorias} />
                 <Input label="Precio *" type="number" value={modalEdicion.valores.precio} onChange={(e) => actualizarModal("precio", e.target.value)} />
                 {cargandoCategorias && <p className={styles.helper}>Cargando categorías...</p>}
               </>
