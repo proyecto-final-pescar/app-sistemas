@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import './Input.css';
 
 function Input({
@@ -11,6 +13,8 @@ function Input({
   readOnly,
   disabled,
 }) {
+  const [mostrar, setMostrar] = useState(false);
+  const esPassword = type === "password";
 
   let mensajeError = null;
 
@@ -29,15 +33,28 @@ function Input({
         {label}
       </label>
 
-      <input
-        className="input-campo"
-        placeholder={placeholder}
-        type={type}
-        value={value}
-        onChange={onChange}
-        readOnly={readOnly}
-        disabled={disabled}
-      />
+      <div className="input-password-wrap">
+        <input
+          className={`input-campo ${esPassword ? "input-campo-password" : ""}`}
+          placeholder={placeholder}
+          type={esPassword && mostrar ? "text" : type}
+          value={value}
+          onChange={onChange}
+          readOnly={readOnly}
+          disabled={disabled}
+        />
+
+        {esPassword && (
+          <button
+            type="button"
+            className="input-ojito"
+            onClick={() => setMostrar((prev) => !prev)}
+            aria-label={mostrar ? "Ocultar contraseña" : "Mostrar contraseña"}
+          >
+            {mostrar ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        )}
+      </div>
 
       {mensajeError}
 

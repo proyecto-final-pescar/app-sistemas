@@ -154,7 +154,8 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
     } catch (error) {
       console.error("Error al dar de baja la publicación:", error);
       alert(
-        error.response?.data?.mensaje ||
+        error.response?.data?.message ??
+          error.response?.data?.mensaje ??
           "Hubo un error al procesar la solicitud.",
       );
     } finally {
@@ -174,7 +175,8 @@ function ModeracionDeForoModal({ publicacion, onClose, onSuccess }) {
     } catch (error) {
       console.error("Error al descartar los reportes:", error);
       alert(
-        error.response?.data?.mensaje ||
+        error.response?.data?.message ??
+          error.response?.data?.mensaje ??
           "Hubo un error al procesar la solicitud.",
       );
     } finally {

@@ -33,6 +33,51 @@ export const obtenerTurnosPorUsuario = async () => {
   return data.data?.turnos || [];
 };
 
+// Normaliza la respuesta paginada del backend a una forma estable.
+const normalizarPagina = (datos = {}) => ({
+  turnos: datos.turnos || [],
+  total: datos.total ?? 0,
+  pagina: datos.pagina ?? 1,
+  totalPaginas: datos.totalPaginas ?? 1,
+});
+
+/**
+ * Turnos paginados del usuario autenticado ("Mis turnos").
+ * `tab`: "proximos" | "pasados". Filtra y ordena el backend.
+ * Devuelve { turnos, total, pagina, totalPaginas }.
+ */
+export const obtenerTurnosPaginadosPorUsuario = async ({
+  tab,
+  pagina = 1,
+  limite = 10,
+} = {}) => {
+  const { data } = await api.get("/turnos", {
+    params: { usuarioId: "me", tab, pagina, limite },
+  });
+  return normalizarPagina(data.data);
+};
+
+/**
+ * Turnos paginados de una veterinaria (agenda).
+ * `tab`: "proximos" | "pasados". `busquedaTutor`: texto libre (nombre/apellido).
+ * Devuelve { turnos, total, pagina, totalPaginas }.
+ */
+export const obtenerTurnosPaginadosPorVeterinaria = async (
+  veterinariaId,
+  { tab, estados, busquedaTutor, pagina = 1, limite = 10 } = {}
+) => {
+  if (!veterinariaId) {
+    console.warn("obtenerTurnosPaginadosPorVeterinaria: 'veterinariaId' no fue proporcionado.");
+    return normalizarPagina();
+  }
+
+  const params = { veterinariaId, tab, estados, pagina, limite };
+  if (busquedaTutor?.trim()) params.busquedaTutor = busquedaTutor.trim();
+
+  const { data } = await api.get("/turnos", { params });
+  return normalizarPagina(data.data);
+};
+
 /**
  * Cancela un turno por su ID.
  */
@@ -78,4 +123,13 @@ export const reservarTurno = async (turnoId, payload) => {
 export const pagarEfectivo = async (payload) => {
   const { data } = await api.post("/pagos/efectivo", payload);
   return data.data?.turno;
+};
+
+/**
+ * Reglas de negocio de turnos (fuente única en el backend).
+ * Si falla, el llamador debe usar valores por defecto locales.
+ */
+export const obtenerReglasTurnos = async () => {
+  const { data } = await api.get("/constantes/reglas-turnos");
+  return data.data; // { anticipacionMinimaHoras, plazoPagoHoras }
 };

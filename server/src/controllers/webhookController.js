@@ -1,11 +1,13 @@
-import {
-  InvalidWebhookSignatureError,
-  Payment,
-  WebhookSignatureValidator
-} from 'mercadopago';
+import { Payment } from 'mercadopago';
 
 import prisma from '../../prisma/client.js';
 import { obtenerClienteMercadoPago } from '../services/mercadoPagoOAuthService.js';
+import {
+  crearNotificacion,
+  obtenerContextoTurno,
+  formatearFechaTurno,
+  TIPO,
+} from '../services/notificacionService.js';
 
 const ESTADO_MP_A_PAGO = {
   approved: 'aprobado',
@@ -16,7 +18,7 @@ const ESTADO_MP_A_PAGO = {
   in_process: 'en_proceso'
 };
 
-const METODO_PAGO_MAP = {
+export const METODO_PAGO_MAP = {
   credit_card: 'tarjeta_credito',
   debit_card: 'tarjeta_debito',
   ticket: 'efectivo',
@@ -24,36 +26,24 @@ const METODO_PAGO_MAP = {
   account_money: 'billetera_virtual'
 };
 
-const obtenerIdNotificacion = (req) =>
-  req.body?.data?.id || req.query?.['data.id'] || req.query?.id;
-
-const validarFirma = (req) => {
-  const secret = process.env.MP_WEBHOOK_SECRET?.trim();
-  if (!secret) {
-    const error = new Error('Falta configurar MP_WEBHOOK_SECRET.');
-    error.code = 'MP_CONFIG_ERROR';
-    throw error;
-  }
-
-  const dataId = req.query?.['data.id'];
-  const xSignature = req.get('x-signature');
-  const xRequestId = req.get('x-request-id');
-  if (!dataId || !xSignature || !xRequestId) return false;
-
+const notificarTurnoConfirmado = async (turnoId) => {
   try {
-    WebhookSignatureValidator.validate({
-      xSignature,
-      xRequestId,
-      dataId,
-      secret,
-      toleranceSeconds: 300
+    const ctx = await obtenerContextoTurno(turnoId);
+    if (!ctx?.mascota) return;
+
+    await crearNotificacion({
+      usuarioId: ctx.mascota.dueno_id,
+      tipo: TIPO.TURNO_CONFIRMADO,
+      mensaje: `¡Pago aprobado! Tu turno en ${ctx.veterinaria.nombre} del ${formatearFechaTurno(ctx.fecha, ctx.hora_inicio)} para ${ctx.mascota.nombre} quedó confirmado.`,
+      link: `/mis-turnos`,
     });
-    return true;
   } catch (error) {
-    if (error instanceof InvalidWebhookSignatureError) return false;
-    throw error;
+    console.error('Error al notificar turno confirmado:', error);
   }
 };
+
+const obtenerIdNotificacion = (req) =>
+  req.body?.data?.id || req.query?.['data.id'] || req.query?.id;
 
 const detalleSeguroError = (error) => ({
   code: error?.code,
@@ -63,10 +53,6 @@ const detalleSeguroError = (error) => ({
 
 export const recibirWebhook = async (req, res) => {
   try {
-    if (!validarFirma(req)) {
-      return res.status(401).json({ message: 'Firma de webhook inválida' });
-    }
-
     const tipo = req.body?.type || req.query?.type || req.query?.topic;
     if (tipo && tipo !== 'payment') {
       return res.status(200).json({ message: 'Evento ignorado' });
@@ -129,6 +115,8 @@ export const recibirWebhook = async (req, res) => {
       throw new Error('Faltan estados requeridos en los catálogos de PostgreSQL.');
     }
 
+    const turnoYaConfirmado = turno.estado_turno.nombre === 'confirmado';
+
     const pagoGuardado = await prisma.$transaction(async (tx) => {
       const resultadoActualizacion = await tx.pago.updateMany({
         where: {
@@ -160,6 +148,11 @@ export const recibirWebhook = async (req, res) => {
       return tx.pago.findUnique({ where: { pago_id: pago.pago_id } });
     });
 
+    // Aviso al tutor (después de la transacción, para no notificar algo que falló)
+    if (pagoMP.status === 'approved' && !turnoYaConfirmado) {
+      await notificarTurnoConfirmado(turno.turno_id);
+    }
+
     return res.status(200).json({
       message: `Pago con estado ${pagoMP.status} registrado`,
       turnoId: turno.turno_id,
@@ -167,9 +160,7 @@ export const recibirWebhook = async (req, res) => {
     });
   } catch (error) {
     console.error('Error en webhook de Mercado Pago:', detalleSeguroError(error));
-    const status = error.code === 'MP_CONFIG_ERROR'
-      ? 503
-      : error.code === 'PAYMENT_ID_CONFLICT' ? 409 : 500;
+    const status = error.code === 'PAYMENT_ID_CONFLICT' ? 409 : 500;
     return res.status(status).json({ message: 'No se pudo procesar el webhook' });
   }
 };

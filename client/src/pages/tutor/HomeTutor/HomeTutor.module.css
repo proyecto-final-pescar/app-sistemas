@@ -533,3 +533,8 @@
     flex-direction: row;
   }
 }
+.verMas {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}

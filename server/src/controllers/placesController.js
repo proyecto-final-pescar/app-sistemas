@@ -51,8 +51,7 @@ export const details = async (req, res) => {
       return res.status(500).json({ message: 'Error de configuración del servidor' });
     }
 
-    const url = `${GOOGLE_PLACES_BASE_URL}/details/json?place_id=${encodeURIComponent(place_id)}&key=${apiKey}&language=es&fields=geometry,formatted_address`;
-
+     const url = `${GOOGLE_PLACES_BASE_URL}/details/json?place_id=${encodeURIComponent(place_id)}&key=${apiKey}&language=es&fields=geometry,formatted_address,address_component`;    
     const googleRes = await fetch(url);
     const data = await googleRes.json();
 

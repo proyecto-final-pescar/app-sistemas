@@ -1,10 +1,9 @@
-import User from '../models/User.js';
-import Mascota from '../models/Mascota.js';
-import Turno from '../models/Turno.js';
 import bcrypt from 'bcrypt';
-import mongoose from 'mongoose';
+import crypto from 'crypto';
+import { invalidarUsuarioCache } from '../middleware/auth.js'
 import prisma from '../../prisma/client.js'
-import { enviarEmail } from '../utils/mailer.js';
+import { enviarEmail, sendVerificationEmail } from '../utils/mailer.js';
+import { hashToken } from '../utils/tokens.js';
 import { armarEmailSuspensionCuenta } from '../templates/emailSuspensionCuenta.js';
 import { armarEmailCambioEstadoCuenta } from '../templates/emailCambioEstadoCuenta.js';
 
@@ -338,7 +337,7 @@ export const actualizarPerfilPropio = async (req, res) => {
       data,
       include: { rol: true, zona: true }
     })
- 
+    invalidarUsuarioCache(usuarioActualizado.usuario_id)
     return res.status(200).json({
       success: true,
       message: 'Perfil actualizado correctamente.',
@@ -369,26 +368,36 @@ export const actualizarPerfilPropio = async (req, res) => {
     })
   }
 }
- 
-//TODO: no migrado
+
+const VERIFICACION_TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 hs
+
 export const crearUsuarioAdmin = async (req, res) => {
     try {
-        const { name, email, password, role, telefono } = req.body;
+        const { name, nombre, apellido, email, password, role, telefono } = req.body;
 
-        if (!name || !email || !password || !role) {
+        // Compatibilidad: `name` ("Juan Pérez") o nombre+apellido por separado
+        let nombreFinal = typeof nombre === 'string' ? nombre.trim() : '';
+        let apellidoFinal = typeof apellido === 'string' ? apellido.trim() : '';
+        if ((!nombreFinal || !apellidoFinal) && typeof name === 'string' && name.trim()) {
+            const partes = name.trim().split(/\s+/);
+            if (!nombreFinal) nombreFinal = partes.shift() || '';
+            if (!apellidoFinal) apellidoFinal = partes.join(' ');
+        }
+
+        if (!nombreFinal || !email || !password || !role) {
             return res.status(400).json({
                 success: false,
-                message: 'Faltan campos obligatorios (name, email, password, role)'
+                message: 'Faltan campos obligatorios (nombre, email, password, role)'
             });
         }
 
         const validaciones = [];
 
-        if (name.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(name.trim())) {
+        if (nombreFinal.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombreFinal)) {
             validaciones.push('El nombre debe tener al menos 3 caracteres y contener solo letras.');
         }
 
-        if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email.trim())) {
+        if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(String(email).trim())) {
             validaciones.push('El formato del email no es válido.');
         }
 
@@ -396,13 +405,16 @@ export const crearUsuarioAdmin = async (req, res) => {
             validaciones.push('La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula y un número.');
         }
 
-        const rolesPermitidos = ['administrador', 'tutor', 'veterinaria', 'dueno'];
-        if (!rolesPermitidos.includes(role)) {
-            validaciones.push(`El rol debe ser uno de los siguientes: ${rolesPermitidos.join(', ')}.`);
+        // El rol se valida contra la tabla rol (no hay códigos hardcodeados)
+        const rolDb = await prisma.rol.findUnique({
+            where: { nombre: String(role).trim() }
+        });
+        if (!rolDb) {
+            validaciones.push('El rol enviado no existe en el sistema.');
         }
 
-        if (telefono !== undefined && telefono !== null && telefono.trim() !== '') {
-            if (!/^[\d\s()+-]{6,20}$/.test(telefono.trim())) {
+        if (telefono !== undefined && telefono !== null && String(telefono).trim() !== '') {
+            if (!/^[\d\s()+-]{6,20}$/.test(String(telefono).trim())) {
                 validaciones.push('El teléfono debe contener solo números, espacios, +, - o paréntesis (6 a 20 caracteres).');
             }
         }
@@ -415,7 +427,11 @@ export const crearUsuarioAdmin = async (req, res) => {
             });
         }
 
-        const existingUser = await User.findOne({ email });
+        const emailNormalizado = String(email).toLowerCase().trim();
+
+        const existingUser = await prisma.usuario.findUnique({
+            where: { email: emailNormalizado }
+        });
         if (existingUser) {
             return res.status(409).json({
                 success: false,
@@ -426,30 +442,60 @@ export const crearUsuarioAdmin = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const newUser = new User({
-            name: name.trim(),
-            email: email.toLowerCase().trim(),
-            password: hashedPassword,
-            role,
-            telefono: telefono ? telefono.trim() : undefined,
-            active: true,
-            historialSesiones: []
+        const tokenVerificacion = crypto.randomBytes(32).toString('hex');
+        const tokenVerificacionHash = hashToken(tokenVerificacion);
+
+        const nuevoUsuario = await prisma.$transaction(async (tx) => {
+            const usuario = await tx.usuario.create({
+                data: {
+                    nombre: nombreFinal,
+                    apellido: apellidoFinal,
+                    email: emailNormalizado,
+                    rol_id: rolDb.rol_id,
+                    telefono: telefono ? String(telefono).trim() : null,
+                    active: true,
+                    verificado: false
+                }
+            });
+
+            await tx.usuario_password.create({
+                data: {
+                    usuario_id: usuario.usuario_id,
+                    password_hash: hashedPassword,
+                    token_verificacion: tokenVerificacionHash,
+                    token_verificacion_expires: new Date(Date.now() + VERIFICACION_TOKEN_EXPIRATION_MS)
+                }
+            });
+
+            return usuario;
         });
 
-        await newUser.save();
-
-        const userResponse = newUser.toObject();
-        delete userResponse.password;
-        delete userResponse.resetPasswordToken;
-        delete userResponse.resetPasswordExpires;
+        try {
+            await sendVerificationEmail(nuevoUsuario.email, tokenVerificacion, nuevoUsuario.nombre);
+        } catch (mailError) {
+            console.error('Error al enviar el email de verificación:', mailError);
+        }
 
         return res.status(201).json({
             success: true,
             message: 'Usuario creado exitosamente por el administrador',
-            data: userResponse
+            data: {
+                usuario_id: nuevoUsuario.usuario_id,
+                nombre: nuevoUsuario.nombre,
+                apellido: nuevoUsuario.apellido,
+                email: nuevoUsuario.email,
+                rol: rolDb.nombre,
+                active: nuevoUsuario.active
+            }
         });
 
     } catch (error) {
+        if (error.code === 'P2002') {
+            return res.status(409).json({
+                success: false,
+                message: 'El email ya se encuentra registrado en el sistema'
+            });
+        }
         console.error('Error en crearUsuarioAdmin:', error);
         return res.status(500).json({
             success: false,
@@ -484,6 +530,8 @@ export const darDeBajaUsuario = async (req, res) => {
             where: { usuario_id: id },
             data: { active: false }
         });
+
+        invalidarUsuarioCache(usuarioActualizado.usuario_id);
 
         // Aviso por email al usuario suspendido (no debe bloquear la baja si falla)
         try {
@@ -555,7 +603,7 @@ export const actualizarUsuarioAdmin = async (req, res) => {
             where: { usuario_id: id },
             data: { active }
         });
-
+        invalidarUsuarioCache(usuarioActualizado.usuario_id);
        
         try {
             const nombreCompleto = `${usuarioActualizado.nombre} ${usuarioActualizado.apellido}`.trim();

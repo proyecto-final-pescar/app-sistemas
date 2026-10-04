@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
+import { FileText } from "lucide-react";
 import Sidebar from "../../../components/layout/Sidebar.jsx";
 import TopBar from "../../../components/layout/TopBar.jsx";
 import RechazarVetModal from "../../../components/administrador/rechazarVetModal/rechazarVetModal.jsx";
 import ConfirmModal from "../../../components/ui/confirm-modal/ConfirmModal.jsx";
 import VeterinariaDetalleModal from "../../../components/administrador/detallesDeVetModal/VeterinariaDetalleModal.jsx";
+import Button from "../../../components/ui/button/Button.jsx";
+
 import {
   getVeterinariasAdmin,
   aprobarVeterinariaAdmin,
@@ -22,6 +25,41 @@ const formatServicios = (servicios = []) => {
   return restantes > 0
     ? `${visibles.join(", ")} +${restantes} más`
     : visibles.join(", ");
+};
+
+const IconoDocumento = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <polyline points="10 9 9 9 8 9" />
+  </svg>
+);
+
+// Fuera del render a propósito: definida adentro se recreaba en cada
+// render y perdía estado. Es pura (solo props + styles del módulo).
+const Paginacion = ({ pagina, total, onChange }) => {
+  if (total <= 1) return null;
+  return (
+    <div className={styles.paginacion}>
+      <button className={styles.paginaBtn} onClick={() => onChange(pagina - 1)} disabled={pagina === 1}>
+        ← Anterior
+      </button>
+      {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
+        <button
+          key={n}
+          className={`${styles.paginaBtn} ${pagina === n ? styles.paginaBtnActiva : ""}`}
+          onClick={() => onChange(n)}
+        >
+          {n}
+        </button>
+      ))}
+      <button className={styles.paginaBtn} onClick={() => onChange(pagina + 1)} disabled={pagina === total}>
+        Siguiente →
+      </button>
+    </div>
+  );
 };
 
 const GestionVeterinarias = () => {
@@ -61,11 +99,11 @@ const GestionVeterinarias = () => {
   }, []);
 
   const listaFiltrada = veterinarias.filter((v) =>
-    v.nombre.toLowerCase().includes(busqueda.toLowerCase())
+    (v.nombre ?? "").toLowerCase().includes(busqueda.toLowerCase())
   );
 
   const pendientesFiltrados = pendientes.filter((v) =>
-    v.nombre.toLowerCase().includes(busqueda.toLowerCase())
+    (v.nombre ?? "").toLowerCase().includes(busqueda.toLowerCase())
   );
 
   const paginar = (lista, pagina) => {
@@ -84,7 +122,6 @@ const GestionVeterinarias = () => {
     setPaginaPendientes(1);
   };
 
-  // Abre el modal de confirmación de aprobación
   const abrirModalAprobacion = (vet) => {
     setVetAAprobar({ id: vet._id, nombre: vet.nombre });
   };
@@ -113,7 +150,6 @@ const GestionVeterinarias = () => {
     }
   };
 
-  // Abre el modal de rechazo
   const abrirModalRechazo = (vet) => {
     setVetARechazar({ id: vet._id, nombre: vet.nombre });
   };
@@ -125,7 +161,6 @@ const GestionVeterinarias = () => {
     setPendientes((prev) => prev.filter((v) => v._id !== vetARechazar.id));
   };
 
-  // Abre el modal de confirmación para activar/suspender una veterinaria
   const abrirModalCambioEstado = (vet) => {
     const estadoNuevo = vet.estado === "activa" ? "suspendida" : "activa";
     setVetACambiarEstado({
@@ -137,7 +172,7 @@ const GestionVeterinarias = () => {
   };
 
   const cerrarModalCambioEstado = () => {
-    if (isCambiandoEstado) return; // evita cerrar mientras hay una request en curso
+    if (isCambiandoEstado) return;
     setVetACambiarEstado(null);
   };
 
@@ -160,43 +195,8 @@ const GestionVeterinarias = () => {
     }
   };
 
-  // Abre el modal de detalle del registro (datos, horarios, servicios y
-  // profesionales cargados por la veterinaria)
   const abrirModalDetalle = (vet) => setVetIdDetalle(vet._id);
   const cerrarModalDetalle = () => setVetIdDetalle(null);
-
-  const IconoDocumento = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="16" y1="13" x2="8" y2="13" />
-      <line x1="16" y1="17" x2="8" y2="17" />
-      <polyline points="10 9 9 9 8 9" />
-    </svg>
-  );
-
-  const Paginacion = ({ pagina, total, onChange }) => {
-    if (total <= 1) return null;
-    return (
-      <div className={styles.paginacion}>
-        <button className={styles.paginaBtn} onClick={() => onChange(pagina - 1)} disabled={pagina === 1}>
-          ← Anterior
-        </button>
-        {Array.from({ length: total }, (_, i) => i + 1).map((n) => (
-          <button
-            key={n}
-            className={`${styles.paginaBtn} ${pagina === n ? styles.paginaBtnActiva : ""}`}
-            onClick={() => onChange(n)}
-          >
-            {n}
-          </button>
-        ))}
-        <button className={styles.paginaBtn} onClick={() => onChange(pagina + 1)} disabled={pagina === total}>
-          Siguiente →
-        </button>
-      </div>
-    );
-  };
 
   return (
     <div className={styles.layout}>
@@ -293,10 +293,15 @@ const GestionVeterinarias = () => {
                   listaVisible.map((vet) => (
                     <div key={vet._id} className={styles.card}>
                       <div className={styles.cardHeader}>
-                        <button
-                          className={`${styles.toggle} ${vet.estado === "activa" ? styles.toggleOn : styles.toggleOff}`}
-                          onClick={() => abrirModalCambioEstado(vet)}
-                        />
+                        <div className={styles.estadoWrapper}>
+                          <button
+                            className={`${styles.toggle} ${vet.estado === "activa" ? styles.toggleOn : styles.toggleOff}`}
+                            onClick={() => abrirModalCambioEstado(vet)}
+                          />
+                          <span className={styles.estadoLabel}>
+                            Estado: <strong>{vet.estado === "activa" ? "Activa" : "Suspendida"}</strong>
+                          </span>
+                        </div>
                       </div>
                       <p className={styles.cardNombre}>{vet.nombre}</p>
                       <p className={styles.cardInfo}>{vet.email}</p>
@@ -314,13 +319,16 @@ const GestionVeterinarias = () => {
                           )}
                         </div>
                       )}
-                      <button
-                        className={styles.btnIcono}
-                        title="Ver datos del registro"
-                        onClick={() => abrirModalDetalle(vet)}
-                      >
-                        <IconoDocumento />
-                      </button>
+                      
+                      <div className={styles.cardFooter}>
+                        <Button
+                          texto="Ver datos del registro"
+                          variante="ver-ficha"
+                          tamaño="mediano"
+                          icon={FileText}
+                          onClick={() => abrirModalDetalle(vet)}
+                        />
+                      </div>
                     </div>
                   ))
                 )}
@@ -396,16 +404,29 @@ const GestionVeterinarias = () => {
                       <p className={styles.cardInfo}>{vet.telefono}</p>
                       <p className={styles.cardInfo}>{vet.direccion}</p>
                       <p className={styles.cardInfo}>CUIT: {vet.cuit}</p>
-                      <div className={styles.cardAcciones}>
-                        <button
-                          className={styles.btnIcono}
-                          title="Ver datos del registro"
+                      
+                      <div className={styles.cardAccionesColumnas}>
+                        <Button
+                          texto="Ver datos del registro"
+                          variante="ver-ficha"
+                          tamaño="mediano"
+                          icon={FileText}
                           onClick={() => abrirModalDetalle(vet)}
-                        >
-                          <IconoDocumento />
-                        </button>
-                        <button className={styles.btnAprobar} onClick={() => abrirModalAprobacion(vet)}>Aprobar</button>
-                        <button className={styles.btnRechazar} onClick={() => abrirModalRechazo(vet)}>Rechazar</button>
+                        />
+                        <div className={styles.cardAccionesFila}>
+                          <Button 
+                            texto="Rechazar" 
+                            variante="peligro-borde" 
+                            tamaño="mediano" 
+                            onClick={() => abrirModalRechazo(vet)} 
+                          />
+                          <Button 
+                            texto="Aprobar" 
+                            variante="primario" 
+                            tamaño="mediano" 
+                            onClick={() => abrirModalAprobacion(vet)} 
+                          />
+                        </div>
                       </div>
                     </div>
                   ))

@@ -6,12 +6,20 @@ import TopBar from "../../../components/layout/TopBar";
 import VetCard from "../../../components/veterinarias/VetCard";
 import api from "../../../services/api";
 import styles from "./Emergencias.module.css";
+import { useCategoriasServicio } from "../../../hooks/useCategoriasServicio";
 
 const BUENOS_AIRES = { lat: -34.6037, lng: -58.3816 };
 const DIAS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
-const ESPECIALIDADES = ["Todas", "Clínica General", "Cirugía", "Dermatología", "Cardiología", "Laboratorio", "Internación","Vacunación"];
+
 const RADIOS = [1, 5, 10];
 const RADIO_MAXIMO_AMPLIADO = 50000;
+
+const normalizarTexto = (texto = "") =>
+  texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
 
 // Controlador de cámara para el mapa
 const MapController = ({ center }) => {
@@ -76,6 +84,10 @@ const IconRoute = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="n
 
 const Emergencias = () => {
   const navigate = useNavigate();
+  const {
+  categorias,
+  loading: loadingCategorias,
+} = useCategoriasServicio();
 
   const [miUbicacion, setMiUbicacion]       = useState(BUENOS_AIRES);
   const [geoAceptada, setGeoAceptada]       = useState(false);
@@ -160,18 +172,21 @@ const Emergencias = () => {
   useEffect(() => {
     if (!coordsRef.current) return;
     buscarVeterinarias(coordsRef.current.lat, coordsRef.current.lng);
-  }, [radioKm]); 
+  }, [radioKm]);
 
   const veterinariasFiltradas = veterinarias
     .filter((v) =>
       filtroEsp === "Todas" ||
-      v.especialidades?.some((esp) => esp.toLowerCase() === filtroEsp.toLowerCase())
+      v.servicios?.some(
+  (servicio) =>
+    normalizarTexto(servicio) === normalizarTexto(filtroEsp)
+)
     )
     .filter((v) => !solo24hs || v.urgencias24hs)
     .filter((v) =>
       busqueda.trim() === "" ||
-      v.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      v.direccion.toLowerCase().includes(busqueda.toLowerCase())
+      (v.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ?? false) ||
+      (v.direccion?.toLowerCase().includes(busqueda.toLowerCase()) ?? false)
     );
 
   const abiertas = veterinariasFiltradas.filter(estaAbierta).length;
@@ -411,9 +426,22 @@ const Emergencias = () => {
                 <button className={`${styles.btnFiltros} ${solo24hs ? styles.btnFiltrosActivo : ""}`} onClick={() => setSolo24hs((v) => !v)}>
                   <IconAlert /> 24hs
                 </button>
-                <select value={filtroEsp} onChange={(e) => setFiltroEsp(e.target.value)} className={styles.select}>
-                  {ESPECIALIDADES.map((e) => (<option key={e} value={e}>{e}</option>))}
-                </select>
+                  <select
+                      value={filtroEsp}
+                      onChange={(e) => setFiltroEsp(e.target.value)}
+                      className={styles.select}
+                      disabled={loadingCategorias}
+                    >
+                      <option value="Todas">
+                        {loadingCategorias ? "Cargando..." : "Todas"}
+                      </option>
+
+                      {categorias.map((categoria) => (
+                        <option key={categoria.id} value={categoria.nombre}>
+                          {categoria.nombre}
+                        </option>
+                      ))}
+                    </select>
                 <select value={radioKm} onChange={handleRadioChange} className={styles.select}>
                   {RADIOS.map((r) => (<option key={r} value={r}>{r} km</option>))}
                 </select>
@@ -437,13 +465,20 @@ const Emergencias = () => {
                   <div className={styles.lista}>
                     {veterinariasFiltradas.map((vet) => {
                       const pos = getPosition(vet);
+                      // Se prefiere la distancia de PostGIS que ya trae el backend;
+                      // el cálculo local queda solo como respaldo.
+                      const distanciaKm =
+                        vet.distanciaMetros != null &&
+                        Number.isFinite(Number(vet.distanciaMetros))
+                          ? (Number(vet.distanciaMetros) / 1000).toFixed(1)
+                          : calcularDistancia(miUbicacion.lat, miUbicacion.lng, pos.lat, pos.lng);
                       return (
                         <VetCard
                           key={vet._id}
                           vet={vet}
                           activa={vetDestacada === vet._id}
                           abierta={estaAbierta(vet)}
-                          distancia={calcularDistancia(miUbicacion.lat, miUbicacion.lng, pos.lat, pos.lng)}
+                          distancia={distanciaKm}
                           onClick={() => handleCardClick(vet)}
                           onVerDetalle={() => irAlPerfil(vet._id)}
                         />

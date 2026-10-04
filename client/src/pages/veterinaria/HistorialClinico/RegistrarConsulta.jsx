@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 
 import api from "../../../services/api.js";
@@ -47,27 +47,47 @@ function convertirFechaParaInput(fecha) {
   return fechaConvertida.toISOString().slice(0, 10);
 }
 
-function obtenerId(valor) {
-  if (!valor) return "";
-
-  if (typeof valor === "string") {
-    return valor;
-  }
-
-  return valor._id || valor.id || "";
+function obtenerFechaDeTurno(fecha) {
+  if (!fecha) return "";
+  return String(fecha).slice(0, 10);
 }
 
-function obtenerNombrePersona(persona) {
-  if (!persona || typeof persona !== "object") {
-    return "";
-  }
-
+function IconoAgenda() {
   return (
-    persona.nombreCompleto ||
-    persona.nombre ||
-    persona.apellido ||
-    persona.email ||
-    ""
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
+  );
+}
+
+function IconoFicha() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6" />
+      <path d="M12 12v6M9 15h6" />
+    </svg>
   );
 }
 
@@ -76,7 +96,9 @@ function RegistrarConsulta() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const origenFicha = location.state?.origen === "ficha" && location.state?.mascotaId;
+  const origenFicha = Boolean(
+    location.state?.origen === "ficha" && location.state?.mascotaId
+  );
   const rutaVolver = origenFicha ? `/pacientes/${location.state.mascotaId}` : "/agenda";
   const textoVolver = origenFicha ? "← Volver al historial clínico" : "← Volver a la agenda";
 
@@ -85,6 +107,10 @@ function RegistrarConsulta() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingTurno, setIsLoadingTurno] = useState(true);
 
+  // A dónde se va después de registrar la consulta ("agenda" | "ficha").
+  // Si se llegó desde la ficha del paciente, arranca en "ficha"; si no, en "agenda".
+  const [destino, setDestino] = useState(origenFicha ? "ficha" : "agenda");
+
   const [errorApi, setErrorApi] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -92,6 +118,9 @@ function RegistrarConsulta() {
 
   const [form, setForm] = useState(estadoInicialFormulario);
   const [errores, setErrores] = useState({});
+
+  const alertasRef = useRef(null);
+  const redireccionRef = useRef(null);
 
   useEffect(() => {
     const obtenerTurno = async () => {
@@ -136,7 +165,7 @@ function RegistrarConsulta() {
           sexo: mascota?.sexo_mascota?.nombre || "",
           peso: mascota?.peso != null ? String(mascota.peso) : "",
           profesionalId: turno.profesional_id || "",
-          fecha: convertirFechaParaInput(turno.fecha),
+          fecha: obtenerFechaDeTurno(turno.fecha),
           hora: turno.hora_inicio || "",
           categoriaServicio: turno.servicio?.categoria_servicio?.nombre || "Consulta",
           motivoConsulta: turno.motivo || "",
@@ -164,6 +193,19 @@ function RegistrarConsulta() {
 
     obtenerTurno();
   }, [turnoId]);
+
+  // Si el componente se desmonta antes de la redirección, se cancela el timeout.
+  useEffect(() => {
+    return () => clearTimeout(redireccionRef.current);
+  }, []);
+
+  // Los avisos están arriba del formulario: si aparece uno mientras la persona
+  // está abajo (botón de registrar), se lleva la vista hasta el aviso.
+  useEffect(() => {
+    if ((errorApi || successMessage) && alertasRef.current) {
+      alertasRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [errorApi, successMessage]);
 
   function actualizarCampo(campo, valor) {
     setForm((formAnterior) => ({
@@ -255,21 +297,14 @@ function RegistrarConsulta() {
     return Object.keys(nuevosErrores).length === 0;
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  // Valida, registra la consulta y redirige según el destino elegido:
+  //  - "agenda": vuelve a /agenda
+  //  - "ficha":  va a la ficha médica de la mascota
+  async function procesarRegistro() {
+    if (isLoading) return;
 
     setErrorApi("");
     setSuccessMessage("");
-
-    if (pasoActual === 1) {
-      if (!validarPasoUno()) {
-        return;
-      }
-
-      setErrores({});
-      setPasoActual(2);
-      return;
-    }
 
     if (!validarPasoDos()) {
       return;
@@ -292,14 +327,22 @@ function RegistrarConsulta() {
     try {
       await api.post("/historial-clinico", body);
 
-      setSuccessMessage("Consulta registrada correctamente.");
+      setSuccessMessage(
+        destino === "ficha"
+          ? "Consulta registrada correctamente. Te llevamos a la ficha médica..."
+          : "Consulta registrada correctamente. Volvemos a la agenda..."
+      );
       setErrores({});
 
-      // Redirige solo cuando el registro fue exitoso (antes esto estaba
-      // en el catch por error y mandaba al usuario a /agenda incluso
-      // cuando la consulta NO se había podido registrar).
-      // El destino depende de donde vino el usuario
-      setTimeout(() => navigate(rutaVolver), 1500);
+      redireccionRef.current = setTimeout(() => {
+        if (destino === "ficha") {
+          navigate(`/pacientes/${form.mascotaId}`, {
+            state: { tabActiva: "ficha-medica" },
+          });
+        } else {
+          navigate("/agenda");
+        }
+      }, 1500);
     } catch (error) {
       console.error("Error al registrar la consulta:", error);
 
@@ -311,6 +354,53 @@ function RegistrarConsulta() {
       setIsLoading(false);
     }
   }
+
+  // Un solo submit para los dos pasos:
+  //  - paso 1: valida y avanza al paso 2
+  //  - paso 2: registra la consulta y redirige según el destino elegido
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    if (pasoActual === 1) {
+      setErrorApi("");
+      setSuccessMessage("");
+
+      if (!validarPasoUno()) {
+        return;
+      }
+
+      setErrores({});
+      setPasoActual(2);
+      return;
+    }
+
+    procesarRegistro();
+  }
+
+  const bloqueado = isLoading || Boolean(successMessage);
+
+  const opcionesDestino = [
+    {
+      valor: "agenda",
+      titulo: "Ir a la agenda",
+      descripcion: "Volvés a los turnos para seguir con el próximo paciente.",
+      icono: <IconoAgenda />,
+    },
+    {
+      valor: "ficha",
+      titulo: "Ir a la ficha médica",
+      descripcion: `Seguís cargando vacunas, estudios y datos de ${
+        form.nombreMascota || "la mascota"
+      }.`,
+      icono: <IconoFicha />,
+    },
+  ];
+
+  const textoRegistrar = isLoading
+    ? "Registrando..."
+    : destino === "ficha"
+      ? "Registrar e ir a la ficha médica"
+      : "Registrar e ir a la agenda";
 
   if (isLoadingTurno) {
     return (
@@ -376,17 +466,25 @@ function RegistrarConsulta() {
               </p>
             </div>
 
-            {errorApi && (
-              <div className="registrar-consulta-alert registrar-consulta-alert-error">
-                {errorApi}
-              </div>
-            )}
+            <div ref={alertasRef} className="registrar-consulta-alertas">
+              {errorApi && (
+                <div
+                  role="alert"
+                  className="registrar-consulta-alert registrar-consulta-alert-error"
+                >
+                  {errorApi}
+                </div>
+              )}
 
-            {successMessage && (
-              <div className="registrar-consulta-alert registrar-consulta-alert-success">
-                {successMessage}
-              </div>
-            )}
+              {successMessage && (
+                <div
+                  role="status"
+                  className="registrar-consulta-alert registrar-consulta-alert-success"
+                >
+                  {successMessage}
+                </div>
+              )}
+            </div>
 
             <form
               onSubmit={handleSubmit}
@@ -549,11 +647,15 @@ function RegistrarConsulta() {
                     </div>
 
                     <div className="registrar-consulta-textarea-wrapper">
-                      <label className="registrar-consulta-label">
+                      <label
+                        htmlFor="registrar-consulta-anotaciones"
+                        className="registrar-consulta-label"
+                      >
                         Anotaciones
                       </label>
 
                       <textarea
+                        id="registrar-consulta-anotaciones"
                         className={`registrar-consulta-textarea ${errores.anotaciones
                           ? "registrar-consulta-textarea-error"
                           : ""
@@ -575,13 +677,70 @@ function RegistrarConsulta() {
                       )}
                     </div>
                   </div>
+
+                  <div className="registrar-consulta-section">
+                    <h2
+                      id="registrar-consulta-destino-titulo"
+                      className="registrar-consulta-section-title"
+                    >
+                      Después de registrar
+                    </h2>
+
+                    <p className="registrar-consulta-section-ayuda">
+                      Elegí a dónde querés ir una vez guardada la consulta.
+                    </p>
+
+                    <div
+                      role="radiogroup"
+                      aria-labelledby="registrar-consulta-destino-titulo"
+                      className="registrar-consulta-destino-opciones"
+                    >
+                      {opcionesDestino.map((opcion) => (
+                        <label
+                          key={opcion.valor}
+                          className="registrar-consulta-destino-opcion"
+                        >
+                          <input
+                            type="radio"
+                            name="destino"
+                            value={opcion.valor}
+                            checked={destino === opcion.valor}
+                            onChange={() => setDestino(opcion.valor)}
+                            disabled={bloqueado}
+                            className="registrar-consulta-destino-input"
+                          />
+
+                          <span className="registrar-consulta-destino-card">
+                            <span className="registrar-consulta-destino-icono">
+                              {opcion.icono}
+                            </span>
+
+                            <span className="registrar-consulta-destino-textos">
+                              <span className="registrar-consulta-destino-titulo">
+                                {opcion.titulo}
+                              </span>
+                              <span className="registrar-consulta-destino-desc">
+                                {opcion.descripcion}
+                              </span>
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </>
               )}
 
-              <div className="registrar-consulta-actions">
-                {pasoActual === 2 &&
-                  !successMessage && (
+              {!successMessage && (
+                <div
+                  className={`registrar-consulta-actions ${pasoActual === 2
+                    ? "registrar-consulta-actions-paso-2"
+                    : ""
+                    }`}
+                >
+                  {pasoActual === 2 && (
                     <Button
+                      key="paso-anterior"
                       type="button"
                       texto="← Paso anterior"
                       variante="secundario"
@@ -594,27 +753,38 @@ function RegistrarConsulta() {
                     />
                   )}
 
-                {!successMessage && (
-                  <Button
-                    type="submit"
-                    texto={
-                      isLoading
-                        ? "Registrando..."
-                        : pasoActual === 1
-                          ? "Continuar →"
-                          : "Registrar consulta"
-                    }
-                    variante="primario"
-                    tamaño="mediano"
-                    disabled={
-                      isLoading ||
-                      isLoadingTurno ||
-                      !form.mascotaId ||
-                      !form.profesionalId
-                    }
-                  />
-                )}
-              </div>
+                  {pasoActual === 1 && (
+                    <Button
+                      key="continuar"
+                      type="submit"
+                      texto="Continuar →"
+                      variante="primario"
+                      tamaño="mediano"
+                      disabled={
+                        isLoading ||
+                        isLoadingTurno ||
+                        !form.mascotaId ||
+                        !form.profesionalId
+                      }
+                    />
+                  )}
+
+                  {pasoActual === 2 && (
+                    <Button
+                      key="registrar"
+                      type="submit"
+                      texto={textoRegistrar}
+                      variante="primario"
+                      tamaño="mediano"
+                      disabled={
+                        isLoading ||
+                        !form.mascotaId ||
+                        !form.profesionalId
+                      }
+                    />
+                  )}
+                </div>
+              )}
             </form>
           </div>
         </main>

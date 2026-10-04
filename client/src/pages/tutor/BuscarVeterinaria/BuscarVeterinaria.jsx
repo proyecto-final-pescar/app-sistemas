@@ -1,26 +1,26 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Sidebar from "../../../components/layout/Sidebar";
 import TopBar from "../../../components/layout/TopBar";
 import PanelDestacado from "../../../components/ui/panel-destacado/PanelDestacado";
+import Button from "../../../components/ui/button/Button";
 import VetCard from "../../../components/veterinarias/VetCard";
 import {
-  getAllVeterinarias,
+  obtenerVeterinariasPaginadas,
   buscarVeterinariasCercanas,
 } from "../../../services/veterinariaService";
 import { calcularEstadoApertura } from "../../../utils/Horarios";
+import { useCategoriasServicio } from "../../../hooks/useCategoriasServicio";
 import styles from "../../../pages/tutor/HomeTutor/HomeTutor.module.css";
 
 const RADIO_DEFAULT_METROS = 5000;
+const VETERINARIAS_POR_PAGINA = 12;
 
-const FILTROS = ["Emergencias", "Vacunación", "Cerca mío"];
+const FILTROS_ESPECIALES = ["Emergencias", "Cerca mío"];
 
-function matchFiltro(vet, filtro) {
-  if (!filtro) return true;
-  if (filtro === "Emergencias") return !!vet.urgencias24hs;
-  if (filtro === "Vacunación") return !!vet.especialidades?.includes("Vacunación");
-  return true;
-}
+// Nota: los filtros de texto, urgencias y categoría los aplica el servidor
+// (params q, urgencias y categoria=VAC). Acá solo se filtra en cliente el
+// modo "Cerca mío", que usa el endpoint geográfico sin esos params.
 
 function matchTexto(vet, q) {
   if (!q) return true;
@@ -40,41 +40,93 @@ const BuscarVeterinaria = () => {
 
   const [inputValue, setInputValue] = useState(query);
 
+  // Chips de categoría desde el catálogo (misma fuente que el registro).
+  // Cada chip manda el código (id) al backend, no el nombre.
+  const { categorias } = useCategoriasServicio();
+  const chips = useMemo(
+    () => ["Emergencias", ...categorias.map((c) => c.nombre), "Cerca mío"],
+    [categorias]
+  );
+  // Código de la categoría del filtro activo (undefined = sin filtro o
+  // filtro especial). Memoizado para que cargarListado siempre vea el
+  // valor vigente cuando el catálogo termina de cargar.
+  const codigoCategoriaFiltro = useMemo(
+    () =>
+      !FILTROS_ESPECIALES.includes(filtro) && filtro
+        ? categorias.find((c) => c.nombre === filtro)?.id
+        : undefined,
+    [categorias, filtro]
+  );
+
   const [veterinarias, setVeterinarias] = useState([]);
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
   const [cercanas, setCercanas] = useState(null);
 
   const [loading, setLoading] = useState(false);
+  const [cargandoMas, setCargandoMas] = useState(false);
   const [error, setError] = useState(null);
+
+  // Descarta respuestas viejas si el usuario cambia de filtro o búsqueda
+  // mientras todavía hay un pedido en vuelo.
+  const pedidoActual = useRef(0);
 
   useEffect(() => {
     setInputValue(query);
   }, [query]);
 
-  const cargarListado = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await getAllVeterinarias();
-    
-      const lista = Array.isArray(res) ? res : res?.data ?? [];
-      setVeterinarias(lista);
-    } catch (err) {
-      console.error("Error al obtener veterinarias:", err);
-      const status = err?.response?.status;
-      const mensajeBackend = err?.response?.data?.error || err?.response?.data?.message;
+  const cargarListado = useCallback(
+    async (paginaACargar = 1) => {
+      const pedido = ++pedidoActual.current;
+      const esPrimeraPagina = paginaACargar === 1;
 
-      if (status === 401) {
-        setError(mensajeBackend || "Tu sesión expiró. Te estamos llevando al login…");
-        setTimeout(() => navigate("/login"), 1500);
-      } else {
-        setError(mensajeBackend || "No pudimos cargar las veterinarias. Intentá nuevamente.");
+      try {
+        if (esPrimeraPagina) setLoading(true);
+        else setCargandoMas(true);
+        setError(null);
+
+        const data = await obtenerVeterinariasPaginadas({
+          q: query,
+          categoria: codigoCategoriaFiltro,
+          urgencias: filtro === "Emergencias",
+          page: paginaACargar,
+          limit: VETERINARIAS_POR_PAGINA,
+        });
+
+        if (pedido !== pedidoActual.current) return;
+
+        setVeterinarias((previas) =>
+          esPrimeraPagina ? data.veterinarias : [...previas, ...data.veterinarias]
+        );
+        setPagina(data.page);
+        setTotalPaginas(data.totalPaginas);
+      } catch (err) {
+        if (pedido !== pedidoActual.current) return;
+
+        console.error("Error al obtener veterinarias:", err);
+        const status = err?.response?.status;
+        const mensajeBackend = err?.response?.data?.error || err?.response?.data?.message;
+
+        if (status === 401) {
+          setError(mensajeBackend || "Tu sesión expiró. Te estamos llevando al login…");
+          setTimeout(() => navigate("/login"), 1500);
+        } else {
+          setError(mensajeBackend || "No pudimos cargar las veterinarias. Intentá nuevamente.");
+        }
+      } finally {
+        if (pedido === pedidoActual.current) {
+          setLoading(false);
+          setCargandoMas(false);
+        }
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [navigate]);
+    },
+    [navigate, query, filtro, codigoCategoriaFiltro]
+  );
 
   const buscarCercanas = useCallback(async () => {
+    // Invalida cualquier pedido del listado general que siga en vuelo
+    pedidoActual.current += 1;
+
     if (!("geolocation" in navigator)) {
       setError("Tu navegador no soporta geolocalización.");
       setCercanas([]);
@@ -116,20 +168,23 @@ const BuscarVeterinaria = () => {
     );
   }, []);
 
+  // Cada cambio de búsqueda o de chip vuelve a pedir la primera página
   useEffect(() => {
     if (filtro === "Cerca mío") {
       buscarCercanas();
     } else {
-      cargarListado();
+      cargarListado(1);
     }
-  }, [filtro, buscarCercanas, cargarListado]);
+  }, [filtro, query, buscarCercanas, cargarListado]);
 
   const resultados = useMemo(() => {
     if (filtro === "Cerca mío") {
       return (cercanas ?? []).filter((v) => matchTexto(v, query));
     }
-    return veterinarias.filter((v) => matchTexto(v, query) && matchFiltro(v, filtro));
+    return veterinarias;
   }, [filtro, cercanas, veterinarias, query]);
+
+  const hayMasPaginas = filtro !== "Cerca mío" && pagina < totalPaginas;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -179,7 +234,7 @@ const BuscarVeterinaria = () => {
             </form>
 
             <div className={styles.chips}>
-              {FILTROS.map((f) => (
+              {chips.map((f) => (
                 <button
                   key={f}
                   type="button"
@@ -210,7 +265,7 @@ const BuscarVeterinaria = () => {
             ) : (
               <div className={styles.listaResultados}>
                 {resultados.map((vet) => {
-                
+
                   const { abierta, horaCierre } = calcularEstadoApertura(vet);
                   return (
                     <VetCard
@@ -222,6 +277,19 @@ const BuscarVeterinaria = () => {
                     />
                   );
                 })}
+              </div>
+            )}
+
+            {!loading && hayMasPaginas && (
+              <div className={styles.verMas}>
+                <Button
+                  type="button"
+                  texto={cargandoMas ? "Cargando..." : "Ver más"}
+                  variante="secundario"
+                  tamaño="chico"
+                  disabled={cargandoMas}
+                  onClick={() => cargarListado(pagina + 1)}
+                />
               </div>
             )}
           </section>

@@ -5,6 +5,15 @@ const formatearHora = (hora) => {
   return hora.toISOString().slice(11, 16)
 }
 
+const FORMATO_FECHA = /^\d{4}-\d{2}-\d{2}$/
+
+// Convierte "YYYY-MM-DD" a medianoche UTC. Devuelve null si no es válida.
+const parsearFechaSinHora = (fecha) => {
+  if (typeof fecha !== 'string' || !FORMATO_FECHA.test(fecha.trim())) return null
+  const parseada = new Date(`${fecha.trim()}T00:00:00.000Z`)
+  return Number.isNaN(parseada.getTime()) ? null : parseada
+}
+
 const isValidUUID = (id) => {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
 }
@@ -143,10 +152,9 @@ export const crearConsulta = async (req, res) => {
       return res.status(400).json({ message: 'La fecha del turno es requerida' })
     }
 
-    const fechaValida = new Date(fecha)
-
-    if (Number.isNaN(fechaValida.getTime())) {
-      return res.status(400).json({ message: 'La fecha ingresada no es válida' })
+    // La fecha que se guarda es la del turno; acá solo se valida el formato.
+    if (!parsearFechaSinHora(fecha)) {
+      return res.status(400).json({ message: 'La fecha debe tener formato YYYY-MM-DD' })
     }
 
     if (!hora || typeof hora !== 'string') {
@@ -241,6 +249,7 @@ export const crearConsulta = async (req, res) => {
         mascota_id: true,
         veterinaria_id: true,
         profesional_id: true,
+        fecha: true,
         estado_turno: { select: { nombre: true } },
         consulta: { select: { consulta_id: true } }
       }
@@ -275,7 +284,7 @@ export const crearConsulta = async (req, res) => {
           profesional_id: profesionalId,
           veterinaria_id: veterinaria.veterinaria_id,
           turno_id: turnoId,
-          fecha: fechaValida,
+          fecha: turno.fecha,
           hora: horaBD,
           categoria_servicio_id: categoria.categoria_servicio_id,
           motivo_consulta: motivoConsulta.trim(),
@@ -333,9 +342,9 @@ export const actualizarConsulta = async (req, res) => {
     const dataActualizar = {}
 
     if (fecha !== undefined) {
-      const fechaValida = new Date(fecha)
-      if (Number.isNaN(fechaValida.getTime())) {
-        return res.status(400).json({ success: false, message: 'La fecha no es válida' })
+      const fechaValida = parsearFechaSinHora(fecha)
+      if (!fechaValida) {
+        return res.status(400).json({ success: false, message: 'La fecha debe tener formato YYYY-MM-DD' })
       }
       dataActualizar.fecha = fechaValida
     }
