@@ -796,3 +796,25 @@
     opacity: 0;
   }
 }
+
+.navSemanaTop {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.navContenedor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.mesAnioIndicador {
+  font-size: 13px;
+  color: #8276ab;
+  font-weight: 600;
+  text-transform: capitalize;
+  margin-right: 2px;
+}
