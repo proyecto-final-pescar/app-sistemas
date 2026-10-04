@@ -89,6 +89,12 @@ async function start() {
   
   const shutdown = (signal) => {
     console.log(`[server] ${signal} recibido, cerrando...`);
+    // Corta de entrada los streams abiertos (SSE de notificaciones): si no,
+    // server.close() los espera y el apagado siempre cae en el forzado de 10s.
+    // El front reabre el stream solo, como ante cualquier corte.
+    if (typeof server.closeAllConnections === "function") {
+      server.closeAllConnections();
+    }
     server.close(async () => {
       await disconnectDB();
       process.exit(0);
