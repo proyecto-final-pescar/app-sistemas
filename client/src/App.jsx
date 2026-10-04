@@ -62,144 +62,87 @@ const CargandoPagina = () => (
   </div>
 );
 
-
 function App() {
   return (
     <NotificacionesProvider>
-    <BrowserRouter>
-      <Suspense fallback={<CargandoPagina />}>
-      <Routes>
-      
-        <Route
-          path="/registro-veterinaria"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <RegistroDeVeterinaria />
-            </PrivateRoute>
-          }
-        />
+      <BrowserRouter>
+        <Suspense fallback={<CargandoPagina />}>
+          <Routes>
+            <Route
+              path="/registro-veterinaria"
+              element={
+                <PrivateRoute allowedRoles={["veterinaria"]}>
+                  <RegistroDeVeterinaria />
+                </PrivateRoute>
+              }
+            />
 
-       
-        <Route
-          path="/veterinaria-pendiente"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <SolicitudEnRevision />
-            </PrivateRoute>
-          }
-        />
+            <Route
+              path="/veterinaria-pendiente"
+              element={
+                <PrivateRoute allowedRoles={["veterinaria"]}>
+                  <SolicitudEnRevision />
+                </PrivateRoute>
+              }
+            />
 
-        <Route path="/login" element={<Login />} />
-        <Route path="/registro" element={<Registro />} />
-        <Route path="/register" element={<Registro />} />
-        <Route path="/completar-registro-google" element={<CompletarRegistroGoogle />} />
-        <Route path="/tutor/historial-medico/:mascotaId" element={<PrivateRoute allowedRoles={["dueno"]}><HistorialIndividual /></PrivateRoute>} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/verificar-cuenta" element={<VerificarCuenta />} />
-        <Route path="/home" element={<PrivateRoute allowedRoles={["dueno"]}><HomeTutor /></PrivateRoute>} />
+            {/* ══ Rutas de veterinaria: rol + estado (solo ACT puede entrar) ══
+                El guard cuelga de una ruta padre, así se monta una sola vez
+                y no se revalida al navegar entre estas pantallas. */}
+            <Route
+              element={
+                <PrivateRoute allowedRoles={["veterinaria"]}>
+                  <RutaVeterinariaActiva />
+                </PrivateRoute>
+              }
+            >
+              <Route path="/home-veterinaria" element={<HomeVeterinaria />} />
+              <Route path="/mi-veterinaria" element={<MiVeterinaria />} />
+              <Route path="/agenda" element={<CitasAgendadas />} />
+              <Route path="/historial/registrar/:turnoId" element={<RegistrarConsulta />} />
+              <Route path="/pacientes" element={<Pacientes />} />
+              <Route path="/pacientes/:mascotaId" element={<FichaPaciente />} />
+              <Route path="/cargar-turnos" element={<CargaTurnos />} />
+            </Route>
 
-        {/* ══ Rutas de veterinaria protegidas por rol + estado (solo ACT puede entrar) ══ */}
-        <Route
-          path="/home-veterinaria"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <RutaVeterinariaActiva>
-                <HomeVeterinaria />
-              </RutaVeterinariaActiva>
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/mi-veterinaria"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <RutaVeterinariaActiva>
-                <MiVeterinaria />
-              </RutaVeterinariaActiva>
-            </PrivateRoute>
-          }
-        />
-        <Route path="/mascotas" element={<PrivateRoute allowedRoles={["dueno"]}><MisMascotas /></PrivateRoute>} />
-        <Route path="/turnos" element={<PrivateRoute allowedRoles={["dueno"]}><Turnos /></PrivateRoute>} />
-        <Route path="/mis-turnos" element={<PrivateRoute allowedRoles={["dueno"]}><MisTurnos /></PrivateRoute>} />
-        <Route path="/turnos/agendar/:veterinariaId" element={<PrivateRoute allowedRoles={["dueno"]}><AgendarTurnos /></PrivateRoute>} />
-        <Route path="/admin-foro-mascotas-perdidas" element={<PrivateRoute allowedRoles={["administrador"]}><ModeracionForo /></PrivateRoute>} />
-        <Route path="/tutor/veterinarias/:id" element={<PerfilVeterinaria />} />
-        <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><BuscarVeterinaria /></PrivateRoute>} />
-        <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
-        <Route
-          path="/agenda"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <RutaVeterinariaActiva>
-                <CitasAgendadas />
-              </RutaVeterinariaActiva>
-            </PrivateRoute>
-          }
-        />
-        <Route path="/terminos" element={<Terms />} />
-        <Route path="/privacidad" element={<Privacy />} />
-       
-       
-        <Route
-          path="/historial/registrar/:turnoId"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <RutaVeterinariaActiva>
-                <RegistrarConsulta />
-              </RutaVeterinariaActiva>
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/pacientes"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <RutaVeterinariaActiva>
-                <Pacientes />
-              </RutaVeterinariaActiva>
-            </PrivateRoute>
-          }
-        />
-        <Route path="/urgencias" element={<PrivateRoute allowedRoles={["dueno"]}><Emergencias /></PrivateRoute>} />
-        <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
-        <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
-        <Route path="/tutor/dashboard" element={<AdminDashboard />} />
-        <Route
-          path="/pacientes/:mascotaId"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <RutaVeterinariaActiva>
-                <FichaPaciente />
-              </RutaVeterinariaActiva>
-            </PrivateRoute>
-          }
-        />
-        <Route path="/admin-duenos" element={<PrivateRoute allowedRoles={["administrador"]}><GestionUsuarios /></PrivateRoute> }/>
-        <Route path="/perfil" element={<PerfilUsuario />} />
-        <Route path="/admin/veterinarias" element={<PrivateRoute allowedRoles={["administrador"]}><GestionVeterinarias /></PrivateRoute>} />
-        <Route path="/historial-medico" element={
-          <PrivateRoute allowedRoles={["dueno"]}><HistorialMedico /></PrivateRoute>} />
-        <Route path="/admin-turnos" element={<PrivateRoute allowedRoles={["administrador"]}><GestionTurnos /></PrivateRoute>} />
-        <Route path="/" element={<Landing />} />
-        <Route path="/pago-exitoso" element={<PrivateRoute allowedRoles={["dueno"]}><PagoExitoso /></PrivateRoute>} />
-        <Route path="/pago-pendiente" element={<PrivateRoute allowedRoles={["dueno"]}><PagoPendiente /></PrivateRoute>} />
-        <Route path="/pago-fallido" element={<PrivateRoute allowedRoles={["dueno"]}><PagoFallido /></PrivateRoute>} />
-        <Route
-          path="/cargar-turnos"
-          element={
-            <PrivateRoute allowedRoles={["veterinaria"]}>
-              <RutaVeterinariaActiva>
-                <CargaTurnos />
-              </RutaVeterinariaActiva>
-            </PrivateRoute>
-          }
-        />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      </Suspense>
-    </BrowserRouter>
+            <Route path="/login" element={<Login />} />
+            <Route path="/registro" element={<Registro />} />
+            <Route path="/register" element={<Registro />} />
+            <Route path="/completar-registro-google" element={<CompletarRegistroGoogle />} />
+            <Route path="/tutor/historial-medico/:mascotaId" element={<PrivateRoute allowedRoles={["dueno"]}><HistorialIndividual /></PrivateRoute>} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verificar-cuenta" element={<VerificarCuenta />} />
+            <Route path="/home" element={<PrivateRoute allowedRoles={["dueno"]}><HomeTutor /></PrivateRoute>} />
+
+            <Route path="/mascotas" element={<PrivateRoute allowedRoles={["dueno"]}><MisMascotas /></PrivateRoute>} />
+            <Route path="/turnos" element={<PrivateRoute allowedRoles={["dueno"]}><Turnos /></PrivateRoute>} />
+            <Route path="/mis-turnos" element={<PrivateRoute allowedRoles={["dueno"]}><MisTurnos /></PrivateRoute>} />
+            <Route path="/turnos/agendar/:veterinariaId" element={<PrivateRoute allowedRoles={["dueno"]}><AgendarTurnos /></PrivateRoute>} />
+            <Route path="/admin-foro-mascotas-perdidas" element={<PrivateRoute allowedRoles={["administrador"]}><ModeracionForo /></PrivateRoute>} />
+            <Route path="/tutor/veterinarias/:id" element={<PerfilVeterinaria />} />
+            <Route path="/veterinarias" element={<PrivateRoute allowedRoles={["dueno"]}><BuscarVeterinaria /></PrivateRoute>} />
+            <Route path="/foro" element={<PrivateRoute allowedRoles={["dueno"]}><Foro /></PrivateRoute>} />
+            <Route path="/terminos" element={<Terms />} />
+            <Route path="/privacidad" element={<Privacy />} />
+
+            <Route path="/urgencias" element={<PrivateRoute allowedRoles={["dueno"]}><Emergencias /></PrivateRoute>} />
+            <Route path="/admin" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
+            <Route path="/dashboard" element={<PrivateRoute allowedRoles={["administrador"]}><AdminDashboard /></PrivateRoute>} />
+            <Route path="/tutor/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin-duenos" element={<PrivateRoute allowedRoles={["administrador"]}><GestionUsuarios /></PrivateRoute>} />
+            <Route path="/perfil" element={<PerfilUsuario />} />
+            <Route path="/admin/veterinarias" element={<PrivateRoute allowedRoles={["administrador"]}><GestionVeterinarias /></PrivateRoute>} />
+            <Route path="/historial-medico" element={<PrivateRoute allowedRoles={["dueno"]}><HistorialMedico /></PrivateRoute>} />
+            <Route path="/admin-turnos" element={<PrivateRoute allowedRoles={["administrador"]}><GestionTurnos /></PrivateRoute>} />
+            <Route path="/" element={<Landing />} />
+            <Route path="/pago-exitoso" element={<PrivateRoute allowedRoles={["dueno"]}><PagoExitoso /></PrivateRoute>} />
+            <Route path="/pago-pendiente" element={<PrivateRoute allowedRoles={["dueno"]}><PagoPendiente /></PrivateRoute>} />
+            <Route path="/pago-fallido" element={<PrivateRoute allowedRoles={["dueno"]}><PagoFallido /></PrivateRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
     </NotificacionesProvider>
   );
 }

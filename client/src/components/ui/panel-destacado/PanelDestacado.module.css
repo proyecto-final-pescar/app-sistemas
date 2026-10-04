@@ -71,6 +71,21 @@
     margin-top: 22px;
 }
 
+/* Variante compacta: menos alto para pantallas con mucho contenido debajo */
+.compacto {
+    padding: 20px 28px;
+}
+
+.compacto .titulo {
+    font-size: 24px;
+    line-height: 30px;
+    margin-bottom: 4px;
+}
+
+.compacto .contenido {
+    margin-top: 4px;
+}
+
 /* Responsividad del Panel */
 @media (max-width: 767px) {
     .panel {
@@ -90,5 +105,14 @@
 
     .contenido {
         margin-top: 16px;
+    }
+
+    .compacto .titulo {
+        font-size: 20px;
+        line-height: 26px;
+    }
+
+    .compacto .contenido {
+        margin-top: 4px;
     }
 }

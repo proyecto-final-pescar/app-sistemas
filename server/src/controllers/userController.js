@@ -14,6 +14,25 @@ const esIdInvalido = (error) =>
 
 const ESTADO_TURNO_CANCELADO = 'CAN';
 
+
+const REGEX_SOLO_LETRAS = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/
+const LARGO_MAXIMO_NOMBRE = 100
+ 
+// Devuelve { valor } si es válido o { error } con el mensaje para el usuario.
+const validarNombrePropio = (valor, etiqueta, minimo) => {
+  if (typeof valor !== 'string') {
+    return { error: `El ${etiqueta} no es válido.` }
+  }
+  const limpio = valor.trim()
+  if (limpio.length < minimo || !REGEX_SOLO_LETRAS.test(limpio)) {
+    return { error: `El ${etiqueta} debe tener al menos ${minimo} caracteres y contener solo letras.` }
+  }
+  if (limpio.length > LARGO_MAXIMO_NOMBRE) {
+    return { error: `El ${etiqueta} no puede superar los ${LARGO_MAXIMO_NOMBRE} caracteres.` }
+  }
+  return { valor: limpio }
+}
+
 // GET /usuarios: listado paginado de usuarios
 // "Gestion de Dueños" — MIGRADO 
 export const listarUsuarios = async (req, res) => {
@@ -205,34 +224,45 @@ export const obtenerPerfilUsuario = async (req, res) => {
   }
 }
 
-///MIGRADOOO
 export const actualizarPerfilPropio = async (req, res) => {
   try {
     const usuarioId = req.user.id
-    const { nombre, email, telefono, zonaId, fotoUrl, asistenteVirtual } = req.body
-
+    const { nombre, apellido, email, telefono, zonaId, fotoUrl, asistenteVirtual } = req.body
+ 
     const usuario = await prisma.usuario.findUnique({
       where: { usuario_id: usuarioId }
     })
-
+ 
     if (!usuario) {
       return res.status(404).json({
         success: false,
         message: 'El usuario no existe.'
       })
     }
-
+ 
     const validaciones = []
     const data = {}
-
+ 
     if (nombre !== undefined) {
-      if (nombre.length < 3 || !/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(nombre.trim())) {
-        validaciones.push('El nombre debe tener al menos 3 caracteres y contener solo letras.')
+      const resultado = validarNombrePropio(nombre, 'nombre', 3)
+      if (resultado.error) {
+        validaciones.push(resultado.error)
       } else {
-        data.nombre = nombre.trim()
+        data.nombre = resultado.valor
       }
     }
-
+ 
+    if (apellido !== undefined) {
+      // Mínimo 2 porque hay apellidos reales de 2 letras. Si en el registro
+      // se exige otro mínimo, conviene unificarlo.
+      const resultado = validarNombrePropio(apellido, 'apellido', 2)
+      if (resultado.error) {
+        validaciones.push(resultado.error)
+      } else {
+        data.apellido = resultado.valor
+      }
+    }
+ 
     if (email !== undefined) {
       const emailLimpio = email.toLowerCase().trim()
       if (!/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(emailLimpio)) {
@@ -250,7 +280,7 @@ export const actualizarPerfilPropio = async (req, res) => {
         data.email = emailLimpio
       }
     }
-
+ 
     if (telefono !== undefined) {
       const telefonoLimpio = telefono === null ? '' : telefono.trim()
       if (telefonoLimpio === '') {
@@ -261,7 +291,7 @@ export const actualizarPerfilPropio = async (req, res) => {
         data.telefono = telefonoLimpio
       }
     }
-
+ 
     if (zonaId !== undefined) {
       if (zonaId === null || zonaId === '') {
         data.zona_id = null
@@ -279,11 +309,11 @@ export const actualizarPerfilPropio = async (req, res) => {
         }
       }
     }
-
+ 
     if (fotoUrl !== undefined) {
       data.foto_url = (fotoUrl === null || fotoUrl === '') ? null : fotoUrl.trim()
     }
-
+ 
     if (asistenteVirtual !== undefined) {
       const idPorTipo = { perro: 'PER', gato: 'GAT' }
       const asistenteId = idPorTipo[asistenteVirtual]
@@ -293,7 +323,7 @@ export const actualizarPerfilPropio = async (req, res) => {
         data.asistente_virtual_id = asistenteId
       }
     }
-
+ 
     if (validaciones.length > 0) {
       return res.status(400).json({
         success: false,
@@ -301,7 +331,7 @@ export const actualizarPerfilPropio = async (req, res) => {
         errors: validaciones
       })
     }
-
+ 
     const usuarioActualizado = await prisma.usuario.update({
       where: { usuario_id: usuarioId },
       data,
@@ -338,10 +368,7 @@ export const actualizarPerfilPropio = async (req, res) => {
     })
   }
 }
-/////
 
-// Creación de usuarios por admin — MIGRADO a Prisma/Postgres.
-// Acepta nombre+apellido o el legacy `name` ("Nombre Apellido").
 const VERIFICACION_TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 hs
 
 export const crearUsuarioAdmin = async (req, res) => {

@@ -171,25 +171,41 @@
   border-color: var(--color-primario);
 }
 
-/* Lista de consultas */
+/* Lista de consultas: */
 .listaConsultas {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 100%;
 }
 
 .cardConsulta {
   display: flex;
+  align-items: center;
   gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
   background-color: var(--color-blanco);
   border: 1.5px solid #e5e7eb;
   border-radius: 12px;
   padding: 14px;
-  transition: box-shadow 0.15s ease;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .cardConsulta:hover {
   box-shadow: 0 2px 8px rgba(124, 58, 237, 0.1);
+  border-color: #ddd6fe;
+}
+
+.cardConsulta:active {
+  opacity: 0.85;
+}
+
+.cardConsulta:focus-visible {
+  outline: 2px solid var(--color-primario);
+  outline-offset: 2px;
 }
 
 .cardIcono {
@@ -235,6 +251,23 @@
   color: var(--color-texto-secundario);
   margin: 0;
   line-height: 1.5;
+}
+
+/* Vista previa de anotaciones: máximo 2 líneas */
+.anotacionesResumen {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--color-texto-secundario);
+}
+
+.cardConsulta:hover .chevron {
+  color: var(--color-primario);
 }
 
 /* Sin resultados */
@@ -374,6 +407,42 @@
   border-top: 1px solid #e5e7eb;
 }
 
+/* Modal de detalle de consulta: más ancho/rectangular que el selector de turno.
+   Tiene que ir después de .modal para pisar su max-width. */
+.modalDetalle {
+  max-width: 640px;
+}
+
+.detalleDatos {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.detalleDato {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.9rem;
+  color: var(--color-texto-principal);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.detalleAnotaciones {
+  background-color: #f8f7ff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-texto-principal);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
 .btnCancelar {
   padding: 9px 20px;
   background: none;
@@ -430,7 +499,7 @@
   }
 
   .btnVolver:hover {
-    background: #ede9fe; 
+    background: #ede9fe;
   }
 
   .btnRegistrar {
@@ -452,12 +521,16 @@
   }
 
   .cardConsulta {
-    padding: 16px;
+    padding: 16px 20px;
   }
 
   .cardIcono {
     width: 40px;
     height: 40px;
+  }
+
+  .detalleDatos {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -465,19 +538,11 @@
 @media (min-width: 1024px) {
   .contenido {
     padding: 32px 40px;
-    /* se saca el max-width/centrado: mismo criterio que Pacientes.module.css,
-       aprovecha todo el ancho disponible en vez de angostar el contenido */
+   
   }
 
   .titulo {
     font-size: 1.65rem;
-  }
-
-  
-  .listaConsultas {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 12px;
   }
 
   .cardMotivo {

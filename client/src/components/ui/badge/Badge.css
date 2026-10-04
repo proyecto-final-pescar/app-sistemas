@@ -36,3 +36,8 @@
   background-color: var(--color-fondo-claro);
   color: var(--color-primario);
 }
+
+.badge-zona {
+  background-color: #d1fae5;
+  color: var(--color-cta);
+}

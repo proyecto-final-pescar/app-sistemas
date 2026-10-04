@@ -28,7 +28,6 @@ function nuevoId() {
 /**
  * Burbuja flotante del asistente virtual.
  * Se incluye una única vez en el layout principal de la app
- * 
  *
  * Muestra al personaje de cuerpo completo elegido por el usuario en
  * Configuración > Asistente virtual (PerfilUsuario.jsx), y se puede
@@ -48,16 +47,15 @@ export default function ChatBot({ notificacionesNuevas = 0 }) {
   const [pose, setPose] = useState('idle');
 
   // Preferencia guardada por el usuario en Configuración > Asistente
-  // virtual (PerfilUsuario.jsx). Default 'perro' 
+  // virtual (PerfilUsuario.jsx). Default 'perro'
   const tipoBot = usuario?.asistenteVirtual || 'perro';
   const nombreBot = tipoBot === 'gato' ? 'Luna' : 'Firu';
 
- 
   const [posicion, setPosicion] = useState(null);
   const [arrastrando, setArrastrando] = useState(false);
   const botonRef = useRef(null);
   const arrastreRef = useRef({ activo: false, offsetX: 0, offsetY: 0, movioSuficiente: false });
- 
+
   const ultimoFueArrastreRef = useRef(false);
 
   const controllerRef = useRef(null);
@@ -65,7 +63,8 @@ export default function ChatBot({ notificacionesNuevas = 0 }) {
   const timeoutMaximoRef = useRef(null);
   const timeoutPoseRef = useRef(null);
 
-  // Saludo inicial: se agrega la primera vez que se abre el chat.
+  // Saludo inicial: se agrega cuando se abre el chat y no hay mensajes
+  // (primera apertura, o después de cambiar de asistente).
   useEffect(() => {
     if (abierto && mensajes.length === 0) {
       setMensajes([
@@ -76,9 +75,13 @@ export default function ChatBot({ notificacionesNuevas = 0 }) {
         },
       ]);
     }
-    // Solo se dispara la primera vez que se abre; no queremos que
-   
-  }, [abierto, mensajes.length]);
+  }, [abierto, mensajes.length, nombreBot]);
+
+  // Si el usuario cambia de asistente en Configuración, se reinicia la
+  // conversación para que no quede el saludo ni el historial del anterior.
+  useEffect(() => {
+    setMensajes([]);
+  }, [tipoBot]);
 
   // Limpieza de timers/requests pendientes si el componente se desmonta.
   useEffect(() => {
@@ -100,14 +103,13 @@ export default function ChatBot({ notificacionesNuevas = 0 }) {
 
   const manejarClick = useCallback(() => {
     if (ultimoFueArrastreRef.current) {
-    
       ultimoFueArrastreRef.current = false;
       return;
     }
     alternarChat();
   }, [alternarChat]);
 
-  // --- Handlers de arrastre 
+  // --- Handlers de arrastre
 
   const manejarPointerDown = useCallback(
     (e) => {
@@ -175,10 +177,8 @@ export default function ChatBot({ notificacionesNuevas = 0 }) {
     } catch {
       // Si el pointer ya no está capturado, no pasa nada.
     }
-    
   }, []);
 
-  
   useEffect(() => {
     const handleResize = () => {
       if (!posicion || !botonRef.current) return;
@@ -202,7 +202,8 @@ export default function ChatBot({ notificacionesNuevas = 0 }) {
 
       const mensajeUsuario = { id: nuevoId(), role: 'user', content: textoLimpio };
 
-    
+      // El saludo inicial también viaja en el historial (rol 'assistant'),
+      // igual que antes; solo se excluyen los mensajes de error.
       const historialParaBackend = [...mensajes, mensajeUsuario]
         .filter((m) => !m.esError)
         .map(({ role, content }) => ({ role, content }));
@@ -227,7 +228,8 @@ export default function ChatBot({ notificacionesNuevas = 0 }) {
       try {
         const contenidoRespuesta = await enviarMensajeAlBot(
           historialParaBackend,
-          controller.signal
+          controller.signal,
+          tipoBot
         );
         setMensajes((previos) => [
           ...previos,
@@ -246,7 +248,8 @@ export default function ChatBot({ notificacionesNuevas = 0 }) {
             esError: true,
             content: esCancelacion
               ? 'La respuesta está tardando demasiado. Probá de nuevo en unos segundos.'
-              : 'No pude conectarme con el asistente. Revisá tu conexión e intentá de nuevo.',
+              : error.response?.data?.reply ||
+                'No pude conectarme con el asistente. Revisá tu conexión e intentá de nuevo.',
           },
         ]);
         setPose('preocupado');
@@ -259,7 +262,7 @@ export default function ChatBot({ notificacionesNuevas = 0 }) {
         setTardandoMucho(false);
       }
     },
-    [mensajes, estaEscribiendo]
+    [mensajes, estaEscribiendo, tipoBot]
   );
 
   const mostrarBadge = !abierto && notificacionesNuevas > 0;
