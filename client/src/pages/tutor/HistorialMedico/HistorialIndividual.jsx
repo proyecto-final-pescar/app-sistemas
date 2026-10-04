@@ -4,7 +4,6 @@ import api from '../../../services/api'
 import Sidebar from '../../../components/layout/Sidebar'
 import TopBar from '../../../components/layout/TopBar'
 import Badge from '../../../components/ui/badge/Badge'
-import Button from '../../../components/ui/button/Button'
 import styles from './HistorialIndividual.module.css'
 
 const obtenerPartesFechaSinHora = (fecha) => {
@@ -34,34 +33,126 @@ export default function HistorialIndividual() {
   const { mascotaId } = useParams()
   const navigate = useNavigate()
 
+  // Estados generales
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Estados de Vacunas para scroll infinito
+  const [vacunas, setVacunas] = useState([])
+  const [pageVacunas, setPageVacunas] = useState(1)
+  const [hasMoreVacunas, setHasMoreVacunas] = useState(true)
+  const [loadingVacunas, setLoadingVacunas] = useState(false)
+
+  // Estados de Estudios para scroll infinito
+  const [estudios, setEstudios] = useState([])
+  const [pageEstudios, setPageEstudios] = useState(1)
+  const [hasMoreEstudios, setHasMoreEstudios] = useState(true)
+  const [loadingEstudios, setLoadingEstudios] = useState(false)
+
+  // Carga inicial
   useEffect(() => {
-    const fetchHistorial = async () => {
+    let isMounted = true
+
+    const fetchInicial = async () => {
       try {
-        const response = await api.get(`/historial-completo/${mascotaId}`)
-        if (response.data.success) {
-          setData(response.data.data)
-          setLoading(false)
+        setLoading(true)
+        const response = await api.get(
+          `/historial-completo/${mascotaId}?pageVacunas=1&limitVacunas=10&pageEstudios=1&limitEstudios=10`
+        )
+        if (response.data.success && isMounted) {
+          const resData = response.data.data
+          setData(resData)
+          setVacunas(resData.vacunas || [])
+          setEstudios(resData.estudios || [])
+
+          if (resData.pagination) {
+            setHasMoreVacunas(resData.pagination.vacunas?.hasMore ?? false)
+            setHasMoreEstudios(resData.pagination.estudios?.hasMore ?? false)
+          }
         }
       } catch (err) {
-        console.error('Error:', err)
-        setError(err.response?.data?.message || 'Error al cargar la ficha')
-        setLoading(false)
+        if (isMounted) {
+          console.error('Error:', err)
+          setError(err.response?.data?.message || 'Error al cargar la ficha')
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
-    fetchHistorial()
+    if (mascotaId) fetchInicial()
+
+    return () => {
+      isMounted = false
+    }
   }, [mascotaId])
+
+  // Subconsultas con scroll infinito
+  const cargarMasVacunas = async () => {
+    if (loadingVacunas || !hasMoreVacunas) return
+    try {
+      setLoadingVacunas(true)
+      const nextPage = pageVacunas + 1
+      const response = await api.get(
+        `/historial-completo/${mascotaId}?pageVacunas=${nextPage}&limitVacunas=10`
+      )
+      if (response.data.success) {
+        const nuevasVacunas = response.data.data.vacunas || []
+        setVacunas((prev) => [...prev, ...nuevasVacunas])
+        setPageVacunas(nextPage)
+        setHasMoreVacunas(response.data.data.pagination?.vacunas?.hasMore ?? false)
+      }
+    } catch (err) {
+      console.error('Error al paginar vacunas:', err)
+    } finally {
+      setLoadingVacunas(false)
+    }
+  }
+
+  const cargarMasEstudios = async () => {
+    if (loadingEstudios || !hasMoreEstudios) return
+    try {
+      setLoadingEstudios(true)
+      const nextPage = pageEstudios + 1
+      const response = await api.get(
+        `/historial-completo/${mascotaId}?pageEstudios=${nextPage}&limitEstudios=10`
+      )
+      if (response.data.success) {
+        const nuevosEstudios = response.data.data.estudios || []
+        setEstudios((prev) => [...prev, ...nuevosEstudios])
+        setPageEstudios(nextPage)
+        setHasMoreEstudios(response.data.data.pagination?.estudios?.hasMore ?? false)
+      }
+    } catch (err) {
+      console.error('Error al paginar estudios:', err)
+    } finally {
+      setLoadingEstudios(false)
+    }
+  }
+
+  const handleScrollVacunas = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
+    if (scrollHeight - scrollTop - clientHeight < 25) {
+      cargarMasVacunas()
+    }
+  }
+
+  const handleScrollEstudios = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget
+    if (scrollHeight - scrollTop - clientHeight < 25) {
+      cargarMasEstudios()
+    }
+  }
 
   if (loading) {
     return (
       <div className={styles.shell}>
         <Sidebar />
         <div className={styles.main}>
-          <TopBar title="Ficha Médica" />
+          <TopBar title="Historial Clínico" />
           <div className={styles.container}>Cargando...</div>
         </div>
       </div>
@@ -73,7 +164,7 @@ export default function HistorialIndividual() {
       <div className={styles.shell}>
         <Sidebar />
         <div className={styles.main}>
-          <TopBar title="Ficha Médica" />
+          <TopBar title="Historial Clínico" />
           <div className={styles.container}><p>{error}</p></div>
         </div>
       </div>
@@ -85,14 +176,32 @@ export default function HistorialIndividual() {
       <div className={styles.shell}>
         <Sidebar />
         <div className={styles.main}>
-          <TopBar title="Ficha Médica" />
+          <TopBar title="Historial Clínico" />
           <div className={styles.container}>No hay datos</div>
         </div>
       </div>
     )
   }
 
-  const { mascota, fichaMedica, historialClinico, vacunas, estudios } = data
+  const { mascota, fichaMedica, historialClinico } = data
+
+  // Compatibilidad universal para los datos del tutor
+  const tutorNombre =
+    mascota?.dueno?.name ||
+    (mascota?.dueno?.nombre
+      ? `${mascota.dueno.nombre} ${mascota.dueno.apellido || ''}`.trim()
+      : null) ||
+    mascota?.dueñoId?.name ||
+    (mascota?.usuario
+      ? `${mascota.usuario.nombre} ${mascota.usuario.apellido || ''}`.trim()
+      : null) ||
+    'No registrado'
+
+  const tutorTelefono =
+    mascota?.dueno?.telefono ||
+    mascota?.dueñoId?.telefono ||
+    mascota?.usuario?.telefono ||
+    'N/A'
 
   const calcularEdad = () => {
     if (!mascota?.fechaNacimiento) return 'N/A'
@@ -140,20 +249,17 @@ export default function HistorialIndividual() {
       <div className={styles.main}>
         <TopBar title={`Ficha Médica - ${mascota?.nombre || ''}`} />
         <div className={styles.container}>
-          <button
-            className={styles.backBtn}
-            onClick={() => navigate(-1)}
-          >
+          <button className={styles.backBtn} onClick={() => navigate(-1)}>
             ← Volver
           </button>
+
           {/* Header */}
           <div className={styles.header}>
             <h1>Ficha Médica - {mascota?.nombre}</h1>
-           <p>Tutor: {mascota?.dueno ? `${mascota.dueno.nombre} ${mascota.dueno.apellido}` : 'No registrado'}</p>
-
+            <p>Tutor: {tutorNombre}</p>
           </div>
 
-          {/* mascota*/}
+          {/* Mascota Card */}
           <div className={styles.mascotaCard}>
             <div className={styles.mascotaInfo}>
               {mascota?.foto ? (
@@ -170,23 +276,26 @@ export default function HistorialIndividual() {
                 <p>{mascota?.especie} · {mascota?.raza} · {mascota?.sexo}</p>
                 <div className={styles.badges}>
                   <Badge
-                    texto={mascota?.esCastrado ? "Castrado" : "No castrado"}
+                    texto={mascota?.esCastrado ? 'Castrado' : 'No castrado'}
                     variante="secondary"
                   />
-                  <Badge texto={`Pelaje: ${fichaMedica?.colorPelaje || 'No registrado'}`} variante="success" />
+                  <Badge
+                    texto={`Pelaje: ${fichaMedica?.colorPelaje || 'No registrado'}`}
+                    variante="success"
+                  />
                 </div>
               </div>
             </div>
+
+            {/* Responsable alineado a la derecha */}
             <div className={styles.responsable}>
               <p className={styles.responsableLabel}>RESPONSABLE</p>
-              <p className={styles.responsableName}>
-                {mascota?.dueno ? `${mascota.dueno.nombre} ${mascota.dueno.apellido}` : 'No registrado'}
-             </p>
-             <p className={styles.responsablePhone}>{mascota?.dueno?.telefono || 'N/A'}</p>
+              <p className={styles.responsableName}>{tutorNombre}</p>
+              <p className={styles.responsablePhone}>{tutorTelefono}</p>
             </div>
           </div>
 
-          {/*tarjetitas informacion */}
+          {/* Tarjetitas información */}
           <div className={styles.cardsGrid}>
             <div className={styles.card}>
               <svg className={styles.cardIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -225,7 +334,9 @@ export default function HistorialIndividual() {
                 <path d="M8 11h.01" />
                 <path d="M8 16h.01" />
               </svg>
-             <p className={styles.cardValue}>{historialClinico?.length || 0}</p>
+              <p className={styles.cardValue}>
+                {(historialClinico?.length || 0) + vacunas.length + estudios.length}
+              </p>
               <p className={styles.cardLabel}>Consultas Totales</p>
             </div>
 
@@ -265,7 +376,11 @@ export default function HistorialIndividual() {
                 </div>
                 <div className={styles.row}>
                   <label>Enfermedades crónicas</label>
-                  <p>{fichaMedica?.enfermedadesCronicas || 'Ninguna registrada'}</p>
+                  <p>
+                    {Array.isArray(fichaMedica?.enfermedadesCronicas)
+                      ? fichaMedica.enfermedadesCronicas.join(', ')
+                      : fichaMedica?.enfermedadesCronicas || 'Ninguna registrada'}
+                  </p>
                 </div>
                 <div className={styles.row}>
                   <label>Cirugías previas</label>
@@ -278,7 +393,7 @@ export default function HistorialIndividual() {
               </div>
             </section>
 
-            {/* Vacunacion y Estudios */}
+            {/* Vacunación y Estudios con Scroll Infinito */}
             <div className={styles.rightColumn}>
               {/* Vacunas */}
               <section className={styles.section}>
