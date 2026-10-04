@@ -7,12 +7,9 @@ import {
   TIPO,
 } from "../services/notificacionService.js";
 
-// ─────────────────────────────────────────────────────────────
-// Reglas de negocio
-// ─────────────────────────────────────────────────────────────
 export const ANTICIPACION_MINIMA_HORAS = 10;
-export const PLAZO_PAGO_HORAS = 3; // siempre < ANTICIPACION_MINIMA_HORAS
-const HORAS_LIMITE_CANCELACION = 24; // solo aplica a turnos ya CONFIRMADOS
+export const PLAZO_PAGO_HORAS = 3; 
+const HORAS_LIMITE_CANCELACION = 24;
 
 export const ESTADO = {
   DISPONIBLE: "DIS",
@@ -68,9 +65,7 @@ export const includeTurnoCompleto = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────
-// Helpers de fecha/hora
-// ─────────────────────────────────────────────────────────────
+
 export const combinarFechaHora = (fecha, horaTime) => {
   const fechaStr =
     typeof fecha === "string"
@@ -106,16 +101,11 @@ export const formatearTurno = (turno) => ({
   hora_fin: formatearHora(turno.hora_fin),
 });
 
-// ─────────────────────────────────────────────────────────────
-// Helpers de listado (GET /turnos): pestañas, búsqueda y paginación
-// ─────────────────────────────────────────────────────────────
 const TABS_VALIDAS = new Set(["proximos", "pasados"]);
 const LIMITE_POR_DEFECTO = 10;
 const LIMITE_MAXIMO = 50;
 
-// "Ahora" en hora argentina (UTC-3 fijo, igual que combinarFechaHora).
-// `hoy` es la fecha a medianoche UTC (así Prisma compara columnas @db.Date)
-// y `horaActual` es la hora sobre 1970-01-01 UTC (columnas @db.Time).
+
 const ahoraArgentina = () => {
   const ar = new Date(Date.now() - 3 * 60 * 60 * 1000);
   return {
@@ -135,9 +125,7 @@ const ahoraArgentina = () => {
   };
 };
 
-// Pestañas del tutor (MisTurnos). Se miden por hora de INICIO.
-//  - proximos: confirmados o pendientes de pago que todavía no empezaron
-//  - pasados: cancelados, atendidos, o cualquiera cuyo inicio ya pasó
+
 const condicionTabTutor = (tab) => {
   const { hoy, horaActual } = ahoraArgentina();
 
@@ -164,9 +152,7 @@ const condicionTabTutor = (tab) => {
   };
 };
 
-// Pestañas de la veterinaria (CitasAgendadas). Se miden por hora de FIN.
-//  - proximos: confirmados cuyo horario de fin todavía no pasó
-//  - pasados: atendidos, o confirmados cuyo fin ya pasó sin consulta registrada
+
 const condicionTabVeterinaria = (tab) => {
   const { hoy, horaActual } = ahoraArgentina();
 
@@ -202,8 +188,6 @@ const condicionTabVeterinaria = (tab) => {
   };
 };
 
-// Cada palabra tiene que aparecer en nombre o apellido del tutor.
-// Ojo: `mode: 'insensitive'` ignora mayúsculas pero NO tildes.
 const condicionBusquedaTutor = (texto) => {
   const palabras = texto.trim().split(/\s+/).filter(Boolean).slice(0, 5);
   if (palabras.length === 0) return null;
@@ -220,8 +204,6 @@ const condicionBusquedaTutor = (texto) => {
   };
 };
 
-// Sin `tab` se mantiene el orden histórico (fecha + hora de inicio ascendente).
-// El desempate por turno_id evita filas repetidas o salteadas entre páginas.
 const ordenarTurnos = (tab, porHoraFin) => {
   const campoHora = tab && porHoraFin ? "hora_fin" : "hora_inicio";
   const direccion = tab === "pasados" ? "desc" : "asc";
@@ -232,7 +214,6 @@ const ordenarTurnos = (tab, porHoraFin) => {
   ];
 };
 
-// La paginación es opt-in: sin `pagina` ni `limite` la respuesta es la de siempre.
 const parsearPaginacion = (query) => {
   if (query.pagina === undefined && query.limite === undefined) return null;
 
@@ -245,22 +226,6 @@ const parsearPaginacion = (query) => {
   return { pagina, limite };
 };
 
-// ─────────────────────────────────────────────────────────────
-// GET /turnos
-//
-// Query params:
-//   veterinariaId | usuarioId ("me")   (uno de los dos es obligatorio)
-//   estado | estadoDistinto | estados | servicioId | fechaDesde | fechaHasta
-//   tab=proximos|pasados               filtra y ordena en el servidor
-//   busquedaTutor                      solo con veterinariaId
-//   pagina, limite                     activa la paginación (limite máx. 50)
-//
-// Sin paginación responde { turnos }. Con paginación responde
-// { turnos, total, pagina, limite, totalPaginas }.
-// ─────────────────────────────────────────────────────────────
-// ─────────────────────────────────────────────────────────────
-// GET /turnos (RESTAURADO AL ORIGINAL)
-// ─────────────────────────────────────────────────────────────
 export const obtenerTurnos = async (req, res) => {
   try {
     const {
@@ -390,9 +355,6 @@ export const obtenerTurnos = async (req, res) => {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// GET /turnos/disponibles/grilla (NUEVO - SOLO PARA LA UI DE CARGA)
-// ─────────────────────────────────────────────────────────────
 export const obtenerTurnosDisponiblesGrilla = async (req, res) => {
   try {
     const { veterinariaId, fechaDesde, fechaHasta } = req.query;
@@ -424,11 +386,10 @@ export const obtenerTurnosDisponiblesGrilla = async (req, res) => {
       }
     });
 
-    // Formatear horas localmente sin invocar el include completo
     const turnosMapeados = turnos.map(t => ({
       ...t,
-      hora_inicio: t.hora_inicio ? t.hora_inicio.toISOString().slice(11, 16) : null,
-      hora_fin: t.hora_fin ? t.hora_fin.toISOString().slice(11, 16) : null
+      hora_inicio: formatearHora(t.hora_inicio),
+      hora_fin: formatearHora(t.hora_fin)
     }));
 
     return res.status(200).json({ success: true, data: { turnos: turnosMapeados } });
@@ -438,9 +399,6 @@ export const obtenerTurnosDisponiblesGrilla = async (req, res) => {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
-// GET /turnos/:id
-// ─────────────────────────────────────────────────────────────
 export const obtenerTurnoPorId = async (req, res) => {
   try {
     const { id } = req.params;
@@ -477,9 +435,6 @@ export const obtenerTurnoPorId = async (req, res) => {
     return res.status(500).json({ message: "Error interno del servidor" });
   }
 };
-
-// ─────────────────────────────────────────────────────────────
-// POST /turnos/:id/reservar
 
 export const reservarTurno = async (req, res) => {
   try {
@@ -571,9 +526,6 @@ export const reservarTurno = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// PATCH /turnos/:id/cancelar
-// ─────────────────────────────────────────────────────────────
 export const cancelarTurno = async (req, res) => {
   try {
     const { id } = req.params;
@@ -610,9 +562,6 @@ export const cancelarTurno = async (req, res) => {
     let motivoRechazoReembolso = null;
 
     if (turno.estado_turno_id === ESTADO.CONFIRMADO) {
-      // Solo hay cobro real si existe un pago APROBADO. Sin cobro (p. ej.
-      // efectivo pendiente de cobro en el local) se cancela con la misma
-      // flexibilidad que un pendiente: no hay dinero que devolver.
       pagoAReembolsar = await prisma.pago.findFirst({
         where: { turno_id: id, estado_pago_id: "APR" },
         orderBy: { created_at: "desc" },
@@ -632,10 +581,6 @@ export const cancelarTurno = async (req, res) => {
         }
       }
 
-      // Reembolso automático: solo si hay un pago realmente APROBADO (cobrado).
-      // Si es efectivo y todavía está en PEN (nunca se cobró en el local),
-      // no hay nada que reembolsar — se cancela sin más.
-
       if (pagoAReembolsar) {
         if (
           pagoAReembolsar.metodo_pago_id === "MPG" &&
@@ -646,8 +591,6 @@ export const cancelarTurno = async (req, res) => {
             await refundClient.create({ payment_id: pagoAReembolsar.id_pago });
             estadoReembolso = "APR";
           } catch (errorReembolso) {
-            // No bloqueamos la cancelación del turno por un fallo de MP:
-            // se cancela igual, y el reembolso queda para resolución manual.
             console.error(
               "Error al reembolsar en MercadoPago:",
               errorReembolso,
@@ -657,19 +600,11 @@ export const cancelarTurno = async (req, res) => {
               "Fallo el reembolso automático en MercadoPago, requiere revisión manual.";
           }
         } else {
-          // Efectivo ya cobrado (a futuro, cuando exista "marcar como cobrado"):
-          // no hay integración externa, se asume resuelto en el local.
           estadoReembolso = "APR";
         }
       }
     }
 
-    // Se preserva el turno cancelado como registro de auditoría (queda
-    // intacto: mascota, motivo, notas, fecha, hora) y se libera el
-    // horario creando un turno NUEVO en estado 'disponible' con los
-    // mismos datos de slot, incluyendo el mismo profesional_id ya fijo.
-    // El índice único parcial ix_turno_slot_unico permite que ambos
-    // coexistan porque excluye filas con estado 'CAN'.
     const [turnoCancelado, turnoLiberado] = await prisma.$transaction(
       async (tx) => {
         const cancelado = await tx.turno.update({
@@ -751,9 +686,6 @@ export const cancelarTurno = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// Cron — libera turnos 'pendiente' cuyo plazo de pago venció
-// ─────────────────────────────────────────────────────────────
 export const liberarTurnosVencidos = async () => {
   try {
     const resultado = await prisma.turno.updateMany({
@@ -779,12 +711,6 @@ export const liberarTurnosVencidos = async () => {
     console.error("Error en liberarTurnosVencidos:", error);
   }
 };
-
-// ─────────────────────────────────────────────────────────────
-// POST /turnos/oferta — la veterinaria carga horarios disponibles
-
-// ─────────────────────────────────────────────────────────────
-// POST /turnos/oferta — la veterinaria carga horarios disponibles
 
 export const crearOfertaHoraria = async (req, res) => {
   try {
@@ -931,7 +857,6 @@ export const crearOfertaHoraria = async (req, res) => {
         ),
       );
 
-      // Si el cierre es exactamente 00:00 (madrugada), lo interpretamos como el día siguiente
       if (baseHasta.getTime() === Date.UTC(1970, 0, 1, 0, 0, 0, 0)) {
         baseHasta = new Date(Date.UTC(1970, 0, 2, 0, 0, 0, 0));
       }
@@ -994,7 +919,7 @@ export const crearOfertaHoraria = async (req, res) => {
             conflictos.push({
               fecha: slot.fecha,
               hora: slot.hora,
-              profesional: `${profesional.nombre} ${profesional.apellido}`,
+              professional: `${profesional.nombre} ${profesional.apellido}`,
             });
           } else {
             console.error(
