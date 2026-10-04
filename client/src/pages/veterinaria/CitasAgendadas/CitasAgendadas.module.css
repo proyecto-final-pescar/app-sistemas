@@ -6,12 +6,17 @@
   background-color: #f9f8ff;
   font-family: 'Inter', Arial, Helvetica, sans-serif;
 }
+
+/* min-width: 0 evita que el contenido desborde el layout flex
+   cuando el ancho disponible es chico */
 .main {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
 }
+
 .content {
   margin: 24px 32px 40px;
   display: flex;
@@ -19,8 +24,113 @@
   gap: 20px;
 }
 
-/* Tabs Próximos / Pasados */
+/* Tabs Próximos / Pasados + buscador */
+.tabsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .tabs { display: flex; gap: 8px; }
+
+.inputBusqueda {
+  width: 280px;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 8px 16px;
+  border: 1.5px solid #d4c5f9;
+  border-radius: 999px;
+  background: #ede9fe;
+  font-size: 16px;
+  color: #4a3f6b;
+}
+
+.inputBusqueda::placeholder {
+  color: #7c6aa6;
+}
+
+.inputBusqueda:focus {
+  outline: none;
+  border-color: #7c3aed;
+  background: #ffffff;
+}
+
+/* Botón "Atender turno" */
+.btnAtender {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 999px;
+  background: #7c3aed;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+  transition: background-color 0.15s ease, box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.btnAtender svg {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.btnAtender:hover {
+  background: #6d28d9;
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.32);
+}
+
+.btnAtender:hover svg {
+  transform: translateX(3px);
+}
+
+.btnAtender:active {
+  transform: translateY(1px);
+}
+
+.btnAtender:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+/* Variante sobre el fondo violeta del banner: blanco sólido con texto violeta */
+.btnAtenderBanner {
+  background: #ffffff;
+  color: #5b21b6;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.btnAtenderBanner:hover {
+  background: #f5f3ff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+.btnAtenderBanner:focus-visible {
+  outline-color: #ffffff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btnAtender,
+  .btnAtender svg {
+    transition: none;
+  }
+
+  .btnAtender:hover svg,
+  .btnAtender:active {
+    transform: none;
+  }
+}
 
 /* Banner del turno más próximo */
 .banner {
@@ -35,7 +145,15 @@
   gap: 16px;
   flex-wrap: wrap;
 }
-.bannerInfo { display: flex; align-items: center; gap: 16px; }
+
+.bannerInfo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
 .bannerIcon {
   width: 48px;
   height: 48px;
@@ -49,6 +167,11 @@
   padding: 10px;
   box-sizing: border-box;
 }
+
+.bannerTextos {
+  min-width: 0;
+}
+
 .bannerLabel {
   margin: 0;
   font-size: 12px;
@@ -57,25 +180,30 @@
   color: rgba(255, 255, 255, 0.75);
   text-transform: uppercase;
 }
+
 .bannerTitulo {
   margin: 2px 0 6px;
   font-size: 18px;
   font-weight: 700;
   color: #ffffff;
+  overflow-wrap: anywhere;
 }
+
 .bannerMeta {
   margin: 0;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.85);
   display: flex;
-  gap: 14px;
+  gap: 6px 14px;
   flex-wrap: wrap;
 }
+
 .bannerMeta span {
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
+
 .bannerMeta svg {
   flex-shrink: 0;
   opacity: 0.85;
@@ -89,6 +217,7 @@
   box-shadow: 0 4px 20px rgba(124, 58, 237, 0.06);
   overflow: hidden;
 }
+
 .cardHeader {
   padding: 16px 24px;
   font-size: 13px;
@@ -104,6 +233,7 @@
   padding: 18px 24px;
   border-bottom: 1px solid #f5f3ff;
 }
+
 .turnoRow:last-child { border-bottom: none; }
 
 .fechaBox {
@@ -113,11 +243,20 @@
   min-width: 44px;
   color: #7c3aed;
 }
+
 .fechaDia { font-size: 18px; font-weight: 700; line-height: 20px; }
 .fechaMes { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
 
 .turnoInfo { flex: 1; min-width: 0; }
-.turnoTags { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+
+.turnoTags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-bottom: 4px;
+}
+
 .turnoMascota {
   display: inline-flex;
   align-items: center;
@@ -125,21 +264,32 @@
   font-size: 13px;
   color: #6b7280;
 }
+
 .turnoMascota svg { flex-shrink: 0; }
-.turnoMotivo { margin: 0; font-size: 14px; font-weight: 600; color: #1f1739; }
+
+.turnoMotivo {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f1739;
+  overflow-wrap: anywhere;
+}
+
 .turnoMeta {
   margin: 4px 0 0;
   font-size: 13px;
   color: #8276ab;
   display: flex;
-  gap: 14px;
+  gap: 6px 14px;
   flex-wrap: wrap;
 }
+
 .turnoMeta span {
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
+
 .turnoMeta svg {
   flex-shrink: 0;
 }
@@ -149,4 +299,122 @@
   text-align: center;
   color: #8276ab;
   font-size: 14px;
+}
+
+.paginacion {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.paginaInfo {
+  font-size: 14px;
+  color: #7c6aa6;
+}
+
+
+/* ---------- Responsive ---------- */
+
+/* Tablet / mobile: el Sidebar pasa a barra superior, así que el contenido
+   necesita espacio arriba (mismo criterio que RegistrarConsulta) */
+@media (max-width: 768px) {
+  .content {
+    margin: 76px 20px 32px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Tabs en una fila a todo el ancho y buscador debajo */
+  .tabsRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .tabs button {
+    flex: 1;
+  }
+
+  .inputBusqueda {
+    width: 100%;
+  }
+
+  /* Banner apilado: info arriba, botón a ancho completo abajo */
+  .banner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 20px;
+  }
+
+  .bannerInfo {
+    flex-basis: auto;
+    align-items: flex-start;
+  }
+
+  .bannerIcon {
+    width: 40px;
+    height: 40px;
+    padding: 8px;
+  }
+
+  .bannerTitulo {
+    font-size: 16px;
+  }
+
+  .cardHeader {
+    padding: 14px 16px;
+  }
+
+  /* Fila: fecha + info arriba, botón a ancho completo en una línea nueva */
+  .turnoRow {
+    flex-wrap: wrap;
+    gap: 12px 14px;
+    padding: 16px;
+  }
+
+  .turnoRow .btnAtender {
+    flex: 1 1 100%;
+    min-height: 44px;
+  }
+
+  .banner .btnAtender {
+    min-height: 44px;
+  }
+
+  .estadoVacio {
+    padding: 32px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    margin: 76px 16px 28px;
+    gap: 16px;
+  }
+
+  /* Datos en columna para que nombres largos se lean completos */
+  .bannerMeta,
+  .turnoMeta {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  /* Paginación: "Página X de Y" arriba, botones repartidos debajo */
+  .paginacion {
+    gap: 12px;
+  }
+
+  .paginaInfo {
+    order: -1;
+    flex: 1 1 100%;
+    text-align: center;
+  }
+
+  .paginacion button {
+    flex: 1;
+  }
 }

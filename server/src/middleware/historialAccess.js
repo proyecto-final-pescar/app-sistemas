@@ -40,7 +40,7 @@ const autorizarHistorialMascota = async (req, res, next, mascotaId) => {
     })
   }
 
-  const rolUsuario = req.user?.rol || req.user?.role
+  const rolUsuario = req.user?.rol
   const usuarioId = req.user?.id
 
   req.mascota = mascota
@@ -148,7 +148,7 @@ const autorizarEntradaHistorial = async (
     })
   }
 
-  const rolUsuario = req.user?.rol || req.user?.role
+  const rolUsuario = req.user?.rol
   const usuarioId = req.user?.id
 
   req.entradaHistorial = entrada
@@ -223,7 +223,7 @@ const autorizarRecursoPorMascota = (modeloPrisma, idField) => async (req, res, n
     return res.status(404).json({ message: 'Recurso no encontrado' })
   }
 
-  const rolUsuario = req.user?.rol || req.user?.role
+  const rolUsuario = req.user?.rol
   const usuarioId = req.user?.id
 
   req.recurso = recurso

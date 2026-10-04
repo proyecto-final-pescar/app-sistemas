@@ -416,3 +416,17 @@
 .errorModal button:hover {
   background-color: #6d28d9;
 }
+.paginacion {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.paginaInfo {
+  font-size: 14px;
+  color: #7c6aa6;
+}

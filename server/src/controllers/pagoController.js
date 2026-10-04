@@ -9,8 +9,6 @@ const detalleSeguroError = (error) => ({
   message: error?.message,
   status: error?.status
 });
-import client from '../config/mercadopago.js';
-
 import {
   ESTADO,
   ANTICIPACION_MINIMA_HORAS,
@@ -20,8 +18,15 @@ import {
   formatearTurno
 } from './turnoController.js';
 
+import {
+  crearNotificacion,
+  formatearFechaTurno,
+  TIPO
+} from '../services/notificacionService.js';
+
 export const crearPreferenciaPago = async (req, res) => {
   let pagoCreado = null;
+  let pagoEsNuevo = false;
 
   try {
     const { turnoId } = req.body;
@@ -50,9 +55,17 @@ export const crearPreferenciaPago = async (req, res) => {
     if (['cancelado', 'atendido'].includes(turno.estado_turno.nombre)) {
       return res.status(400).json({ message: 'Este turno no se encuentra disponible para pago' });
     }
+    if (turno.estado_turno_id === ESTADO.PENDIENTE && turno.vence_en && new Date(turno.vence_en) <= new Date()) {
+      return res.status(400).json({ message: 'El plazo para pagar este turno venció. El horario será liberado y podrás reservarlo nuevamente.' });
+    }
 
     const pagoExistente = turno.pago[0];
-    if (pagoExistente && !['rechazado', 'cancelado'].includes(pagoExistente.estado_pago?.nombre)) {
+    const estadoPagoExistente = pagoExistente?.estado_pago?.nombre;
+    // Reintento: si hay un pago pendiente o en proceso (p. ej. se abandonó
+    // el checkout de Mercado Pago), se reutiliza y se genera una
+    // preferencia nueva en lugar de bloquear con 409.
+    const reutilizarPago = !!pagoExistente && ['pendiente', 'en_proceso'].includes(estadoPagoExistente);
+    if (pagoExistente && !reutilizarPago && !['rechazado', 'cancelado'].includes(estadoPagoExistente)) {
       return res.status(400).json({ message: 'Este turno ya tiene un pago asociado' });
     }
 
@@ -62,12 +75,21 @@ export const crearPreferenciaPago = async (req, res) => {
     }
 
     const clienteMercadoPago = await obtenerClienteMercadoPago(turno.veterinaria_id);
-    pagoCreado = await prisma.pago.create({
-      data: { turno_id: turno.turno_id, monto, estado_pago_id: 'PEN' }
-    });
+    if (reutilizarPago) {
+      pagoCreado = pagoExistente;
+    } else {
+      pagoCreado = await prisma.pago.create({
+        data: { turno_id: turno.turno_id, monto, estado_pago_id: 'PEN' }
+      });
+      pagoEsNuevo = true;
+    }
 
     const backendPublico = process.env.PUBLIC_BACKEND_URL?.replace(/\/$/, '');
     if (!backendPublico) throw new Error('Falta configurar PUBLIC_BACKEND_URL.');
+
+    // Sin esto, un CLIENT_URL con "/" final genera "//pago-exitoso" y MP lo rechaza.
+    const clientePublico = (process.env.CLIENT_URL || '').replace(/\/$/, '');
+    if (!clientePublico) throw new Error('Falta configurar CLIENT_URL.');
 
     const preference = new Preference(clienteMercadoPago);
     const resultado = await preference.create({
@@ -80,9 +102,9 @@ export const crearPreferenciaPago = async (req, res) => {
           currency_id: 'ARS'
         }],
         back_urls: {
-          success: `${process.env.CLIENT_URL}/pago-exitoso?turnoId=${turno.turno_id}`,
-          failure: `${process.env.CLIENT_URL}/pago-fallido?turnoId=${turno.turno_id}`,
-          pending: `${process.env.CLIENT_URL}/pago-pendiente?turnoId=${turno.turno_id}`
+          success: `${clientePublico}/pago-exitoso?turnoId=${turno.turno_id}`,
+          failure: `${clientePublico}/pago-fallido?turnoId=${turno.turno_id}`,
+          pending: `${clientePublico}/pago-pendiente?turnoId=${turno.turno_id}`
         },
         notification_url: `${backendPublico}/api/pagos/webhook?veterinariaId=${turno.veterinaria_id}`,
         external_reference: turno.turno_id,
@@ -97,7 +119,9 @@ export const crearPreferenciaPago = async (req, res) => {
 
     return res.status(201).json({ success: true, data: { init_point: resultado.init_point } });
   } catch (error) {
-    if (pagoCreado?.pago_id) {
+    // Solo se revierte el pago si se creó en este intento: un pago
+    // reutilizado debe conservarse para futuros reintentos.
+    if (pagoEsNuevo && pagoCreado?.pago_id) {
       await prisma.pago.delete({ where: { pago_id: pagoCreado.pago_id } }).catch((rollbackError) => {
         console.error('No se pudo revertir el pago pendiente:', detalleSeguroError(rollbackError));
       });
@@ -132,7 +156,14 @@ export const obtenerEstadoPago = async (req, res) => {
       data: {
         estado: pago.estado_pago.nombre,
         monto: Number(pago.monto),
-        fechaAprobacion: pago.fecha_aprobacion
+        fechaAprobacion: pago.fecha_aprobacion,
+        // Derivado del FK existente (sin migrar nada): permite al front
+        // distinguir efectivo de Mercado Pago.
+        metodo: pago.metodo_pago_id === 'EFE'
+          ? 'efectivo'
+          : pago.metodo_pago_id === 'MPG'
+            ? 'mercadopago'
+            : null
       }
     });
   } catch (error) {
@@ -234,6 +265,17 @@ export const pagarEfectivo = async (req, res) => {
         message: 'Este turno ya no está disponible. Por favor elegí otro horario.'
       })
     }
+
+    // Notificacion al tutor: turno confirmado, con pago en efectivo
+    const cuando = formatearFechaTurno(turno.fecha, turno.hora_inicio)
+    const monto = Number(turno.monto_servicio).toLocaleString('es-AR')
+
+    await crearNotificacion({
+      usuarioId: req.user.id,
+      tipo: TIPO.TURNO_CONFIRMADO,
+      mensaje: `Tu turno en ${turno.veterinaria.nombre} para ${resultado.mascota.nombre} del ${cuando} quedó confirmado. Abonás $${monto} en el local.`,
+      link: `/mis-turnos`
+    })
 
     return res.status(200).json({ success: true, data: { turno: formatearTurno(resultado) } })
   } catch (error) {

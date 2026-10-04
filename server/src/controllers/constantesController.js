@@ -1,16 +1,19 @@
 import prisma from '../../prisma/client.js';
+import { ANTICIPACION_MINIMA_HORAS, PLAZO_PAGO_HORAS } from './turnoController.js';
 
-// Devuelve la lista de categorías de servicio válidas, leyendo directo de la tabla.
+// Devuelve las categorías de servicio válidas, leyendo directo de la tabla.
+// Se devuelven id+nombre: el id (código) lo usan los filtros por categoría,
+// el nombre lo muestran los selects y se usa al crear servicios.
 export const obtenerCategoriasServicio = async (req, res) => {
   try {
     const categorias = await prisma.categoria_servicio.findMany({
-      select: { nombre: true },
+      select: { categoria_servicio_id: true, nombre: true },
       orderBy: { nombre: 'asc' }
     });
 
     return res.status(200).json({
       success: true,
-      data: categorias.map((c) => c.nombre)
+      data: categorias.map((c) => ({ id: c.categoria_servicio_id, nombre: c.nombre }))
     });
   } catch (error) {
     console.error('Error en GET /constantes/categorias-servicio:', error);
@@ -77,4 +80,16 @@ export const obtenerSexosMascota = async (req, res) => {
     console.error('Error en GET /constantes/sexos-mascota:', error);
     return res.status(500).json({ message: 'Error interno del servidor' });
   }
+};
+
+// Reglas de negocio de turnos como fuente única para el frontend
+// (antelación mínima y plazo de pago). Son constantes, no van a la DB.
+export const obtenerReglasTurnos = (req, res) => {
+  return res.status(200).json({
+    success: true,
+    data: {
+      anticipacionMinimaHoras: ANTICIPACION_MINIMA_HORAS,
+      plazoPagoHoras: PLAZO_PAGO_HORAS
+    }
+  });
 };

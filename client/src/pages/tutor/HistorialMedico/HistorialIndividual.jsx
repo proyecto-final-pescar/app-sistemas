@@ -6,6 +6,29 @@ import TopBar from '../../../components/layout/TopBar'
 import Badge from '../../../components/ui/badge/Badge'
 import styles from './HistorialIndividual.module.css'
 
+const obtenerPartesFechaSinHora = (fecha) => {
+  const coincidencia = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fecha || ''))
+  if (!coincidencia) return null
+
+  return {
+    anio: Number(coincidencia[1]),
+    mes: Number(coincidencia[2]),
+    dia: Number(coincidencia[3]),
+  }
+}
+
+const formatearFechaSinHora = (fecha) => {
+  const partes = obtenerPartesFechaSinHora(fecha)
+  if (!partes) return ''
+
+  return new Intl.DateTimeFormat('es-AR', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(partes.anio, partes.mes - 1, partes.dia)))
+}
+
 export default function HistorialIndividual() {
   const { mascotaId } = useParams()
   const navigate = useNavigate()
@@ -183,7 +206,13 @@ export default function HistorialIndividual() {
   const calcularEdad = () => {
     if (!mascota?.fechaNacimiento) return 'N/A'
     const hoy = new Date()
-    const nacimiento = new Date(mascota.fechaNacimiento)
+    const partesNacimiento = obtenerPartesFechaSinHora(mascota.fechaNacimiento)
+    if (!partesNacimiento) return 'N/A'
+    const nacimiento = new Date(
+      partesNacimiento.anio,
+      partesNacimiento.mes - 1,
+      partesNacimiento.dia,
+    )
 
     let años = hoy.getFullYear() - nacimiento.getFullYear()
     let meses = hoy.getMonth() - nacimiento.getMonth()
@@ -208,22 +237,11 @@ export default function HistorialIndividual() {
     }
   }
 
-  const formatearFecha = (fecha) => {
-    if (!fecha) return 'N/A'
-    return new Date(fecha).toLocaleDateString('es-AR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
-  const ultimaConsultaFecha = historialClinico?.length
-    ? historialClinico.reduce(
-        (masReciente, c) =>
-          !masReciente || new Date(c.fecha) > new Date(masReciente.fecha) ? c : masReciente,
-        null
-      )?.fecha
-    : null
+   const ultimaConsultaFecha = historialClinico?.length
+   ? historialClinico.reduce((masReciente, c) => (
+      !masReciente || new Date(c.fecha) > new Date(masReciente.fecha) ? c : masReciente
+     ), null)?.fecha
+   : null;
 
   return (
     <div className={styles.shell}>
@@ -330,9 +348,7 @@ export default function HistorialIndividual() {
                 <path d="M3 10h18" />
                 <path d="m9 16 2 2 4-4" />
               </svg>
-              <p className={styles.cardValue}>
-                {ultimaConsultaFecha ? formatearFecha(ultimaConsultaFecha) : 'Sin consultas'}
-              </p>
+            <p className={styles.cardValue}>{ultimaConsultaFecha ? formatearFechaSinHora(ultimaConsultaFecha) : 'Sin consultas'}</p>
               <p className={styles.cardLabel}>Última Consulta</p>
             </div>
           </div>
@@ -344,7 +360,7 @@ export default function HistorialIndividual() {
               <div className={styles.fichaPermanente}>
                 <div className={styles.row}>
                   <label>Fecha de nacimiento</label>
-                  <p>{mascota?.fechaNacimiento ? formatearFecha(mascota.fechaNacimiento) : 'No registrada'}</p>
+                  <p>{mascota?.fechaNacimiento ? formatearFechaSinHora(mascota.fechaNacimiento) : 'No registrada'}</p>
                 </div>
                 <div className={styles.row}>
                   <label>Especie / Raza</label>
@@ -383,21 +399,14 @@ export default function HistorialIndividual() {
               <section className={styles.section}>
                 <h2>Registro de Vacunación</h2>
                 {vacunas && vacunas.length > 0 ? (
-                  <div className={styles.scrollList} onScroll={handleScrollVacunas}>
-                    <div className={styles.vacunasTable}>
-                      {vacunas.map((vacuna, idx) => (
-                        <div key={vacuna.id || vacuna._id || idx} className={styles.vacunaRow}>
-                          <span className={styles.vacunaNombre}>{vacuna.nombre}</span>
-                          <span className={styles.vacunaFecha}>
-                            Aplicada: {formatearFecha(vacuna.fechaAplicada)}
-                          </span>
-                          <span className={styles.vacunaVet}>
-                            {vacuna.profesionalNombre || vacuna.profesionalId?.nombre || 'N/A'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                    {loadingVacunas && <p className={styles.cargandoMas}>Cargando más vacunas...</p>}
+                  <div className={styles.vacunasTable}>
+                    {vacunas.map((vacuna, idx) => (
+                      <div key={idx} className={styles.vacunaRow}>
+                        <span className={styles.vacunaNombre}>{vacuna.nombre}</span>
+                        <span className={styles.vacunaFecha}>Aplicada: {formatearFechaSinHora(vacuna.fechaAplicada)}</span>
+                         <span className={styles.vacunaVet}>{vacuna.profesionalNombre || 'N/A'}</span>
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <p className={styles.emptyState}>Todavía no hay vacunas registradas.</p>
@@ -408,29 +417,23 @@ export default function HistorialIndividual() {
               <section className={styles.section}>
                 <h2>Estudios</h2>
                 {estudios && estudios.length > 0 ? (
-                  <div className={styles.scrollList} onScroll={handleScrollEstudios}>
-                    <div className={styles.estudios}>
-                      {estudios.map((estudio, idx) => (
-                        <div key={estudio.id || estudio._id || idx} className={styles.estudioCard}>
-                          <h3>{estudio.nombre || estudio.titulo}</h3>
-                          <p>
-                            {formatearFecha(estudio.fecha)} ·{' '}
-                            {estudio.profesionalNombre || estudio.profesionalId?.nombre || 'N/A'}
-                          </p>
-                          {(estudio.urlArchivo || estudio.archivoUrl) && (
-                            <a
-                              href={estudio.urlArchivo || estudio.archivoUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className={styles.verResultado}
-                            >
-                              Ver resultado
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    {loadingEstudios && <p className={styles.cargandoMas}>Cargando más estudios...</p>}
+                  <div className={styles.estudios}>
+                    {estudios.map((estudio, idx) => (
+                      <div key={idx} className={styles.estudioCard}>
+                        <h3>{estudio.nombre}</h3>
+                        <p>{formatearFechaSinHora(estudio.fecha)} · {estudio.profesionalNombre || 'N/A'}</p>
+                        {estudio.urlArchivo && (
+                          <a
+                            href={estudio.urlArchivo}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.verResultado}
+                          >
+                            Ver resultado
+                          </a>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <p className={styles.emptyState}>Todavía no hay estudios registrados.</p>

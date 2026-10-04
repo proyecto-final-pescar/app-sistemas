@@ -25,6 +25,7 @@ export default function ModeracionForo() {
     const [filtroReportes, setFiltroReportes] = useState("");
     const [paginaActual, setPaginaActual] = useState(1);
     const [publicacionSeleccionada, setPublicacionSeleccionada] = useState(null);
+    const [avisoExito, setAvisoExito] = useState("");
     const ITEMS_POR_PAGINA = 10;
 
     const cargar = async () => {
@@ -54,10 +55,16 @@ export default function ModeracionForo() {
         cargarZonas();
     }, []);
 
+    useEffect(() => {
+        if (!avisoExito) return undefined;
+        const timer = setTimeout(() => setAvisoExito(""), 6000);
+        return () => clearTimeout(timer);
+    }, [avisoExito]);
+
     const opcionesZona = [
         { value: "", label: "Todas las zonas" },
         ...zonas.map((zona) => ({
-            value: zona.zona_id,
+            value: String(zona.id),
             label: zona.nombre,
         })),
     ];
@@ -68,7 +75,7 @@ export default function ModeracionForo() {
         if (!pub) return false;
 
         const coincideZona = filtroZona
-            ? String(pub.zona?.zona_id) === String(filtroZona)
+            ? String(pub.zona?.zona_id ?? pub.zona?.id) === String(filtroZona)
             : true;
 
         const coincideReportes = (() => {
@@ -101,8 +108,12 @@ export default function ModeracionForo() {
         setPublicacionSeleccionada(null);
     };
 
-    const handleSuccessModeracion = () => {
+    const handleSuccessModeracion = (mensaje) => {
+        // La acción cambió el total: volver a página 1 para no quedar en
+        // una página vacía si la actual dejó de existir.
+        setPaginaActual(1);
         cargar();
+        setAvisoExito(mensaje || "La publicación se dio de baja correctamente.");
     };
 
     return (
@@ -113,6 +124,12 @@ export default function ModeracionForo() {
                 <TopBar title="Moderación de Foro" />
 
                 <div className={styles.content}>
+
+                    {avisoExito && (
+                        <div className={styles.successBanner} role="status">
+                            {avisoExito}
+                        </div>
+                    )}
 
                     {/* Filtros */}
                     <div className={styles.filtros}>
@@ -129,7 +146,7 @@ export default function ModeracionForo() {
                         <Select
                             placeholder="Zona"
                             opciones={opcionesZona}
-                            value={filtroZona}
+                            value={String(filtroZona)}
                             onChange={(e) => { setFiltroZona(e.target.value); setPaginaActual(1); }}
                         />
                     </div>
@@ -158,12 +175,12 @@ export default function ModeracionForo() {
                                 )}
                                 {!loading && error && (
                                     <tr>
-                                        <td colSpan="9" className={styles.estadoVacio}>{error}</td>
+                                        <td colSpan="7" className={styles.estadoVacio}>{error}</td>
                                     </tr>
                                 )}
                                 {!loading && !error && publicacionesFiltradas.length === 0 && (
                                     <tr>
-                                        <td colSpan="9" className={styles.estadoVacio}>
+                                        <td colSpan="7" className={styles.estadoVacio}>
                                             No hay publicaciones con reportes para mostrar.
                                         </td>
                                     </tr>

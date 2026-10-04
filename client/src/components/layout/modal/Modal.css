@@ -33,6 +33,10 @@
   max-width: 460px;
 }
 
+.mdl-content--md {
+  max-width: 640px;
+}
+
 .mdl-content--lg {
   max-width: 880px;
 }
