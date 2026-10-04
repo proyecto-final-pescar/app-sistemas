@@ -61,6 +61,9 @@ const FichaPaciente = () => {
   const [turnosPendientes, setTurnosPendientes] = useState([]);
   const [modalTurnosAbierto, setModalTurnosAbierto] = useState(false);
 
+  // Consulta cuyo detalle se muestra en el modal (null = cerrado)
+  const [consultaSeleccionada, setConsultaSeleccionada] = useState(null);
+
   // Si la navegación trae una tab (ej: al venir de RegistrarConsulta), la activa
   useEffect(() => {
     if (location.state?.tabActiva) {
@@ -102,6 +105,16 @@ const FichaPaciente = () => {
 
     cargarDatos();
   }, [mascotaId]);
+
+ 
+  useEffect(() => {
+    if (!consultaSeleccionada) return;
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setConsultaSeleccionada(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [consultaSeleccionada]);
 
   // Filtros en tiempo real
   const historialFiltrado = historial.filter((entrada) => {
@@ -291,6 +304,77 @@ const FichaPaciente = () => {
             </div>
           )}
 
+          {/* Detalle de la consulta */}
+          {consultaSeleccionada && (
+            <div className={styles.modalOverlay} onClick={() => setConsultaSeleccionada(null)}>
+              <div
+                className={`${styles.modal} ${styles.modalDetalle}`}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="detalle-consulta-titulo"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.modalHeader}>
+                  <h3 id="detalle-consulta-titulo" className={styles.modalTitulo}>
+                    {consultaSeleccionada.motivoConsulta}
+                  </h3>
+                  <button
+                    type="button"
+                    className={styles.modalCerrar}
+                    onClick={() => setConsultaSeleccionada(null)}
+                    aria-label="Cerrar"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className={styles.modalCuerpo}>
+                  <div className={styles.detalleDatos}>
+                    <div className={styles.detalleDato}>
+                      <span className={styles.label}>Fecha</span>
+                      <span>{formatearFechaSinHora(consultaSeleccionada.fecha)}</span>
+                    </div>
+                    {consultaSeleccionada.hora && (
+                      <div className={styles.detalleDato}>
+                        <span className={styles.label}>Hora</span>
+                        <span>{consultaSeleccionada.hora}</span>
+                      </div>
+                    )}
+                    {consultaSeleccionada.profesionalNombre && (
+                      <div className={styles.detalleDato}>
+                        <span className={styles.label}>Profesional</span>
+                        <span>{consultaSeleccionada.profesionalNombre}</span>
+                      </div>
+                    )}
+                    {consultaSeleccionada.categoriaServicio && (
+                      <div className={styles.detalleDato}>
+                        <span className={styles.label}>Servicio</span>
+                        <span>{consultaSeleccionada.categoriaServicio}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <span className={styles.label}>Anotaciones</span>
+                    <div className={styles.detalleAnotaciones}>
+                      {consultaSeleccionada.anotaciones || "Esta consulta no tiene anotaciones."}
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.modalFooter}>
+                  <button
+                    type="button"
+                    className={styles.btnCancelar}
+                    onClick={() => setConsultaSeleccionada(null)}
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Tabs */}
           <div className={styles.tabs}>
             <button
@@ -341,19 +425,34 @@ const FichaPaciente = () => {
                   ) : (
                     <div className={styles.listaConsultas}>
                       {historialFiltrado.map((entrada) => (
-                        <div key={entrada.id} className={styles.cardConsulta}>
+                        <div
+                          key={entrada.id}
+                          className={styles.cardConsulta}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setConsultaSeleccionada(entrada)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setConsultaSeleccionada(entrada);
+                            }
+                          }}
+                        >
                           <div className={styles.cardIcono}>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                             </svg>
                           </div>
+
                           <div className={styles.cardCuerpo}>
                             <h4 className={styles.cardMotivo}>{entrada.motivoConsulta}</h4>
                             <div className={styles.cardMeta}>
                               <span>
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <circle cx="12" cy="12" r="10" />
-                                  <polyline points="12 6 12 12 16 14" />
+                                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                                  <line x1="16" y1="2" x2="16" y2="6" />
+                                  <line x1="8" y1="2" x2="8" y2="6" />
+                                  <line x1="3" y1="10" x2="21" y2="10" />
                                 </svg>
                                 {formatearFechaSinHora(entrada.fecha)}
                               </span>
@@ -377,9 +476,20 @@ const FichaPaciente = () => {
                               )}
                             </div>
                             {entrada.anotaciones && (
-                              <p className={styles.cardAnotaciones}>{entrada.anotaciones}</p>
+                              <p className={`${styles.cardAnotaciones} ${styles.anotacionesResumen}`}>
+                                {entrada.anotaciones}
+                              </p>
                             )}
                           </div>
+
+                          <svg
+                            className={styles.chevron}
+                            width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <polyline points="9 6 15 12 9 18" />
+                          </svg>
                         </div>
                       ))}
                     </div>
