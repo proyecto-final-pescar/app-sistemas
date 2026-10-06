@@ -1,60 +1,56 @@
-import nodemailer from 'nodemailer'
 import { emailVerificacionCuenta } from '../templates/emailVerificacionCuenta.js'
 import { emailRecordatorio } from '../templates/emailRecordatorio.js'
 // nota: mailer.js vive en src/utils/, y la plantilla en src/templates/
 // (carpeta nueva, al mismo nivel que controllers/models/routes/utils)
 
+const BREVO_URL = 'https://api.brevo.com/v3/smtp/email'
+
 // --- Diagnóstico de variables de entorno (no imprime los valores) ---
-console.log('[MAIL] GMAIL_USER definido:', Boolean(process.env.GMAIL_USER))
-console.log('[MAIL] GMAIL_PASSWORD definido:', Boolean(process.env.GMAIL_PASSWORD))
+console.log('[MAIL] BREVO_API_KEY definido:', Boolean(process.env.BREVO_API_KEY))
+console.log('[MAIL] MAIL_FROM definido:', Boolean(process.env.MAIL_FROM))
 console.log('[MAIL] CLIENT_URL definido:', Boolean(process.env.CLIENT_URL))
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASSWORD
-  },
-  // Evita que el envío quede colgado si el puerto SMTP está bloqueado
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000
-})
-
-// Verifica la conexión SMTP al iniciar el servidor
-transporter.verify((err) => {
-  if (err) {
-    console.error('[MAIL] Falló la conexión SMTP:', err.code, '-', err.message)
-  } else {
-    console.log('[MAIL] SMTP listo para enviar')
-  }
-})
-
 /**
- * Envia un email generico usando el transporter compartido de My Pet
+ * Envia un email generico usando la API de Brevo (HTTPS, no usa puertos SMTP)
  * @param {Object} params
  * @param {string} params.to - Email del destinatario
  * @param {string} params.subject - Asunto del email
  * @param {string} params.html - Contenido HTML del email
  */
 export async function enviarEmail({ to, subject, html }) {
-  const mailOptions = {
-    from: `"My Pet" <${process.env.GMAIL_USER}>`,
-    to,
-    subject,
-    html
-  }
-
   console.log('[MAIL] Intentando enviar ->', to, '| asunto:', subject)
 
+  let res
   try {
-    const info = await transporter.sendMail(mailOptions)
-    console.log('[MAIL] Enviado OK ->', to, '| messageId:', info.messageId)
-    return info
+    res = await fetch(BREVO_URL, {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json',
+        accept: 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { name: 'My Pet', email: process.env.MAIL_FROM },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html
+      }),
+      signal: AbortSignal.timeout(15000)
+    })
   } catch (err) {
-    console.error('[MAIL] Error enviando a', to, '|', err.code, '-', err.message)
+    console.error('[MAIL] Error de red enviando a', to, '|', err.name, '-', err.message)
     throw err
   }
+
+  if (!res.ok) {
+    const detalle = await res.text()
+    console.error('[MAIL] Brevo respondió', res.status, 'enviando a', to, '|', detalle)
+    throw new Error(`Brevo ${res.status}: ${detalle}`)
+  }
+
+  const data = await res.json()
+  console.log('[MAIL] Enviado OK ->', to, '| messageId:', data.messageId)
+  return data
 }
 
 /**
