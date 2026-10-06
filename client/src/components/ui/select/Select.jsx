@@ -3,8 +3,8 @@ import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import "./Select.css";
 
-const MARGEN_VIEWPORT = 8; 
-const ALTURA_MAXIMA_MENU = 280; 
+const MARGEN_VIEWPORT = 8;
+const ALTURA_MAXIMA_MENU = 280;
 
 function Select({
   label,
@@ -27,7 +27,6 @@ function Select({
     .map(normalizarOpcion)
     .find((opcion) => String(opcion.value) === String(value));
 
-  
   const actualizarPosicion = () => {
     if (!botonRef.current) return;
     const rect = botonRef.current.getBoundingClientRect();
@@ -41,10 +40,17 @@ function Select({
     const alturaDisponible = abrirHaciaArriba ? espacioArriba : espacioAbajo;
     const alturaMenu = Math.max(0, Math.min(ALTURA_MAXIMA_MENU, alturaDisponible));
 
-   
+  
+    const anchoMaximo = window.innerWidth - MARGEN_VIEWPORT * 2;
+    const ancho = Math.min(rect.width, anchoMaximo);
+    const left = Math.min(
+      Math.max(rect.left, MARGEN_VIEWPORT),
+      window.innerWidth - ancho - MARGEN_VIEWPORT
+    );
+
     setPosicionMenu({
-      left: rect.left,
-      width: rect.width,
+      left,
+      width: ancho,
       maxHeight: alturaMenu,
       ...(abrirHaciaArriba
         ? { bottom: window.innerHeight - rect.top + 4, top: "auto" }
@@ -80,7 +86,7 @@ function Select({
 
     document.addEventListener("mousedown", cerrarSiEsAfuera);
     document.addEventListener("keydown", cerrarConEscape);
- 
+
     window.addEventListener("scroll", reposicionarSiNoEsElMenu, true);
     window.addEventListener("resize", actualizarPosicion);
     return () => {
@@ -126,6 +132,8 @@ function Select({
                 bottom: posicionMenu.bottom,
                 left: posicionMenu.left,
                 width: posicionMenu.width,
+                minWidth: posicionMenu.width,
+                maxWidth: posicionMenu.width,
                 maxHeight: posicionMenu.maxHeight,
               }}
             >

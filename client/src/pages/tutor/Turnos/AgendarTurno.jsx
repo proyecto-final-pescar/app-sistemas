@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, CalendarDays, X } from "lucide-react";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { crearPreferenciaPago } from "../../../services/pagosService";
 import { getVeterinariaById } from "../../../services/veterinariaService";
@@ -99,9 +99,12 @@ const AgendarTurnos = () => {
   });
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [isSelectorPagoOpen, setIsSelectorPagoOpen] = useState(false);
+ 
+  const [paso, setPaso] = useState("datos");
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [metodoConfirmado, setMetodoConfirmado] = useState(null);
+  // Monto guardado antes de cerrar el modal, para el mensaje de éxito en efectivo.
+  const [montoConfirmado, setMontoConfirmado] = useState(null);
   const [procesandoAccion, setProcesandoAccion] = useState(false);
   // Qué acción corre ('reservar' | 'pagar' | null): ambos botones se
   // deshabilitan juntos, pero solo el accionado muestra "Procesando...".
@@ -116,8 +119,7 @@ const AgendarTurnos = () => {
   const [mascotaSeleccionadaId, setMascotaSeleccionadaId] = useState("");
   const [notas, setNotas] = useState("");
   const [mascotaConfirmadaNombre, setMascotaConfirmadaNombre] = useState("");
-  // Al perder la carrera por un turno (409) se incrementa para que el
-  // efecto de abajo recargue la grilla sin el horario ya tomado.
+ 
   const [refreshKey, setRefreshKey] = useState(0);
   // Reintento manual de la carga inicial cuando falla.
   const [retryKey, setRetryKey] = useState(0);
@@ -331,12 +333,14 @@ const AgendarTurnos = () => {
 
     setTurnoSeleccionado({ dia, hora, opciones });
     setTurnoIdSeleccionado(opciones.length === 1 ? idDeTurno(opciones[0]) : "");
+    setPaso("datos");
     setIsConfirmOpen(true);
   };
 
   const handleCloseConfirm = useCallback(() => {
     if (procesandoAccion) return;
     setIsConfirmOpen(false);
+    setPaso("datos");
     setAccionEnCurso(null);
     setTurnoIdSeleccionado("");
     setMascotaSeleccionadaId("");
@@ -436,11 +440,13 @@ const AgendarTurnos = () => {
       return;
     }
     setErrorPago("");
-    setIsSelectorPagoOpen(true);
+    setPaso("pago");
   };
 
   const handlePagarConMercadoPago = async () => {
-    setIsSelectorPagoOpen(false);
+    // Se vuelve al paso de datos: si algo falla, el usuario ve el error
+    // y puede reintentar sin perder lo que cargó.
+    setPaso("datos");
     setErrorPago("");
     setProcesandoAccion(true);
     setAccionEnCurso("pagar");
@@ -498,7 +504,7 @@ const AgendarTurnos = () => {
   };
 
   const handlePagarEnEfectivo = async () => {
-    setIsSelectorPagoOpen(false);
+    setPaso("datos");
     setProcesandoAccion(true);
     setAccionEnCurso("pagar");
 
@@ -519,8 +525,10 @@ const AgendarTurnos = () => {
       setTurnosDisponibles((prev) => prev.filter((t) => idDeTurno(t) !== turnoId));
 
       setMetodoConfirmado("efectivo");
-      // Idem arriba: cerrar con el flag bajo para que no quede abierto
-      // debajo del success.
+      // Se guarda el monto ANTES de cerrar: handleCloseConfirm limpia el
+      // turno elegido y el mensaje de éxito quedaba con "$" vacío.
+      setMontoConfirmado(turnoConcretoElegido?.monto_servicio ?? null);
+      // Cerrar con el flag bajo para que no quede abierto debajo del success.
       setProcesandoAccion(false);
       handleCloseConfirm();
       setIsSuccessOpen(true);
@@ -574,6 +582,7 @@ const AgendarTurnos = () => {
       </div>
     );
   }
+
   if (procesandoPago) {
     return (
       <div className={styles.pagoLoadingOverlay}>
@@ -720,62 +729,67 @@ const AgendarTurnos = () => {
                   </div>
                 ) : (
                   <div className={styles.calendarioContainer}>
-                    <div className={styles.diasHeader}>
-                      <div className={styles.espacioHora}></div>
-                      {diasSemana.map((dia) => (
-                        <div
-                          key={dia.fechaStr}
-                          className={`${styles.diaColumna} ${dia.activo ? styles.diaColumnaActivo : ""
-                            }`}
-                        >
-                          <span className={styles.diaNombre}>{dia.nom}</span>
-                          <span className={styles.diaNumero}>{dia.num}</span>
-                          <span className={styles.diaMes}>{dia.mes}</span>
+                    {/* Scroll horizontal en pantallas chicas */}
+                    <div className={styles.calendarioScrollX}>
+                      <div className={styles.calendarioInner}>
+                        <div className={styles.diasHeader}>
+                          <div className={styles.espacioHora}></div>
+                          {diasSemana.map((dia) => (
+                            <div
+                              key={dia.fechaStr}
+                              className={`${styles.diaColumna} ${dia.activo ? styles.diaColumnaActivo : ""
+                                }`}
+                            >
+                              <span className={styles.diaNombre}>{dia.nom}</span>
+                              <span className={styles.diaNumero}>{dia.num}</span>
+                              <span className={styles.diaMes}>{dia.mes}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
 
-                    <div className={styles.gridHorariosScroll}>
-                      {horasVisibles.length === 0 ? (
-                        <p className={styles.sinTurnosText}>
-                          No hay turnos disponibles para este servicio en esta semana.
-                        </p>
-                      ) : (
-                        horasVisibles.map((hora) => (
-                          <div key={hora} className={styles.filaHorario}>
-                            <span className={styles.horaLabel}>{hora}</span>
-                            {diasSemana.map((dia) => {
-                              const opciones =
-                                turnosPorDiaYHora[dia.fechaStr]?.[hora] || [];
-                              const disponible = opciones.length > 0;
+                        <div className={styles.gridHorariosScroll}>
+                          {horasVisibles.length === 0 ? (
+                            <p className={styles.sinTurnosText}>
+                              No hay turnos disponibles para este servicio en esta semana.
+                            </p>
+                          ) : (
+                            horasVisibles.map((hora) => (
+                              <div key={hora} className={styles.filaHorario}>
+                                <span className={styles.horaLabel}>{hora}</span>
+                                {diasSemana.map((dia) => {
+                                  const opciones =
+                                    turnosPorDiaYHora[dia.fechaStr]?.[hora] || [];
+                                  const disponible = opciones.length > 0;
 
-                              return (
-                                <button
-                                  key={`${dia.fechaStr}-${hora}`}
-                                  type="button"
-                                  className={`${styles.slotTurno} ${disponible
-                                    ? styles.slotDisponible
-                                    : styles.slotNoDisponible
-                                    }`}
-                                  disabled={!disponible}
-                                  onClick={() => handleSlotClick(dia, hora)}
-                                  title={
-                                    disponible
-                                      ? `${opciones.length} profesional(es) disponible(s)`
-                                      : undefined
-                                  }
-                                >
-                                  {disponible ? (
-                                    <span style={{ fontWeight: "bold" }}>✓</span>
-                                  ) : (
-                                    <span>-</span>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        ))
-                      )}
+                                  return (
+                                    <button
+                                      key={`${dia.fechaStr}-${hora}`}
+                                      type="button"
+                                      className={`${styles.slotTurno} ${disponible
+                                        ? styles.slotDisponible
+                                        : styles.slotNoDisponible
+                                        }`}
+                                      disabled={!disponible}
+                                      onClick={() => handleSlotClick(dia, hora)}
+                                      title={
+                                        disponible
+                                          ? `${opciones.length} profesional(es) disponible(s)`
+                                          : undefined
+                                      }
+                                    >
+                                      {disponible ? (
+                                        <span style={{ fontWeight: "bold" }}>✓</span>
+                                      ) : (
+                                        <span>-</span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     <div className={styles.leyendaCalendario}>
@@ -803,11 +817,13 @@ const AgendarTurnos = () => {
               </>
             )}
 
-            {/* MODAL CONFIRMACIÓN */}
+            {/* MODAL CONFIRMACIÓN (con paso de pago embebido) */}
             {isConfirmOpen && (
               <div className={styles.modalOverlay} onClick={handleCloseConfirm}>
                 <div
                   className={styles.modalContainer}
+                  role="dialog"
+                  aria-modal="true"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <button
@@ -817,123 +833,131 @@ const AgendarTurnos = () => {
                     onClick={handleCloseConfirm}
                     disabled={procesandoAccion}
                   >
-                    ✕
+                    <X size={18} />
                   </button>
 
-                  <h3 className={styles.modalTitulo}>Confirmar turno</h3>
-                  <p className={styles.modalDescripcion}>
-                    {servicioElegido?.nombre} en {veterinaria?.nombre}
-                  </p>
+                  {paso === "pago" ? (
+                    <SelectorMetodoPago
+                      embebido
+                      isOpen
+                      onVolver={() => setPaso("datos")}
+                      onElegirMercadoPago={handlePagarConMercadoPago}
+                      onElegirEfectivo={handlePagarEnEfectivo}
+                      monto={turnoConcretoElegido?.monto_servicio}
+                      procesando={procesandoAccion}
+                    />
+                  ) : (
+                    <>
+                      <header className={styles.modalHeader}>
+                        <h3 className={styles.modalTitulo}>Confirmar turno</h3>
+                        <p className={styles.modalDescripcion}>
+                          {servicioElegido?.nombre} en {veterinaria?.nombre}
+                        </p>
+                      </header>
 
-                  <div className={styles.modalBadgeFecha}>
-                    <span>{obtenerFechaFormateada()}</span>
-                  </div>
+                      <div className={styles.modalBadgeFecha}>
+                        <CalendarDays size={18} />
+                        <span>{obtenerFechaFormateada()}</span>
+                      </div>
 
-                  <form
-                    className={styles.modalForm}
-                    onSubmit={handleConfirmarTurnoFinal}
-                  >
-                    <div className={styles.formGroup}>
-                      <Select
-                        label="Profesional"
-                        placeholder="Seleccioná un profesional"
-                        value={turnoIdSeleccionado}
-                        onChange={(e) => setTurnoIdSeleccionado(e.target.value)}
-                        opciones={(turnoSeleccionado?.opciones || []).map((turno) => {
-                          const prof = turno.profesional || mapaProfesionales[turno.profesional_id];
-                          return {
-                            value: idDeTurno(turno),
-                            label: prof?.especialidad
-                              ? `${prof?.nombre || "Profesional"} ${prof?.apellido || ""} · ${prof.especialidad?.nombre}`
-                              : `${prof?.nombre || "Profesional"} ${prof?.apellido || ""}`.trim(),
-                          };
-                        })}
-                      />
-                    </div>
-
-                    <div className={styles.formGroup}>
-                      <Select
-                        label="Mascota"
-                        placeholder="Seleccioná una mascota"
-                        value={mascotaSeleccionadaId}
-                        onChange={(e) => setMascotaSeleccionadaId(e.target.value)}
-                        opciones={mascotas.map((m) => ({
-                          value: idDeMascota(m),
-                          label: `${m.nombre} · ${m.especie || m.raza?.especie?.nombre || ""}`,
-                        }))}
-                      />
-                    </div>
-
-                    <div className={styles.formGroup}>
-                      <label className={styles.formLabel}>Notas (opcional)</label>
-                      <textarea
-                        className={styles.modalSelect}
-                        rows={2}
-                        value={notas}
-                        onChange={(e) => setNotas(e.target.value)}
-                        placeholder="Algo que quieras contarle a la veterinaria..."
-                      />
-                    </div>
-
-                    {turnoConcretoElegido && (
-                      <p className={styles.modalDescripcion}>
-                        Precio del servicio: ${formatearPrecio(turnoConcretoElegido.monto_servicio)}
-                      </p>
-                    )}
-
-                    <p className={styles.modalDescripcion}>
-                      Vas a tener {reglas.plazoPagoHoras}hs para pagar este turno antes de
-                      que se libere automáticamente (o pagalo ahora en efectivo o por MercadoPago).
-                    </p>
-
-                    {errorPago && (
-                      <p className={styles.modalDescripcion} style={{ color: "#ef4444", fontWeight: 600 }}>
-                        {errorPago}
-                      </p>
-                    )}
-
-                    {turnoReservadoId && (
-                      <p className={styles.modalDescripcion} style={{ color: "#6d28d9", fontWeight: 600 }}>
-                        Este turno ya quedó reservado a tu nombre. Podés pagarlo
-                        con “Pagar ahora” o desde “Mis Turnos”.
-                      </p>
-                    )}
-
-                    <div className={styles.modalAcciones}>
-                      <button
-                        type="button"
-                        className={styles.btnCancelar}
-                        onClick={handleCloseConfirm}
-                        disabled={procesandoAccion}
+                      <form
+                        className={styles.modalForm}
+                        onSubmit={handleConfirmarTurnoFinal}
                       >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.btnCancelar}
-                        onClick={handleAbrirSelectorPago}
-                        disabled={procesandoAccion}
-                      >
-                        {procesandoAccion && accionEnCurso === "pagar" ? "Procesando..." : "Pagar ahora"}
-                      </button>
-                      <button type="submit" className={styles.btnConfirmar} disabled={procesandoAccion || turnoReservadoId}>
-                        {procesandoAccion && accionEnCurso === "reservar" ? "Procesando..." : "Confirmar turno"}
-                      </button>
-                    </div>
-                  </form>
+                        <Select
+                          label="Profesional"
+                          placeholder="Seleccioná un profesional"
+                          value={turnoIdSeleccionado}
+                          onChange={(e) => setTurnoIdSeleccionado(e.target.value)}
+                          opciones={(turnoSeleccionado?.opciones || []).map((turno) => {
+                            const prof = turno.profesional || mapaProfesionales[turno.profesional_id];
+                            return {
+                              value: idDeTurno(turno),
+                              label: prof?.especialidad
+                                ? `${prof?.nombre || "Profesional"} ${prof?.apellido || ""} · ${prof.especialidad?.nombre}`
+                                : `${prof?.nombre || "Profesional"} ${prof?.apellido || ""}`.trim(),
+                            };
+                          })}
+                        />
+
+                        <Select
+                          label="Mascota"
+                          placeholder="Seleccioná una mascota"
+                          value={mascotaSeleccionadaId}
+                          onChange={(e) => setMascotaSeleccionadaId(e.target.value)}
+                          opciones={mascotas.map((m) => ({
+                            value: idDeMascota(m),
+                            label: `${m.nombre} · ${m.especie || m.raza?.especie?.nombre || ""}`,
+                          }))}
+                        />
+
+                        <div className={styles.formGroup}>
+                          <label className={styles.formLabel}>Notas (opcional)</label>
+                          <textarea
+                            className={styles.modalTextarea}
+                            rows={2}
+                            value={notas}
+                            onChange={(e) => setNotas(e.target.value)}
+                            placeholder="Algo que quieras contarle a la veterinaria..."
+                          />
+                        </div>
+
+                        {turnoConcretoElegido && (
+                          <div className={styles.resumenPrecio}>
+                            <span>Precio del servicio</span>
+                            <strong>${formatearPrecio(turnoConcretoElegido.monto_servicio)}</strong>
+                          </div>
+                        )}
+
+                        <p className={styles.modalAviso}>
+                          Vas a tener {reglas.plazoPagoHoras}hs para pagar este turno antes
+                          de que se libere automáticamente.
+                        </p>
+
+                        {errorPago && <p className={styles.modalError}>{errorPago}</p>}
+
+                        {turnoReservadoId && (
+                          <p className={styles.modalAviso}>
+                            Este turno ya quedó reservado a tu nombre. Podés pagarlo con
+                            “Pagar ahora” o desde “Mis Turnos”.
+                          </p>
+                        )}
+
+                        <div className={styles.modalAcciones}>
+                          <button
+                            type="button"
+                            className={styles.btnTexto}
+                            onClick={handleCloseConfirm}
+                            disabled={procesandoAccion}
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            type="submit"
+                            className={styles.btnSecundario}
+                            disabled={procesandoAccion || !!turnoReservadoId}
+                          >
+                            {procesandoAccion && accionEnCurso === "reservar"
+                              ? "Procesando..."
+                              : "Reservar y pagar después"}
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.btnPrimario}
+                            onClick={handleAbrirSelectorPago}
+                            disabled={procesandoAccion}
+                          >
+                            {procesandoAccion && accionEnCurso === "pagar"
+                              ? "Procesando..."
+                              : "Pagar ahora"}
+                          </button>
+                        </div>
+                      </form>
+                    </>
+                  )}
                 </div>
               </div>
             )}
-
-            {/* SELECTOR DE MÉTODO DE PAGO */}
-            <SelectorMetodoPago
-              isOpen={isSelectorPagoOpen}
-              onClose={() => setIsSelectorPagoOpen(false)}
-              onElegirMercadoPago={handlePagarConMercadoPago}
-              onElegirEfectivo={handlePagarEnEfectivo}
-              monto={turnoConcretoElegido?.monto_servicio}
-              procesando={procesandoAccion}
-            />
 
             {/* MODAL ÉXITO */}
             <SuccessModal
@@ -941,7 +965,7 @@ const AgendarTurnos = () => {
               titulo={metodoConfirmado === "efectivo" ? "¡Turno confirmado!" : "¡Turno reservado!"}
               mensaje={
                 metodoConfirmado === "efectivo"
-                  ? `Tu turno para ${mascotaConfirmadaNombre || "tu mascota"} quedó confirmado. Recordá abonar $${turnoConcretoElegido ? formatearPrecio(turnoConcretoElegido.monto_servicio) : ""} en efectivo en el local.`
+                  ? `Tu turno para ${mascotaConfirmadaNombre || "tu mascota"} quedó confirmado. Recordá abonar $${formatearPrecio(montoConfirmado)} en efectivo en el local.`
                   : `Tu turno para ${mascotaConfirmadaNombre || "tu mascota"} quedó reservado. Tenés ${reglas.plazoPagoHoras}hs para pagarlo desde "Mis Turnos" o se libera automáticamente.`
               }
               textoBoton="Entendido"
