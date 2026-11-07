@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import PanelDestacado from "../ui/panel-destacado/PanelDestacado";
 import Button from "../ui/button/Button";
+import Reveal from "../ui/reveal/Reveal";
 import styles from "./CtaSection.module.css";
 
 const CtaSection = () => {
@@ -9,19 +9,28 @@ const CtaSection = () => {
   return (
     <section className={styles.section}>
       <div className={styles.container}>
-        <PanelDestacado
-          titulo="Empezá hoy, es gratis"
-          subtitulo="Registrate en menos de 2 minutos y centralizá toda la salud de tu mascota."
-        >
-          <div className={styles.buttonRow}>
-            <Button
-              texto="Registrarme gratis"
-              variante="primario"
-              tamaño="grande"
-              onClick={() => navigate("/registro")}
-            />
+        <Reveal>
+          <div className={styles.panel}>
+            <span className={`${styles.circle} ${styles.circleBig}`} aria-hidden="true" />
+            <span className={`${styles.circle} ${styles.circleSmall}`} aria-hidden="true" />
+
+            <div className={styles.content}>
+              <h2 className={styles.title}>Empezá hoy, es gratis</h2>
+              <p className={styles.subtitle}>
+                Registrate en menos de 2 minutos y centralizá toda la salud de
+                tu mascota.
+              </p>
+              <div className={styles.buttonRow}>
+                <Button
+                  texto="Registrarme"
+                  variante="primario"
+                  tamaño="grande"
+                  onClick={() => navigate("/registro")}
+                />
+              </div>
+            </div>
           </div>
-        </PanelDestacado>
+        </Reveal>
       </div>
     </section>
   );

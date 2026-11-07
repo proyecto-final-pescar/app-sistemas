@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../hooks/useAuth.js";
 import api from "../services/api.js";
 import { obtenerMiVeterinaria } from "../services/veterinariaService.js";
+import { obtenerMensajeError } from "../utils/obtenerMensajeError.js";
 import styles from "./Login.module.css";
 
 function Login() {
@@ -13,6 +15,7 @@ function Login() {
     password: "",
   });
   const [error, setError] = useState("");
+  const [errorBaneado, setErrorBaneado] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -25,22 +28,73 @@ function Login() {
     }));
   };
 
-  const getErrorMessage = (data) => {
-    if (typeof data === "string") {
-      return data;
+  const redirigirSegunRol = async (userData) => {
+    const rol = userData.rol;
+
+    if (rol === "dueno") {
+      navigate("/home", { replace: true });
+      return;
     }
 
-    return (
-      data?.message ||
-      data?.mensaje ||
-      data?.error ||
-      "No se pudo iniciar sesion."
-    );
+    if (rol === "veterinaria") {
+  try {
+    const miVeterinaria = await obtenerMiVeterinaria();
+    if (!miVeterinaria?._id) {
+      navigate("/registro-veterinaria", { replace: true });
+    } else if (miVeterinaria.estado === "ACT") {
+      navigate("/home-veterinaria", { replace: true });
+    } else {
+      navigate("/veterinaria-pendiente", { replace: true });
+    }
+  } catch (vetError) {
+    // Solo la ausencia de veterinaria (404) lleva al registro. Cualquier
+    // otro fallo (500, red caída) muestra error en vez de redirigir,
+    // para no hacerle creer al usuario que perdió su veterinaria.
+    if (vetError?.response?.status === 404) {
+      navigate("/registro-veterinaria", { replace: true });
+    } else {
+      setError(
+        "No se pudo verificar tu veterinaria. Revisá tu conexión e intentá de nuevo.",
+      );
+    }
+  }
+  return;
+}
+
+    if (rol === "administrador") {
+      navigate("/dashboard", { replace: true });
+      return;
+    }
+
+    navigate("/home", { replace: true });
+  };
+
+  // Maneja los errores de la request de login, distinguiendo el caso
+  // de cuenta inactiva (motivo === "cuenta_desactivada") del resto,
+  // para poder mostrar cada uno con su propio estilo.
+  const manejarErrorLogin = (requestError) => {
+    const responseData = requestError.response?.data;
+    const statusCode = requestError.response?.status;
+
+    if (statusCode === 403 && responseData?.motivo === "cuenta_desactivada") {
+      setErrorBaneado(
+        responseData?.mensaje || "Tu cuenta ha sido desactivada.",
+      );
+    } else if (responseData) {
+      setError(obtenerMensajeError(responseData));
+    } else if (requestError.request) {
+      setError(
+        "No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.",
+      );
+    } else {
+      setError("Ocurrió un error inesperado. Por favor intentá nuevamente.");
+    }
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+    setErrorBaneado("");
     setIsLoading(true);
 
     try {
@@ -50,7 +104,7 @@ function Login() {
       });
 
       const token = data.token || data.jwt || data.accessToken;
-      const user = data.user || data.usuario || {};
+      const user = data.usuario || data.user || {};
 
       if (!token) {
         setError("No se recibio un token de autenticacion.");
@@ -58,189 +112,219 @@ function Login() {
       }
 
       const userData = {
-        id: user.id || user._id || data.id,
-        email: user.email || data.email || formData.email.trim().toLowerCase(),
-        nombre: user.nombre || user.name || data.nombre || data.name,
-        rol: user.rol || user.role || data.rol || data.role,
-        fotoUrl: user.fotoUrl || data.fotoUrl || "",
-        asistenteVirtual: user.asistenteVirtual || data.asistenteVirtual || "perro",
+        id: user.id,
+        email: user.email,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        rol: user.rol,
+        fotoUrl: user.fotoUrl || "",
+        asistenteVirtual: user.asistenteVirtual || "perro",
       };
 
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(userData));
       setUsuario(userData);
 
-      const rol = userData.rol;
-      if (rol === "dueno") {
-        navigate("/home", { replace: true }); /*/home*/
-        return;
-      }
-
-      if (rol === "veterinaria") {
-        try {
-          const miVeterinaria = await obtenerMiVeterinaria();
-          const tienePerfilCompletado = Boolean(
-            miVeterinaria?._id || miVeterinaria?.nombre,
-          );
-
-          if (tienePerfilCompletado) {
-            navigate("/home-veterinaria", { replace: true });
-          } else {
-            navigate("/registro-veterinaria", { replace: true });
-          }
-        } catch (vetError) {
-          navigate("/registro-veterinaria", { replace: true });
-        }
-        return;
-      }
-
-      if (rol === "administrador") {
-        navigate("/dashboard", { replace: true });
-        return;
-      }
-
-      navigate("/home", { replace: true });
+      await redirigirSegunRol(userData);
     } catch (requestError) {
-      const responseData = requestError.response?.data;
-
-      if (responseData) {
-        setError(getErrorMessage(responseData));
-      } else if (requestError.request) {
-        setError(
-          "No se pudo conectar con el servidor. Revisá tu conexión e intentá de nuevo.",
-        );
-      } else {
-        setError("Ocurrió un error inesperado. Por favor intentá nuevamente.");
-      }
+      manejarErrorLogin(requestError);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError("");
+    setErrorBaneado("");
+    setIsLoading(true);
+
+    try {
+      const { data } = await api.post("/auth/google", {
+        token: credentialResponse.credential,
+      });
+
+      if (data.nuevoUsuario) {
+        navigate("/completar-registro-google", {
+          state: {
+            googleCredential: credentialResponse.credential,
+            nombre: data.nombre,
+            apellido: data.apellido,
+            email: data.email,
+          },
+        });
+        return;
+      }
+
+      const token = data.token;
+      const user = data.usuario;
+
+      if (!token) {
+        setError("No se recibió un token de autenticación.");
+        return;
+      }
+
+      const userData = {
+        id: user.id,
+        email: user.email,
+        nombre: user.nombre,
+        apellido: user.apellido,
+        rol: user.rol,
+        fotoUrl: user.fotoUrl || "",
+        asistenteVirtual: user.asistenteVirtual || "perro",
+      };
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUsuario(userData);
+
+      await redirigirSegunRol(userData);
+    } catch (requestError) {
+      manejarErrorLogin(requestError);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError("No se pudo completar el login con Google.");
+  };
+
   return (
-    <main className={styles.page}>
-      <div className={styles.backgroundIconTop}>♥</div>
-      <div className={styles.backgroundIconLeft}>♥</div>
-      <div className={styles.backgroundIconBottom}>♥</div>
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+      <main className={styles.page}>
+        <div className={styles.backgroundIconTop}>♥</div>
+        <div className={styles.backgroundIconLeft}>♥</div>
+        <div className={styles.backgroundIconBottom}>♥</div>
 
-      <header className={styles.brand}>
-        <img src="/logo-mypet.svg" alt="" className={styles.brandIcon} />
-        <img src="/mypet2.svg" alt="MyPet" className={styles.brandLogo} />
-      </header>
+        <header className={styles.brand}>
+          <img src="/logo-mypet.svg" alt="" className={styles.brandIcon} />
+          <img src="/mypet2.svg" alt="MyPet" className={styles.brandLogo} />
+        </header>
 
-      <section className={styles.panel} aria-labelledby="login-title">
-        <span aria-hidden="true" className={styles.panelTopBar} />
+        <section className={styles.panel} aria-labelledby="login-title">
+          <span aria-hidden="true" className={styles.panelTopBar} />
 
-        <div className={styles.heading}>
-          <h1 id="login-title" className={styles.title}>
-            Iniciar sesión
-          </h1>
-          <p className={styles.subtitle}>Ingresá con tu email y contraseña</p>
-        </div>
+          <div className={styles.heading}>
+            <h1 id="login-title" className={styles.title}>
+              Iniciar sesión
+            </h1>
+            <p className={styles.subtitle}>Ingresá con tu email y contraseña</p>
+          </div>
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <label className={styles.field}>
-            <span className={styles.label}>Email</span>
-            <span className={styles.inputWrap}>
-              <span aria-hidden="true" className={styles.inputIcon}>
-                <EnvelopeIcon />
+          <form onSubmit={handleSubmit} className={styles.form}>
+            <label className={styles.field}>
+              <span className={styles.label}>Email</span>
+              <span className={styles.inputWrap}>
+                <span aria-hidden="true" className={styles.inputIcon}>
+                  <EnvelopeIcon />
+                </span>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  autoComplete="email"
+                  placeholder="ana@mypet.com"
+                  required
+                  className={styles.input}
+                />
               </span>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                autoComplete="email"
-                placeholder="ana@mypet.com"
-                required
-                className={styles.input}
-              />
-            </span>
-          </label>
+            </label>
 
-          <label className={styles.field}>
-            <span className={styles.labelRow}>
-              <span className={styles.label}>Contraseña</span>
-              <a href="/forgot-password" className={styles.forgotLink}>
-                ¿Olvidaste tu contraseña?
+            <label className={styles.field}>
+              <span className={styles.labelRow}>
+                <span className={styles.label}>Contraseña</span>
+                <a href="/forgot-password" className={styles.forgotLink}>
+                  ¿Olvidaste tu contraseña?
+                </a>
+              </span>
+              <span className={styles.inputWrap}>
+                <span aria-hidden="true" className={styles.inputIcon}>
+                  <LockIcon />
+                </span>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  autoComplete="current-password"
+                  placeholder="Mínimo 8 caracteres"
+                  required
+                  className={styles.input}
+                />
+                <button
+                  type="button"
+                  aria-label={
+                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                  }
+                  onClick={() => setShowPassword((currentValue) => !currentValue)}
+                  className={styles.passwordButton}
+                >
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </button>
+              </span>
+            </label>
+
+            {errorBaneado && (
+              <div role="alert" aria-live="polite" className={styles.avisoInactiva}>
+                <span aria-hidden="true" className={styles.avisoInactivaIcono}>
+                  <AlertIcon />
+                </span>
+                <span>{errorBaneado}</span>
+              </div>
+            )}
+
+            {error && !errorBaneado && (
+              <p role="alert" aria-live="polite" className={styles.error}>
+                {error}
+              </p>
+            )}
+
+            <button type="submit" disabled={isLoading} className={styles.button}>
+              {isLoading ? "Ingresando..." : "Ingresar  →"}
+            </button>
+
+            <div className={styles.divider}>
+              <span className={styles.dividerLine} />
+              <span className={styles.dividerText}>o continuá con</span>
+              <span className={styles.dividerLine} />
+            </div>
+
+            <div className={styles.socialGrid}>
+              <div className={styles.googleBtnWrap}>
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  size="large"
+                  width="100%"
+                  shape="pill"
+                  theme="outline"
+                  locale="es_AR"
+                />
+              </div>
+            </div>
+
+            <p className={styles.registerText}>
+              ¿No tenés cuenta?{" "}
+              <a href="/registro" className={styles.registerLink}>
+                Registrate
               </a>
-            </span>
-            <span className={styles.inputWrap}>
-              <span aria-hidden="true" className={styles.inputIcon}>
-                <LockIcon />
-              </span>
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                autoComplete="current-password"
-                placeholder="Mínimo 8 caracteres"
-                required
-                className={styles.input}
-              />
-              <button
-                type="button"
-                aria-label={
-                  showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
-                }
-                onClick={() => setShowPassword((currentValue) => !currentValue)}
-                className={styles.passwordButton}
-              >
-                <EyeIcon />
-              </button>
-            </span>
-          </label>
-
-          {error && (
-            <p role="alert" aria-live="polite" className={styles.error}>
-              {error}
             </p>
-          )}
+          </form>
+        </section>
 
-          <button type="submit" disabled={isLoading} className={styles.button}>
-            {isLoading ? "Ingresando..." : "Ingresar  →"}
-          </button>
-
-          <div className={styles.divider}>
-            <span className={styles.dividerLine} />
-            <span className={styles.dividerText}>o continuá con</span>
-            <span className={styles.dividerLine} />
-          </div>
-
-          <div className={styles.socialGrid}>
-            <button type="button" className={styles.socialButton}>
-              Google
-            </button>
-            <button type="button" className={styles.socialButton}>
-              Apple
-            </button>
-          </div>
-
-          <p className={styles.registerText}>
-            ¿No tenés cuenta?{" "}
-            <a href="/registro" className={styles.registerLink}>
-              Registrate
-            </a>
-          </p>
-        </form>
-      </section>
-
-      <p className={styles.termsText}>
-        Al ingresar aceptás nuestros{" "}
-        <a href="/terminos" className={styles.termsLink}>
-          Términos
-        </a>{" "}
-        y{" "}
-        <a href="/privacidad" className={styles.termsLink}>
-          Privacidad
-        </a>
-      </p>
-
-      <button type="button" aria-label="Ayuda" className={styles.helpButton}>
-        ?
-      </button>
-    </main>
+        <p className={styles.termsText}>
+          Al ingresar aceptás nuestros{" "}
+          <a href="/terminos" className={styles.termsLink}>
+            Términos
+          </a>{" "}
+          y{" "}
+          <a href="/privacidad" className={styles.termsLink}>
+            Privacidad
+          </a>
+        </p>
+      </main>
+    </GoogleOAuthProvider>
   );
 }
 
@@ -271,4 +355,24 @@ function EyeIcon() {
   );
 }
 
-export default Login; 
+function EyeOffIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="2" />
+      <circle cx="12" cy="12" r="2.5" stroke="currentColor" strokeWidth="2" />
+      <path d="M3 3l18 18" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function AlertIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 9v4" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path d="M12 17h.01" stroke="currentColor" strokeLinecap="round" strokeWidth="2" />
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    </svg>
+  );
+}
+
+export default Login;

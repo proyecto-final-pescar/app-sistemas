@@ -13,16 +13,19 @@ const menuItems = [
     ),
   },
   {
-    label: "Registro",
-    path: "/registro-veterinaria",
+    label: "Mi Veterinaria",
+    path: "/mi-veterinaria",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-        <rect x="8" y="2" width="8" height="4" rx="1" />
-        <path d="M9 13l2 2 4-4" />
+        <path d="M3 21h18" />
+        <path d="M5 21V7l7-4 7 4v14" />
+        <path d="M9 10h6" />
+        <path d="M12 7v6" />
+        <path d="M9 21v-5h6v5" />
       </svg>
     ),
   },
+ 
   {
     label: "Agenda",
     path: "/agenda",

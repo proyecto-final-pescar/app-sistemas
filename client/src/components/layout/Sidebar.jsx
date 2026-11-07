@@ -2,8 +2,12 @@ import { useState, useEffect } from "react";
 import TutorMenu from "./TutorMenu";
 import VeterinariaMenu from "./VeterinariaMenu";
 import AdminMenu from "./AdminMenu";
+import LogoutModal from "../ui/logout-modal/LogoutModal";
+import NotificationBell from "../notifications/NotificationBell";
 import { useAuth } from "../../hooks/useAuth.js";
 import { useNavigate, useLocation } from "react-router-dom";
+
+import styles from "./Sidebar.module.css";
 
 const IconConfig = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -50,25 +54,24 @@ const SidebarContenido = ({ onClose }) => {
   const inicial = nombreMostrado.charAt(0).toUpperCase();
   const etiquetaRol = ETIQUETAS_ROL[rol] || "Usuario";
 
+  const handleLogoutConfirm = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
+
   return (
     <>
       {/* Logo */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        gap: "10px", padding: "20px 20px 16px", borderBottom: "1px solid #f5f3ff"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <img src="/logo-mypett.svg" alt="Ícono MyPet" style={{ width: "40px", height: "40px" }} />
-          <img src="/mypet.svg" alt="MyPet" style={{ height: "32px", width: "auto" }} />
+      <div className={styles.logoHeader}>
+        <div className={styles.logoGroup}>
+          <img src="/logo-mypett.svg" alt="Ícono MyPet" className={styles.logoIcon} />
+          <img src="/mypet.svg" alt="MyPet" className={styles.logoWordmark} />
         </div>
         {onClose && (
           <button
             onClick={onClose}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              width: "32px", height: "32px", border: "none", borderRadius: "8px",
-              backgroundColor: "transparent", color: "#6b7280", cursor: "pointer",
-            }}
+            className={styles.closeButton}
+            aria-label="Cerrar menú"
           >
             <IconClose />
           </button>
@@ -76,72 +79,46 @@ const SidebarContenido = ({ onClose }) => {
       </div>
 
       {/* Menú principal */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px 12px 0" }}>
+      <div className={styles.menuArea}>
         {rol === "veterinaria" && <VeterinariaMenu onNavigate={onClose} />}
         {rol === "dueno" && <TutorMenu onNavigate={onClose} />}
         {rol === "administrador" && <AdminMenu onNavigate={onClose} />}
       </div>
 
       {/* Bloque inferior */}
-      <div style={{ borderTop: "1px solid #f5f3ff", padding: "12px 12px 10px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", marginBottom: "4px" }}>
+      <div className={styles.bottomBlock}>
+        <div className={styles.profileRow}>
           {usuario?.fotoUrl ? (
-            <img
-              src={usuario.fotoUrl}
-              alt={nombreMostrado}
-              style={{
-                width: "34px", height: "34px", borderRadius: "50%",
-                objectFit: "cover", flexShrink: 0,
-              }}
-            />
+            <img src={usuario.fotoUrl} alt={nombreMostrado} className={styles.avatarImg} />
           ) : (
-            <div style={{
-              width: "34px", height: "34px", borderRadius: "50%",
-              backgroundColor: "#7c3aed", color: "#ffffff",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "13px", fontWeight: 600, flexShrink: 0,
-            }}>{inicial}</div>
+            <div className={styles.avatarFallback}>{inicial}</div>
           )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: "13px", fontWeight: 600, color: "#1f1739", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nombreMostrado}</p>
-            <p style={{ margin: 0, fontSize: "11px", color: "#8276ab" }}>{etiquetaRol}</p>
+          <div className={styles.profileInfo}>
+            <p className={styles.profileName}>{nombreMostrado}</p>
+            <p className={styles.profileRole}>{etiquetaRol}</p>
           </div>
-          <button
-            title="Cerrar sesión"
-            onClick={() => { logout(); navigate("/login", { replace: true }); }}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "30px", height: "30px", flexShrink: 0, border: "none", borderRadius: "8px", backgroundColor: "transparent", color: "#c4b5fd", cursor: "pointer" }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff1f4"; e.currentTarget.style.color = "#a31d34"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#c4b5fd"; }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-          </button>
+          <LogoutModal onConfirm={handleLogoutConfirm}>
+            <button title="Cerrar sesión" className={styles.logoutButton}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          </LogoutModal>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className={styles.actionsRow}>
           <button
             onClick={() => navigate("/perfil")}
-            style={{
-              display: "flex", alignItems: "center", gap: "12px", flex: 1, padding: "10px 12px",
-              border: "none", borderRadius: "10px",
-              backgroundColor: enPerfil ? "#f5f3ff" : "transparent",
-              color: enPerfil ? "#7c3aed" : "#6b7280",
-              fontSize: "14px", fontWeight: "500", cursor: "pointer", textAlign: "left", boxSizing: "border-box",
-            }}
-            onMouseEnter={(e) => { if (!enPerfil) { e.currentTarget.style.backgroundColor = "#f5f3ff"; e.currentTarget.style.color = "#7c3aed"; } }}
-            onMouseLeave={(e) => { if (!enPerfil) { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#6b7280"; } }}
+            className={`${styles.configButton} ${enPerfil ? styles.configButtonActive : ""}`}
           >
             <IconConfig />
             Configuración
           </button>
           <button
             title="Contraer sidebar"
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "32px", height: "32px", flexShrink: 0, border: "none", borderRadius: "8px", backgroundColor: "transparent", color: "#c4b5fd", cursor: "pointer" }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#f5f3ff"; e.currentTarget.style.color = "#7c3aed"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.color = "#c4b5fd"; }}
+            className={styles.collapseButton}
           >
             <IconCollapse />
           </button>
@@ -165,100 +142,55 @@ const Sidebar = ({ title = "" }) => {
     } else {
       document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ""; };
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [mobileAbierto]);
 
   return (
     <>
       {/* DESKTOP */}
-      <aside style={{
-        width: "260px", minWidth: "260px", height: "100vh",
-        backgroundColor: "#ffffff", borderRight: "1px solid #ede9fe",
-        display: "flex", flexDirection: "column", boxSizing: "border-box",
-        position: "sticky", top: 0, fontFamily: "'Inter', Arial, Helvetica, sans-serif",
-      }}
-        className="sidebar-desktop"
-      >
+      <aside className={styles.sidebarDesktop}>
         <SidebarContenido />
       </aside>
 
       {/* MOBILE: barra superior */}
-      <div className="sidebar-mobile-topbar" style={{
-        display: "none",
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        height: "60px", backgroundColor: "#ffffff",
-        borderBottom: "1px solid #ede9fe",
-        alignItems: "center", justifyContent: "space-between",
-        padding: "0 16px", boxSizing: "border-box",
-        fontFamily: "'Inter', Arial, Helvetica, sans-serif",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <img src="/logo-mypett.svg" alt="MyPet" style={{ width: "28px", height: "28px" }} />
-          {title && (
-            <span style={{
-              fontSize: "14px", fontWeight: 600,
-              color: "#1c1033", whiteSpace: "nowrap",
-              overflow: "hidden", textOverflow: "ellipsis",
-              maxWidth: "180px",
-            }}>
-              {title}
-            </span>
-          )}
+      <div className={styles.mobileTopbar}>
+        <div className={styles.mobileTopbarLeft}>
+          <img src="/logo-mypett.svg" alt="MyPet" className={styles.mobileLogo} />
+          {title && <span className={styles.mobileTitle}>{title}</span>}
         </div>
-        <button
-          onClick={() => setMobileAbierto(true)}
-          style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            width: "40px", height: "40px", border: "none", borderRadius: "10px",
-            backgroundColor: "#f5f3ff", color: "#7c3aed", cursor: "pointer",
-          }}
-          aria-label="Abrir menú"
-        >
-          <IconHamburger />
-        </button>
+
+        {/* Campanita + hamburguesa agrupadas: antes solo estaba el botón de
+            hamburguesa acá y el space-between del padre lo empujaba solo a
+            él contra el borde. Al sumar la campanita necesitan un wrapper
+            propio para no separarse una de la otra. */}
+        <div className={styles.mobileActions}>
+          <NotificationBell />
+          <button
+            onClick={() => setMobileAbierto(true)}
+            className={styles.hamburgerButton}
+            aria-label="Abrir menú"
+          >
+            <IconHamburger />
+          </button>
+        </div>
       </div>
 
       {/* MOBILE: overlay */}
       {mobileAbierto && (
         <div
           onClick={() => setMobileAbierto(false)}
-          className="sidebar-mobile-overlay"
-          style={{
-            display: "none",
-            position: "fixed", inset: 0, zIndex: 200,
-            backgroundColor: "rgba(0, 0, 0, 0.45)",
-          }}
+          className={styles.mobileOverlay}
         />
       )}
 
       {/* MOBILE: drawer */}
       <div
-        className="sidebar-mobile-drawer"
-        style={{
-          position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 300,
-          width: "280px", backgroundColor: "#ffffff",
-          display: "flex", flexDirection: "column", boxSizing: "border-box",
-          fontFamily: "'Inter', Arial, Helvetica, sans-serif",
-          transform: mobileAbierto ? "translateX(0)" : "translateX(-100%)",
-          transition: "transform 0.25s ease",
-          boxShadow: mobileAbierto ? "4px 0 20px rgba(0,0,0,0.12)" : "none",
-        }}
+        className={`${styles.mobileDrawer} ${mobileAbierto ? styles.mobileDrawerAbierto : ""}`}
       >
         <SidebarContenido onClose={() => setMobileAbierto(false)} />
       </div>
-
-      <style>{`
-        @media (max-width: 767px) {
-          .sidebar-desktop { display: none !important; }
-          .sidebar-mobile-topbar { display: flex !important; }
-          .sidebar-mobile-overlay { display: block !important; }
-        }
-        @media (min-width: 768px) {
-          .sidebar-mobile-topbar { display: none !important; }
-          .sidebar-mobile-drawer { display: none !important; }
-          .sidebar-mobile-overlay { display: none !important; }
-        }
-      `}</style>
     </>
   );
 };

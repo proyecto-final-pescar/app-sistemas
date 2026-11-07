@@ -7,6 +7,29 @@ import Badge from '../../../components/ui/badge/Badge'
 import Button from '../../../components/ui/button/Button'
 import styles from './HistorialIndividual.module.css'
 
+const obtenerPartesFechaSinHora = (fecha) => {
+  const coincidencia = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fecha || ''))
+  if (!coincidencia) return null
+
+  return {
+    anio: Number(coincidencia[1]),
+    mes: Number(coincidencia[2]),
+    dia: Number(coincidencia[3]),
+  }
+}
+
+const formatearFechaSinHora = (fecha) => {
+  const partes = obtenerPartesFechaSinHora(fecha)
+  if (!partes) return ''
+
+  return new Intl.DateTimeFormat('es-AR', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(partes.anio, partes.mes - 1, partes.dia)))
+}
+
 export default function HistorialIndividual() {
   const { mascotaId } = useParams()
   const navigate = useNavigate()
@@ -38,7 +61,7 @@ export default function HistorialIndividual() {
       <div className={styles.shell}>
         <Sidebar />
         <div className={styles.main}>
-          <TopBar />
+          <TopBar title="Ficha Médica" />
           <div className={styles.container}>Cargando...</div>
         </div>
       </div>
@@ -50,7 +73,7 @@ export default function HistorialIndividual() {
       <div className={styles.shell}>
         <Sidebar />
         <div className={styles.main}>
-          <TopBar />
+          <TopBar title="Ficha Médica" />
           <div className={styles.container}><p>{error}</p></div>
         </div>
       </div>
@@ -62,7 +85,7 @@ export default function HistorialIndividual() {
       <div className={styles.shell}>
         <Sidebar />
         <div className={styles.main}>
-          <TopBar />
+          <TopBar title="Ficha Médica" />
           <div className={styles.container}>No hay datos</div>
         </div>
       </div>
@@ -74,7 +97,13 @@ export default function HistorialIndividual() {
   const calcularEdad = () => {
     if (!mascota?.fechaNacimiento) return 'N/A'
     const hoy = new Date()
-    const nacimiento = new Date(mascota.fechaNacimiento)
+    const partesNacimiento = obtenerPartesFechaSinHora(mascota.fechaNacimiento)
+    if (!partesNacimiento) return 'N/A'
+    const nacimiento = new Date(
+      partesNacimiento.anio,
+      partesNacimiento.mes - 1,
+      partesNacimiento.dia,
+    )
 
     let años = hoy.getFullYear() - nacimiento.getFullYear()
     let meses = hoy.getMonth() - nacimiento.getMonth()
@@ -99,19 +128,17 @@ export default function HistorialIndividual() {
     }
   }
 
-  const formatearFecha = (fecha) => {
-    return new Date(fecha).toLocaleDateString('es-AR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
+   const ultimaConsultaFecha = historialClinico?.length
+   ? historialClinico.reduce((masReciente, c) => (
+      !masReciente || new Date(c.fecha) > new Date(masReciente.fecha) ? c : masReciente
+     ), null)?.fecha
+   : null;
 
   return (
     <div className={styles.shell}>
       <Sidebar />
       <div className={styles.main}>
-        <TopBar />
+        <TopBar title={`Ficha Médica - ${mascota?.nombre || ''}`} />
         <div className={styles.container}>
           <button
             className={styles.backBtn}
@@ -122,7 +149,8 @@ export default function HistorialIndividual() {
           {/* Header */}
           <div className={styles.header}>
             <h1>Ficha Médica - {mascota?.nombre}</h1>
-            <p>Tutor: {mascota?.dueñoId?.name || 'No registrado'}</p>
+           <p>Tutor: {mascota?.dueno ? `${mascota.dueno.nombre} ${mascota.dueno.apellido}` : 'No registrado'}</p>
+
           </div>
 
           {/* mascota*/}
@@ -151,8 +179,10 @@ export default function HistorialIndividual() {
             </div>
             <div className={styles.responsable}>
               <p className={styles.responsableLabel}>RESPONSABLE</p>
-              <p className={styles.responsableName}>{mascota?.dueñoId?.name}</p>
-              <p className={styles.responsablePhone}>{mascota?.dueñoId?.telefono || 'N/A'}</p>
+              <p className={styles.responsableName}>
+                {mascota?.dueno ? `${mascota.dueno.nombre} ${mascota.dueno.apellido}` : 'No registrado'}
+             </p>
+             <p className={styles.responsablePhone}>{mascota?.dueno?.telefono || 'N/A'}</p>
             </div>
           </div>
 
@@ -195,7 +225,7 @@ export default function HistorialIndividual() {
                 <path d="M8 11h.01" />
                 <path d="M8 16h.01" />
               </svg>
-              <p className={styles.cardValue}>{(historialClinico?.length || 0) + (vacunas?.length || 0) + (estudios?.length || 0)}</p>
+             <p className={styles.cardValue}>{historialClinico?.length || 0}</p>
               <p className={styles.cardLabel}>Consultas Totales</p>
             </div>
 
@@ -207,7 +237,7 @@ export default function HistorialIndividual() {
                 <path d="M3 10h18" />
                 <path d="m9 16 2 2 4-4" />
               </svg>
-              <p className={styles.cardValue}>{vacunas?.[0]?.fechaAplicada || estudios?.[0]?.fecha ? formatearFecha(vacunas?.[0]?.fechaAplicada || estudios?.[0]?.fecha) : 'N/A'}</p>
+            <p className={styles.cardValue}>{ultimaConsultaFecha ? formatearFechaSinHora(ultimaConsultaFecha) : 'Sin consultas'}</p>
               <p className={styles.cardLabel}>Última Consulta</p>
             </div>
           </div>
@@ -219,7 +249,7 @@ export default function HistorialIndividual() {
               <div className={styles.fichaPermanente}>
                 <div className={styles.row}>
                   <label>Fecha de nacimiento</label>
-                  <p>{fichaMedica?.fechaNacimiento ? formatearFecha(fichaMedica.fechaNacimiento) : mascota?.fechaNacimiento ? formatearFecha(mascota.fechaNacimiento) : 'No registrada'}</p>
+                  <p>{mascota?.fechaNacimiento ? formatearFechaSinHora(mascota.fechaNacimiento) : 'No registrada'}</p>
                 </div>
                 <div className={styles.row}>
                   <label>Especie / Raza</label>
@@ -258,8 +288,8 @@ export default function HistorialIndividual() {
                     {vacunas.map((vacuna, idx) => (
                       <div key={idx} className={styles.vacunaRow}>
                         <span className={styles.vacunaNombre}>{vacuna.nombre}</span>
-                        <span className={styles.vacunaFecha}>Aplicada: {formatearFecha(vacuna.fechaAplicada)}</span>
-                        <span className={styles.vacunaVet}>{vacuna.profesionalId?.nombre || 'N/A'}</span>
+                        <span className={styles.vacunaFecha}>Aplicada: {formatearFechaSinHora(vacuna.fechaAplicada)}</span>
+                         <span className={styles.vacunaVet}>{vacuna.profesionalNombre || 'N/A'}</span>
                       </div>
                     ))}
                   </div>
@@ -276,7 +306,7 @@ export default function HistorialIndividual() {
                     {estudios.map((estudio, idx) => (
                       <div key={idx} className={styles.estudioCard}>
                         <h3>{estudio.nombre}</h3>
-                        <p>{formatearFecha(estudio.fecha)} · {estudio.profesionalId?.nombre || 'N/A'}</p>
+                        <p>{formatearFechaSinHora(estudio.fecha)} · {estudio.profesionalNombre || 'N/A'}</p>
                         {estudio.urlArchivo && (
                           <a
                             href={estudio.urlArchivo}

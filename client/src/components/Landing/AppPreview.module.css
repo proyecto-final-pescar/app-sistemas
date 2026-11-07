@@ -1,0 +1,480 @@
+.section {
+  width: 100%;
+  background: linear-gradient(180deg, var(--color-blanco, #fff) 0%, #f5f3ff 100%);
+  padding: 112px 24px;
+  font-family: "Inter", Arial, Helvetica, sans-serif;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.container {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 72px;
+}
+.logo {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: block;
+  object-fit: contain;
+}
+
+/* ---------- Texto ---------- */
+.textColumn {
+  flex: 1 1 480px;
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0 0 20px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-primario);
+}
+
+.title {
+  margin: 0;
+  max-width: 560px;
+  font-size: clamp(34px, 4.6vw, 54px);
+  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #1c1533;
+}
+
+.titleAccent {
+  color: var(--color-primario);
+}
+
+.lead {
+  margin: 20px 0 0;
+  max-width: 480px;
+  color: #7c6aa6;
+  font-size: 17px;
+  line-height: 27px;
+}
+
+.points {
+  list-style: none;
+  margin: 40px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 24px;
+}
+
+.point {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.pointIcon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background-color: #ede9fe;
+  color: var(--color-primario);
+}
+
+.pointTitle {
+  margin: 0;
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 600;
+  color: #1c1533;
+}
+
+.pointText {
+  margin: 4px 0 0;
+  max-width: 420px;
+  font-size: 15px;
+  line-height: 24px;
+  color: #7c6aa6;
+}
+
+/* ---------- Mockup ---------- */
+.deviceColumn {
+  flex: 0 1 420px;
+  display: flex;
+  justify-content: center;
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+}
+
+.glow {
+  position: absolute;
+  inset: -10% -25%;
+  z-index: 0;
+  background:
+    radial-gradient(closest-side at 65% 35%, rgba(124, 58, 237, 0.28), transparent 70%),
+    radial-gradient(closest-side at 30% 75%, rgba(16, 185, 129, 0.22), transparent 70%);
+  filter: blur(36px);
+  pointer-events: none;
+}
+
+.phone {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  aspect-ratio: 9 / 18.5;
+  padding: 10px;
+  border-radius: 46px;
+  background: #1c1533;
+  box-shadow:
+    0 40px 70px -30px rgba(60, 20, 120, 0.55),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+}
+
+.notch {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  translate: -50% 0;
+  width: 84px;
+  height: 22px;
+  border-radius: 999px;
+  background: #1c1533;
+  z-index: 3;
+}
+
+.screen {
+  height: 100%;
+  padding: 40px 14px 0;
+  border-radius: 36px;
+  background: #faf9ff;
+  box-sizing: border-box;
+  overflow: hidden;
+  /* la pantalla se desvanece abajo: sugiere que hay más contenido */
+  -webkit-mask-image: linear-gradient(180deg, #000 80%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 80%, transparent 100%);
+}
+
+/* Header de la app: logo + campana + menú (lila, como en la app) */
+.appBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.appBarActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.iconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: #ede9fe;
+  color: var(--color-primario);
+}
+
+.iconBtnRound {
+  border-radius: 50%;
+}
+
+.screenTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #1c1533;
+}
+
+.screenSub {
+  margin: 2px 0 10px;
+  font-size: 11px;
+  color: #8b7fb0;
+}
+
+/* Identidad */
+.idCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid rgba(124, 58, 237, 0.1);
+  box-shadow: 0 8px 20px -14px rgba(124, 58, 237, 0.4);
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: 50% 30%;
+  flex-shrink: 0;
+  border: 2px solid #ede9fe;
+}
+
+.idText {
+  min-width: 0;
+}
+
+.idName {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1c1533;
+}
+
+.idMeta {
+  margin: 1px 0 0;
+  font-size: 11px;
+  color: #7c6aa6;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.chipViolet {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.chipGreen {
+  background: #d1fae5;
+  color: #047857;
+}
+
+/* Datos rápidos */
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.stat {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #ede9fe;
+  border: 1px solid rgba(124, 58, 237, 0.1);
+}
+
+.statIcon {
+  color: var(--color-primario);
+}
+
+.statValue {
+  margin: 6px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1c1533;
+}
+
+.statLabel {
+  margin: 1px 0 0;
+  font-size: 10.5px;
+  color: #7c6aa6;
+}
+
+/* Registro de vacunación (caja lila con tarjetas blancas, como en la app) */
+.vaccinesBox {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: #ede9fe;
+  border: 1px solid rgba(124, 58, 237, 0.1);
+}
+
+.vaccinesTitle {
+  margin: 0 0 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #7c3aed;
+}
+
+.vaccines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.vaccine {
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.vaccineName {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1c1533;
+}
+
+.vaccineDate {
+  margin: 2px 0 0;
+  font-size: 10.5px;
+  color: #6b5f8a;
+}
+
+.vaccineVet {
+  margin: 1px 0 0;
+  font-size: 10.5px;
+  color: #8b7fb0;
+}
+
+/* ---------- Tarjetas flotantes (salen de otras pantallas) ---------- */
+.float {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px 10px 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 14px 30px -10px rgba(124, 58, 237, 0.35);
+  animation: float 6s ease-in-out infinite;
+}
+
+.floatTurno {
+  right: -64px;
+  top: 30%;
+}
+
+.floatEstudio {
+  left: -64px;
+  bottom: 16%;
+  animation-delay: -3s;
+}
+
+.floatIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #ede9fe;
+  color: var(--color-primario);
+  flex-shrink: 0;
+}
+
+.floatTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1c1533;
+  white-space: nowrap;
+}
+
+.floatMeta {
+  margin: 1px 0 0;
+  font-size: 11.5px;
+  color: #7c6aa6;
+  white-space: nowrap;
+}
+
+.floatPill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #6d28d9;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 960px) {
+  .container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 56px;
+  }
+
+  .deviceColumn {
+    flex: none;
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 64px 20px;
+  }
+
+  .points {
+    margin-top: 32px;
+  }
+
+  .stage {
+    max-width: 300px;
+  }
+
+  .floatTurno {
+    right: -14px;
+    top: 24%;
+  }
+
+  .floatEstudio {
+    left: -14px;
+    bottom: 14%;
+  }
+
+  .floatTitle {
+    font-size: 12px;
+  }
+
+  .floatMeta {
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float {
+    animation: none;
+  }
+}

@@ -1,0 +1,55 @@
+.shell {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #f5f3ff;
+  font-family: 'Inter', Arial, Helvetica, sans-serif;
+}
+
+.contenido {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.card {
+  max-width: 480px;
+  width: 100%;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 40px 32px;
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(124, 58, 237, 0.08);
+  border: 1px solid #ede9fe;
+}
+
+.icono {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: #ede9fe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7c3aed;
+}
+
+.titulo {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f1739;
+  margin: 0 0 12px;
+  letter-spacing: -0.2px;
+}
+
+.mensaje {
+  font-size: 15px;
+  line-height: 1.5;
+  color: #8276ab;
+  margin: 0;
+}

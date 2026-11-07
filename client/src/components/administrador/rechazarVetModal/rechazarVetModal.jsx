@@ -61,7 +61,7 @@ export default function RechazarVetModal({
       setError("");
 
       // Ejecutamos la petición de rechazo al Backend
-      await rechazarVeterinariaAdmin(veterinariaId, motivo);
+      await rechazarVeterinariaAdmin(veterinariaId, motivo.trim());
 
       if (onSuccess) {
         onSuccess();

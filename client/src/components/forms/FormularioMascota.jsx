@@ -1,20 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { PawPrint, Camera, Pencil } from "lucide-react";
 import "./FormularioMascota.css";
 
 import Input from "../ui/input/Input";
 import Select from "../ui/select/Select";
 import Button from "../ui/button/Button";
-import {
-  crearMascota,
-  actualizarMascota,
-} from "../../services/MascotaService";
+import RecortadorImagen from "../common/RecortadorImagen";
+import { crearMascota, actualizarMascota } from "../../services/mascotaService";
 import { subirImagen } from "../../services/uploadService";
+import {
+  obtenerEspecies,
+  obtenerRazas,
+} from "../../services/constantesService";
+import { optimizarImagen } from "../../utils/optimizarImagen";
 
-function FormularioMascota({
-  mascotaInicial = null,
-  onCancelar,
-  onGuardado,
-})  {
+function FormularioMascota({ mascotaInicial = null, onCancelar, onGuardado }) {
   const esEdicion = Boolean(mascotaInicial);
 
   const [nombre, setNombre] = useState(mascotaInicial?.nombre || "");
@@ -22,18 +22,74 @@ function FormularioMascota({
   const [raza, setRaza] = useState(mascotaInicial?.raza || "");
   const [fechaNacimiento, setFechaNacimiento] = useState(
     mascotaInicial?.fechaNacimiento
-        ? mascotaInicial.fechaNacimiento.split("T")[0]
-        : ""
-    );
+      ? mascotaInicial.fechaNacimiento.split("T")[0]
+      : "",
+  );
   const [sexo, setSexo] = useState(mascotaInicial?.sexo || "");
-  const [peso, setPeso] = useState(mascotaInicial?.peso || "");
-  const [esCastrado, setEsCastrado] = useState(mascotaInicial?.esCastrado ?? false);
+  const [peso, setPeso] = useState(
+    mascotaInicial?.peso !== undefined && mascotaInicial?.peso !== null
+      ? String(mascotaInicial.peso)
+      : ""
+  );
+  const [esCastrado, setEsCastrado] = useState(
+    mascotaInicial?.esCastrado ?? false,
+  );
   const [foto, setFoto] = useState(null);
-const [guardando, setGuardando] = useState(false);
+  const [fotoPreview, setFotoPreview] = useState(null);
+  const fotoPreviewRef = useRef(null);
+  const [archivoParaRecortar, setArchivoParaRecortar] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [errorGeneral, setErrorGeneral] = useState(null);
 
+  const [especiesDisponibles, setEspeciesDisponibles] = useState([]);
+  const [razasDisponibles, setRazasDisponibles] = useState([]);
 
+  // Libera el blob de la vista previa al desmontar el formulario
+  useEffect(() => {
+    return () => {
+      if (fotoPreviewRef.current) URL.revokeObjectURL(fotoPreviewRef.current);
+    };
+  }, []);
 
+  // Traer el catálogo de especies del backend
+  useEffect(() => {
+    let cancelado = false;
 
+    obtenerEspecies()
+      .then((especies) => {
+        if (!cancelado) setEspeciesDisponibles(especies);
+      })
+      .catch((error) => {
+        console.error("Error al obtener especies:", error);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  // Razas de la especie elegida (ignora respuestas de una especie anterior)
+  useEffect(() => {
+    if (!especie) {
+      setRazasDisponibles([]);
+      return;
+    }
+
+    let cancelado = false;
+
+    obtenerRazas(especie)
+      .then((razas) => {
+        if (!cancelado) setRazasDisponibles(razas);
+      })
+      .catch((error) => {
+        console.error("Error al obtener razas:", error);
+        if (!cancelado) setRazasDisponibles([]);
+      });
+
+    return () => {
+      cancelado = true;
+    };
+  }, [especie]);
 
   const [errores, setErrores] = useState({});
 
@@ -48,28 +104,32 @@ const [guardando, setGuardando] = useState(false);
       nuevosErrores.especie = "Debe seleccionar una especie";
     }
 
+    if (raza.trim() === "") {
+      nuevosErrores.raza = "Debe seleccionar una raza";
+    }
+
     if (sexo.trim() === "") {
       nuevosErrores.sexo = "Debe seleccionar un sexo";
     }
-    if (fechaNacimiento.trim() === "")
-    {
+    if (fechaNacimiento.trim() === "") {
       nuevosErrores.fechaNacimiento = "Debe seleccionar una fecha aproximada";
     }
-    if (peso.trim() === "")
-    {
-      nuevosErrores.peso = "El campo peso es obligatorio"
+    if (peso.trim() === "") {
+      nuevosErrores.peso = "El campo peso es obligatorio";
     }
 
     setErrores(nuevosErrores);
 
     return Object.keys(nuevosErrores).length === 0;
   }
-async function manejarSubmit(evento) {
+
+  async function manejarSubmit(evento) {
     evento.preventDefault();
 
     if (!validarFormularioMascota()) return;
 
     setGuardando(true);
+    setErrorGeneral(null);
 
     try {
       let urlFoto = mascotaInicial?.foto || "";
@@ -85,147 +145,204 @@ async function manejarSubmit(evento) {
         fechaNacimiento,
         sexo,
         peso,
-        esCastrado,   
+        esCastrado,
         foto: urlFoto,
       };
 
-      if (esEdicion) {
-        await actualizarMascota(mascotaInicial._id, datosMascota);
-      } else {
-        await crearMascota(datosMascota);
-      }
+      const mascotaGuardada = esEdicion
+        ? await actualizarMascota(mascotaInicial._id, datosMascota)
+        : await crearMascota(datosMascota);
 
-      onGuardado?.();
+      onGuardado?.(mascotaGuardada);
     } catch (error) {
       console.error(error);
+      setErrorGeneral(
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          "No pudimos guardar la mascota. Intentá de nuevo."
+      );
     } finally {
       setGuardando(false);
     }
   }
 
-    function manejarCambioFoto(evento) {
-  const archivo = evento.target.files?.[0];
+  function manejarCambioFoto(evento) {
+    const archivo = evento.target.files?.[0];
 
-  if (archivo) {
-    setFoto(archivo);
+    if (archivo) {
+      setArchivoParaRecortar(archivo);
+    }
+
+    // Permite volver a elegir el mismo archivo si se cancela el recorte
+    evento.target.value = "";
   }
-}
+
+  function manejarRecorteConfirmado(archivoRecortado) {
+    // El blob de la vista previa se crea una sola vez (no en cada render)
+    if (fotoPreviewRef.current) URL.revokeObjectURL(fotoPreviewRef.current);
+    const urlPreview = URL.createObjectURL(archivoRecortado);
+    fotoPreviewRef.current = urlPreview;
+
+    setFoto(archivoRecortado);
+    setFotoPreview(urlPreview);
+    setArchivoParaRecortar(null);
+  }
+
+  function manejarRecorteCancelado() {
+    setArchivoParaRecortar(null);
+  }
+
+  const fotoSrc = fotoPreview || optimizarImagen(mascotaInicial?.foto, 400);
 
   return (
-    <form className="formulario-mascota" onSubmit={manejarSubmit}>
-      <div className="formulario-header">
-        <div className="formulario-icono">🐾</div>
-
-        <h2>{esEdicion ? "Editar Mascota" : "Agregar Mascota"}</h2>
-
-       <p>{esEdicion ? "Modificá los datos de tu mascota" : "Registrá a tu próximo compañero"}</p>
+    <form className="formMascota" onSubmit={manejarSubmit}>
+      <div className="formMascota__header">
+        <div className="formMascota__iconoWrap">
+          <PawPrint size={22} />
+        </div>
+        <div className="formMascota__titulos">
+          <h2>{esEdicion ? "Editar Mascota" : "Agregar Mascota"}</h2>
+          <p>
+            {esEdicion
+              ? "Modificá los datos de tu mascota"
+              : "Registrá a tu próximo compañero"}
+          </p>
+        </div>
       </div>
 
-<label className="foto-upload">
-  {foto || mascotaInicial?.foto ? (
-    <div className="foto-preview-wrapper">
-      <img
-        className="preview-foto"
-        src={foto ? URL.createObjectURL(foto) : mascotaInicial.foto}
-        alt="Vista previa"
-      />
-      <div className="foto-edit-overlay">✏️</div>
-    </div>
-  ) : (
-    <>
-      <span className="foto-icono">📷</span>
-      <span>{esEdicion ? "Cambiar foto" : "Subir foto"}</span>
-    </>
-  )}
-  <input type="file" accept="image/*" onChange={manejarCambioFoto} />
-</label>
-  
-      <Input
-        label="Nombre"
-        placeholder="Ej: Luna"
-        value={nombre}
-        onChange={(evento) => setNombre(evento.target.value)}
-        error={errores.nombre}
-      />
+      <div className="formMascota__body">
+        <div className="formMascota__colFoto">
+          <label className="formMascota__foto">
+            {fotoSrc ? (
+              <div className="formMascota__fotoPreviewWrap">
+                <img
+                  className="formMascota__fotoImg"
+                  src={fotoSrc}
+                  alt="Vista previa"
+                />
+                <div className="formMascota__fotoOverlay">
+                  <span className="formMascota__fotoEditBtn">
+                    <Pencil size={15} />
+                  </span>
+                  <span className="formMascota__fotoOverlayTexto">
+                    {esEdicion ? "Cambiar foto" : "Subir foto"}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <span className="formMascota__fotoIconoCirculo">
+                  <Camera size={20} />
+                </span>
+                <span className="formMascota__fotoTexto">
+                  {esEdicion ? "Cambiar foto" : "Subir foto"}
+                </span>
+                <span className="formMascota__fotoSubtexto">
+                  JPG o PNG
+                </span>
+              </>
+            )}
+            <input type="file" accept="image/*" onChange={manejarCambioFoto} />
+          </label>
+        </div>
 
-      <Select
-        label="Especie"
-        placeholder="Seleccioná una especie"
-        opciones={["Perro", "Gato", "Otro"]}
-        value={especie}
-        onChange={(evento) => setEspecie(evento.target.value)}
-        error={errores.especie}
-      />
+        <div className="formMascota__colCampos">
+          <Input
+            label="Nombre"
+            placeholder="Ej: Luna"
+            value={nombre}
+            onChange={(evento) => setNombre(evento.target.value)}
+            error={errores.nombre}
+          />
 
-      <Input
-        label="Raza"
-        placeholder="Ej: Labrador Retriever"
-        value={raza}
-        onChange={(evento) => setRaza(evento.target.value)}
-        error={errores.raza}
-      />
+          <div className="formMascota__fila">
+            <Select
+              label="Especie"
+              placeholder="Seleccioná una especie"
+              opciones={especiesDisponibles}
+              value={especie}
+              onChange={(evento) => {
+                setEspecie(evento.target.value);
+                setRaza("");
+              }}
+              error={errores.especie}
+            />
 
-      <Input
-        label="Fecha de Nacimiento (aproximado)"
-        type="date"
-        value={fechaNacimiento}
-        onChange={(evento) => setFechaNacimiento(evento.target.value)}
-        error={errores.fechaNacimiento}
-      />
-
-      <div>
-        <label className="input-label">Sexo</label>
-
-        <div className="sexo-opciones">
-          <div
-            className={`sexo-card ${
-              sexo === "Macho" ? "sexo-card-selected" : ""
-            }`}
-            onClick={() => setSexo("Macho")}
-          >
-            Macho
+            <Select
+              label="Raza"
+              placeholder={especie ? "Seleccioná una raza" : "Elegí primero una especie"}
+              opciones={razasDisponibles}
+              value={raza}
+              onChange={(evento) => setRaza(evento.target.value)}
+              error={errores.raza}
+              disabled={!especie}
+            />
           </div>
 
-          <div
-            className={`sexo-card ${
-              sexo === "Hembra" ? "sexo-card-selected" : ""
-            }`}
-            onClick={() => setSexo("Hembra")}
-          >
-            Hembra
+          <div className="formMascota__fila">
+            <Input
+              label="Fecha de Nacimiento (aproximado)"
+              type="date"
+              value={fechaNacimiento}
+              onChange={(evento) => setFechaNacimiento(evento.target.value)}
+              error={errores.fechaNacimiento}
+            />
+
+            <Input
+              label="Peso"
+              placeholder="0.0 kg"
+              value={peso}
+              type="number"
+              onChange={(evento) => setPeso(evento.target.value)}
+              error={errores.peso}
+            />
+          </div>
+
+          <div>
+            <label className="formMascota__label">Sexo</label>
+            <div className="formMascota__opciones">
+              <div
+                className={`formMascota__opcion ${sexo === "Macho" ? "formMascota__opcion--selected" : ""
+                  }`}
+                onClick={() => setSexo("Macho")}
+              >
+                Macho
+              </div>
+
+              <div
+                className={`formMascota__opcion ${sexo === "Hembra" ? "formMascota__opcion--selected" : ""
+                  }`}
+                onClick={() => setSexo("Hembra")}
+              >
+                Hembra
+              </div>
+            </div>
+            {errores.sexo && <p className="formMascota__error">{errores.sexo}</p>}
+          </div>
+
+          <div>
+            <label className="formMascota__label">Castración</label>
+            <div className="formMascota__opciones">
+              <div
+                className={`formMascota__opcion ${esCastrado === true ? "formMascota__opcion--selected" : ""}`}
+                onClick={() => setEsCastrado(true)}
+              >
+                Castrad@
+              </div>
+              <div
+                className={`formMascota__opcion ${esCastrado === false ? "formMascota__opcion--selected" : ""}`}
+                onClick={() => setEsCastrado(false)}
+              >
+                No castrad@
+              </div>
+            </div>
           </div>
         </div>
-
-        {errores.sexo && <p className="input-error">{errores.sexo}</p>}
       </div>
 
-      <Input
-        label="Peso"
-        placeholder="0.0 kg"
-        value={peso}
-        type="number"
-        onChange={(evento) => setPeso(evento.target.value)}
-        error={errores.peso}
-      />
-      <div>
-      <label className="input-label">Castración</label>
-      <div className="sexo-opciones">
-        <div
-          className={`sexo-card ${esCastrado === true ? "sexo-card-selected" : ""}`}
-          onClick={() => setEsCastrado(true)}
-        >
-          Castrad@
-        </div>
-        <div
-          className={`sexo-card ${esCastrado === false ? "sexo-card-selected" : ""}`}
-          onClick={() => setEsCastrado(false)}
-        >
-          No castrad@
-        </div>
-      </div>
-    </div>
+      {errorGeneral && <p className="formMascota__error">{errorGeneral}</p>}
 
-      <div className="formulario-acciones">
+      <div className="formMascota__acciones">
         <Button
           type="button"
           texto="Cancelar"
@@ -234,20 +351,31 @@ async function manejarSubmit(evento) {
           onClick={onCancelar}
         />
 
-       <Button
+        <Button
           type="submit"
           disabled={guardando}
           texto={
             guardando
               ? "Guardando..."
               : esEdicion
-              ? "Guardar cambios"
-              : "Agregar Mascota"
+                ? "Guardar cambios"
+                : "Agregar Mascota"
           }
           variante="primario"
           tamaño="mediano"
         />
       </div>
+
+      {archivoParaRecortar && (
+        <RecortadorImagen
+          archivo={archivoParaRecortar}
+          aspecto={3 / 4}
+          forma="rectangular"
+          titulo="Ajustá la foto de tu mascota"
+          onCancelar={manejarRecorteCancelado}
+          onConfirmar={manejarRecorteConfirmado}
+        />
+      )}
     </form>
   );
 }

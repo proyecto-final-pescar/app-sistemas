@@ -56,7 +56,7 @@ const veterinariaSchema = new mongoose.Schema(
       }
     },
 
-     servicios: [
+    servicios: [
       {
         categoria: {
           type: String,
@@ -91,13 +91,11 @@ const veterinariaSchema = new mongoose.Schema(
           required: [true, 'La especialidad del profesional es requerida'],
           trim: true
         },
+        // TEMPORAL: se relajó el required hasta implementar la UI de asociación
+        // profesional↔servicio (pendiente, no forma parte de este PR).
         serviciosIds: {
-          type: [mongoose.Schema.Types.ObjectId],
-          required: [true, 'Debe brindar al menos un servicio'],
-          validate: {
-            validator: (arr) => Array.isArray(arr) && arr.length > 0,
-            message: 'El profesional debe tener al menos un servicio asignado'
-          }
+          type: [String],
+          default: []
         },
         email: {
           type: String,
@@ -134,8 +132,7 @@ const veterinariaSchema = new mongoose.Schema(
     },
 
     usuarioId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      type: String,
       required: [true, 'El usuario administrador es requerido']
     },
 

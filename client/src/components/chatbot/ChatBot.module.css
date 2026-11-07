@@ -1,9 +1,8 @@
 .burbuja {
   position: fixed;
   right: 24px;
-  bottom: 24px;
+  bottom: 96px; 
   z-index: 1000;
-
 
   width: auto;
   height: auto;
@@ -39,7 +38,6 @@
   transition: none;
 }
 
-
 .burbuja img {
   filter: drop-shadow(0 8px 12px rgba(124, 58, 237, 0.35));
 }
@@ -72,9 +70,9 @@
 }
 
 
-@media (max-width: 480px) {
+@media (max-width: 767px) {
   .burbuja {
     right: 16px;
-    bottom: 16px;
+    bottom: 185px; 
   }
 }

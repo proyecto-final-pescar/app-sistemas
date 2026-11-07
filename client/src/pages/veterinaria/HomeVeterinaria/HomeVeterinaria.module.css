@@ -1,12 +1,14 @@
 .shell {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: #f9f8ff;
   font-family: "Inter", Arial, Helvetica, sans-serif;
 }
 
 .main {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -17,6 +19,8 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Buscador e inputs */
@@ -29,9 +33,9 @@
 }
 
 .inputSearchContainer {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
-
 
 .btnBuscarIcono {
   display: none;
@@ -49,17 +53,136 @@
 
 .actionButtonsRow {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
-/* Grilla inferior de tarjetas oscuras */
+/* Resultados de búsqueda */
+.resultados {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.resultadosHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.resultadosTitulo {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 22px;
+  color: #1c1033;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.btnLimpiar {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  color: #7c3aed;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.btnLimpiar:hover {
+  text-decoration: underline;
+}
+
+.resultadosGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 14px;
+}
+
+.pacienteCard {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  box-shadow: 0 4px 12px rgba(28, 16, 51, 0.03);
+  border: none;
+  box-sizing: border-box;
+}
+
+.pacienteHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pacienteTitulos {
+  min-width: 0;
+}
+
+.pacienteNombre {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: #1c1033;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pacienteMeta {
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 18px;
+  color: #7e6fa0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pacienteTurno {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 18px;
+  color: #1c1033;
+  margin: 0;
+}
+
+.pacienteTurnoLabel {
+  font-weight: 400;
+  font-size: 12px;
+  color: #7e6fa0;
+}
+
+.estadoVacio {
+  font-family: "Inter", sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 20px;
+  color: #7e6fa0;
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin: 0;
+}
+
+/* Grilla de tarjetas */
 .cardsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: 20px;
 }
 
-/* Reestilización de la tarjeta UI para adaptarla al modo oscuro */
 .metricCard {
   background-color: #ffffff;
   border-radius: 16px;
@@ -68,6 +191,7 @@
   flex-direction: column;
   justify-content: space-between;
   min-height: 200px;
+  min-width: 0;
   box-shadow: 0 4px 12px rgba(28, 16, 51, 0.03);
   border: none;
   box-sizing: border-box;
@@ -93,6 +217,7 @@
   background-color: #ede9fe;
   width: 36px;
   height: 36px;
+  flex-shrink: 0;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -106,6 +231,7 @@
   flex-direction: column;
   justify-content: center;
   margin-bottom: 16px;
+  min-width: 0;
 }
 
 .mainDetail {
@@ -114,24 +240,17 @@
   font-size: 18px;
   color: #1c1033;
   margin: 0 0 4px 0;
-}
-
-.mainNumber {
-  font-family: "Outfit", sans-serif;
-  font-weight: 800;
-  font-size: 30px;
-  line-height: 42px;
-  color: #1c1033;
-  margin: 0 0 2px 0;
+  overflow-wrap: anywhere;
 }
 
 .subDetail {
   font-family: "Inter", sans-serif;
-  font-weight: 400; /* Regular */
+  font-weight: 400;
   font-size: 13px;
   line-height: 18px;
-  color: #7e6fa0; /* Texto secundario MyPet */
+  color: #7e6fa0;
   margin: 0 0 2px 0;
+  overflow-wrap: anywhere;
 }
 
 .timeDetail {
@@ -147,7 +266,7 @@
   color: #7c3aed;
   text-decoration: none;
   font-family: "Inter", sans-serif;
-  font-weight: 500; /* Medium */
+  font-weight: 500;
   font-size: 13px;
   cursor: pointer;
   display: inline-block;
@@ -166,6 +285,7 @@
   color: #7e6fa0;
   margin: 0;
 }
+
 /* TABLET CHICA */
 @media (min-width: 481px) and (max-width: 767px) {
   .contentWrap {
@@ -212,19 +332,14 @@
 
 /* MOBILE */
 @media (max-width: 480px) {
- .contentWrap {
-  padding: 72px 12px 12px;
-  gap: 16px;
-}
+  .contentWrap {
+    padding: 72px 12px 12px;
+    gap: 16px;
+  }
 
   .searchBarRow {
     gap: 8px;
     margin-bottom: 16px;
-  }
-
-  .inputSearchContainer {
-    flex: 1;
-    min-width: 0;
   }
 
   .btnBuscarTexto {
@@ -239,8 +354,12 @@
     gap: 10px;
   }
 
-  .actionButtonsRow > button {
-    flex: 1;
+  .actionButtonsRow > * {
+    flex: 1 1 140px;
+  }
+
+  .resultadosGrid {
+    grid-template-columns: 1fr;
   }
 
   .cardsGrid {
@@ -251,11 +370,6 @@
   .metricCard {
     min-height: auto;
     padding: 18px;
-  }
-
-  .mainNumber {
-    font-size: 26px;
-    line-height: 34px;
   }
 
   .mainDetail {

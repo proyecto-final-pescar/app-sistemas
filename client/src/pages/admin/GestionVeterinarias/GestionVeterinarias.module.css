@@ -1,4 +1,3 @@
-/* Layout */
 .layout {
   display: flex;
   min-height: 100vh;
@@ -14,18 +13,18 @@
 }
 
 .contenido {
-  padding: 16px;
+  padding: 12px;
   flex: 1;
   overflow-y: auto;
 }
 
-/* Toolbar */
 .toolbar {
   margin-bottom: 16px;
 }
 
 .buscador {
   width: 100%;
+  min-width: 0;
   padding: 10px 14px;
   border: 1.5px solid #e5e7eb;
   border-radius: 8px;
@@ -43,7 +42,6 @@
   border-color: var(--color-primario);
 }
 
-/* Tabs */
 .tabs {
   display: flex;
   gap: 8px;
@@ -76,64 +74,15 @@
   border-color: var(--color-primario);
 }
 
-/* Tabla (desktop) */
-.tablaWrapper {
-  display: none;
-  width: 100%;
-  overflow-x: auto;
-}
-
-.tabla {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: var(--color-blanco);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.tabla thead tr {
-  background-color: var(--color-primario);
-  color: var(--color-blanco);
-}
-
-.tabla th {
-  padding: 12px 16px;
-  text-align: left;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.tabla tbody tr {
-  border-bottom: 1px solid #e5e7eb;
-  transition: background-color 0.1s ease;
-}
-
-.tabla tbody tr:last-child {
-  border-bottom: none;
-}
-
-.tabla tbody tr:hover {
-  background-color: var(--color-fondo-secciones);
-}
-
-.tabla td {
-  padding: 14px 16px;
-  font-size: var(--texto-form-size);
-  color: var(--color-texto-principal);
-  vertical-align: middle;
-}
-
-.idCell {
-  font-weight: 600;
+.estadoMensaje {
+  text-align: center;
+  padding: 2rem;
   color: var(--color-texto-secundario);
+  font-size: 0.95rem;
 }
 
-.telefono {
-  font-size: 0.8rem;
-  color: var(--color-texto-secundario);
+.estadoError {
+  color: #b91c1c;
 }
 
 .sinResultados {
@@ -143,105 +92,10 @@
   font-size: 0.9rem;
 }
 
-/* Toggle */
-.toggle {
-  width: 40px;
-  height: 22px;
-  border-radius: 20px;
-  border: none;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-  position: relative;
-  flex-shrink: 0;
+.tablaWrapper {
+  display: none;
 }
 
-.toggle::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  width: 16px;
-  height: 16px;
-  background-color: white;
-  border-radius: 50%;
-  transition: left 0.2s ease;
-}
-
-.toggleOn {
-  background-color: var(--color-cta);
-}
-
-.toggleOn::after {
-  left: 21px;
-}
-
-.toggleOff {
-  background-color: #d1d5db;
-}
-
-.toggleOff::after {
-  left: 3px;
-}
-
-/* Acciones */
-.accionesPendiente {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btnIcono {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--color-texto-secundario);
-  padding: 4px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  transition: background-color 0.15s ease;
-}
-
-.btnIcono:hover {
-  background-color: var(--color-fondo-claro);
-  color: var(--color-primario);
-}
-
-.btnAprobar {
-  padding: 6px 16px;
-  background-color: var(--color-cta);
-  color: var(--color-blanco);
-  border: none;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-  white-space: nowrap;
-}
-
-.btnAprobar:hover {
-  background-color: #047857;
-}
-
-.btnRechazar {
-  padding: 6px 16px;
-  background-color: transparent;
-  color: #dc2626;
-  border: 1.5px solid #dc2626;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.btnRechazar:hover {
-  background-color: #dc2626;
-  color: var(--color-blanco);
-}
-
-/* Cards (mobile) */
 .cards {
   display: flex;
   flex-direction: column;
@@ -262,12 +116,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.cardId {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--color-texto-secundario);
 }
 
 .cardFecha {
@@ -305,13 +153,82 @@
   font-weight: 500;
 }
 
-.cardAcciones {
+.estadoWrapper {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  align-items: center;
+  gap: 10px;
 }
 
-/* Paginación */
+.estadoLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-texto-secundario);
+}
+
+.estadoLabel strong {
+  color: var(--color-texto-principal);
+}
+
+.cardFooter {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #f1eff8;
+  display: flex;
+  width: 100%;
+}
+
+.cardFooter > * {
+  width: 100%;
+}
+
+.cardAccionesColumnas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #f1eff8;
+  width: 100%;
+}
+
+.cardAccionesFila {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.cardAccionesFila > * {
+  flex: 1; /* Permite que ambos botones midan el 50% exacto */
+}
+
+.toggle {
+  width: 40px;
+  height: 22px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.toggle::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  border-radius: 50%;
+  transition: left 0.2s ease;
+}
+
+.toggleOn { background-color: var(--color-cta); }
+.toggleOn::after { left: 21px; }
+
+.toggleOff { background-color: #d1d5db; }
+.toggleOff::after { left: 3px; }
+
 .paginacion {
   display: flex;
   justify-content: center;
@@ -348,19 +265,7 @@
   border-color: var(--color-primario);
 }
 
-/* Mensajes de estado */
-.estadoMensaje {
-  text-align: center;
-  padding: 2rem;
-  color: var(--color-texto-secundario);
-  font-size: 0.95rem;
-}
 
-.estadoError {
-  color: #b91c1c;
-}
-
-/* Desktop */
 @media (min-width: 768px) {
   .contenido {
     padding: 24px;
@@ -370,11 +275,128 @@
     max-width: 500px;
   }
 
-  .tablaWrapper {
-    display: block;
-  }
-
   .cards {
     display: none;
   }
+
+  .tablaWrapper {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .tabla {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--color-blanco);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    min-width: 850px; /* Evita que la tabla se rompa si se achica */
+  }
+
+  .tabla thead tr {
+    background-color: var(--color-primario);
+    color: var(--color-blanco);
+  }
+
+  .tabla th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .tabla tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+    transition: background-color 0.1s ease;
+  }
+
+  .tabla tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .tabla tbody tr:hover {
+    background-color: var(--color-fondo-secciones);
+  }
+
+  .tabla td {
+    padding: 14px 16px;
+    font-size: var(--texto-form-size);
+    color: var(--color-texto-principal);
+    vertical-align: middle;
+  }
+
+  .telefono {
+    font-size: 0.8rem;
+    color: var(--color-texto-secundario);
+  }
+
+  .accionesPendiente {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btnIcono {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--color-texto-secundario);
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .btnIcono:hover {
+    background-color: var(--color-fondo-claro);
+    color: var(--color-primario);
+  }
+
+  .btnAprobar {
+    padding: 6px 16px;
+    background-color: var(--color-cta);
+    color: var(--color-blanco);
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .btnAprobar:hover {
+    background-color: #047857;
+  }
+
+  .btnRechazar {
+    padding: 6px 16px;
+    background-color: transparent;
+    color: #dc2626;
+    border: 1.5px solid #dc2626;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .btnRechazar:hover {
+    background-color: #dc2626;
+    color: var(--color-blanco);
+  }
+}
+
+
+@media (min-width: 1024px) {
+
 }

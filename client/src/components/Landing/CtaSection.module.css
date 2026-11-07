@@ -1,37 +1,124 @@
 .section {
+  --panel-dark: #5b21b6;
+
   width: 100%;
-  background-color: var(--color-fondo-claro);
-  padding: 64px 24px;
+  padding: 96px 24px;
+  background-color: var(--color-blanco);
   font-family: "Inter", Arial, Helvetica, sans-serif;
   box-sizing: border-box;
 }
 
 .container {
-  max-width: 1000px;
+  max-width: 1120px;
   margin: 0 auto;
 }
 
+.panel {
+  position: relative;
+  overflow: hidden;
+  padding: 80px 48px;
+  border-radius: 32px;
+  background: linear-gradient(135deg, var(--color-primario) 0%, var(--panel-dark) 100%);
+  box-shadow: 0 30px 60px -30px rgba(124, 58, 237, 0.55);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(30px, 4.5vw, 46px);
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--color-blanco);
+}
+
+.subtitle {
+  margin: 16px 0 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 17px;
+  line-height: 26px;
+}
+
 .buttonRow {
+  margin-top: 36px;
   display: flex;
   justify-content: center;
 }
 
+/* Círculos decorativos */
+.circle {
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.08);
+  animation: drift 9s ease-in-out infinite;
+}
+
+.circleBig {
+  top: -120px;
+  right: -80px;
+  width: 340px;
+  height: 340px;
+}
+
+.circleSmall {
+  bottom: -90px;
+  left: -60px;
+  width: 220px;
+  height: 220px;
+  animation-delay: -4s;
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-12px, 14px);
+  }
+}
+
 @media (max-width: 768px) {
   .section {
-    padding: 48px 20px;
+    padding: 64px 20px;
+  }
+
+  .panel {
+    padding: 56px 28px;
+    border-radius: 24px;
   }
 }
 
 @media (max-width: 480px) {
   .section {
-    padding: 40px 16px;
+    padding: 48px 16px;
   }
-  .buttonRow {
-    width: 100%;
+
+  .panel {
+    padding: 48px 20px;
+  }
+
+  .subtitle {
+    font-size: 15px;
+    line-height: 24px;
   }
 
   .buttonRow > * {
     width: 100%;
     box-sizing: border-box;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .circle {
+    animation: none;
   }
 }

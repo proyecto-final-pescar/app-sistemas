@@ -8,6 +8,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .container {
@@ -39,6 +40,8 @@
   margin-bottom: 2rem;
   border: 1px solid #e5e7eb;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .mascotaInfo {
@@ -46,6 +49,7 @@
   gap: 1rem;
   align-items: flex-start;
   flex: 1;
+  min-width: 220px;
 }
 
 .mascotaAvatar {
@@ -86,6 +90,7 @@
 .badges {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .cardsGrid {
@@ -101,6 +106,7 @@
   padding: 0.875rem;
   text-align: left;
   border: 1px solid #e9d5ff;
+  min-width: 0;
 }
 
 .cardIcon {
@@ -116,6 +122,7 @@
   font-weight: 700;
   color: #1f2937;
   margin: 0 0 0.25rem 0;
+  word-break: break-word;
 }
 
 .cardLabel {
@@ -129,6 +136,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   margin-bottom: 2rem;
+  align-items: start;
 }
 
 .section {
@@ -136,6 +144,7 @@
   border-radius: 0.75rem;
   border: 1px solid #e9d5ff;
   padding: 1.5rem;
+  min-width: 0;
 }
 
 .section h2 {
@@ -165,6 +174,7 @@
   font-size: 0.9375rem;
   color: #1f2937;
   margin: 0;
+  word-break: break-word;
 }
 
 
@@ -211,7 +221,7 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.75rem;
-  /* el fondo/borde ahora vive en .section */
+ 
 }
 
 .estudioCard {
@@ -222,6 +232,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .estudioCard h3 {
@@ -257,6 +268,7 @@
   display: flex;
   flex-direction: column;
   gap: 2rem;
+  min-width: 0;
 }
 
 .responsable {
@@ -306,10 +318,96 @@
   transform: translateX(-3px);
 }
 
-/* Ajuste opcional para reducir el margen del título si lo ves muy separado */
-.header h1 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin: 0 0 0.25rem 0;
-  color: #1f2937;
+@media (max-width: 1024px) {
+  .container {
+    padding: 1.5rem;
+  }
+
+  .cardsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .contentGrid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+
+@media (max-width: 767px) {
+  .container {
+    padding-top: calc(60px + 1rem);
+  }
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .header h1 {
+    font-size: 1.25rem;
+  }
+
+  .mascotaCard {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1.25rem;
+  }
+
+  .mascotaInfo {
+    min-width: 0;
+  }
+
+  .responsable {
+    text-align: left;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 0.75rem;
+  }
+
+  .cardsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .card {
+    padding: 0.75rem;
+  }
+
+  .cardValue {
+    font-size: 1.1rem;
+  }
+
+  .section {
+    padding: 1.25rem;
+  }
+
+  .vacunaRow {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+    text-align: left;
+  }
+
+  .vacunaVet {
+    text-align: left;
+  }
+
+  .estudioCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .verResultado {
+    align-self: flex-start;
+  }
+}
+
+
+@media (max-width: 380px) {
+  .cardsGrid {
+    grid-template-columns: 1fr;
+  }
 }

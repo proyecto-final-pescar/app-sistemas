@@ -5,30 +5,12 @@ import { crearReporte } from "../../../services/reporteService";
 import "./FormularioReporte.css";
 
 const MOTIVOS_REPORTE = [
-  {
-    value: "contenido_inapropiado",
-    label: "Contenido inapropiado",
-  },
-  {
-    value: "informacion_falsa",
-    label: "Información falsa",
-  },
-  {
-    value: "spam",
-    label: "Spam",
-  },
-  {
-    value: "animal_ya_encontrado",
-    label: "Animal ya encontrado",
-  },
-  {
-    value: "publicacion_duplicada",
-    label: "Publicación duplicada",
-  },
-  {
-    value: "otro",
-    label: "Otro",
-  },
+  { value: "INA", label: "Contenido inapropiado" },
+  { value: "FAL", label: "Información falsa" },
+  { value: "SPM", label: "Spam" },
+  { value: "ENC", label: "Animal ya encontrado" },
+  { value: "DUP", label: "Publicación duplicada" },
+  { value: "OTR", label: "Otro" },
 ];
 
 function FormularioReporte({
@@ -60,7 +42,7 @@ function FormularioReporte({
       formularioValido = false;
     }
 
-    if (motivo === "otro" && !descripcion.trim()) {
+    if (motivo === "OTR" && !descripcion.trim()) {
       setErrorDescripcion(
         'La descripción es requerida cuando seleccionás "Otro".'
       );
@@ -75,12 +57,12 @@ function FormularioReporte({
       setEnviando(true);
 
       await crearReporte({
-        publicacionId: publicacion._id,
+        publicacionId: publicacion.publicacion_id,
         motivo,
         descripcion: descripcion.trim(),
       });
 
-      onReportado(publicacion._id);
+      onReportado(publicacion.publicacion_id);
     } catch (error) {
       console.error("Error al crear el reporte:", error);
 
@@ -88,8 +70,6 @@ function FormularioReporte({
         error?.response?.data?.message ||
         "No pudimos enviar el reporte. Intentá nuevamente.";
 
-     
-     
       if (error?.response?.status === 400 && mensaje === "Ya reportaste esta publicación") {
         onYaReportado?.(publicacion);
       }
@@ -101,20 +81,14 @@ function FormularioReporte({
   };
 
   return (
-    <form
-      className="formulario-reporte"
-      onSubmit={handleSubmit}
-    >
+    <form className="formulario-reporte" onSubmit={handleSubmit}>
       <div className="formulario-reporte-header">
         <h2>Reportar publicación</h2>
-
         <p>
           ¿Querés reportar la publicación de{" "}
-          <strong>
-            “{publicacion?.nombre || "esta mascota"}”
-          </strong>
-          ? Un administrador la va a revisar para ver si infringe las normas
-          de la comunidad.
+          <strong>“{publicacion?.nombre || "esta mascota"}”</strong>? Un
+          administrador la va a revisar para ver si infringe las normas de la
+          comunidad.
         </p>
       </div>
 
@@ -144,10 +118,7 @@ function FormularioReporte({
           maxLength={300}
           error={errorDescripcion}
         />
-
-        <span className="contador-caracteres">
-          {descripcion.length}/300
-        </span>
+        <span className="contador-caracteres">{descripcion.length}/300</span>
       </div>
 
       {errorEnvio && (
@@ -157,20 +128,10 @@ function FormularioReporte({
       )}
 
       <div className="acciones-reporte">
-        <button
-          type="button"
-          className="boton-cancelar-reporte"
-          onClick={onCancelar}
-          disabled={enviando}
-        >
+        <button type="button" className="boton-cancelar-reporte" onClick={onCancelar} disabled={enviando}>
           Cancelar
         </button>
-
-        <button
-          type="submit"
-          className="boton-enviar-reporte"
-          disabled={!motivo || enviando}
-        >
+        <button type="submit" className="boton-enviar-reporte" disabled={!motivo || enviando}>
           {enviando ? "Reportando..." : "Reportar"}
         </button>
       </div>

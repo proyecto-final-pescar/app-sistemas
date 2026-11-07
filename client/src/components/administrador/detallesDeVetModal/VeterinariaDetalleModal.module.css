@@ -1,0 +1,172 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 16, 51, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--color-blanco);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--color-fondo-claro);
+}
+
+.titulo {
+  font-family: var(--fuente-titulos);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-texto-principal);
+  margin: 0;
+}
+
+.btnCerrar {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--color-texto-secundario);
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+  font-family: var(--fuente-texto);
+}
+
+.btnCerrar:hover {
+  color: var(--color-texto-principal);
+}
+
+.contenido {
+  padding: 20px 24px;
+  overflow-y: auto;
+  font-family: var(--fuente-texto);
+}
+
+.estadoMensaje {
+  text-align: center;
+  color: var(--color-texto-secundario);
+  padding: 24px 0;
+  font-size: var(--texto-form-size);
+  line-height: var(--texto-form-line-height);
+}
+
+.estadoError {
+  color: #dc2626;
+}
+
+.seccion {
+  margin-bottom: 24px;
+}
+
+.seccion:last-child {
+  margin-bottom: 0;
+}
+
+.seccionTitulo {
+  font-family: var(--fuente-titulos);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-primario);
+  margin: 0 0 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 20px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.etiqueta {
+  font-size: 12px;
+  color: var(--color-texto-secundario);
+  font-weight: var(--texto-nav-weight);
+}
+
+.valor {
+  font-size: var(--texto-form-size);
+  line-height: var(--texto-form-line-height);
+  letter-spacing: var(--texto-form-letter-spacing);
+  color: var(--color-texto-principal);
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.itemHorario,
+.itemServicio,
+.itemProfesional {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--color-fondo-secciones);
+  border-radius: 8px;
+  font-size: var(--texto-form-size);
+  line-height: var(--texto-form-line-height);
+  color: var(--color-texto-principal);
+}
+
+.diaSemana {
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.nombreItem {
+  font-weight: 500;
+  display: block;
+}
+
+.categoria {
+  font-size: 12px;
+  color: var(--color-texto-secundario);
+  display: block;
+}
+
+.precio {
+  font-weight: 700;
+  color: var(--color-primario);
+}
+
+.emailProfesional {
+  font-size: 12px;
+  color: var(--color-texto-secundario);
+}
+
+.sinDatos {
+  font-size: var(--texto-form-size);
+  color: var(--color-texto-secundario);
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

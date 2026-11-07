@@ -7,9 +7,7 @@ import {
   eliminarEstudio
 } from '../controllers/estudioController.js'
 import verifyToken, { authorize } from '../middleware/auth.js'
-import historialAccess from '../middleware/historialAccess.js'
-import { verificarAccesoRecurso } from '../middleware/verificarAccesoRecurso.js'
-import Estudio from '../models/Estudio.js'
+import historialAccess, { autorizarEstudio } from '../middleware/historialAccess.js'
 
 const router = Router()
 
@@ -26,18 +24,13 @@ router.get('/estudios/mascota/:mascotaId',
   obtenerEstudiosPorMascota
 )
 
-router.get('/estudios/:id',
-  verifyToken,
-  authorize('dueno', 'veterinaria'),
-  verificarAccesoRecurso(Estudio),
-  obtenerEstudioPorId
-)
+router.get('/estudios/:id', verifyToken, authorize('dueno', 'veterinaria'), autorizarEstudio, obtenerEstudioPorId)
 
 router.put('/estudios/:id',
-   verifyToken,
-   authorize('veterinaria'),
-   actualizarEstudio
- ) 
+  verifyToken,
+  authorize('veterinaria'),
+  actualizarEstudio
+)
 
 router.delete('/estudios/:id',
   verifyToken,

@@ -11,8 +11,8 @@ import {
 
 const router = Router();
 
-// GET /publicaciones — pública, cualquiera puede ver las publicaciones
-router.get('/', obtenerPublicaciones);
+// GET /publicaciones 
+router.get('/',verifyToken, obtenerPublicaciones);
 
 // GET /publicaciones/:id — pública, detalle de una publicación
 router.get('/:id', obtenerPublicacionPorId);

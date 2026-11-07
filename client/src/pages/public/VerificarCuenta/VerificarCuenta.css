@@ -1,0 +1,126 @@
+/* ── Reutiliza el mismo lenguaje visual que ResetPassword.css ────── */
+
+.reset__content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reset__success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 0 8px;
+  text-align: center;
+}
+
+.reset__success-icon {
+  color: var(--color-primario);
+  display: inline-block;
+  width: 56px;
+  height: 56px;
+  line-height: 1;
+  margin-bottom: 12px;
+  transform-origin: center;
+  animation: verificar-icon-pop 420ms cubic-bezier(.2,.9,.3,1);
+}
+
+/* Estado "vencido":  */
+.reset__success-icon--vencido {
+  color: #d97706;
+}
+
+/* Estados "inválido" y "error de red": */
+.reset__success-icon--error {
+  color: #dc2626;
+}
+
+@keyframes verificar-icon-pop {
+  0%   { transform: scale(.6) rotate(-8deg); opacity: 0; }
+  60%  { transform: scale(1.08) rotate(4deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.reset__success-title {
+  font-family: var(--fuente-titulos);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-texto-principal);
+  margin: 0;
+}
+
+.reset__success-text {
+  font-size: var(--texto-form-size);
+  color: var(--color-texto-secundario);
+  margin: 0;
+}
+
+.reset__error {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: var(--texto-form-size);
+  color: #dc2626;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.reset__btn {
+  width: 100%;
+  padding: 14px;
+  margin-top: 8px;
+  background: var(--color-primario);
+  color: var(--color-blanco);
+  border: none;
+  border-radius: 12px;
+  font-family: var(--fuente-titulos);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.reset__btn:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.reset__btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+
+.verificar__btn-secundario {
+  width: 100%;
+  padding: 12px;
+  background: transparent;
+  color: var(--color-primario);
+  border: 1.5px solid var(--color-primario);
+  border-radius: 12px;
+  font-family: var(--fuente-titulos);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.verificar__btn-secundario:hover {
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.verificar__reenvio-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.verificar__reenvio-ok {
+  padding: 12px 14px;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  color: #15803d;
+}

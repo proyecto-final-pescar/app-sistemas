@@ -1,5 +1,4 @@
-
-// Un día sin horario cargado (desde/hasta vacíos o undefined) se trata como cerrado.
+// Un día sin horario cargado (sin franja en horario_veterinaria) se trata como cerrado.
 
 const DIAS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
 

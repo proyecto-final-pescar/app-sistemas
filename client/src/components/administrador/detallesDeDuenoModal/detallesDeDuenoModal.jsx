@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PawPrint } from "lucide-react";
 import { obtenerUsuarioPorId } from "../../../services/adminService";
 import Badge from "../../ui/badge/Badge";
 import styles from "./detallesDeDuenoModal.module.css";
@@ -9,6 +10,7 @@ function DetallesDeDuenoModal({ duenoId, onClose }) {
   const [dueno, setDueno] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [imagenesRotas, setImagenesRotas] = useState({});
 
   // Cargar los datos del usuario o cambiar duenoId
   useEffect(() => {
@@ -164,20 +166,33 @@ function DetallesDeDuenoModal({ duenoId, onClose }) {
                     {dueno.mascotas.map((mascota, index) => {
                       const colorClase =
                         styles[COLORES_MASCOTA[index % COLORES_MASCOTA.length]];
+                      const claveImagenRota = `imagenRota-${mascota._id || index}`;
 
                       return (
                         <div
                           key={mascota._id || index}
                           className={`${styles.tarjetaMascota} ${colorClase}`}
                         >
-                          <img
-                            src={
-                              mascota.foto ||
-                              "https://via.placeholder.com/100?text=Mascota"
-                            }
-                            alt={mascota.nombre}
-                            className={styles.avatarMascota}
-                          />
+                          {mascota.foto && !imagenesRotas[claveImagenRota] ? (
+                            <img
+                              src={mascota.foto}
+                              alt={mascota.nombre}
+                              className={styles.avatarMascota}
+                              onError={() =>
+                                setImagenesRotas((actual) => ({
+                                  ...actual,
+                                  [claveImagenRota]: true,
+                                }))
+                              }
+                            />
+                          ) : (
+                            <div
+                              className={styles.avatarMascotaPlaceholder}
+                              aria-hidden="true"
+                            >
+                              <PawPrint size={20} />
+                            </div>
+                          )}
                           <div className={styles.infoMascota}>
                             <span className={styles.nombreMascota}>
                               {mascota.nombre}

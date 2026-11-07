@@ -1,278 +1,719 @@
-import Turno from '../models/Turno.js';
-import Veterinaria from '../models/Veterinaria.js';
+import prisma from "../../prisma/client.js";
+import client from "../config/mercadopago.js";
+import { PaymentRefund } from "mercadopago";
+import {
+  crearNotificacion,
+  formatearFechaTurno,
+  TIPO,
+} from "../services/notificacionService.js";
 
-// 1. Anticipación mínima: no se puede solicitar un turno con menos de esto de antelación.
-const ANTICIPACION_MINIMA_HORAS = 10;
-// 2. Plazo de pago: ventana para pagar online desde que se solicita el turno.
-//    Siempre debe ser MENOR a ANTICIPACION_MINIMA_HORAS (si no, un turno podría
-//    vencer su plazo de pago después de que ya no se pudiera volver a solicitar
-//    con la anticipación mínima requerida).
-const PLAZO_PAGO_HORAS = 3;
-// 3. Plazo de cancelación: hasta cuándo se puede cancelar un turno ya CONFIRMADO
-//    (pagado). Un turno 'pendiente' (sin pago acreditado) se puede cancelar
-//    en cualquier momento, sin esta restricción.
+export const ANTICIPACION_MINIMA_HORAS = 10;
+export const PLAZO_PAGO_HORAS = 3; 
 const HORAS_LIMITE_CANCELACION = 24;
 
-const obtenerFechaHoraCompleta = (turno) => {
-  
-  const fechaStr =
-    typeof turno.fecha === 'string'
-      ? turno.fecha.slice(0, 10)
-      : turno.fecha.toISOString().slice(0, 10);
-
-  const [anio, mes, dia] = fechaStr.split('-').map(Number);
-  const [horas, minutos] = turno.hora.split(':').map(Number);
-
-  // revisar que siepre se use el mismo seteo // peligros de desfase 
-  return new Date(anio, mes - 1, dia, horas, minutos, 0, 0);
+export const ESTADO = {
+  DISPONIBLE: "DIS",
+  PENDIENTE: "PEN",
+  CONFIRMADO: "CON",
+  CANCELADO: "CAN",
+  ATENDIDO: "ATE",
 };
 
-const horasHastaTurno = (turno) => {
-  const diffMs = obtenerFechaHoraCompleta(turno) - new Date();
-  return diffMs / (1000 * 60 * 60);
+export const ESTADOS_VALIDOS = new Set(Object.values(ESTADO));
+
+export const includeTurnoCompleto = {
+  mascota: {
+    select: {
+      mascota_id: true,
+      nombre: true,
+      fecha_nacimiento: true,
+      peso: true,
+      raza: {
+        select: {
+          nombre: true,
+          especie: { select: { nombre: true } },
+        },
+      },
+      sexo_mascota: { select: { nombre: true } },
+      usuario: {
+        select: {
+          usuario_id: true,
+          nombre: true,
+          apellido: true,
+          email: true,
+        },
+      },
+    },
+  },
+  veterinaria: {
+    select: { veterinaria_id: true, nombre: true, direccion: true },
+  },
+  profesional: {
+    select: {
+      profesional_id: true,
+      nombre: true,
+      apellido: true,
+      especialidad: { select: { nombre: true } },
+    },
+  },
+  servicio: {
+    select: {
+      servicio_id: true,
+      nombre: true,
+      categoria_servicio: { select: { nombre: true } },
+    },
+  },
+};
+
+
+export const combinarFechaHora = (fecha, horaTime) => {
+  const fechaStr =
+    typeof fecha === "string"
+      ? fecha.slice(0, 10)
+      : fecha.toISOString().slice(0, 10);
+  const hhmm =
+    typeof horaTime === "string"
+      ? horaTime.slice(0, 5)
+      : horaTime.toISOString().slice(11, 16);
+  return new Date(`${fechaStr}T${hhmm}:00-03:00`);
+};
+
+export const horasHasta = (fechaHora) =>
+  (fechaHora.getTime() - Date.now()) / (1000 * 60 * 60);
+
+const horaStringATime = (horaStr) => {
+  const [h, m] = horaStr.split(":").map(Number);
+  return new Date(Date.UTC(1970, 0, 1, h, m, 0, 0));
+};
+
+const sumarMinutos = (horaTimeUTC, minutos) => {
+  const copia = new Date(horaTimeUTC.getTime());
+  copia.setUTCMinutes(copia.getUTCMinutes() + minutos);
+  return copia;
+};
+
+export const formatearHora = (horaDate) =>
+  horaDate ? horaDate.toISOString().slice(11, 16) : null;
+
+export const formatearTurno = (turno) => ({
+  ...turno,
+  hora_inicio: formatearHora(turno.hora_inicio),
+  hora_fin: formatearHora(turno.hora_fin),
+});
+
+const TABS_VALIDAS = new Set(["proximos", "pasados"]);
+const LIMITE_POR_DEFECTO = 10;
+const LIMITE_MAXIMO = 50;
+
+
+const ahoraArgentina = () => {
+  const ar = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  return {
+    hoy: new Date(
+      Date.UTC(ar.getUTCFullYear(), ar.getUTCMonth(), ar.getUTCDate()),
+    ),
+    horaActual: new Date(
+      Date.UTC(
+        1970,
+        0,
+        1,
+        ar.getUTCHours(),
+        ar.getUTCMinutes(),
+        ar.getUTCSeconds(),
+      ),
+    ),
+  };
+};
+
+
+const condicionTabTutor = (tab) => {
+  const { hoy, horaActual } = ahoraArgentina();
+
+  if (tab === "proximos") {
+    return {
+      AND: [
+        { estado_turno_id: { in: [ESTADO.CONFIRMADO, ESTADO.PENDIENTE] } },
+        {
+          OR: [
+            { fecha: { gt: hoy } },
+            { fecha: hoy, hora_inicio: { gte: horaActual } },
+          ],
+        },
+      ],
+    };
+  }
+
+  return {
+    OR: [
+      { estado_turno_id: { in: [ESTADO.CANCELADO, ESTADO.ATENDIDO] } },
+      { fecha: { lt: hoy } },
+      { fecha: hoy, hora_inicio: { lt: horaActual } },
+    ],
+  };
+};
+
+
+const condicionTabVeterinaria = (tab) => {
+  const { hoy, horaActual } = ahoraArgentina();
+
+  if (tab === "proximos") {
+    return {
+      AND: [
+        { estado_turno_id: ESTADO.CONFIRMADO },
+        {
+          OR: [
+            { fecha: { gt: hoy } },
+            { fecha: hoy, hora_fin: { gt: horaActual } },
+          ],
+        },
+      ],
+    };
+  }
+
+  return {
+    OR: [
+      { estado_turno_id: ESTADO.ATENDIDO },
+      {
+        AND: [
+          { estado_turno_id: ESTADO.CONFIRMADO },
+          {
+            OR: [
+              { fecha: { lt: hoy } },
+              { fecha: hoy, hora_fin: { lte: horaActual } },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+};
+
+const condicionBusquedaTutor = (texto) => {
+  const palabras = texto.trim().split(/\s+/).filter(Boolean).slice(0, 5);
+  if (palabras.length === 0) return null;
+
+  return {
+    usuario: {
+      AND: palabras.map((palabra) => ({
+        OR: [
+          { nombre: { contains: palabra, mode: "insensitive" } },
+          { apellido: { contains: palabra, mode: "insensitive" } },
+        ],
+      })),
+    },
+  };
+};
+
+const ordenarTurnos = (tab, porHoraFin) => {
+  const campoHora = tab && porHoraFin ? "hora_fin" : "hora_inicio";
+  const direccion = tab === "pasados" ? "desc" : "asc";
+  return [
+    { fecha: direccion },
+    { [campoHora]: direccion },
+    { turno_id: "asc" },
+  ];
+};
+
+const parsearPaginacion = (query) => {
+  if (query.pagina === undefined && query.limite === undefined) return null;
+
+  const pagina = Math.max(parseInt(query.pagina, 10) || 1, 1);
+  const limite = Math.min(
+    Math.max(parseInt(query.limite, 10) || LIMITE_POR_DEFECTO, 1),
+    LIMITE_MAXIMO,
+  );
+
+  return { pagina, limite };
 };
 
 export const obtenerTurnos = async (req, res) => {
   try {
-    const { veterinariaId, usuarioId, estado, estadoDistinto, servicioId, fechaDesde, fechaHasta } = req.query;
+    const {
+      veterinariaId, usuarioId, estado, estadoDistinto, estados,
+      servicioId, fechaDesde, fechaHasta, tab, busquedaTutor
+    } = req.query
 
     if (!veterinariaId && !usuarioId) {
-      return res.status(400).json({ message: 'Falta veterinariaId o usuarioId' });
+      return res.status(400).json({ message: 'Falta veterinariaId o usuarioId' })
     }
 
-    const filtro = {};
-
-    if (veterinariaId) filtro.veterinariaId = veterinariaId;
-    if (servicioId) filtro.servicioId = servicioId;
-
-    if (usuarioId === 'me') filtro.usuarioId = req.user.id;
-    else if (usuarioId) filtro.usuarioId = usuarioId;
-
-    if (estadoDistinto) filtro.estado = { $ne: estadoDistinto };
-    else if (estado) filtro.estado = estado;
-
-    // Rango de fechas: usado para traer la semana visible en la grilla
-    if (fechaDesde || fechaHasta) {
-      filtro.fecha = {};
-      if (fechaDesde) filtro.fecha.$gte = new Date(`${fechaDesde}T00:00:00`);
-      if (fechaHasta) filtro.fecha.$lte = new Date(`${fechaHasta}T23:59:59`);
-    }
-
-    const turnos = await Turno.find(filtro)
-      .populate('mascotaId', 'nombre especie')
-      .populate('usuarioId', 'name email')
-      .populate('veterinariaId', 'nombre direccion')
-      .sort({ fecha: 1, hora: 1 });
-
-    res.status(200).json({
-      success: true,
-      data: { turnos }
-    });
-
-  } catch (error) {
-    if (error.name === 'CastError') {
-      return res.status(400).json({ message: 'El id enviado no es válido' });
-    }
-    console.error('Error en obtenerTurnos:', error);
-    res.status(500).json({ message: 'Error interno del servidor' });
-  }
-};
-
-export const reservarTurno = async (req, res) => {
-  try {
-    const { fecha, hora, motivo, mascotaId, veterinariaId, profesionalId, notas } = req.body;
-
-    if (!fecha || !hora || !motivo || !mascotaId || !veterinariaId || !profesionalId) {
-      return res.status(400).json({ message: 'Faltan datos obligatorios para reservar el turno' });
-    }
-
-    const fechaHoraSolicitada = obtenerFechaHoraCompleta({ fecha, hora });
-    const horasHastaElTurno = (fechaHoraSolicitada - new Date()) / (1000 * 60 * 60);
-
-    if (horasHastaElTurno < ANTICIPACION_MINIMA_HORAS) {
+    if (tab !== undefined && !TABS_VALIDAS.has(tab)) {
       return res.status(400).json({
-        message: `Los turnos deben solicitarse con al menos ${ANTICIPACION_MINIMA_HORAS}hs de anticipación.`
-      });
+        message: `Tab inválido: "${tab}". Valores permitidos: ${[...TABS_VALIDAS].join(', ')}`
+      })
     }
 
-    const veterinaria = await Veterinaria.findById(veterinariaId);
-    if (!veterinaria || veterinaria.estado !== 'activa') {
-      return res.status(404).json({ message: 'Veterinaria no disponible' });
-    }
+    const filtro = {}
 
-    const profesionalValido = veterinaria.profesionales.id(profesionalId);
-    if (!profesionalValido) {
-      return res.status(400).json({ message: 'El profesional no pertenece a esta veterinaria' });
-    }
-
-    // Regla 2: al reservar, arranca la ventana de pago online.
-    const venceEn = new Date(Date.now() + PLAZO_PAGO_HORAS * 60 * 60 * 1000);
-
-    const turnoReservado = await Turno.findOneAndUpdate(
-      {
-        veterinariaId,
-        profesionalId,
-        fecha: new Date(fecha),
-        hora,
-        estado: 'disponible'
-      },
-      {
-        $set: {
-          estado: 'pendiente',
-          mascotaId,
-          usuarioId: req.user.id,
-          motivo,
-          notas: notas || null,
-          venceEn
-        }
-      },
-      {
-        new: true,
-        runValidators: true
+    if (usuarioId) {
+      if (usuarioId !== 'me' && usuarioId !== req.user.id) {
+        return res.status(403).json({ message: 'No tenés permisos para ver los turnos de otro usuario.' })
       }
-    );
-
-    if (!turnoReservado) {
-      return res.status(409).json({
-        message: 'Este turno ya no está disponible. Por favor elegí otro horario.'
-      });
+      filtro.mascota = { dueno_id: req.user.id }
     }
+
+    if (veterinariaId) {
+      const veterinaria = await prisma.veterinaria.findUnique({
+        where: { veterinaria_id: veterinariaId },
+        select: { usuario_id: true }
+      })
+
+      if (!veterinaria) {
+        return res.status(404).json({ message: 'La veterinaria no existe' })
+      }
+
+      const esDueñoDeLaVeterinaria = veterinaria.usuario_id === req.user.id
+      const soloConsultaDisponibilidad = estado === ESTADO.DISPONIBLE && !estadoDistinto && !estados
+
+      if (!esDueñoDeLaVeterinaria && !soloConsultaDisponibilidad) {
+        return res.status(403).json({ message: 'No tenés permisos para ver esos turnos.' })
+      }
+
+      filtro.veterinaria_id = veterinariaId
+    }
+
+    if (servicioId) filtro.servicio_id = servicioId
+
+    if (estados) {
+      const listaEstados = estados.split(',').map((e) => e.trim()).filter(Boolean)
+      const listaInvalida = listaEstados.filter((e) => !ESTADOS_VALIDOS.has(e))
+
+      if (listaEstados.length === 0 || listaInvalida.length > 0) {
+        return res.status(400).json({
+          message: `Estado(s) inválido(s): ${listaInvalida.join(', ') || '(vacío)'}. Valores permitidos: ${[...ESTADOS_VALIDOS].join(', ')}`
+        })
+      }
+      filtro.estado_turno_id = { in: listaEstados }
+    } else if (estadoDistinto) {
+      if (!ESTADOS_VALIDOS.has(estadoDistinto)) {
+        return res.status(400).json({
+          message: `Estado inválido: "${estadoDistinto}". Valores permitidos: ${[...ESTADOS_VALIDOS].join(', ')}`
+        })
+      }
+      filtro.estado_turno_id = { not: estadoDistinto }
+    } else if (estado) {
+      if (!ESTADOS_VALIDOS.has(estado)) {
+        return res.status(400).json({
+          message: `Estado inválido: "${estado}". Valores permitidos: ${[...ESTADOS_VALIDOS].join(', ')}`
+        })
+      }
+      filtro.estado_turno_id = estado
+    }
+
+    if (fechaDesde || fechaHasta) {
+      filtro.fecha = {}
+      if (fechaDesde) filtro.fecha.gte = new Date(`${fechaDesde}T00:00:00.000Z`)
+      if (fechaHasta) filtro.fecha.lte = new Date(`${fechaHasta}T23:59:59.999Z`)
+    }
+
+    if (busquedaTutor && veterinariaId) {
+      const condicion = condicionBusquedaTutor(String(busquedaTutor).slice(0, 100))
+      if (condicion) filtro.mascota = { ...(filtro.mascota || {}), ...condicion }
+    }
+
+    if (tab) {
+      filtro.AND = [veterinariaId ? condicionTabVeterinaria(tab) : condicionTabTutor(tab)]
+    }
+
+    const orderBy = ordenarTurnos(tab, Boolean(veterinariaId))
+    const paginacion = parsearPaginacion(req.query)
+
+    if (!paginacion) {
+      const turnos = await prisma.turno.findMany({
+        where: filtro,
+        include: includeTurnoCompleto,
+        orderBy
+      })
+      return res.status(200).json({ success: true, data: { turnos: turnos.map(formatearTurno) } })
+    }
+
+    const { pagina, limite } = paginacion
+    const [total, turnos] = await Promise.all([
+      prisma.turno.count({ where: filtro }),
+      prisma.turno.findMany({
+        where: filtro,
+        include: includeTurnoCompleto,
+        orderBy,
+        skip: (pagina - 1) * limite,
+        take: limite
+      })
+    ])
 
     return res.status(200).json({
       success: true,
-      data: { turno: turnoReservado }
+      data: {
+        turnos: turnos.map(formatearTurno),
+        total,
+        pagina,
+        limite,
+        totalPaginas: Math.max(Math.ceil(total / limite), 1)
+      }
+    })
+  } catch (error) {
+    if (error.code === 'P2023') return res.status(400).json({ message: 'El id enviado no es válido' })
+    return res.status(500).json({ message: 'Error interno del servidor' })
+  }
+}
+
+export const obtenerTurnosDisponiblesGrilla = async (req, res) => {
+  try {
+    const { veterinariaId, fechaDesde, fechaHasta } = req.query;
+
+    if (!veterinariaId) {
+      return res.status(400).json({ message: 'Falta veterinariaId' });
+    }
+
+    const filtro = {
+      veterinaria_id: veterinariaId,
+      estado_turno_id: ESTADO.DISPONIBLE
+    };
+
+    if (fechaDesde || fechaHasta) {
+      filtro.fecha = {};
+      if (fechaDesde) filtro.fecha.gte = new Date(`${fechaDesde}T00:00:00.000Z`);
+      if (fechaHasta) filtro.fecha.lte = new Date(`${fechaHasta}T23:59:59.999Z`);
+    }
+
+    // Tope de seguridad: la UI siempre pide una semana, pero un llamado
+    // directo sin fechas no debería poder traer el historial completo.
+    const LIMITE_GRILLA = 500;
+
+    const turnos = await prisma.turno.findMany({
+      where: filtro,
+      select: {
+        turno_id: true,
+        fecha: true,
+        hora_inicio: true,
+        hora_fin: true,
+        servicio_id: true,
+        profesional_id: true
+      },
+      take: LIMITE_GRILLA
     });
 
+    const turnosMapeados = turnos.map(t => ({
+      ...t,
+      hora_inicio: formatearHora(t.hora_inicio),
+      hora_fin: formatearHora(t.hora_fin)
+    }));
+
+    return res.status(200).json({ success: true, data: { turnos: turnosMapeados } });
   } catch (error) {
-    if (error.name === 'CastError') {
-      return res.status(400).json({ message: 'Alguno de los ids enviados no es válido' });
-    }
-    console.error('Error en reservarTurno:', error);
-    res.status(500).json({ message: 'Error interno del servidor' });
+    console.error('Error en obtenerTurnosDisponiblesGrilla:', error);
+    return res.status(500).json({ message: 'Error interno del servidor' });
   }
-};
+}
 
 export const obtenerTurnoPorId = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const turno = await Turno.findById(id)
-      .populate('mascotaId', 'nombre especie raza fechaNacimiento sexo peso')
-      .populate('usuarioId', 'name email')
-      .populate('veterinariaId', 'nombre profesionales');
+    const turno = await prisma.turno.findUnique({
+      where: { turno_id: id },
+      include: includeTurnoCompleto,
+    });
 
     if (!turno) {
-      return res.status(404).json({ message: 'El recurso no existe.' });
+      return res.status(404).json({ message: "El recurso no existe." });
     }
 
-    if (turno.usuarioId?.toString() !== req.user.id && req.user.role !== 'administrador') {
-      const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id });
-      if (!veterinaria || turno.veterinariaId?._id?.toString() !== veterinaria._id.toString()) {
-        return res.status(403).json({ message: 'No tenés permisos para ver este turno.' });
+    const esDueño = turno.mascota?.usuario?.usuario_id === req.user.id;
+    const esAdmin = req.user.rol === "administrador";
+
+    if (!esDueño && !esAdmin) {
+      const veterinaria = await prisma.veterinaria.findUnique({
+        where: { usuario_id: req.user.id },
+      });
+      if (!veterinaria || turno.veterinaria_id !== veterinaria.veterinaria_id) {
+        return res
+          .status(403)
+          .json({ message: "No tenés permisos para ver este turno." });
       }
     }
 
-    res.status(200).json({ success: true, data: turno });
-
+    return res.status(200).json({ success: true, data: formatearTurno(turno) });
   } catch (error) {
-    if (error.name === 'CastError') {
-      return res.status(400).json({ message: 'El id del turno no es válido' });
+    if (error.code === "P2023") {
+      return res.status(400).json({ message: "El id del turno no es válido" });
     }
-    console.error('Error en obtenerTurnoPorId:', error);
-    res.status(500).json({ message: 'Error interno del servidor' });
+
+    return res.status(500).json({ message: "Error interno del servidor" });
   }
 };
 
-// PATCH /turnos/:id/cancelar (protegido con ownerTurno)
+export const reservarTurno = async (req, res) => {
+  try {
+    const { turnoId } = req.params;
+    const { mascotaId, motivo, notas } = req.body;
+
+    if (!turnoId || !mascotaId || !motivo) {
+      return res
+        .status(400)
+        .json({ message: "Faltan datos obligatorios para reservar el turno" });
+    }
+
+    const turno = await prisma.turno.findUnique({
+      where: { turno_id: turnoId },
+      include: { veterinaria: true },
+    });
+
+    if (!turno) {
+      return res.status(404).json({ message: "El turno no existe" });
+    }
+
+    if (turno.veterinaria.estado_veterinaria_id !== "ACT") {
+      return res.status(404).json({ message: "Veterinaria no disponible" });
+    }
+
+    const mascota = await prisma.mascota.findUnique({
+      where: { mascota_id: mascotaId },
+    });
+    if (!mascota || mascota.dueno_id !== req.user.id) {
+      return res.status(403).json({ message: "La mascota no te pertenece" });
+    }
+
+    const fechaHoraTurno = combinarFechaHora(turno.fecha, turno.hora_inicio);
+    if (horasHasta(fechaHoraTurno) < ANTICIPACION_MINIMA_HORAS) {
+      return res.status(400).json({
+        message: `Los turnos deben reservarse con al menos ${ANTICIPACION_MINIMA_HORAS}hs de anticipación.`,
+      });
+    }
+
+    const venceEn = new Date(Date.now() + PLAZO_PAGO_HORAS * 60 * 60 * 1000);
+
+    const resultado = await prisma.$transaction(async (tx) => {
+      const actualizado = await tx.turno.updateMany({
+        where: { turno_id: turnoId, estado_turno_id: ESTADO.DISPONIBLE },
+        data: {
+          estado_turno_id: ESTADO.PENDIENTE,
+          mascota_id: mascotaId,
+          motivo,
+          notas: notas || null,
+          vence_en: venceEn,
+        },
+      });
+
+      if (actualizado.count === 0) return null;
+
+      return tx.turno.findUnique({
+        where: { turno_id: turnoId },
+        include: includeTurnoCompleto,
+      });
+    });
+
+    if (!resultado) {
+      return res.status(409).json({
+        message:
+          "Este turno ya no está disponible. Por favor elegí otro horario.",
+      });
+    }
+
+    const cuando = formatearFechaTurno(turno.fecha, turno.hora_inicio);
+
+    await crearNotificacion({
+      usuarioId: req.user.id,
+      tipo: TIPO.TURNO_PENDIENTE_PAGO,
+      mensaje: `Reservaste un turno para ${mascota.nombre} el ${cuando}. Tenés ${PLAZO_PAGO_HORAS} hs para confirmarlo eligiendo cómo pagar, o el horario se libera.`,
+      link: `/mis-turnos`,
+    });
+
+    return res
+      .status(200)
+      .json({ success: true, data: { turno: formatearTurno(resultado) } });
+  } catch (error) {
+    if (error.code === "P2023") {
+      return res
+        .status(400)
+        .json({ message: "Alguno de los ids enviados no es válido" });
+    }
+    console.error("Error en reservarTurno:", error);
+    return res.status(500).json({ message: "Error interno del servidor" });
+  }
+};
 
 export const cancelarTurno = async (req, res) => {
   try {
+    const { id } = req.params;
 
-    const turno = req.turno;
+    const turno = await prisma.turno.findUnique({
+      where: { turno_id: id },
+      include: { mascota: true },
+    });
 
-    if (turno.estado === 'cancelado') {
-      return res.status(400).json({
-        message: 'El turno ya estaba cancelado'
-      });
+    if (!turno) {
+      return res.status(404).json({ message: "El turno no existe" });
     }
 
-    if (turno.estado === 'atendido') {
-      return res.status(400).json({
-        message: 'No se puede cancelar un turno ya atendido'
-      });
+    const esDueño = turno.mascota?.dueno_id === req.user.id;
+
+    if (!esDueño) {
+      return res
+        .status(403)
+        .json({ message: "No tenés permisos para cancelar este turno." });
     }
 
-    // Regla 3: la restricción de horas solo aplica a turnos ya CONFIRMADOS
+    if (turno.estado_turno_id === ESTADO.CANCELADO) {
+      return res.status(400).json({ message: "El turno ya estaba cancelado" });
+    }
 
-    if (turno.estado === 'confirmado') {
+    if (turno.estado_turno_id === ESTADO.ATENDIDO) {
+      return res
+        .status(400)
+        .json({ message: "No se puede cancelar un turno ya atendido" });
+    }
 
-      const horasRestantes = horasHastaTurno(turno);
+    let pagoAReembolsar = null;
+    let estadoReembolso = null;
+    let motivoRechazoReembolso = null;
 
-      if (horasRestantes < HORAS_LIMITE_CANCELACION) {
-        return res.status(400).json({
-          message:
-            `Solo se puede cancelar un turno confirmado hasta ${HORAS_LIMITE_CANCELACION}hs antes. Faltan ${horasRestantes.toFixed(1)}hs`
+    if (turno.estado_turno_id === ESTADO.CONFIRMADO) {
+      pagoAReembolsar = await prisma.pago.findFirst({
+        where: { turno_id: id, estado_pago_id: "APR" },
+        orderBy: { created_at: "desc" },
+      });
+
+      if (pagoAReembolsar) {
+        const fechaHoraTurno = combinarFechaHora(
+          turno.fecha,
+          turno.hora_inicio,
+        );
+        const horasRestantes = horasHasta(fechaHoraTurno);
+
+        if (horasRestantes < HORAS_LIMITE_CANCELACION) {
+          return res.status(400).json({
+            message: `Solo se puede cancelar un turno confirmado hasta ${HORAS_LIMITE_CANCELACION}hs antes. Faltan ${horasRestantes.toFixed(1)}hs`,
+          });
+        }
+      }
+
+      if (pagoAReembolsar) {
+        if (
+          pagoAReembolsar.metodo_pago_id === "MPG" &&
+          pagoAReembolsar.id_pago
+        ) {
+          try {
+            const refundClient = new PaymentRefund(client);
+            await refundClient.create({ payment_id: pagoAReembolsar.id_pago });
+            estadoReembolso = "APR";
+          } catch (errorReembolso) {
+            console.error(
+              "Error al reembolsar en MercadoPago:",
+              errorReembolso,
+            );
+            estadoReembolso = "PRO";
+            motivoRechazoReembolso =
+              "Fallo el reembolso automático en MercadoPago, requiere revisión manual.";
+          }
+        } else {
+          estadoReembolso = "APR";
+        }
+      }
+    }
+
+    const [turnoCancelado, turnoLiberado] = await prisma.$transaction(
+      async (tx) => {
+        const cancelado = await tx.turno.update({
+          where: { turno_id: id },
+          data: { estado_turno_id: ESTADO.CANCELADO },
         });
-      }
 
-      // TODO(pago):
-      // acá se define si se devuelve el pago o queda como crédito,
-      // decidir que se debe realizar
-    }
+        const nuevoTurno = await tx.turno.create({
+          data: {
+            veterinaria_id: turno.veterinaria_id,
+            profesional_id: turno.profesional_id,
+            servicio_id: turno.servicio_id,
+            fecha: turno.fecha,
+            hora_inicio: turno.hora_inicio,
+            hora_fin: turno.hora_fin,
+            monto_servicio: turno.monto_servicio,
+            estado_turno_id: ESTADO.DISPONIBLE,
+          },
+        });
 
-   
-    // LIBERAR EL TURNO
-  
-    // El horario vuelve a estar disponible para que otra persona
-    // pueda solicitarlo.
-    
-    // Se eliminan los datos pertenecientes a la reserva anterior.
-    turno.estado = 'disponible';
-    turno.mascotaId = undefined;
-    turno.usuarioId = undefined;
-    turno.motivo = undefined;
-    turno.notas = undefined;
-    turno.pagoId = undefined;
+        if (pagoAReembolsar) {
+          await tx.pago.update({
+            where: { pago_id: pagoAReembolsar.pago_id },
+            data: { estado_pago_id: "REE" },
+          });
 
-    turno.venceEn = null;
+          await tx.pago.create({
+            data: {
+              turno_id: id,
+              monto: pagoAReembolsar.monto,
+              metodo_pago_id: pagoAReembolsar.metodo_pago_id,
+              estado_pago_id: estadoReembolso,
+              reembolso_de_id: pagoAReembolsar.pago_id,
+              motivo_rechazo: motivoRechazoReembolso,
+            },
+          });
+        }
 
-    await turno.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Turno cancelado y horario liberado correctamente',
-      data: { turno }
-    });
-
-  } catch (error) {
-
-    console.error('Error en cancelarTurno:', error);
-
-    res.status(500).json({
-      message: 'Error interno del servidor'
-    });
-  }
-};
-   
-//libera directamente
-// por venceEn, y LIBERA el slot (vuelve a 'disponible') NO borra el
-// documento — el turno lo sigue ofreciendo la veterinaria, solo se cae la
-// reserva del tutor que no pagó a tiempo.
-export const liberarTurnosVencidos = async () => {
-  try {
-    const resultado = await Turno.updateMany(
-      { estado: 'pendiente', venceEn: { $lte: new Date() } },
-      {
-        $set: { estado: 'disponible' },
-        $unset: { mascotaId: '', usuarioId: '', motivo: '', notas: '', venceEn: '' }
-      }
+        return [cancelado, nuevoTurno];
+      },
     );
 
-    if (resultado.modifiedCount > 0) {
-      console.log(`[cron] ${resultado.modifiedCount} turno(s) pendiente(s) liberado(s) automáticamente (plazo de pago vencido)`);
+    const cuando = formatearFechaTurno(turno.fecha, turno.hora_inicio);
+
+    let mensaje = `Cancelaste el turno de ${turno.mascota.nombre} del ${cuando}.`;
+
+    if (pagoAReembolsar) {
+      const monto = Number(pagoAReembolsar.monto).toLocaleString("es-AR");
+      mensaje +=
+        estadoReembolso === "APR"
+          ? ` Te reembolsamos $${monto}.`
+          : ` Tu reembolso de $${monto} está en revisión.`;
+    }
+
+    await crearNotificacion({
+      usuarioId: req.user.id,
+      tipo: TIPO.SISTEMA,
+      mensaje,
+      link: `/mis-turnos`,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Turno cancelado y horario liberado correctamente",
+      data: {
+        turnoCancelado: formatearTurno(turnoCancelado),
+        turnoNuevoDisponible: formatearTurno(turnoLiberado),
+        reembolso: pagoAReembolsar
+          ? { monto: Number(pagoAReembolsar.monto), estado: estadoReembolso }
+          : null,
+      },
+    });
+  } catch (error) {
+    if (error.code === "P2023") {
+      return res.status(400).json({ message: "El id del turno no es válido" });
+    }
+    console.error("Error en cancelarTurno:", error);
+    return res.status(500).json({ message: "Error interno del servidor" });
+  }
+};
+
+export const liberarTurnosVencidos = async () => {
+  try {
+    const resultado = await prisma.turno.updateMany({
+      where: {
+        estado_turno_id: ESTADO.PENDIENTE,
+        vence_en: { lte: new Date() },
+      },
+      data: {
+        estado_turno_id: ESTADO.DISPONIBLE,
+        mascota_id: null,
+        motivo: null,
+        notas: null,
+        vence_en: null,
+      },
+    });
+
+    if (resultado.count > 0) {
+      console.log(
+        `[cron] ${resultado.count} turno(s) pendiente(s) liberado(s) automáticamente (plazo de pago vencido)`,
+      );
     }
   } catch (error) {
-    console.error('Error en liberarTurnosVencidos:', error);
+    console.error("Error en liberarTurnosVencidos:", error);
   }
 };
 
@@ -280,151 +721,256 @@ export const crearOfertaHoraria = async (req, res) => {
   try {
     const { servicioId, profesionales, slots, duracion } = req.body;
 
-    if (!servicioId || !profesionales?.length || !slots?.length || !duracion) {
+    if (
+      !servicioId ||
+      !profesionales?.length ||
+      !slots?.length ||
+      duracion === undefined
+    ) {
       return res.status(400).json({
-        message: 'Faltan datos obligatorios: servicioId, profesionales, duracion y slots'
+        message:
+          "Faltan datos obligatorios: servicioId, profesionales, duracion y slots",
       });
     }
 
-    const veterinaria = await Veterinaria.findOne({ usuarioId: req.user.id });
-    if (!veterinaria) {
-      return res.status(404).json({ message: 'No se encontró una veterinaria asociada a este usuario' });
+    // 1. Validaciones extra (evitan error 500)
+    if (!Number.isInteger(duracion) || duracion <= 0) {
+      return res
+        .status(400)
+        .json({ message: "La duración debe ser un número entero positivo." });
     }
 
-    const servicio = veterinaria.servicios.id(servicioId);
-    if (!servicio) {
-      return res.status(400).json({ message: 'El servicio no pertenece a esta veterinaria' });
-    }
-
-    for (const profId of profesionales) {
-      const profValido = veterinaria.profesionales.id(profId);
-      if (!profValido) {
-        return res.status(400).json({
-          message: `El profesional ${profId} no pertenece a esta veterinaria`
-        });
+    const REGEX_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
+    for (const slot of slots) {
+      if (!REGEX_HORA.test(slot.hora)) {
+        return res
+          .status(400)
+          .json({ message: `El formato de hora es inválido: ${slot.hora}` });
       }
-      const brindaElServicio = profValido.serviciosIds
-        ?.some(id => id.toString() === servicioId);
+    }
+
+    const veterinaria = await prisma.veterinaria.findUnique({
+      where: { usuario_id: req.user.id },
+      include: {
+        horario_veterinaria: {
+          include: { dia_semana: true },
+        },
+      },
+    });
+
+    if (!veterinaria) {
+      return res
+        .status(404)
+        .json({
+          message: "No se encontró una veterinaria asociada a este usuario",
+        });
+    }
+
+    const servicio = await prisma.servicio.findUnique({
+      where: { servicio_id: servicioId },
+    });
+    if (!servicio || servicio.veterinaria_id !== veterinaria.veterinaria_id) {
+      return res
+        .status(400)
+        .json({ message: "El servicio no pertenece a esta veterinaria" });
+    }
+
+    const profesionalesValidos = [];
+    for (const profId of profesionales) {
+      const profesional = await prisma.profesional.findUnique({
+        where: { profesional_id: profId },
+      });
+      if (
+        !profesional ||
+        profesional.veterinaria_id !== veterinaria.veterinaria_id
+      ) {
+        return res
+          .status(400)
+          .json({
+            message: `El profesional ${profId} no pertenece a esta veterinaria`,
+          });
+      }
+
+      const brindaElServicio = await prisma.profesional_servicio.findUnique({
+        where: {
+          profesional_id_servicio_id: {
+            profesional_id: profId,
+            servicio_id: servicioId,
+          },
+        },
+      });
       if (!brindaElServicio) {
         return res.status(400).json({
-          message: `El profesional ${profValido.nombre} no brinda el servicio seleccionado`
+          message: `${profesional.nombre} ${profesional.apellido} no brinda el servicio seleccionado`,
+        });
+      }
+
+      profesionalesValidos.push(profesional);
+    }
+
+    // 2. Validación de rangos horarios de atención
+    const diasMapa = {
+      0: "domingo",
+      1: "lunes",
+      2: "martes",
+      3: "miercoles",
+      4: "jueves",
+      5: "viernes",
+      6: "sabado",
+    };
+
+    for (const slot of slots) {
+      const fechaDate = new Date(`${slot.fecha}T00:00:00.000Z`);
+      const nombreDia = diasMapa[fechaDate.getUTCDay()];
+
+      const horarioDia = veterinaria.horario_veterinaria.find(
+        (h) => h.dia_semana?.nombre === nombreDia,
+      );
+      if (!horarioDia) {
+        return res.status(400).json({
+          message: `La veterinaria no atiende el día ${nombreDia} (${slot.fecha}).`,
+        });
+      }
+
+      const horaInicioTime = horaStringATime(slot.hora);
+      const horaFinTime = sumarMinutos(horaInicioTime, duracion);
+
+      const horaDesdeDate = new Date(horarioDia.hora_desde);
+      const horaHastaDate = new Date(horarioDia.hora_hasta);
+
+      // Normalizar las fechas base para comparar únicamente las horas
+      const baseDesde = new Date(
+        Date.UTC(
+          1970,
+          0,
+          1,
+          horaDesdeDate.getUTCHours(),
+          horaDesdeDate.getUTCMinutes(),
+          0,
+          0,
+        ),
+      );
+      let baseHasta = new Date(
+        Date.UTC(
+          1970,
+          0,
+          1,
+          horaHastaDate.getUTCHours(),
+          horaHastaDate.getUTCMinutes(),
+          0,
+          0,
+        ),
+      );
+
+      if (baseHasta.getTime() === Date.UTC(1970, 0, 1, 0, 0, 0, 0)) {
+        baseHasta = new Date(Date.UTC(1970, 0, 2, 0, 0, 0, 0));
+      }
+
+      if (
+        horaInicioTime.getTime() < baseDesde.getTime() ||
+        horaFinTime.getTime() > baseHasta.getTime()
+      ) {
+        return res.status(400).json({
+          message: `El turno de las ${slot.hora} (duración ${duracion}m) excede el horario de atención (${horaDesdeDate.toISOString().slice(11, 16)} - ${horaHastaDate.toISOString().slice(11, 16)}) para el día ${slot.fecha}.`,
         });
       }
     }
 
-    const turnosACrear = [];
-    const conflictos = []; // registra por que se descarto cada slot
+    const conflictos = [];
+    let creados = 0;
 
     for (const slot of slots) {
-      for (const profId of profesionales) {
-        const existente = await Turno.findOne({
-          veterinariaId: veterinaria._id,
-          profesionalId: profId,
-          fecha: new Date(slot.fecha),
-          hora: slot.hora,
-          estado: { $ne: 'cancelado' } // un turno cancelado no ocupa la agenda
+      const horaInicioTime = horaStringATime(slot.hora);
+      const horaFinTime = sumarMinutos(horaInicioTime, duracion);
+
+      for (const profesional of profesionalesValidos) {
+        const existente = await prisma.turno.findFirst({
+          where: {
+            veterinaria_id: veterinaria.veterinaria_id,
+            profesional_id: profesional.profesional_id,
+            fecha: new Date(`${slot.fecha}T00:00:00.000Z`),
+            estado_turno_id: { not: ESTADO.CANCELADO },
+            hora_inicio: { lt: horaFinTime },
+            hora_fin: { gt: horaInicioTime },
+          },
         });
 
         if (existente) {
-          const prof = veterinaria.profesionales.id(profId);
-          const mismoServicio = existente.servicioId?.toString() === servicioId;
-
           conflictos.push({
-            profesional: prof?.nombre || 'Profesional',
             fecha: slot.fecha,
             hora: slot.hora,
-            mismoServicio
+            profesional: `${profesional.nombre} ${profesional.apellido}`,
           });
           continue;
         }
 
-        turnosACrear.push({
-          fecha: new Date(slot.fecha),
-          hora: slot.hora,
-          servicioId: servicio._id,
-          especialidad: servicio.nombre,
-          montoServicio: servicio.precio,
-          duracion,
-          veterinariaId: veterinaria._id,
-          profesionalId: profId,
-          estado: 'disponible'
-        });
+        try {
+          await prisma.turno.create({
+            data: {
+              veterinaria_id: veterinaria.veterinaria_id,
+              servicio_id: servicioId,
+              profesional_id: profesional.profesional_id,
+              fecha: new Date(`${slot.fecha}T00:00:00.000Z`),
+              hora_inicio: horaInicioTime,
+              hora_fin: horaFinTime,
+              monto_servicio: servicio.precio,
+              estado_turno_id: ESTADO.DISPONIBLE,
+            },
+          });
+
+          creados += 1;
+        } catch (errorSlot) {
+          if (errorSlot.code === "P2002") {
+            conflictos.push({
+              fecha: slot.fecha,
+              hora: slot.hora,
+              profesional: `${profesional.nombre} ${profesional.apellido}`,
+            });
+          } else {
+            console.error(
+              "Error inesperado creando turno de oferta:",
+              errorSlot,
+            );
+            throw errorSlot;
+          }
+        }
       }
     }
 
-    if (!turnosACrear.length) {
-      return res.status(400).json({
-        message: construirMensajeConflictos(conflictos)
-      });
+    if (creados === 0) {
+      return res
+        .status(409)
+        .json({ message: construirMensajeConflictos(conflictos) });
     }
-
-    // ordered: false permite que Mongo siga insertando el resto del batch
-    // aunque algún slot choque por condición de carrera con otra oferta
-    // (requiere el índice único { veterinariaId, profesionalId, fecha, hora } en Turno.js)
-    let turnosCreados = [];
-    let chocadosEnBulk = 0;
-
-    try {
-      turnosCreados = await Turno.insertMany(turnosACrear, { ordered: false });
-    } catch (bulkError) {
-      if (bulkError.code === 11000 || bulkError.writeErrors) {
-        turnosCreados = bulkError.insertedDocs || [];
-        chocadosEnBulk = turnosACrear.length - turnosCreados.length;
-      } else {
-        throw bulkError;
-      }
-    }
-
-    if (!turnosCreados.length) {
-      return res.status(409).json({
-        message: 'Todos los horarios seleccionados fueron ocupados justo antes de guardar. Probá de nuevo.'
-      });
-    }
-
-    const totalOmitidos = conflictos.length + chocadosEnBulk;
 
     return res.status(201).json({
       success: true,
-      message: totalOmitidos > 0
-        ? `Se crearon ${turnosCreados.length} turnos disponibles. ${totalOmitidos} horario(s) se omitieron por conflictos de agenda.`
-        : `Se crearon ${turnosCreados.length} turnos disponibles`,
-      data: { cantidad: turnosCreados.length }
+      message:
+        conflictos.length > 0
+          ? `Se crearon ${creados} turnos disponibles. ${conflictos.length} combinación(es) profesional+horario se omitieron por ya existir.`
+          : `Se crearon ${creados} turnos disponibles`,
+      data: { cantidad: creados },
     });
-
   } catch (error) {
-    if (error.name === 'CastError') {
-      return res.status(400).json({ message: 'Alguno de los ids enviados no es válido' });
+    if (error.code === "P2023") {
+      return res
+        .status(400)
+        .json({ message: "Alguno de los ids enviados no es válido" });
     }
-    console.error('Error en crearOfertaHoraria:', error);
-    res.status(500).json({ message: 'Error interno del servidor' });
+    console.error("Error en crearOfertaHoraria:", error);
+    return res
+      .status(500)
+      .json({ message: "Error interno del servidor al crear oferta horaria." });
   }
 };
 
-
 const construirMensajeConflictos = (conflictos) => {
   if (!conflictos.length) {
-    return 'No se pudo crear ningún turno.';
+    return "No se pudo crear ningún turno.";
   }
-
-  const porOtroServicio = conflictos.filter(c => !c.mismoServicio);
-  const duplicadosMismoServicio = conflictos.filter(c => c.mismoServicio);
-
-  const partes = [];
-
-  if (porOtroServicio.length) {
-    const ejemplo = porOtroServicio[0];
-    const fechaFmt = new Date(ejemplo.fecha + 'T00:00:00').toLocaleDateString('es-AR');
-    partes.push(
-      `${porOtroServicio.length} horario(s) chocan porque el profesional ya tiene otro turno en ese momento ` +
-      `(ej: ${ejemplo.profesional} el ${fechaFmt} a las ${ejemplo.hora}hs)`
-    );
-  }
-
-  if (duplicadosMismoServicio.length) {
-    partes.push(
-      `${duplicadosMismoServicio.length} horario(s) ya estaban ofrecidos para este mismo servicio`
-    );
-  }
-
-  return `No se pudo crear ningún turno. ${partes.join('. ')}.`;
+  const ejemplo = conflictos[0];
+  const fechaFmt = new Date(`${ejemplo.fecha}T00:00:00`).toLocaleDateString(
+    "es-AR",
+  );
+  return `No se pudo crear ningún turno. ${conflictos.length} combinación(es) ya estaban ofrecidas (ej: ${ejemplo.profesional} el ${fechaFmt} a las ${ejemplo.hora}hs).`;
 };
