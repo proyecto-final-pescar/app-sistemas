@@ -14,5 +14,6 @@ build/
 Thumbs.db
 .vercel
 .env*
+!.env*.example
 
 .vscode
