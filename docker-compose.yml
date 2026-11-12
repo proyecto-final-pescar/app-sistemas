@@ -1,0 +1,93 @@
+name: mypet
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mypet}
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en el archivo .env de la raiz}"
+      POSTGRES_DB: ${POSTGRES_DB:-mypet}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./server/db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  server:
+    build: ./server
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./server/.env.docker
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mypet}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-mypet}
+      DIRECT_URL: postgresql://${POSTGRES_USER:-mypet}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-mypet}
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./server/src:/app/src
+      - ./server/prisma:/app/prisma
+    command:
+      [
+        "node_modules/.bin/nodemon",
+        "--legacy-watch",
+        "--watch",
+        "src",
+        "--watch",
+        "prisma",
+        "src/index.js",
+      ]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  client:
+    build: ./client
+    depends_on:
+      server:
+        condition: service_healthy
+    env_file:
+      - path: ./client/.env.docker
+        required: false
+    environment:
+      VITE_API_URL: http://localhost:3000/api
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./client/src:/app/src
+      - ./client/public:/app/public
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5173/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  pgdata:
