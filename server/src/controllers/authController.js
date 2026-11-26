@@ -9,6 +9,12 @@ import { validateEmail } from '../validators/emailValidator.js'
 import { validatePasswordStrength } from '../validators/passwordValidator.js'
 import { hashToken } from '../utils/tokens.js'
 import { obtenerJwtSecret } from '../config/security.js'
+import { responderLimiteAuth } from '../utils/authRateLimit.js'
+import {
+  obtenerBloqueoLoginEmail,
+  registrarFalloLoginEmail,
+  reiniciarFallosLoginEmail
+} from '../services/loginEmailRateLimit.js'
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
@@ -151,24 +157,37 @@ export const login = async (req, res) => {
       return res.status(400).json({ mensaje: 'Email y contraseña son requeridos' })
     }
 
+    const emailNormalizado = typeof email === 'string'
+      ? email.trim().toLowerCase()
+      : ''
+
+    const bloqueoEmail = await obtenerBloqueoLoginEmail(emailNormalizado)
+    if (bloqueoEmail) {
+      return responderLimiteAuth(res, bloqueoEmail)
+    }
+
     const usuario = await prisma.usuario.findUnique({
-      where: { email: String(email).trim().toLowerCase() },
+      where: { email: emailNormalizado },
       include: includeUsuarioCompleto
     })
 
     if (!usuario) {
+      const bloqueo = await registrarFalloLoginEmail(emailNormalizado)
+      if (bloqueo) return responderLimiteAuth(res, bloqueo)
       return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
     }
 
     // Cuenta creada por Google nunca tuvo usuario_password.
     if (!usuario.usuario_password) {
-      return res.status(401).json({
-        mensaje: 'Esta cuenta fue creada con Google. Iniciá sesión con Google o restablecé tu contraseña.'
-      })
+      const bloqueo = await registrarFalloLoginEmail(emailNormalizado)
+      if (bloqueo) return responderLimiteAuth(res, bloqueo)
+      return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
     }
 
     const esValida = await bcrypt.compare(password, usuario.usuario_password.password_hash)
     if (!esValida) {
+      const bloqueo = await registrarFalloLoginEmail(emailNormalizado)
+      if (bloqueo) return responderLimiteAuth(res, bloqueo)
       return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
     }
 
@@ -189,6 +208,7 @@ export const login = async (req, res) => {
     }
 
     const token = generarJwt(usuario)
+    await reiniciarFallosLoginEmail(emailNormalizado)
 
     return res.status(200).json(respuestaUsuario(token, usuario))
   } catch (error) {
