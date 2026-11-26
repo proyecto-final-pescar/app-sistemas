@@ -9,6 +9,14 @@ import { validateEmail } from '../validators/emailValidator.js'
 import { validatePasswordStrength } from '../validators/passwordValidator.js'
 import { hashToken } from '../utils/tokens.js'
 import { obtenerJwtSecret } from '../config/security.js'
+import { responderLimiteAuth } from '../utils/authRateLimit.js'
+import {
+  reiniciarFallosLoginEmail
+} from '../services/loginEmailRateLimit.js'
+import {
+  obtenerBloqueoLogin,
+  registrarFalloLogin
+} from '../services/loginRateLimit.js'
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
@@ -22,6 +30,10 @@ if (!process.env.JWT_SECRET) {
 const RESET_TOKEN_EXPIRATION_MS = 60 * 60 * 1000 // 1 hora
 const VERIFICACION_TOKEN_EXPIRATION_MS = 24 * 60 * 60 * 1000 // 24 hs
 const SALT_ROUNDS = 10
+const RESPUESTA_REGISTRO_GENERICA = {
+  success: true,
+  message: 'Si el email puede registrarse, recibirás un correo con los próximos pasos. Si ya tenés cuenta, iniciá sesión o recuperá tu contraseña.'
+}
 
 
 const ROL_ID_POR_NOMBRE = {
@@ -90,7 +102,7 @@ export const register = async (req, res) => {
       where: { email: emailNormalizado }
     })
     if (existente) {
-      return res.status(409).json({ mensaje: 'El email ya está registrado' })
+      return res.status(200).json(RESPUESTA_REGISTRO_GENERICA)
     }
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
@@ -129,14 +141,11 @@ export const register = async (req, res) => {
       console.error('Error al enviar el email de verificación:', mailError)
     }
 
-    return res.status(201).json({
-      success: true,
-      message: 'Cuenta creada. Revisá tu correo para verificar tu cuenta antes de iniciar sesión.'
-    })
+    return res.status(200).json(RESPUESTA_REGISTRO_GENERICA)
   } catch (error) {
 
     if (error.code === 'P2002') {
-      return res.status(409).json({ mensaje: 'El email ya está registrado' })
+      return res.status(200).json(RESPUESTA_REGISTRO_GENERICA)
     }
     console.error('Error en register:', error)
     return res.status(500).json({ mensaje: 'Error interno del servidor' })
@@ -151,24 +160,44 @@ export const login = async (req, res) => {
       return res.status(400).json({ mensaje: 'Email y contraseña son requeridos' })
     }
 
+    const emailNormalizado = typeof email === 'string'
+      ? email.trim().toLowerCase()
+      : ''
+    const ipCliente = req.ip || req.socket?.remoteAddress
+
+    const bloqueo = await obtenerBloqueoLogin(emailNormalizado, ipCliente)
+    if (bloqueo) {
+      return responderLimiteAuth(res, bloqueo, 'Demasiados intentos de inicio de sesión')
+    }
+
     const usuario = await prisma.usuario.findUnique({
-      where: { email: String(email).trim().toLowerCase() },
+      where: { email: emailNormalizado },
       include: includeUsuarioCompleto
     })
 
     if (!usuario) {
+      const bloqueo = await registrarFalloLogin(emailNormalizado, ipCliente)
+      if (bloqueo) {
+        return responderLimiteAuth(res, bloqueo, 'Demasiados intentos de inicio de sesión')
+      }
       return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
     }
 
     // Cuenta creada por Google nunca tuvo usuario_password.
     if (!usuario.usuario_password) {
-      return res.status(401).json({
-        mensaje: 'Esta cuenta fue creada con Google. Iniciá sesión con Google o restablecé tu contraseña.'
-      })
+      const bloqueo = await registrarFalloLogin(emailNormalizado, ipCliente)
+      if (bloqueo) {
+        return responderLimiteAuth(res, bloqueo, 'Demasiados intentos de inicio de sesión')
+      }
+      return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
     }
 
     const esValida = await bcrypt.compare(password, usuario.usuario_password.password_hash)
     if (!esValida) {
+      const bloqueo = await registrarFalloLogin(emailNormalizado, ipCliente)
+      if (bloqueo) {
+        return responderLimiteAuth(res, bloqueo, 'Demasiados intentos de inicio de sesión')
+      }
       return res.status(401).json({ mensaje: 'Credenciales incorrectas' })
     }
 
@@ -189,6 +218,7 @@ export const login = async (req, res) => {
     }
 
     const token = generarJwt(usuario)
+    await reiniciarFallosLoginEmail(emailNormalizado)
 
     return res.status(200).json(respuestaUsuario(token, usuario))
   } catch (error) {
