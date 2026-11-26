@@ -1,28 +1,28 @@
 import {
-  crearLimitadorAuth,
+  crearVentanaAuth,
   normalizarEmailAuth,
   responderLimiteAuth
 } from '../utils/authRateLimit.js'
 
-const solicitudesRecuperacionPorIp = crearLimitadorAuth({
+const solicitudesRecuperacionPorIp = crearVentanaAuth({
   keyPrefix: 'auth:forgot-password:ip',
   points: 5,
   duration: 15 * 60
 })
 
-const solicitudesRecuperacionPorEmailHora = crearLimitadorAuth({
+const solicitudesRecuperacionPorEmailHora = crearVentanaAuth({
   keyPrefix: 'auth:forgot-password:email-hour',
   points: 3,
   duration: 60 * 60
 })
 
-const solicitudesRecuperacionPorEmailDia = crearLimitadorAuth({
+const solicitudesRecuperacionPorEmailDia = crearVentanaAuth({
   keyPrefix: 'auth:forgot-password:email-day',
   points: 5,
   duration: 24 * 60 * 60
 })
 
-const intervaloEnvioPorEmail = crearLimitadorAuth({
+const intervaloEnvioPorEmail = crearVentanaAuth({
   keyPrefix: 'auth:forgot-password:email-cooldown',
   points: 1,
   duration: 60
@@ -65,7 +65,13 @@ const limitarRecuperacion = async (req, res, next) => {
   if (errorInterno) return next(errorInterno)
 
   const bloqueo = seleccionarLimiteMasLargo(errores)
-  if (bloqueo) return responderLimiteAuth(res, bloqueo)
+  if (bloqueo) {
+    return responderLimiteAuth(
+      res,
+      bloqueo,
+      'Demasiadas solicitudes de recuperación de contraseña'
+    )
+  }
 
   return next()
 }

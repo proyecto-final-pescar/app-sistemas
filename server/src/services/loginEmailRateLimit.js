@@ -1,5 +1,6 @@
 import {
   crearLimitadorAuth,
+  crearVentanaAuth,
   normalizarEmailAuth
 } from '../utils/authRateLimit.js'
 
@@ -10,7 +11,7 @@ const BLOQUEO_MAXIMO_SEGUNDOS = 60 * 60
 
 // El contador de fallos y el bloqueo usan limitadores separados para que la
 // expiración del bloqueo no borre la progresión exponencial del email.
-const fallosPorEmail = crearLimitadorAuth({
+const fallosPorEmail = crearVentanaAuth({
   keyPrefix: 'auth:login:email-failures',
   points: Number.MAX_SAFE_INTEGER,
   duration: VENTANA_FALLOS_SEGUNDOS

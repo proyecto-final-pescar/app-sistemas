@@ -225,12 +225,13 @@ function Registro() {
             />
             <h1>¡Ya casi terminás!</h1>
             <p>
-              Te enviamos un correo a <strong>{emailRegistrado}</strong> con un
-              link para verificar tu cuenta.
+              Si el email puede registrarse, recibirás un correo en{" "}
+              <strong>{emailRegistrado}</strong> con los próximos pasos. Si ya
+              tenés cuenta, iniciá sesión o recuperá tu contraseña.
             </p>
             <p className="registro-confirmacion-subtexto">
-              Tenés que confirmar tu email antes de poder iniciar sesión. Si
-              no lo ves, revisá la carpeta de spam.
+              Si recibís un correo de verificación, confirmá tu email antes de
+              iniciar sesión. Si no lo ves, revisá la carpeta de spam.
             </p>
 
             <div className="registro-button">

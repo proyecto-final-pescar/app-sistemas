@@ -1,4 +1,5 @@
 import { RateLimiterMemory } from 'rate-limiter-flexible'
+import { SlidingWindowRateLimiter } from './slidingWindowRateLimiter.js'
 
 /**
  * Normaliza correos para usar la misma clave de limitación aunque el usuario
@@ -18,24 +19,34 @@ export const crearLimitadorAuth = ({
   blockDuration = 0
 }) => new RateLimiterMemory({ keyPrefix, points, duration, blockDuration })
 
+/** Crea un contador con ventana móvil para los límites de solicitudes. */
+export const crearVentanaAuth = ({ keyPrefix, points, duration }) =>
+  new SlidingWindowRateLimiter({ keyPrefix, points, duration })
+
 const formatearEspera = (segundos) => {
-  if (segundos >= 3600) {
-    const horas = Math.ceil(segundos / 3600)
-    return `${horas} ${horas === 1 ? 'hora' : 'horas'}`
+  const horas = Math.floor(segundos / 3600)
+  const minutos = Math.floor((segundos % 3600) / 60)
+  const segundosRestantes = segundos % 60
+  const partes = []
+
+  if (horas) partes.push(`${horas} ${horas === 1 ? 'hora' : 'horas'}`)
+  if (minutos) partes.push(`${minutos} ${minutos === 1 ? 'minuto' : 'minutos'}`)
+  if (segundosRestantes || partes.length === 0) {
+    partes.push(`${segundosRestantes} ${segundosRestantes === 1 ? 'segundo' : 'segundos'}`)
   }
 
-  if (segundos >= 60) {
-    const minutos = Math.ceil(segundos / 60)
-    return `${minutos} ${minutos === 1 ? 'minuto' : 'minutos'}`
-  }
-
-  return `${segundos} ${segundos === 1 ? 'segundo' : 'segundos'}`
+  if (partes.length === 1) return partes[0]
+  return `${partes.slice(0, -1).join(', ')} y ${partes.at(-1)}`
 }
 
 /**
  * Responde un bloqueo del limitador con HTTP 429 y Retry-After en segundos.
  */
-export const responderLimiteAuth = (res, resultadoLimite) => {
+export const responderLimiteAuth = (
+  res,
+  resultadoLimite,
+  mensajeAccion = 'Demasiadas solicitudes'
+) => {
   const milisegundosRestantes = Number(resultadoLimite?.msBeforeNext)
   const segundosRestantes = Number.isFinite(milisegundosRestantes)
     ? Math.max(1, Math.ceil(milisegundosRestantes / 1000))
@@ -44,7 +55,7 @@ export const responderLimiteAuth = (res, resultadoLimite) => {
   res.set('Retry-After', String(segundosRestantes))
 
   return res.status(429).json({
-    mensaje: `Demasiados intentos. Intentá de nuevo en ${formatearEspera(segundosRestantes)}.`,
+    mensaje: `${mensajeAccion}. Intentá de nuevo en ${formatearEspera(segundosRestantes)}.`,
     retryAfterSeconds: segundosRestantes
   })
 }

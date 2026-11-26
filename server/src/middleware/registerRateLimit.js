@@ -1,22 +1,22 @@
 import {
-  crearLimitadorAuth,
+  crearVentanaAuth,
   normalizarEmailAuth,
   responderLimiteAuth
 } from '../utils/authRateLimit.js'
 
-const solicitudesRegistroPorIpHora = crearLimitadorAuth({
+const solicitudesRegistroPorIpHora = crearVentanaAuth({
   keyPrefix: 'auth:register:ip-hour',
   points: 5,
   duration: 60 * 60
 })
 
-const solicitudesRegistroPorIpDia = crearLimitadorAuth({
+const solicitudesRegistroPorIpDia = crearVentanaAuth({
   keyPrefix: 'auth:register:ip-day',
   points: 10,
   duration: 24 * 60 * 60
 })
 
-const solicitudesRegistroPorEmailHora = crearLimitadorAuth({
+const solicitudesRegistroPorEmailHora = crearVentanaAuth({
   keyPrefix: 'auth:register:email-hour',
   points: 3,
   duration: 60 * 60
@@ -56,7 +56,9 @@ const limitarRegistro = async (req, res, next) => {
   if (errorInterno) return next(errorInterno)
 
   const bloqueo = seleccionarLimiteMasLargo(errores)
-  if (bloqueo) return responderLimiteAuth(res, bloqueo)
+  if (bloqueo) {
+    return responderLimiteAuth(res, bloqueo, 'Demasiadas solicitudes de registro')
+  }
 
   return next()
 }
